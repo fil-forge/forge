@@ -1,0 +1,132 @@
+package echo
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/http"
+
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"go.uber.org/fx"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/otel"
+
+	"github.com/fil-forge/piri/pkg/config/app"
+	pirimiddleware "github.com/fil-forge/piri/pkg/pdp/httpapi/server/middleware"
+)
+
+var log = logging.Logger("fx/echo")
+
+var Module = fx.Module("echo",
+	fx.Provide(
+		NewEcho,
+	),
+	fx.Invoke(
+		RegisterRoutes,
+		StartEchoServer,
+	),
+)
+
+// RouteRegistrar defines the interface for services that register Echo routes
+type RouteRegistrar interface {
+	RegisterRoutes(e *echo.Echo)
+}
+
+// NewEcho creates a new Echo instance with default middleware
+func NewEcho() *echo.Echo {
+	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
+
+	// Set custom error handler
+	e.HTTPErrorHandler = pirimiddleware.CustomHTTPErrorHandler
+
+	// Add default middleware
+	e.Use(pirimiddleware.RequestLogger(log))
+	e.Use(middleware.Recover())
+	// Custom middlewares
+	e.Use(ErrorLogger(log))
+	e.Use(otelecho.Middleware(
+		"piri",
+		otelecho.WithPropagators(otel.GetTextMapPropagator()),
+		otelecho.WithMeterProvider(otel.GetMeterProvider()),
+	))
+
+	return e
+}
+
+// EchoServer wraps Echo with fx lifecycle management
+type EchoServer struct {
+	echo *echo.Echo
+	addr string
+}
+
+// StartEchoServer runs a Echo server with lifecycle management
+func StartEchoServer(cfg app.ServerConfig, e *echo.Echo, lc fx.Lifecycle) (*EchoServer, error) {
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+
+	server := &EchoServer{
+		echo: e,
+		addr: addr,
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			log.Infof("Starting Echo server on %s", addr)
+
+			// Start server in a goroutine
+			go func() {
+				if err := e.Start(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+					log.Errorf("Echo server error: %v", err)
+				}
+			}()
+
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			log.Info("Shutting down Echo server")
+			defer log.Info("Echo server stopped")
+			// Per go docs on this method:
+			// Shutdown gracefully shuts down the server without interrupting any
+			// active connections. Shutdown works by first closing all open
+			// listeners, then closing all idle connections, and then waiting
+			// indefinitely for connections to return to idle and then shut down.
+			// If the provided context expires before the shutdown is complete,
+			// Shutdown returns the context's error, otherwise it returns any
+			// error returned from closing the [Server]'s underlying Listener(s).
+			//
+			// When Shutdown is called, [Serve], [ListenAndServe], and
+			// [ListenAndServeTLS] immediately return [ErrServerClosed].
+			//
+			// The timeout of the context passed to this method is configured
+			// by setting fx.StopTimeout([duration]),
+			return e.Shutdown(ctx)
+		},
+	})
+
+	return server, nil
+}
+
+// RouteParams collects all route registrars
+type RouteParams struct {
+	fx.In
+
+	Registrars []RouteRegistrar `group:"route_registrar"`
+}
+
+// RegisterRoutes registers all routes from collected registrars
+func RegisterRoutes(e *echo.Echo, params RouteParams) {
+	log.Infof("Registering routes from %d registrars", len(params.Registrars))
+
+	for _, registrar := range params.Registrars {
+		registrar.RegisterRoutes(e)
+	}
+}
+
+// Address returns the server's listening address
+func (s *EchoServer) Address() string {
+	return s.addr
+}

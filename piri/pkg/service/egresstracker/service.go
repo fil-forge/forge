@@ -1,0 +1,343 @@
+package egresstracker
+
+// TODO(forrest)[ucan1]: do this later
+
+/*
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/url"
+	"time"
+
+	captypes "github.com/fil-forge/go-libstoracha/capabilities/types"
+	"github.com/fil-forge/go-libstoracha/failure"
+	"github.com/fil-forge/go-ucanto/client"
+	"github.com/fil-forge/go-ucanto/core/dag/blockstore"
+	"github.com/fil-forge/go-ucanto/core/result"
+	"github.com/fil-forge/libforge/commands"
+	"github.com/fil-forge/libforge/commands/space/egress"
+	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/multikey"
+	"github.com/fil-forge/ucantone/ucan"
+	"github.com/fil-forge/ucantone/ucan/invocation"
+	"github.com/ipfs/go-cid"
+	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
+
+	"github.com/fil-forge/ucantone/ucan/receipt"
+
+	"github.com/fil-forge/piri/pkg/client/receipts"
+	"github.com/fil-forge/piri/pkg/store/consolidationstore"
+	"github.com/fil-forge/piri/pkg/store/consolidationstore/consolidation"
+	"github.com/fil-forge/piri/pkg/store/local/retrievaljournal"
+)
+
+const journalRotationPeriod = time.Hour * 12
+
+// Service stores receipts from `space/content/retrieve` invocations, batches them and sends
+// them to an egress tracking service via `space/egress/track` invocations.
+type Service struct {
+	id                   ucan.Signer
+	egressTrackerDID     did.DID
+	// egressTrackerProofs is the ordered chain (root → leaf) issued by the
+	// delegator for the egress-tracker service. Every link must accompany
+	// each /space/egress/track invocation for the egress-tracker validator
+	// to walk the chain back to the originating authority.
+	egressTrackerProofs  []ucan.Delegation
+	egressTrackerConn    client.Connection
+	batchEndpoint        *url.URL
+	journal              retrievaljournal.Journal
+	journalRotator       *retrievaljournal.PeriodicRotator
+	queue                EgressTrackerQueue
+	consolidationStore   consolidationstore.Store
+	rcptsClient          *receipts.Client
+	cleanupCheckInterval time.Duration
+	cleanupCancel        context.CancelFunc
+	cleanupDone          chan struct{}
+}
+
+func New(
+	id ucan.Signer,
+	egressTrackerConn client.Connection,
+	egressTrackerProofs []ucan.Delegation,
+	batchEndpoint *url.URL,
+	journal retrievaljournal.Journal,
+	consolidationStore consolidationstore.Store,
+	queue EgressTrackerQueue,
+	rcptsClient *receipts.Client,
+	cleanupCheckInterval time.Duration,
+) (*Service, error) {
+	// if the journal supports forced rotation, set up a periodic rotator to
+	// ensure batches are rotated even during low traffic periods
+	var journalRotator *retrievaljournal.PeriodicRotator
+	if fr, ok := journal.(retrievaljournal.ForceRotator); ok {
+		journalRotator = retrievaljournal.NewPeriodicRotator(fr, journalRotationPeriod)
+	}
+
+	svc := &Service{
+		id:                   id,
+		egressTrackerDID:     egressTrackerConn.ID().DID(),
+		egressTrackerProofs:  egressTrackerProofs,
+		egressTrackerConn:    egressTrackerConn,
+		batchEndpoint:        batchEndpoint,
+		journal:              journal,
+		journalRotator:       journalRotator,
+		consolidationStore:   consolidationStore,
+		queue:                queue,
+		rcptsClient:          rcptsClient,
+		cleanupCheckInterval: cleanupCheckInterval,
+		cleanupDone:          make(chan struct{}),
+	}
+
+	if err := queue.Register(svc.egressTrack); err != nil {
+		return nil, fmt.Errorf("registering egress track task: %w", err)
+	}
+
+	// set the RotateFunc to enqueue a track task for the rotated batch when a
+	// rotation occurs periodically
+	if journalRotator != nil {
+		journalRotator.RotateFunc = func(batchID cid.Cid) {
+			if err := svc.enqueueEgressTrackTask(context.Background(), batchID); err != nil {
+				log.Errorw("enqueuing egress track task", "batch", batchID, "error", err)
+			}
+		}
+	}
+
+	return svc, nil
+}
+
+func (s *Service) AddReceipt(ctx context.Context, rcpt *receipt.Receipt) error {
+	batchRotated, rotatedBatchCID, err := s.journal.Append(ctx, rcpt)
+	if err != nil {
+		return fmt.Errorf("adding receipt to store: %w", err)
+	}
+
+	if batchRotated {
+		if err := s.enqueueEgressTrackTask(ctx, rotatedBatchCID); err != nil {
+			return fmt.Errorf("enqueuing egress track task: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) enqueueEgressTrackTask(ctx context.Context, batchCID cid.Cid) error {
+	return s.queue.Enqueue(ctx, batchCID)
+}
+
+func (s *Service) egressTrack(ctx context.Context, batchCID cid.Cid) error {
+	if len(s.egressTrackerProofs) == 0 {
+		return fmt.Errorf("no proofs configured for egress tracker invocation")
+	}
+	proofLinks := make([]cid.Cid, len(s.egressTrackerProofs))
+	for i, d := range s.egressTrackerProofs {
+		proofLinks[i] = d.Link()
+	}
+	trackInv, err := egress.Track.Invoke(
+		s.id,
+		s.egressTrackerDID,
+		&egress.TrackArguments{
+			Receipts: batchCID,
+			Endpoint: capabilities.CborURL(*s.batchEndpoint),
+		},
+		invocation.WithProofs(proofLinks...),
+		invocation.WithNoExpiration(),
+	)
+	if err != nil {
+		return fmt.Errorf("creating invocation: %w", err)
+	}
+
+	resp, err := client.Execute(ctx, []invocation.Invocation{trackInv}, s.egressTrackerConn)
+	if err != nil {
+		return fmt.Errorf("executing invocation: %w", err)
+	}
+
+	rcptLnk, ok := resp.Get(trackInv.Link())
+	if !ok {
+		return fmt.Errorf("missing receipt for invocation: %s", trackInv.Link().String())
+	}
+
+	blocks, err := blockstore.NewBlockReader(blockstore.WithBlocksIterator(resp.Blocks()))
+	if err != nil {
+		return fmt.Errorf("importing response blocks into blockstore: %w", err)
+	}
+
+	rcptReader, err := receipt.NewReceiptReaderFromTypes[egress.TrackOk, failure.FailureModel](egress.TrackOkType(), failure.FailureType(), captypes.Converters...)
+	if err != nil {
+		return fmt.Errorf("constructing receipt reader: %w", err)
+	}
+
+	rcpt, err := rcptReader.Read(rcptLnk, blocks.Iterator())
+	if err != nil {
+		return fmt.Errorf("reading receipt: %w", err)
+	}
+
+	_, x := result.Unwrap(rcpt.Out())
+	var emptyErr failure.FailureModel
+	if x != emptyErr {
+		return fmt.Errorf("invocation failed: %s", x.Message)
+	}
+
+	// Extract the consolidate invocation from the receipt's effects
+	effects := rcpt.Fx()
+	if effects == nil {
+		return fmt.Errorf("receipt has no effects")
+	}
+
+	forks := effects.Fork()
+	if len(forks) != 1 {
+		return fmt.Errorf("expected exactly one fork effect, but got: %d", len(forks))
+	}
+
+	consolidateInvLink := forks[0].Link()
+
+	// Store the track invocation and consolidate CID (indexed by batch CID)
+	consolidateCID := consolidateInvLink.(cidlink.Link).Cid
+	c := consolidation.Consolidation{
+		TrackInvocation:          trackInv,
+		ConsolidateInvocationCID: consolidateCID,
+	}
+	if err := s.consolidationStore.Put(ctx, batchCID, c); err != nil {
+		return fmt.Errorf("storing track invocation in consolidation store: %w", err)
+	}
+	log.Infof("stored track invocation with consolidate invocation %s for batch %s", consolidateInvLink.String(), batchCID.String())
+
+	return nil
+}
+
+// Start starts the periodic cleanup task that checks for consolidated batches
+// and removes them from the store as well as starting the journal rotator if
+// enabled.
+func (s *Service) Start(ctx context.Context) error {
+	if s.cleanupCheckInterval <= 0 {
+		log.Info("cleanup task disabled (interval is 0)")
+		close(s.cleanupDone)
+		return nil
+	}
+
+	cleanupCtx, cancel := context.WithCancel(ctx)
+	s.cleanupCancel = cancel
+
+	go s.runCleanupTask(cleanupCtx)
+
+	log.Infof("cleanup task started with interval: %v", s.cleanupCheckInterval)
+
+	if s.journalRotator != nil {
+		s.journalRotator.Start()
+		log.Info("periodic journal rotator started")
+	}
+	return nil
+}
+
+// Stop stops the periodic cleanup task and journal rotator gracefully.
+func (s *Service) Stop(ctx context.Context) error {
+	if s.journalRotator != nil {
+		s.journalRotator.Stop(ctx)
+		log.Info("periodic journal rotator stopped")
+	}
+
+	if s.cleanupCancel != nil {
+		s.cleanupCancel()
+	}
+
+	select {
+	case <-s.cleanupDone:
+		log.Info("cleanup task stopped")
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("timeout waiting for cleanup task to stop: %w", ctx.Err())
+	}
+}
+
+func (s *Service) runCleanupTask(ctx context.Context) {
+	defer close(s.cleanupDone)
+
+	ticker := time.NewTicker(s.cleanupCheckInterval)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("cleanup task context cancelled")
+			return
+		case <-ticker.C:
+			if err := s.cleanupConsolidatedBatches(ctx); err != nil {
+				log.Errorf("error cleaning up consolidated batches: %v", err)
+			}
+		}
+	}
+}
+
+func (s *Service) cleanupConsolidatedBatches(ctx context.Context) error {
+	// List all batches
+	batchCIDs, err := s.journal.List(ctx)
+	if err != nil {
+		return fmt.Errorf("listing batches: %w", err)
+	}
+
+	// Check each batch for consolidation
+	// TODO: consider doing this in parallel
+	for batchCID := range batchCIDs {
+		if err := s.checkAndRemoveConsolidatedBatch(ctx, batchCID); err != nil {
+			log.Errorf("error checking batch %s: %v", batchCID, err)
+			// Continue with other batches even if one fails
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) checkAndRemoveConsolidatedBatch(ctx context.Context, batchCID cid.Cid) error {
+	// Get the consolidation data from the consolidation store
+	c, err := s.consolidationStore.Get(ctx, batchCID)
+	if err != nil {
+		log.Warnf("batch %s not found in consolidation store, skipping: %v", batchCID, err)
+		return nil
+	}
+
+	// Fetch the consolidate receipt from the egress tracker's receipts endpoint
+	rcpt, err := s.rcptsClient.Fetch(ctx, cidlink.Link{Cid: c.ConsolidateInvocationCID})
+	if err != nil {
+		if errors.Is(err, receipts.ErrNotFound) {
+			log.Debugf("consolidate receipt not yet available for batch %s", batchCID)
+			return nil
+		}
+
+		return fmt.Errorf("fetching consolidate receipt: %w", err)
+	}
+
+	log.Debugf("consolidate receipt fetched for batch %s", batchCID.String())
+
+	// Use the track invocation from the consolidation data
+	trackInv := c.TrackInvocation
+
+	if err := s.validateConsolidateReceipt(rcpt, trackInv); err != nil {
+		return fmt.Errorf("receipt failed validation: %w", err)
+	}
+
+	// Remove the batch from the store
+	log.Infof("consolidate receipt found for batch %s, removing from store", batchCID)
+	if err := s.journal.Remove(ctx, batchCID); err != nil {
+		return fmt.Errorf("removing consolidated batch: %w", err)
+	}
+
+	// Remove from consolidation store
+	if err := s.consolidationStore.Delete(ctx, batchCID); err != nil {
+		log.Warnf("failed to remove batch %s from consolidation store: %v", batchCID, err)
+	}
+
+	log.Debugf("batch %s removed from journal and consolidation store", batchCID.String())
+
+	return nil
+}
+
+func (s *Service) validateConsolidateReceipt(receipt *receipt.Receipt, trackInv invocation.Invocation) error {
+	// TODO: Validate the receipt. This will include checking the receipt matches the original track invocation
+	// and confirming that the consolidated amount of bytes matches our records.
+
+	// TODO(forrest)[ucan1]: surprised this never got done... lets panic to force the point -_-
+	panic("JFC COMPLETE ME!!!!")
+	return nil
+}
+
+
+*/

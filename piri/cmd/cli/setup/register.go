@@ -1,0 +1,1094 @@
+package setup
+
+import (
+	"context"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/BurntSushi/toml"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/fil-forge/libforge/commands/blob"
+	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
+	"github.com/fil-forge/libforge/commands/pdp"
+	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/ucan"
+	"github.com/fil-forge/ucantone/ucan/container"
+	"github.com/fil-forge/ucantone/ucan/delegation"
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/samber/lo"
+	"github.com/spf13/cobra"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap/zapcore"
+
+	"github.com/fil-forge/piri/pkg/pdp/types"
+
+	"github.com/fil-forge/piri/pkg/store/local/keystore"
+	"github.com/fil-forge/piri/pkg/wallet"
+
+	delgclient "github.com/fil-forge/delegator/client"
+
+	"github.com/fil-forge/piri/pkg/config"
+	appcfg "github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/piri/pkg/curiopdp"
+	"github.com/fil-forge/piri/pkg/fx/app"
+	"github.com/fil-forge/piri/pkg/fx/root"
+	"github.com/fil-forge/piri/pkg/health"
+	"github.com/fil-forge/piri/pkg/pdp/service"
+	"github.com/fil-forge/piri/pkg/presets"
+)
+
+var log = logging.Logger("cmd/init")
+
+var InitCmd = &cobra.Command{
+	Use:   "init",
+	Args:  cobra.NoArgs,
+	Short: "Initialize your piri node in the storacha network",
+	RunE:  doInit,
+}
+
+func init() {
+	InitCmd.Flags().String(
+		"network",
+		"",
+		fmt.Sprintf("Network the node will operate on. This will set default values for service URLs and DIDs and contract addresses. Available values are: %q", presets.AvailableNetworks),
+	)
+
+	// Required flags
+	InitCmd.Flags().String("host", "localhost", "Host Piri listens for connections on")
+	InitCmd.Flags().Uint("port", 3000, "Port Piri listens for connections on")
+	InitCmd.Flags().String("data-dir", "", "Path to a data directory Piri will maintain its permanent state in")
+	InitCmd.Flags().String("temp-dir", "", "Path to a temporary directory Piri will maintain ephemeral state in")
+	InitCmd.Flags().String("key-file", "", "Path to a PEM file containing ed25519 private key used as Piri's identity on the Storacha network")
+	InitCmd.Flags().String("wallet-file", "", "Path to a file containing a delegated filecoin address private key in hex format")
+	InitCmd.Flags().String("lotus-endpoint", "", "API endpoint of the Lotus node Piri will use to interact with the blockchain")
+	InitCmd.Flags().String("operator-email", "", "Email address of the piri operator (your email address for contact with the Storacha team)")
+	InitCmd.Flags().String("public-url", "", "URL Piri will advertise to the Storacha network")
+
+	cobra.CheckErr(InitCmd.MarkFlagRequired("data-dir"))
+	cobra.CheckErr(InitCmd.MarkFlagRequired("temp-dir"))
+	cobra.CheckErr(InitCmd.MarkFlagRequired("key-file"))
+	cobra.CheckErr(InitCmd.MarkFlagRequired("wallet-file"))
+	cobra.CheckErr(InitCmd.MarkFlagRequired("lotus-endpoint"))
+	cobra.CheckErr(InitCmd.MarkFlagRequired("operator-email"))
+	cobra.CheckErr(InitCmd.MarkFlagRequired("public-url"))
+
+	// did:plc resolution is always available; an omitted or empty value falls
+	// back to the default PLC directory. Set a non-empty value to override it.
+	InitCmd.Flags().String(
+		"plc-directory",
+		config.DefaultPLCDirectory,
+		"did:plc directory URL used to resolve did:plc identities (defaults to https://plc.directory)",
+	)
+
+	// Database configuration flags
+	InitCmd.Flags().String("db-type", "sqlite", "Database backend: 'sqlite' (default) or 'postgres'")
+	InitCmd.Flags().String("db-postgres-url", "", "PostgreSQL connection URL (required when db-type=postgres)")
+	InitCmd.Flags().Int("db-postgres-max-open-conns", 5, "PostgreSQL max open connections (default: 5)")
+	InitCmd.Flags().Int("db-postgres-max-idle-conns", 5, "PostgreSQL max idle connections (default: 5)")
+	InitCmd.Flags().String("db-postgres-conn-max-lifetime", "30m", "PostgreSQL connection max lifetime (e.g. '30m')")
+
+	// S3 storage configuration flags
+	InitCmd.Flags().String("s3-endpoint", "", "S3-compatible storage endpoint (e.g. minio.example.com:9000)")
+	InitCmd.Flags().String("s3-bucket-prefix", "", "Prefix for S3 bucket names (e.g. 'piri-' creates piri-blobs, piri-allocations)")
+	InitCmd.Flags().String("s3-access-key-id", "", "S3 access key ID")
+	InitCmd.Flags().String("s3-secret-access-key", "", "S3 secret access key")
+	InitCmd.Flags().Bool("s3-insecure", false, "Disable SSL for S3 (development only)")
+	// these flags must be provided together
+	InitCmd.MarkFlagsRequiredTogether("s3-endpoint", "s3-bucket-prefix")
+
+	InitCmd.Flags().String(
+		"registrar-url",
+		"",
+		"[Advanced] URL of the registrar service. Required when using --base-config.")
+	cobra.CheckErr(InitCmd.Flags().MarkHidden("registrar-url"))
+
+	// base-config provides an alternative to --network for custom or local development environments.
+	// It defines the network identity: which blockchain (chain ID), which smart contracts to interact
+	// with, and which Storacha services (signing, upload, indexer, etc.) to connect to.
+	// It may also optionally include storage backend configuration (database type, S3 settings)
+	// which will be used unless overridden by explicit flags.
+	InitCmd.Flags().String(
+		"base-config",
+		"",
+		"[Advanced] Path to network config TOML defining chain ID, contract addresses, and service endpoints. Use instead of --network for custom/local environments. May include storage backend settings (database, S3).")
+	cobra.CheckErr(InitCmd.Flags().MarkHidden("base-config"))
+	// cannot use base-config and network flag together since both define network identity
+	InitCmd.MarkFlagsMutuallyExclusive("base-config", "network")
+
+	InitCmd.SetOut(os.Stdout)
+	InitCmd.SetErr(os.Stderr)
+}
+
+// initFlags holds all the parsed command flags
+type initFlags struct {
+	network       presets.Network
+	host          string
+	port          uint
+	dataDir       string
+	tempDir       string
+	keyFile       string
+	publicURL     *url.URL
+	walletPath    string
+	lotusEndpoint string
+	operatorEmail string
+	delegatorURL  string
+	plcDirectory  string
+	// baseConfig holds values from --base-config or network presets
+	baseConfig *baseConfigValues
+	// storage holds storage backend configuration (S3/Postgres)
+	storage *storageConfig
+}
+
+// storageConfig holds storage configuration parsed from flags or base-config
+type storageConfig struct {
+	database config.DatabaseConfig
+	s3       *config.S3Config
+}
+
+// baseConfigValues holds service and contract configuration from base config or presets
+type baseConfigValues struct {
+	network                 string // for telemetry identification only
+	signingServiceDID       string
+	signingServiceURL       string
+	uploadServiceDID        did.DID
+	uploadServiceURL        string
+	verifierAddress         string
+	providerRegistryAddress string
+	serviceAddress          string
+	serviceViewAddress      string
+	paymentsAddress         string
+	usdfcAddress            string
+	chainID                 string
+	payerAddress            string
+	indexingServiceDID      string
+	indexingServiceURL      string
+	egressTrackerServiceDID string
+	egressTrackerServiceURL string
+	ipniAnnounceURLs        []string
+	// Storage configuration from base-config
+	database config.DatabaseConfig
+	s3Config *config.S3Config
+}
+
+// baseConfig represents the structure of the base config TOML file
+type baseConfig struct {
+	Network string         `toml:"network"`
+	PDP     basePDPConfig  `toml:"pdp"`
+	UCAN    baseUCANConfig `toml:"ucan"`
+	Repo    baseRepoConfig `toml:"repo"`
+}
+
+// baseRepoConfig holds storage configuration from base config TOML file
+type baseRepoConfig struct {
+	Database config.DatabaseConfig `toml:"database,omitempty"`
+	S3       *config.S3Config      `toml:"s3,omitempty"`
+}
+
+type basePDPConfig struct {
+	SigningService struct {
+		DID string `toml:"did"`
+		URL string `toml:"url"`
+	} `toml:"signing_service"`
+	Contracts struct {
+		Verifier         string `toml:"verifier"`
+		ProviderRegistry string `toml:"provider_registry"`
+		Service          string `toml:"service"`
+		ServiceView      string `toml:"service_view"`
+		Payments         string `toml:"payments"`
+		USDFCToken       string `toml:"usdfc_token"`
+	} `toml:"contracts"`
+	ChainID      string `toml:"chain_id"`
+	PayerAddress string `toml:"payer_address"`
+}
+
+type baseUCANConfig struct {
+	Services struct {
+		Indexer struct {
+			DID string `toml:"did"`
+			URL string `toml:"url"`
+		} `toml:"indexer"`
+		EgressTracker struct {
+			DID string `toml:"did"`
+			URL string `toml:"url"`
+		} `toml:"etracker"`
+		Upload struct {
+			DID string `toml:"did"`
+			URL string `toml:"url"`
+		} `toml:"upload"`
+		Publisher struct {
+			IPNIAnnounceURLs []string `toml:"ipni_announce_urls"`
+		} `toml:"publisher"`
+		PrincipalMapping map[string]string `toml:"principal_mapping"`
+	} `toml:"services"`
+}
+
+// loadBaseConfig loads configuration values from a base config TOML file
+func loadBaseConfig(path string) (*baseConfigValues, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("reading base config file: %w", err)
+	}
+
+	var cfg baseConfig
+	if err := toml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parsing base config file: %w", err)
+	}
+
+	uploadServiceDID := did.Undef
+	if cfg.UCAN.Services.Upload.DID != "" {
+		uploadServiceDID, err = did.Parse(cfg.UCAN.Services.Upload.DID)
+		if err != nil {
+			return nil, fmt.Errorf("parsing upload service DID: %w", err)
+		}
+	}
+
+	return &baseConfigValues{
+		network:                 cfg.Network,
+		signingServiceDID:       cfg.PDP.SigningService.DID,
+		signingServiceURL:       cfg.PDP.SigningService.URL,
+		uploadServiceDID:        uploadServiceDID,
+		uploadServiceURL:        cfg.UCAN.Services.Upload.URL,
+		verifierAddress:         cfg.PDP.Contracts.Verifier,
+		providerRegistryAddress: cfg.PDP.Contracts.ProviderRegistry,
+		serviceAddress:          cfg.PDP.Contracts.Service,
+		serviceViewAddress:      cfg.PDP.Contracts.ServiceView,
+		paymentsAddress:         cfg.PDP.Contracts.Payments,
+		usdfcAddress:            cfg.PDP.Contracts.USDFCToken,
+		chainID:                 cfg.PDP.ChainID,
+		payerAddress:            cfg.PDP.PayerAddress,
+		indexingServiceDID:      cfg.UCAN.Services.Indexer.DID,
+		indexingServiceURL:      cfg.UCAN.Services.Indexer.URL,
+		egressTrackerServiceDID: cfg.UCAN.Services.EgressTracker.DID,
+		egressTrackerServiceURL: cfg.UCAN.Services.EgressTracker.URL,
+		ipniAnnounceURLs:        cfg.UCAN.Services.Publisher.IPNIAnnounceURLs,
+		database:                cfg.Repo.Database,
+		s3Config:                cfg.Repo.S3,
+	}, nil
+}
+
+// loadPresets loads network-specific presets and returns base config values
+func loadPresets(cmd *cobra.Command) (presets.Network, *baseConfigValues, error) {
+	// Check if base config is provided
+	baseConfigPath, err := cmd.Flags().GetString("base-config")
+	if err != nil {
+		return presets.Network(""), nil, fmt.Errorf("error reading --base-config: %w", err)
+	}
+
+	networkStr, err := cmd.Flags().GetString("network")
+	if err != nil {
+		return presets.Network(""), nil, fmt.Errorf("error reading --network: %w", err)
+	}
+
+	// Validate: can't use both --network and --base-config
+	if baseConfigPath != "" && networkStr != "" {
+		return presets.Network(""), nil, fmt.Errorf("--network and --base-config are mutually exclusive")
+	}
+
+	// Must have either --network or --base-config
+	if baseConfigPath == "" && networkStr == "" {
+		return presets.Network(""), nil, fmt.Errorf("either --network or --base-config must be specified")
+	}
+
+	// If base config is provided, load it and return
+	if baseConfigPath != "" {
+		baseValues, err := loadBaseConfig(baseConfigPath)
+		if err != nil {
+			return presets.Network(""), nil, fmt.Errorf("loading base config: %w", err)
+		}
+		return presets.Network(""), baseValues, nil
+	}
+
+	// Otherwise, load from network preset
+	network, err := presets.ParseNetwork(networkStr)
+	if err != nil {
+		return presets.Network(""), nil, fmt.Errorf("loading presets: %w", err)
+	}
+
+	preset, err := presets.GetPreset(network)
+	if err != nil {
+		return presets.Network(""), nil, fmt.Errorf("loading presets: %w", err)
+	}
+
+	// Apply registrar URL from preset if not explicitly set
+	if !cmd.Flags().Changed("registrar-url") && preset.Services.RegistrarServiceURL != nil {
+		cmd.Flags().Set("registrar-url", preset.Services.RegistrarServiceURL.String())
+	}
+
+	// Convert preset to baseConfigValues
+	ipniURLs := make([]string, len(preset.Services.IPNIAnnounceURLs))
+	for i, u := range preset.Services.IPNIAnnounceURLs {
+		ipniURLs[i] = u.String()
+	}
+
+	signingServiceDID := ""
+	if preset.Services.SigningServiceDID != did.Undef {
+		signingServiceDID = preset.Services.SigningServiceDID.String()
+	}
+	signingServiceURL := ""
+	if preset.Services.SigningServiceURL != nil {
+		signingServiceURL = preset.Services.SigningServiceURL.String()
+	}
+	uploadServiceURL := ""
+	if preset.Services.UploadServiceURL != nil {
+		uploadServiceURL = preset.Services.UploadServiceURL.String()
+	}
+	indexingServiceDID := ""
+	if preset.Services.IndexingServiceDID != did.Undef {
+		indexingServiceDID = preset.Services.IndexingServiceDID.String()
+	}
+	indexingServiceURL := ""
+	if preset.Services.IndexingServiceURL != nil {
+		indexingServiceURL = preset.Services.IndexingServiceURL.String()
+	}
+	egressTrackerDID := ""
+	if preset.Services.EgressTrackerServiceDID != did.Undef {
+		egressTrackerDID = preset.Services.EgressTrackerServiceDID.String()
+	}
+	egressTrackerURL := ""
+	if preset.Services.EgressTrackerServiceURL != nil {
+		egressTrackerURL = preset.Services.EgressTrackerServiceURL.String()
+	}
+
+	baseValues := &baseConfigValues{
+		signingServiceDID:       signingServiceDID,
+		signingServiceURL:       signingServiceURL,
+		uploadServiceDID:        preset.Services.UploadServiceDID,
+		uploadServiceURL:        uploadServiceURL,
+		verifierAddress:         preset.SmartContracts.Verifier.String(),
+		providerRegistryAddress: preset.SmartContracts.ProviderRegistry.String(),
+		serviceAddress:          preset.SmartContracts.Service.String(),
+		serviceViewAddress:      preset.SmartContracts.ServiceView.String(),
+		paymentsAddress:         preset.SmartContracts.Payments.String(),
+		usdfcAddress:            preset.SmartContracts.USDFCToken.String(),
+		chainID:                 preset.SmartContracts.ChainID.String(),
+		payerAddress:            preset.SmartContracts.PayerAddress.String(),
+		indexingServiceDID:      indexingServiceDID,
+		indexingServiceURL:      indexingServiceURL,
+		egressTrackerServiceDID: egressTrackerDID,
+		egressTrackerServiceURL: egressTrackerURL,
+		ipniAnnounceURLs:        ipniURLs,
+	}
+
+	return network, baseValues, nil
+}
+
+// parseAndValidateFlags parses command flags and validates them
+func parseAndValidateFlags(cmd *cobra.Command) (*initFlags, error) {
+	// Load network presets or base config first
+	network, baseValues, err := loadPresets(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	dataDir, err := cmd.Flags().GetString("data-dir")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --data-dir: %w", err)
+	}
+	tempDir, err := cmd.Flags().GetString("temp-dir")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --temp-dir: %w", err)
+	}
+	keyFile, err := cmd.Flags().GetString("key-file")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --key-file: %w", err)
+	}
+	publicURL, err := cmd.Flags().GetString("public-url")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --public-url: %w", err)
+	}
+	parsedURL, err := url.Parse(publicURL)
+	if err != nil {
+		return nil, fmt.Errorf("parsing --public-url: %w", err)
+	}
+	if parsedURL.Scheme == "" {
+		return nil, fmt.Errorf("--public-url must include a scheme (http:// or https://)")
+	}
+
+	walletPath, err := cmd.Flags().GetString("wallet-file")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --wallet-file: %w", err)
+	}
+
+	lotusEndpoint, err := cmd.Flags().GetString("lotus-endpoint")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --lotus-endpoint: %w", err)
+	}
+
+	operatorEmail, err := cmd.Flags().GetString("operator-email")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --operator-email: %w", err)
+	}
+
+	delegatorURL, err := cmd.Flags().GetString("registrar-url")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --registrar-url: %w", err)
+	}
+
+	plcDirectory, err := cmd.Flags().GetString("plc-directory")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --plc-directory: %w", err)
+	}
+	// Validate up front so init fails fast rather than at serve time. An empty
+	// value is allowed and falls back to the default PLC directory at serve time.
+	if plcDirectory != "" {
+		parsed, err := url.Parse(plcDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("parsing --plc-directory: %w", err)
+		}
+		if parsed.Scheme == "" {
+			return nil, fmt.Errorf("--plc-directory must include a scheme (http:// or https://)")
+		}
+	}
+
+	host, err := cmd.Flags().GetString("host")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --host: %w", err)
+	}
+	port, err := cmd.Flags().GetUint("port")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --port: %w", err)
+	}
+
+	// Parse storage configuration from flags
+	var storage *storageConfig
+
+	// S3 configuration - endpoint and bucket-prefix are required together
+	s3Endpoint, err := cmd.Flags().GetString("s3-endpoint")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --s3-endpoint: %w", err)
+	}
+	s3BucketPrefix, err := cmd.Flags().GetString("s3-bucket-prefix")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --s3-bucket-prefix: %w", err)
+	}
+	s3AccessKeyID, err := cmd.Flags().GetString("s3-access-key-id")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --s3-access-key-id: %w", err)
+	}
+	s3SecretAccessKey, err := cmd.Flags().GetString("s3-secret-access-key")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --s3-secret-access-key: %w", err)
+	}
+	s3Insecure, err := cmd.Flags().GetBool("s3-insecure")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --s3-insecure: %w", err)
+	}
+
+	// Check if user explicitly provided any S3 flag
+	s3FlagsChanged := cmd.Flags().Changed("s3-endpoint") ||
+		cmd.Flags().Changed("s3-bucket-prefix") ||
+		cmd.Flags().Changed("s3-access-key-id") ||
+		cmd.Flags().Changed("s3-secret-access-key") ||
+		cmd.Flags().Changed("s3-insecure")
+	if s3FlagsChanged {
+		// Both endpoint and bucket-prefix are required when using S3
+		if s3Endpoint == "" {
+			return nil, fmt.Errorf("--s3-endpoint is required when using S3 storage")
+		}
+		if s3BucketPrefix == "" {
+			return nil, fmt.Errorf("--s3-bucket-prefix is required when using S3 storage")
+		}
+
+		storage = &storageConfig{
+			s3: &config.S3Config{
+				Endpoint:     s3Endpoint,
+				BucketPrefix: s3BucketPrefix,
+				Credentials: config.Credentials{
+					AccessKeyID:     s3AccessKeyID,
+					SecretAccessKey: s3SecretAccessKey,
+				},
+				Insecure: s3Insecure,
+			},
+		}
+	}
+
+	// Database configuration - only if user explicitly provided --db-type flag
+	dbType, err := cmd.Flags().GetString("db-type")
+	if err != nil {
+		return nil, fmt.Errorf("error reading --db-type: %w", err)
+	}
+	dbFlagsChanged := cmd.Flags().Changed("db-type")
+	if dbFlagsChanged {
+		if dbType != "sqlite" && dbType != "postgres" {
+			return nil, fmt.Errorf("--db-type must be 'sqlite' or 'postgres', got %q", dbType)
+		}
+
+		if storage == nil {
+			storage = &storageConfig{}
+		}
+		storage.database.Type = dbType
+
+		if dbType == "postgres" {
+			postgresURL, err := cmd.Flags().GetString("db-postgres-url")
+			if err != nil {
+				return nil, fmt.Errorf("error reading --db-postgres-url: %w", err)
+			}
+			if postgresURL == "" {
+				return nil, fmt.Errorf("--db-postgres-url is required when --db-type is 'postgres'")
+			}
+			// Validate URL format
+			if _, err := url.Parse(postgresURL); err != nil {
+				return nil, fmt.Errorf("invalid --db-postgres-url: %w", err)
+			}
+
+			storage.database.Postgres.URL = postgresURL
+			storage.database.Postgres.MaxOpenConns, err = cmd.Flags().GetInt("db-postgres-max-open-conns")
+			if err != nil {
+				return nil, fmt.Errorf("error reading --db-postgres-max-open-conns: %w", err)
+			}
+			storage.database.Postgres.MaxIdleConns, err = cmd.Flags().GetInt("db-postgres-max-idle-conns")
+			if err != nil {
+				return nil, fmt.Errorf("error reading --db-postgres-max-idle-conns: %w", err)
+			}
+			storage.database.Postgres.ConnMaxLifetime, err = cmd.Flags().GetString("db-postgres-conn-max-lifetime")
+			if err != nil {
+				return nil, fmt.Errorf("error reading --db-postgres-conn-max-lifetime: %w", err)
+			}
+
+			// Validate duration format if provided
+			if storage.database.Postgres.ConnMaxLifetime != "" {
+				if _, err := time.ParseDuration(storage.database.Postgres.ConnMaxLifetime); err != nil {
+					return nil, fmt.Errorf("invalid --db-postgres-conn-max-lifetime: %w", err)
+				}
+			}
+		}
+	}
+
+	// Merge with base-config (flags take precedence per-setting)
+	if baseValues != nil {
+		if storage == nil {
+			storage = &storageConfig{}
+		}
+
+		// Use base-config S3 if no S3 flags were explicitly provided
+		if !s3FlagsChanged && baseValues.s3Config != nil {
+			if err := baseValues.s3Config.Validate(); err != nil {
+				return nil, fmt.Errorf("base-config s3: %w", err)
+			}
+			storage.s3 = baseValues.s3Config
+		}
+
+		// Use base-config database if --db-type was not explicitly set
+		if !dbFlagsChanged && baseValues.database.Type != "" {
+			storage.database = baseValues.database
+		}
+	}
+
+	// Apply default database type if still not set
+	if storage != nil && storage.database.Type == "" {
+		storage.database.Type = "sqlite"
+	}
+
+	return &initFlags{
+		network:       network,
+		host:          host,
+		port:          port,
+		dataDir:       dataDir,
+		tempDir:       tempDir,
+		keyFile:       keyFile,
+		publicURL:     parsedURL,
+		walletPath:    walletPath,
+		lotusEndpoint: lotusEndpoint,
+		operatorEmail: operatorEmail,
+		delegatorURL:  delegatorURL,
+		plcDirectory:  plcDirectory,
+		baseConfig:    baseValues,
+		storage:       storage,
+	}, nil
+}
+
+// createNode creates and starts a new Piri node
+func createNode(ctx context.Context, flags *initFlags) (*fx.App, *service.PDPService, *appcfg.AppConfig, common.Address, error) {
+	walletKey, err := walletKeyFromWalletFile(flags.walletPath)
+	if err != nil {
+		return nil, nil, nil, common.Address{}, fmt.Errorf("parsing owner address: %w", err)
+	}
+
+	// Build repo config with storage backend settings
+	repoConfig := config.RepoConfig{
+		DataDir: flags.dataDir,
+		TempDir: flags.tempDir,
+	}
+	if flags.storage != nil {
+		repoConfig.Database = flags.storage.database
+		repoConfig.S3 = flags.storage.s3
+	}
+
+	cfg := appcfg.AppConfig{
+		Identity: lo.Must(config.IdentityConfig{KeyFile: flags.keyFile}.ToAppConfig()),
+		Server: appcfg.ServerConfig{
+			Host:      flags.host,
+			Port:      flags.port,
+			PublicURL: *flags.publicURL,
+		},
+		Storage: lo.Must(repoConfig.ToAppConfig()),
+		PDPService: lo.Must(config.PDPServiceConfig{
+			OwnerAddress:  walletKey.Address.String(),
+			LotusEndpoint: flags.lotusEndpoint,
+			SigningService: config.SigningServiceConfig{
+				DID: flags.baseConfig.signingServiceDID,
+				URL: flags.baseConfig.signingServiceURL,
+			},
+			Contracts: config.ContractAddresses{
+				Verifier:         flags.baseConfig.verifierAddress,
+				ProviderRegistry: flags.baseConfig.providerRegistryAddress,
+				Service:          flags.baseConfig.serviceAddress,
+				ServiceView:      flags.baseConfig.serviceViewAddress,
+				Payments:         flags.baseConfig.paymentsAddress,
+				USDFCToken:       flags.baseConfig.usdfcAddress,
+			},
+			ChainID:      flags.baseConfig.chainID,
+			PayerAddress: flags.baseConfig.payerAddress,
+			Aggregation:  config.DefaultAggregationConfig(),
+		}.ToAppConfig()),
+		Replicator: appcfg.DefaultReplicatorConfig(),
+	}
+
+	// Install Curio's PDP contract addresses from config before building the fx app;
+	// the pdpv0 task constructors resolve them eagerly during fx construction.
+	curiopdp.SetContractAddresses(cfg.PDPService)
+
+	var (
+		pdpSvc *service.PDPService
+		wlt    wallet.Wallet
+	)
+	fxApp := fx.New(
+		fx.RecoverFromPanics(),
+		fx.WithLogger(func() fxevent.Logger {
+			el := &fxevent.ZapLogger{Logger: log.Desugar()}
+			el.UseLogLevel(zapcore.DebugLevel)
+			return el
+		}),
+		// Supply init mode for health checks
+		fx.Supply(health.ModeInit),
+		app.CommonModules(cfg),
+		app.PDPModule,
+		root.Module,
+		fx.Populate(&pdpSvc, &wlt),
+	)
+
+	if err := fxApp.Err(); err != nil {
+		return nil, nil, nil, common.Address{}, fmt.Errorf("initializing piri node: %w", err)
+	}
+
+	// before we start the service, which on start up checks for a configured wallet, we import the wallet here.
+	if _, err := wlt.Import(ctx, &walletKey.KeyInfo); err != nil {
+		return nil, nil, nil, common.Address{}, fmt.Errorf("importing wallet: %w", err)
+	}
+
+	if err := fxApp.Start(ctx); err != nil {
+		return nil, nil, nil, common.Address{}, fmt.Errorf("starting piri node: %w", err)
+	}
+
+	return fxApp, pdpSvc, &cfg, walletKey.Address, nil
+}
+
+func walletKeyFromWalletFile(walletPath string) (*wallet.Key, error) {
+	inpdata, err := os.ReadFile(walletPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading wallet from file %s: %w", walletPath, err)
+	}
+
+	data, err := hex.DecodeString(strings.TrimSpace(string(inpdata)))
+	if err != nil {
+		return nil, fmt.Errorf("decoding wallet from file %s: %w", walletPath, err)
+	}
+
+	var ki struct {
+		Type       string
+		PrivateKey []byte
+	}
+	if err := json.Unmarshal(data, &ki); err != nil {
+		return nil, err
+	}
+
+	return wallet.NewKey(keystore.KeyInfo{PrivateKey: ki.PrivateKey})
+}
+
+func registerWithContract(ctx context.Context, cmd *cobra.Command, id ucan.Issuer, pdpSvc *service.PDPService) (uint64, error) {
+	// check if the provider is already registered with the contract
+	status, err := pdpSvc.GetProviderStatus(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("getting provider status: %w", err)
+	}
+	// already registered, return the provider id
+	if status.IsRegistered {
+		return status.ID, nil
+	}
+	// else we need to register
+	if _, err := pdpSvc.RegisterProvider(ctx, types.RegisterProviderParams{
+		Name:        id.DID().String(),
+		Description: "Storacha Service Operator",
+	}); err != nil {
+		return 0, fmt.Errorf("registering provider: %w", err)
+	}
+
+	cmd.PrintErrln("⏳ Waiting for registration to be confirmed on-chain...")
+	// contract.FSRegister fires the registerProvider tx without local tracking,
+	// so we confirm by polling on-chain status until the provider appears in the
+	// registry.
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		status, err = pdpSvc.GetProviderStatus(ctx)
+		if err != nil {
+			return 0, fmt.Errorf("getting provider status: %w", err)
+		}
+		if status.IsRegistered {
+			cmd.PrintErrln("   Registration status: confirmed")
+			return status.ID, nil
+		}
+		cmd.PrintErrln("   Registration status: pending")
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		case <-ticker.C:
+		}
+	}
+}
+
+// setupProofSet creates or finds an existing proof set
+func setupProofSet(ctx context.Context, cmd *cobra.Command, pdpSvc *service.PDPService) (uint64, error) {
+	proofSets, err := pdpSvc.ListProofSets(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("listing proof sets: %w", err)
+	}
+
+	if len(proofSets) > 1 {
+		return 0, fmt.Errorf("multiple proof sets exist, cannot register: %+v", proofSets)
+	}
+
+	if len(proofSets) == 1 {
+		cmd.PrintErrf("✅ Using existing proof set ID: %d\n", proofSets[0].ID)
+		return proofSets[0].ID, nil
+	}
+
+	// Create new proof set
+	cmd.PrintErrln("📝 Creating new proof set...")
+	tx, err := pdpSvc.CreateProofSet(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("creating proof set: %w", err)
+	}
+
+	cmd.PrintErrf("⏳ Waiting for proof set creation to be confirmed on-chain (tx %s)...\n", tx.Hex())
+	for {
+		time.Sleep(10 * time.Second)
+		status, err := pdpSvc.GetProofSetStatus(ctx, tx)
+		if err != nil {
+			return 0, fmt.Errorf("getting proof set status: %w", err)
+		}
+		cmd.PrintErrf("   Transaction status: %s\n", status.TxStatus)
+		if status.ID > 0 {
+			cmd.PrintErrf("✅ Proof set created with ID: %d\n", status.ID)
+			return status.ID, nil
+		}
+	}
+}
+
+// registerWithDelegator handles registration with the delegator service.
+//
+// UCAN 1.0: the new /registrar/register-node handler no longer accepts a
+// delegation proof — the node just identifies itself with operator DID,
+// owner address, proof set ID, email, and public URL. Indexer and
+// egress-tracker proofs are minted by the delegator on demand via
+// /registrar/request-proofs once the node is registered.
+//
+// The delegator returns those proofs as a gzipped ucantone container
+// (`container.RawGzip`) per delegator/internal/handlers/handlers.go. We
+// unwrap the container, pull out the single delegation, and re-encode
+// to plain CBOR so the downstream config consumer (services.go's
+// `delegation.Decode([]byte(s.Proof))`) can read it without changes.
+func registerWithDelegator(ctx context.Context, cmd *cobra.Command, cfg *appcfg.AppConfig, flags *initFlags, ownerAddress common.Address, proofSetID uint64) (string, string, error) {
+	c, err := delgclient.New(flags.delegatorURL)
+	if err != nil {
+		return "", "", fmt.Errorf("creating delegator client: %w", err)
+	}
+
+	operatorDID := cfg.Identity.Issuer.DID().String()
+
+	registered, err := c.IsRegistered(ctx, &delgclient.IsRegisteredRequest{DID: operatorDID})
+	if err != nil {
+		return "", "", fmt.Errorf("checking registration status: %w", err)
+	}
+
+	if !registered {
+		// The delegator's register-node handler requires a UCAN container of
+		// proofs: self-delegations granting the upload service authority over
+		// the blob/pdp capabilities on this provider. They never expire.
+		uploadDID := flags.baseConfig.uploadServiceDID
+		if uploadDID == did.Undef {
+			return "", "", fmt.Errorf("upload service DID is not configured")
+		}
+		self := cfg.Identity.Issuer
+
+		cmds := []ucan.Command{
+			blob.Allocate.Command,
+			blob.Accept.Command,
+			blob.Release.Command,
+			blob.Reject.Command,
+			pdp.Info.Command,
+			replicacmds.Allocate.Command,
+		}
+		dlgs := make([]ucan.Delegation, 0, len(cmds))
+		for _, cmd := range cmds {
+			dlg, err := delegation.Delegate(self, uploadDID, self.DID(), cmd, delegation.WithNoExpiration())
+			if err != nil {
+				return "", "", fmt.Errorf("creating %s delegation: %w", cmd, err)
+			}
+			dlgs = append(dlgs, dlg)
+		}
+		proofsBytes, err := container.Encode(container.Base64Gzip, container.New(container.WithDelegations(dlgs...)))
+		if err != nil {
+			return "", "", fmt.Errorf("encoding provider proofs: %w", err)
+		}
+
+		if err := c.Register(ctx, &delgclient.RegisterRequest{
+			Operator:      operatorDID,
+			OwnerAddress:  ownerAddress.String(),
+			ProofSetID:    proofSetID,
+			OperatorEmail: flags.operatorEmail,
+			PublicURL:     flags.publicURL.String(),
+			Proofs:        string(proofsBytes),
+		}); err != nil {
+			return "", "", fmt.Errorf("registering with delegator: %w", err)
+		}
+		cmd.PrintErrln("✅ Successfully registered with delegator service")
+	} else {
+		cmd.PrintErrln("✅ Node already registered with delegator service")
+	}
+
+	cmd.PrintErrln("📥 Requesting proofs from delegator service...")
+	res, err := c.RequestProofs(ctx, operatorDID)
+	if err != nil {
+		return "", "", fmt.Errorf("requesting delegator proof: %w", err)
+	}
+	if res == nil || len(res.Proofs.Indexer) == 0 || len(res.Proofs.EgressTracker) == 0 {
+		return "", "", fmt.Errorf("missing proofs from delegator")
+	}
+
+	indexerProof, err := encodeProofChain(res.Proofs.Indexer)
+	if err != nil {
+		return "", "", fmt.Errorf("encoding indexer proof chain: %w", err)
+	}
+	egressTrackerProof, err := encodeProofChain(res.Proofs.EgressTracker)
+	if err != nil {
+		return "", "", fmt.Errorf("encoding egress tracker proof chain: %w", err)
+	}
+
+	cmd.PrintErrln("✅ Received proofs from delegator")
+
+	return indexerProof, egressTrackerProof, nil
+}
+
+// encodeProofChain takes the gzipped ucantone container returned by the
+// delegator (which carries a chain: root proof e.g. indexing → delegator, then
+// leaf delegator → storage node) and re-encodes the whole container as a
+// base64 string suitable for TOML storage. Piri needs every link in the chain
+// when invoking /claim/cache (or /space/egress/track) so that the indexing /
+// egress-tracker service can validate the operator's authority back through
+// the delegator. The consumer (pkg/config/services.go's decodeProofChain)
+// base64-decodes and runs container.Decode to recover the chain.
+//
+// Raw CBOR bytes are not UTF-8 safe and break TOML round-trip with
+// "invalid character U+..." — base64 keeps the payload TOML-safe.
+func encodeProofChain(wire []byte) (string, error) {
+	// Sanity check: ensure the wire bytes are decodable so we fail at init
+	// time rather than at first invocation.
+	ct, err := container.Decode(wire)
+	if err != nil {
+		return "", fmt.Errorf("decoding container: %w", err)
+	}
+	if len(ct.Delegations()) == 0 {
+		return "", fmt.Errorf("no delegations in container")
+	}
+	return base64.StdEncoding.EncodeToString(wire), nil
+}
+
+// generateConfig generates the final configuration for the user
+func generateConfig(cfg *appcfg.AppConfig, flags *initFlags, ownerAddress common.Address, proofSetID uint64, indexerProof string, egressTrackerProof string) (config.FullServerConfig, error) {
+	// Derive egress tracker receipts endpoint from URL if available
+	egressTrackerReceiptsEndpoint := ""
+	if flags.baseConfig.egressTrackerServiceURL != "" {
+		parsed, err := url.Parse(flags.baseConfig.egressTrackerServiceURL)
+		if err == nil {
+			parsed.Path = "/receipts"
+			egressTrackerReceiptsEndpoint = parsed.String()
+		}
+	}
+
+	// Use network from preset if available, otherwise from base config
+	network := string(flags.network)
+	if network == "" && flags.baseConfig != nil {
+		network = flags.baseConfig.network
+	}
+
+	// Build repo config with storage backend settings
+	repoConfig := config.RepoConfig{
+		DataDir: cfg.Storage.DataDir,
+		TempDir: cfg.Storage.TempDir,
+	}
+	if flags.storage != nil {
+		repoConfig.Database = flags.storage.database
+		repoConfig.S3 = flags.storage.s3
+	}
+
+	return config.FullServerConfig{
+		Network:  network,
+		Identity: config.IdentityConfig{KeyFile: flags.keyFile},
+		Repo:     repoConfig,
+		Server: config.ServerConfig{
+			Port:      cfg.Server.Port,
+			Host:      cfg.Server.Host,
+			PublicURL: flags.publicURL.String(),
+		},
+		PDPService: config.PDPServiceConfig{
+			OwnerAddress:  ownerAddress.String(),
+			LotusEndpoint: flags.lotusEndpoint,
+			SigningService: config.SigningServiceConfig{
+				DID: flags.baseConfig.signingServiceDID,
+				URL: flags.baseConfig.signingServiceURL,
+			},
+			Contracts: config.ContractAddresses{
+				Verifier:         flags.baseConfig.verifierAddress,
+				ProviderRegistry: flags.baseConfig.providerRegistryAddress,
+				Service:          flags.baseConfig.serviceAddress,
+				ServiceView:      flags.baseConfig.serviceViewAddress,
+				Payments:         flags.baseConfig.paymentsAddress,
+				USDFCToken:       flags.baseConfig.usdfcAddress,
+			},
+			ChainID:      flags.baseConfig.chainID,
+			PayerAddress: flags.baseConfig.payerAddress,
+			Aggregation:  config.DefaultAggregationConfig(),
+		},
+		UCANService: config.UCANServiceConfig{
+			Services: config.ServicesConfig{
+				Indexer: config.IndexingServiceConfig{
+					DID:   flags.baseConfig.indexingServiceDID,
+					URL:   flags.baseConfig.indexingServiceURL,
+					Proof: indexerProof,
+				},
+				EgressTracker: config.EgressTrackerServiceConfig{
+					DID:               flags.baseConfig.egressTrackerServiceDID,
+					URL:               flags.baseConfig.egressTrackerServiceURL,
+					ReceiptsEndpoint:  egressTrackerReceiptsEndpoint,
+					Proof:             egressTrackerProof,
+					MaxBatchSizeBytes: config.DefaultMinimumEgressBatchSize,
+				},
+				Upload: config.UploadServiceConfig{
+					DID: flags.baseConfig.uploadServiceDID.String(),
+					URL: flags.baseConfig.uploadServiceURL,
+				},
+				Publisher: config.PublisherServiceConfig{
+					AnnounceURLs: flags.baseConfig.ipniAnnounceURLs,
+				},
+			},
+			ProofSetID:   proofSetID,
+			PLCDirectory: flags.plcDirectory,
+		},
+	}, nil
+}
+
+func doInit(cmd *cobra.Command, _ []string) error {
+	// Init normally runs near-silent so the [N/6] progress output stays readable.
+	// Set PIRI_INIT_LOG_LEVEL (e.g. "info" or "debug") to surface the node's logs
+	// — useful for debugging the PDP pipeline (chainsched/watchers) during init.
+	initLevel := logging.LevelFatal
+	if v := os.Getenv("PIRI_INIT_LOG_LEVEL"); v != "" {
+		if lvl, err := logging.LevelFromString(v); err == nil {
+			initLevel = lvl
+		}
+	}
+	logging.SetAllLoggers(initLevel)
+	ctx := context.Background()
+
+	cmd.PrintErrln("🚀 Initializing your Piri node on the Storacha Network...")
+	cmd.PrintErrln()
+
+	// Step 1: Parse and validate flags
+	cmd.PrintErrln("[1/6] Validating configuration...")
+	flags, err := parseAndValidateFlags(cmd)
+	if err != nil {
+		return err
+	}
+	cmd.PrintErrln("✅ Configuration validated")
+	cmd.PrintErrln()
+
+	// at this point printing the usage is not needed,
+	//failures after here are unrelated to arguments and flags supplied.
+	cmd.SilenceUsage = true
+	// Step 2: Create and start node
+	cmd.PrintErrln("[2/6] Creating Piri node...")
+	fxApp, pdpSvc, cfg, ownerAddress, err := createNode(ctx, flags)
+	if err != nil {
+		return err
+	}
+	defer fxApp.Stop(ctx)
+	cmd.PrintErrf("✅ Node created with DID: %s\n", cfg.Identity.Issuer.DID().String())
+	cmd.PrintErrln()
+
+	// Step 3: Register with the smart contract (Curio's contract.FSRegister)
+	cmd.PrintErrln("[3/6] Registering provider with contract...")
+	providerID, err := registerWithContract(ctx, cmd, cfg.Identity.Issuer, pdpSvc)
+	if err != nil {
+		return err
+	}
+	cmd.PrintErrf("✅ Node registered with contract ProviderID: %d\n", providerID)
+	cmd.PrintErrln()
+
+	// Step 4: Create or find proof set
+	cmd.PrintErrln("[4/6] Setting up proof set...")
+	proofSetID, err := setupProofSet(ctx, cmd, pdpSvc)
+	if err != nil {
+		return err
+	}
+	cmd.PrintErrln()
+
+	// Step 5: Register with delegator service
+	cmd.PrintErrln("[5/6] Registering with delegator service...")
+	indexerProof, egressTrackerProof, err := registerWithDelegator(ctx, cmd, cfg, flags, ownerAddress, proofSetID)
+	if err != nil {
+		return err
+	}
+	cmd.PrintErrln()
+
+	// Step 6: Generate configuration
+	cmd.PrintErrln("[6/6] Generating configuration file...")
+	userConfig, err := generateConfig(cfg, flags, ownerAddress, proofSetID, indexerProof, egressTrackerProof)
+	if err != nil {
+		return err
+	}
+
+	cfgData, err := toml.Marshal(userConfig)
+	if err != nil {
+		return fmt.Errorf("marshaling configuration: %w", err)
+	}
+
+	cmd.PrintErrln("\n🎉 Initialization complete! Your configuration:")
+
+	// Write to both stdout and file using TeeWriter
+	configFile, err := os.Create(PiriConfigFileName)
+	if err != nil {
+		// If we can't create the file, just write to stdout
+		cmd.PrintErrf("Warning: Failed to create %s: %v\n", PiriConfigFileName, err)
+		cmd.Print(string(cfgData))
+		return nil
+	}
+	defer configFile.Close()
+
+	// Use TeeWriter to write to both stdout and file
+	teeWriter := io.MultiWriter(cmd.OutOrStdout(), configFile)
+	if _, err := teeWriter.Write(cfgData); err != nil {
+		cmd.PrintErrf("Error writing configuration: %v\n", err)
+	}
+
+	cmd.PrintErrf("\nConfiguration saved to: %s\n", PiriConfigFileName)
+	return nil
+}

@@ -1,0 +1,133 @@
+site_name: Piri Docs
+site_url: https://storacha.github.io/piri
+repo_url: https://github.com/fil-forge/piri
+docs_dir: content
+site_dir: site
+markdown_extensions:
+  - md_in_html
+  - attr_list
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+theme:
+  name: material
+  logo: images/logo-header.png
+  features:
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - content.code.copy
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: indigo
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+extra_css:
+  - styles/branding.css
+extra_javascript:
+  - scripts/env-switcher.js
+
+extra:
+  logo: images/logo.png
+  favicon: images/favicon.ico
+
+nav:
+  - Getting Started: index.md
+  - Operator Guide:
+      - operator-guide/index.md
+      - Joining the Network: operator-guide/joining.md
+      - Lotus Node Setup: operator-guide/lotus.md
+      - How Storage Works: operator-guide/storage.md
+      - How Proving Works: operator-guide/proving.md
+      - How Retrieval Works: operator-guide/retrieval.md
+      - Getting Paid: operator-guide/payments.md
+      - Monitoring: operator-guide/monitoring.md
+  - Setup:
+      - Prerequisites: setup/prerequisites.md
+      - Installation: setup/installation.md
+      - Key Generation: setup/key-generation.md
+      - TLS Termination: setup/tls-termination.md
+      - Piri Server: setup/piri-server.md
+  - Configuration:
+      - configuration/index.md
+      - network: configuration/network.md
+      - identity: configuration/identity.md
+      - repo:
+          - configuration/repo/index.md
+          - database: configuration/repo/database.md
+      - server: configuration/server.md
+      - pdp:
+          - configuration/pdp/index.md
+          - gas: configuration/pdp/gas.md
+          - aggregation:
+              - configuration/pdp/aggregation/index.md
+              - commp: configuration/pdp/aggregation/commp.md
+              - aggregator: configuration/pdp/aggregation/aggregator.md
+              - manager: configuration/pdp/aggregation/manager.md
+      - ucan: configuration/ucan.md
+      - telemetry: configuration/telemetry.md
+  - Operations:
+      - Inspect Proof Set: operations/inspect-proof-set.md
+      - Best Practices: operations/best-practices.md
+      - Upgrading: operations/upgrading.md
+      - Telemetry: operations/telemetry.md
+  - Concepts:
+      - concepts/index.md
+      - Database: concepts/database.md
+      - Networks: concepts/networks.md
+      - Telemetry: concepts/telemetry.md
+  - CLI Reference:
+      - cli/index.md
+      - init: cli/init.md
+      - serve: cli/serve/index.md
+      - status:
+          - cli/status/index.md
+          - upgrade-check: cli/status/upgrade-check.md
+      - update: cli/update.md
+      - wallet:
+          - cli/wallet/index.md
+          - list: cli/wallet/list.md
+          - import: cli/wallet/import.md
+      - identity:
+          - cli/identity/index.md
+          - generate: cli/identity/generate.md
+          - parse: cli/identity/parse.md
+      - client:
+          - cli/client/index.md
+          - admin:
+              - cli/client/admin/index.md
+              - config:
+                  - cli/client/admin/config/index.md
+                  - list: cli/client/admin/config/list.md
+                  - get: cli/client/admin/config/get.md
+                  - set: cli/client/admin/config/set.md
+                  - reload: cli/client/admin/config/reload.md
+              - log:
+                  - cli/client/admin/log/index.md
+                  - list: cli/client/admin/log/list.md
+                  - set: cli/client/admin/log/set.md
+                  - set-regex: cli/client/admin/log/set-regex.md
+              - payment:
+                  - cli/client/admin/payment/index.md
+                  - account: cli/client/admin/payment/account.md
+                  - status: cli/client/admin/payment/status.md
+          - pdp:
+              - cli/client/pdp/index.md
+              - proofset:
+                  - cli/client/pdp/proofset/index.md
+                  - repair: cli/client/pdp/proofset/repair.md
+                  - state: cli/client/pdp/proofset/state.md
