@@ -1,0 +1,75 @@
+version: 2
+
+project_name: sprue
+
+builds:
+  - id: sprue
+    main: ./cmd
+    binary: sprue
+    ldflags:
+      # Sets the version variable in the build package to the build version prefixed with a 'v'
+      # Sets the main.date to a static date for checksum verification. See https://goreleaser.com/customization/builds/#reproducible-builds.
+      - -s -w -X github.com/fil-forge/sprue/pkg/build.version=v{{.Version}} -X github.com/fil-forge/sprue/pkg/build.Commit={{.Commit}} -X github.com/fil-forge/sprue/pkg/build.Date={{.CommitDate}} -X github.com/fil-forge/sprue/pkg/build.BuiltBy=goreleaser
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - 'amd64'
+      - 'arm64'
+    # Change to a static date for checksum verification. See https://goreleaser.com/customization/builds/#reproducible-builds.
+    mod_timestamp: '{{.CommitTimestamp}}'
+    env:
+      - CGO_ENABLED=0
+
+universal_binaries:
+  - replace: true
+
+archives:
+  - format_overrides:
+      - goos: darwin
+        formats: zip
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}mac_os
+      {{- else }}{{ .Os }}{{ end }}_{{ .Arch }}
+
+release:
+  mode: keep-existing
+
+changelog:
+  disable: true
+
+dockers:
+  # AMD64 image
+  - image_templates:
+      - "ghcr.io/fil-forge/sprue:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.release
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    goarch: amd64
+
+  # ARM64 image
+  - image_templates:
+      - "ghcr.io/fil-forge/sprue:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.release
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/fil-forge/sprue:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/fil-forge/sprue:{{ .Version }}-amd64"
+      - "ghcr.io/fil-forge/sprue:{{ .Version }}-arm64"
