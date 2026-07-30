@@ -1,16 +1,18 @@
 version: 2
 
-project_name: ingot
+project_name: hilt
 
 builds:
-  - id: ingot
-    main: ./cmd/ingot
-    binary: ingot
+  - id: hilt
+    main: ./cmd
+    binary: hilt
     ldflags:
-      # Stamp the build package (see internal/build). {{.Version}} has no
-      # leading v, so prefix one. CommitDate/CommitTimestamp keep the build
-      # reproducible. https://goreleaser.com/customization/builds/#reproducible-builds
-      - -s -w -X github.com/fil-forge/forge/ingot/internal/build.Version=v{{.Version}} -X github.com/fil-forge/forge/ingot/internal/build.Commit={{.Commit}} -X github.com/fil-forge/forge/ingot/internal/build.Date={{.CommitDate}} -X github.com/fil-forge/forge/ingot/internal/build.BuiltBy=goreleaser
+      # Stamps pkg/build. Mirrors the Makefile's GOFLAGS exactly, except
+      # BuiltBy — the Makefile says "make", here it is "goreleaser".
+      # {{.Version}} has no leading v, so prefix one. CommitDate/CommitTimestamp
+      # keep the build reproducible.
+      # https://goreleaser.com/customization/builds/#reproducible-builds
+      - -s -w -X github.com/fil-forge/forge/hilt/pkg/build.version=v{{.Version}} -X github.com/fil-forge/forge/hilt/pkg/build.Commit={{.Commit}} -X github.com/fil-forge/forge/hilt/pkg/build.Date={{.CommitDate}} -X github.com/fil-forge/forge/hilt/pkg/build.BuiltBy=goreleaser
     goos:
       - linux
       - darwin
@@ -42,7 +44,7 @@ changelog:
 dockers:
   # AMD64 image
   - image_templates:
-      - "ghcr.io/fil-forge/forge/ingot:{{ .Version }}-amd64"
+      - "ghcr.io/fil-forge/forge/hilt:{{ .Version }}-amd64"
     dockerfile: Dockerfile.release
     use: buildx
     build_flag_templates:
@@ -56,7 +58,7 @@ dockers:
 
   # ARM64 image
   - image_templates:
-      - "ghcr.io/fil-forge/forge/ingot:{{ .Version }}-arm64"
+      - "ghcr.io/fil-forge/forge/hilt:{{ .Version }}-arm64"
     dockerfile: Dockerfile.release
     use: buildx
     build_flag_templates:
@@ -69,7 +71,7 @@ dockers:
     goarch: arm64
 
 docker_manifests:
-  - name_template: "ghcr.io/fil-forge/forge/ingot:{{ .Version }}"
+  - name_template: "ghcr.io/fil-forge/forge/hilt:{{ .Version }}"
     image_templates:
-      - "ghcr.io/fil-forge/forge/ingot:{{ .Version }}-amd64"
-      - "ghcr.io/fil-forge/forge/ingot:{{ .Version }}-arm64"
+      - "ghcr.io/fil-forge/forge/hilt:{{ .Version }}-amd64"
+      - "ghcr.io/fil-forge/forge/hilt:{{ .Version }}-arm64"

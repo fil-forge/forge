@@ -10,7 +10,7 @@
 
 services:
   ingot:
-    image: ${INGOT_IMAGE:-ghcr.io/fil-forge/ingot:main}
+    image: ${INGOT_IMAGE:-ghcr.io/fil-forge/forge/ingot:main}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     command: ["serve", "--config", "/etc/ingot/config.yaml"]
     ports:

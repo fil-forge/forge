@@ -37,6 +37,9 @@ CMD ["echo", "test"]
 	}
 }
 
+// piri lives in the monorepo, so its build context is the repo ROOT and the
+// Dockerfile is at piri/Dockerfile — the temp dir models that layout rather
+// than a bare repo with a Dockerfile at its top level.
 func TestBuildPiriImageTagFormat(t *testing.T) {
 	if _, err := exec.LookPath("docker"); err != nil {
 		t.Skip("docker not found in PATH")
@@ -46,7 +49,7 @@ func TestBuildPiriImageTagFormat(t *testing.T) {
 	dockerfile := `FROM alpine:latest
 CMD ["echo", "piri"]
 `
-	if err := writeFile(tempDir, "Dockerfile", dockerfile); err != nil {
+	if err := writeFile(tempDir, "piri/Dockerfile", dockerfile); err != nil {
 		t.Fatalf("failed to create Dockerfile: %v", err)
 	}
 
@@ -77,6 +80,12 @@ CMD ["echo", "guppy"]
 	}
 }
 
+// writeFile writes dir/name, creating any parent directories the name implies
+// (e.g. "piri/Dockerfile").
 func writeFile(dir, name, content string) error {
-	return os.WriteFile(filepath.Join(dir, name), []byte(content), 0644)
+	path := filepath.Join(dir, name)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(content), 0644)
 }

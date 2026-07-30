@@ -355,7 +355,7 @@ compose config and reports two kinds of drift independently:
 
 ```
 WARNING: images differ from snapshot:
-  piri-0: tag ghcr.io/fil-forge/piri:main → ghcr.io/fil-forge/piri:test-build
+  piri-0: tag ghcr.io/fil-forge/forge/piri:main → ghcr.io/fil-forge/forge/piri:test-build
   blockchain: digest drift at filecoin-localdev:local (sha256:83bfc639… → sha256:a1b2c3d4…)
 ```
 

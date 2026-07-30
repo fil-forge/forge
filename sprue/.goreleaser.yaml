@@ -42,7 +42,7 @@ changelog:
 dockers:
   # AMD64 image
   - image_templates:
-      - "ghcr.io/fil-forge/sprue:{{ .Version }}-amd64"
+      - "ghcr.io/fil-forge/forge/sprue:{{ .Version }}-amd64"
     dockerfile: Dockerfile.release
     use: buildx
     build_flag_templates:
@@ -56,7 +56,7 @@ dockers:
 
   # ARM64 image
   - image_templates:
-      - "ghcr.io/fil-forge/sprue:{{ .Version }}-arm64"
+      - "ghcr.io/fil-forge/forge/sprue:{{ .Version }}-arm64"
     dockerfile: Dockerfile.release
     use: buildx
     build_flag_templates:
@@ -69,7 +69,7 @@ dockers:
     goarch: arm64
 
 docker_manifests:
-  - name_template: "ghcr.io/fil-forge/sprue:{{ .Version }}"
+  - name_template: "ghcr.io/fil-forge/forge/sprue:{{ .Version }}"
     image_templates:
-      - "ghcr.io/fil-forge/sprue:{{ .Version }}-amd64"
-      - "ghcr.io/fil-forge/sprue:{{ .Version }}-arm64"
+      - "ghcr.io/fil-forge/forge/sprue:{{ .Version }}-amd64"
+      - "ghcr.io/fil-forge/forge/sprue:{{ .Version }}-arm64"

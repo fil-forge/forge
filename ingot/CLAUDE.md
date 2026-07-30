@@ -206,7 +206,7 @@ forge-mode daemon. Two tiers:
 
 ## Docker images & release
 
-Two publishing paths, both to `ghcr.io/fil-forge/ingot`. Mirrors sprue's
+Two publishing paths, both to `ghcr.io/fil-forge/forge/ingot`. Mirrors sprue's
 pattern so smelt treats every forge service alike; where sprue and piri differ,
 we follow **sprue** (goreleaser builds the release container; `publish-ghcr.yml`
 stays main-only).
