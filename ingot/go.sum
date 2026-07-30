@@ -248,8 +248,8 @@ github.com/fil-forge/go-ucanto v0.0.0-20260507172450-5cb5d073f8ab h1:2J2cDThqTKP
 github.com/fil-forge/go-ucanto v0.0.0-20260507172450-5cb5d073f8ab/go.mod h1:lZF3UXZ2hGLKYmXdquG50JqI9pRlUrV6lubGtgOYfwc=
 github.com/fil-forge/indexing-service v1.13.5-0.20260619142411-efe3f5fab717 h1:Wke8qgaDgy7DGaIS28VpHip+YHSdQP1hGNEZTrXXzb4=
 github.com/fil-forge/indexing-service v1.13.5-0.20260619142411-efe3f5fab717/go.mod h1:wFcakLohOqpMRkJzWRdGFGHRFpGB+PpEMCm9wkt2cqU=
-github.com/fil-forge/libforge v0.0.0-20260724113901-7fc3b2cec1ef h1:xgkciShyWdCQ2Pyl2qEwP7JMbsdbHdECj/v6E5+fj6U=
-github.com/fil-forge/libforge v0.0.0-20260724113901-7fc3b2cec1ef/go.mod h1:0kXihIQ4L2uZ00nR5XrZ/Y8Db7Ht/qQNuiWslwMJ95M=
+github.com/fil-forge/libforge v0.0.0-20260727220215-5e299c46f62f h1:QzgMg8GIE4IhgOE/7DBHFU/4T5oU7J4vAKxbUPKJPGA=
+github.com/fil-forge/libforge v0.0.0-20260727220215-5e299c46f62f/go.mod h1:0kXihIQ4L2uZ00nR5XrZ/Y8Db7Ht/qQNuiWslwMJ95M=
 github.com/fil-forge/ucantone v0.0.0-20260727203046-ccb77059de44 h1:ofvb2Qq7++VPRelGsLbtnd1ZMKVT4n4QGoa79BhJ6VQ=
 github.com/fil-forge/ucantone v0.0.0-20260727203046-ccb77059de44/go.mod h1:oFY5BfD0bDeodGlbBHh3/nK99MAS93rGXjoQz7s5qgE=
 github.com/fil-forge/versitygw v0.0.0-20260716095011-7a65883d595a h1:lDwnNmF4LNbevx/YYNCC0CazMiL4eIe38MvfqbRR3RA=
