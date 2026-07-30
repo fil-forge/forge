@@ -45,3 +45,22 @@ func TestRenderOverrideNoConfigPath(t *testing.T) {
 		t.Fatal("expected error for service without a config path")
 	}
 }
+
+// piri does not compile CGO-free without the skiff build tag: it selects
+// Curio's FFI-free variants, and without it the build dies on undefined ffi.*
+// symbols in curio/lib/ffiselect, harmony/resources/ffigpu and lib/paths.
+//
+// This guard exists because the omission was real and survived in three
+// separate places at once — piri's .goreleaser.yaml, this builder, and
+// (correctly, always) piri's Makefile, which was the only one passing it. The
+// failure mode is bad: workspace mode simply could not build piri, and the
+// error surfaces as a wall of unrelated-looking Curio symbol errors.
+func TestPiriCarriesSkiffTag(t *testing.T) {
+	spec, ok := Services["piri"]
+	if !ok {
+		t.Fatal("piri missing from Services")
+	}
+	if !strings.Contains(spec.buildTags, "skiff") {
+		t.Fatalf("piri must build with the skiff tag, got buildTags=%q", spec.buildTags)
+	}
+}

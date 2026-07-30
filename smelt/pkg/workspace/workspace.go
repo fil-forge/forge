@@ -35,6 +35,7 @@ type serviceBuild struct {
 	buildTarget string // `go build` package arg, e.g. "./cmd"
 	binPath     string // absolute path of the binary inside the container image
 	configPath  string // absolute path of the service's config file inside the container; empty when the service has no single-file config to override
+	buildTags   string // comma-separated -tags value; empty for services that need none
 }
 
 // Services maps smelt service name -> build descriptor. The map key doubles as
@@ -42,7 +43,13 @@ type serviceBuild struct {
 // the generated piri-N nodes. Verified against each sibling's Dockerfile — note
 // delegator installs its binary as /usr/bin/registrar (binary name != module).
 var Services = map[string]serviceBuild{
-	"piri":            {moduleDir: "piri", buildTarget: "./cmd", binPath: "/usr/bin/piri"},
+	// piri REQUIRES the skiff tag. It selects Curio's FFI-free variants, which
+	// is what makes the CGO_ENABLED=0 build below possible; without it the
+	// build fails on undefined ffi.* symbols in curio/lib/ffiselect,
+	// harmony/resources/ffigpu and lib/paths. piri's Makefile has always passed
+	// it (TAGS?=-tags "skiff") — this builder never did, so workspace mode
+	// could not build piri at all.
+	"piri":            {moduleDir: "piri", buildTarget: "./cmd", binPath: "/usr/bin/piri", buildTags: "skiff"},
 	"upload":          {moduleDir: "sprue", buildTarget: "./cmd/main.go", binPath: "/usr/bin/sprue"},
 	"signing-service": {moduleDir: "piri-signing-service", buildTarget: ".", binPath: "/usr/bin/signer"},
 	"indexer":         {moduleDir: "indexing-service", buildTarget: "./cmd", binPath: "/usr/bin/indexer"},
@@ -121,7 +128,12 @@ func BuildBinary(root, service, outDir string) (string, error) {
 	}
 
 	out := filepath.Join(absOutDir, service)
-	cmd := exec.Command(goTool(), "build", "-o", out, spec.buildTarget)
+	args := []string{"build"}
+	if spec.buildTags != "" {
+		args = append(args, "-tags", spec.buildTags)
+	}
+	args = append(args, "-o", out, spec.buildTarget)
+	cmd := exec.Command(goTool(), args...)
 	cmd.Dir = moduleRoot
 	// Static linux/amd64 build so the binary drops into the published image's
 	// base cleanly. GOWORK is pinned explicitly so the build resolves the same
