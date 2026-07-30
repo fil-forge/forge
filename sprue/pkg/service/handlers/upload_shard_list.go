@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	shardcmds "github.com/fil-forge/libforge/commands/upload/shard"
-	upload_store "github.com/fil-forge/sprue/pkg/store/upload"
+	upload_store "github.com/fil-forge/forge/sprue/pkg/store/upload"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"
 	"go.uber.org/zap"

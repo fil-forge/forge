@@ -10,10 +10,10 @@ import (
 	"github.com/fil-forge/ucantone/ucan/receipt"
 	"github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/piri/internal/ipldstore"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/types"
-	apitypes "github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	"github.com/fil-forge/forge/piri/internal/ipldstore"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"
+	apitypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 type PieceAcceptor struct {

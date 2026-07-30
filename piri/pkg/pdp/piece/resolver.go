@@ -16,7 +16,7 @@ import (
 
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 // DefaultResolverCacheSize is the default size of the resolver cache

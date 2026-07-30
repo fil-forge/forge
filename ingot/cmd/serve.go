@@ -10,8 +10,8 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot"
-	"github.com/fil-forge/ingot/config"
+	"github.com/fil-forge/forge/ingot"
+	"github.com/fil-forge/forge/ingot/config"
 )
 
 func newServeCmd() *cobra.Command {

@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fil-forge/sprue/pkg/store"
-	storageprovider "github.com/fil-forge/sprue/pkg/store/storage_provider"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	storageprovider "github.com/fil-forge/forge/sprue/pkg/store/storage_provider"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"

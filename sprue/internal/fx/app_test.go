@@ -4,9 +4,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/sprue/internal/config"
-	appfx "github.com/fil-forge/sprue/internal/fx"
-	"github.com/fil-forge/sprue/internal/testutil"
+	"github.com/fil-forge/forge/sprue/internal/config"
+	appfx "github.com/fil-forge/forge/sprue/internal/fx"
+	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/google/uuid"
 	"go.uber.org/fx/fxtest"

@@ -1,4 +1,4 @@
-module github.com/fil-forge/sprue
+module github.com/fil-forge/forge/sprue
 
 go 1.25.3
 

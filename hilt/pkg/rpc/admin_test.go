@@ -3,10 +3,10 @@ package rpc_test
 import (
 	"testing"
 
-	adminprovider "github.com/fil-forge/hilt/pkg/commands/admin/provider"
-	"github.com/fil-forge/hilt/pkg/rpc"
-	"github.com/fil-forge/hilt/pkg/store"
-	providermemory "github.com/fil-forge/hilt/pkg/store/provider/memory"
+	adminprovider "github.com/fil-forge/forge/hilt/pkg/commands/admin/provider"
+	"github.com/fil-forge/forge/hilt/pkg/rpc"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	providermemory "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"

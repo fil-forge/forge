@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fil-forge/hilt/pkg/config"
-	hiltvault "github.com/fil-forge/hilt/pkg/vault"
-	vaulthashicorp "github.com/fil-forge/hilt/pkg/vault/hashicorp"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	hiltvault "github.com/fil-forge/forge/hilt/pkg/vault"
+	vaulthashicorp "github.com/fil-forge/forge/hilt/pkg/vault/hashicorp"
 	vaultclient "github.com/hashicorp/vault-client-go"
 	"go.uber.org/fx"
 )

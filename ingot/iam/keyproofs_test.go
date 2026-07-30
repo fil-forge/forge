@@ -10,7 +10,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/iam"
+	"github.com/fil-forge/forge/ingot/iam"
 )
 
 // grant mints one no-expiry /content/retrieve delegation iss→aud over iss.

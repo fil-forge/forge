@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fil-forge/sprue/pkg/store"
-	"github.com/fil-forge/sprue/pkg/store/subscription"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	"github.com/fil-forge/forge/sprue/pkg/store/subscription"
 	"github.com/fil-forge/ucantone/did"
 	cid "github.com/ipfs/go-cid"
 )

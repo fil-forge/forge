@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	tenantsvc "github.com/fil-forge/hilt/pkg/api/service/tenant"
-	"github.com/fil-forge/hilt/pkg/store/tenant"
+	tenantsvc "github.com/fil-forge/forge/hilt/pkg/api/service/tenant"
+	"github.com/fil-forge/forge/hilt/pkg/store/tenant"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
 )

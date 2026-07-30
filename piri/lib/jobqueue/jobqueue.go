@@ -10,12 +10,12 @@ import (
 
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/fil-forge/piri/lib/jobqueue/dedup"
-	"github.com/fil-forge/piri/lib/jobqueue/dialect"
-	"github.com/fil-forge/piri/lib/jobqueue/logger"
-	"github.com/fil-forge/piri/lib/jobqueue/queue"
-	"github.com/fil-forge/piri/lib/jobqueue/serializer"
-	"github.com/fil-forge/piri/lib/jobqueue/worker"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/dedup"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/dialect"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/logger"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/queue"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/serializer"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/worker"
 )
 
 var log = logging.Logger("jobqueue")

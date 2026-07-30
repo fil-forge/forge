@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/hilt/pkg/migrations"
+	"github.com/fil-forge/forge/hilt/pkg/migrations"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"

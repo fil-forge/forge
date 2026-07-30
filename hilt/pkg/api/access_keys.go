@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	accesskeysvc "github.com/fil-forge/hilt/pkg/api/service/accesskey"
-	"github.com/fil-forge/hilt/pkg/store/accesskey"
+	accesskeysvc "github.com/fil-forge/forge/hilt/pkg/api/service/accesskey"
+	"github.com/fil-forge/forge/hilt/pkg/store/accesskey"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"

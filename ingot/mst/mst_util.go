@@ -11,7 +11,7 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // MaxKeyBytes is the maximum length, in bytes, of a key stored in the MST.

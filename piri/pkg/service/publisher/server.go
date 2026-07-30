@@ -7,7 +7,7 @@ import (
 	"github.com/fil-forge/go-ipni-tools/pkg/store"
 	"github.com/labstack/echo/v4"
 
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
 )
 
 var _ echofx.RouteRegistrar = (*Server)(nil)

@@ -35,7 +35,7 @@ All welcome! Storacha is open-source. Please feel empowered to open a PR or an i
 
 ### Reporting Issues
 
-Found a bug or have a feature request? Please [open an issue](https://github.com/fil-forge/piri/issues) on our GitHub repository.
+Found a bug or have a feature request? Please [open an issue](https://github.com/fil-forge/forge/piri/issues) on our GitHub repository.
 
 ## License
 

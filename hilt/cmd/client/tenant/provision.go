@@ -1,8 +1,8 @@
 package tenant
 
 import (
-	"github.com/fil-forge/hilt/cmd/client/lib"
-	"github.com/fil-forge/hilt/pkg/api"
+	"github.com/fil-forge/forge/hilt/cmd/client/lib"
+	"github.com/fil-forge/forge/hilt/pkg/api"
 	"github.com/spf13/cobra"
 )
 

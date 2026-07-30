@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	libpiece "github.com/fil-forge/libforge/piece"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
 )
 
 func TestAggregate(t *testing.T) {

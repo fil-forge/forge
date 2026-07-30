@@ -3,7 +3,7 @@ package fx
 import (
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/sprue/internal/config"
+	"github.com/fil-forge/forge/sprue/internal/config"
 )
 
 var ConfigModule = fx.Module("config",

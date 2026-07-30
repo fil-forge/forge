@@ -8,7 +8,7 @@ import (
 
 	ucancmds "github.com/fil-forge/libforge/commands/ucan"
 	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/sprue/pkg/store/agent"
+	"github.com/fil-forge/forge/sprue/pkg/store/agent"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/server"

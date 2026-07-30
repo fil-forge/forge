@@ -167,7 +167,7 @@ into the Go module via `//go:embed`, so consumers that import smelt as
 a dependency can reach them without knowing any filesystem paths:
 
 ```go
-import "github.com/fil-forge/smelt/pkg/stack"
+import "github.com/fil-forge/forge/smelt/pkg/stack"
 
 func TestFromExternalRepo(t *testing.T) {
     s := stack.MustNewStack(t,

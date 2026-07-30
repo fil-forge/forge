@@ -13,10 +13,10 @@ import (
 	"github.com/fil-forge/ucantone/ipld/codec/dagcbor"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/server/handler"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/invocationstore"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/server/handler"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/invocationstore"
 )
 
 var _ echofx.RouteRegistrar = (*Server)(nil)

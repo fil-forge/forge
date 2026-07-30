@@ -26,7 +26,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 // validity is the time a granted delegation is valid for.

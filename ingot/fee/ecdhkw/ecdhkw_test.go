@@ -7,8 +7,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/fil-forge/ingot/fee/aeskw"
-	"github.com/fil-forge/ingot/fee/ecdhkw"
+	"github.com/fil-forge/forge/ingot/fee/aeskw"
+	"github.com/fil-forge/forge/ingot/fee/ecdhkw"
 	"github.com/stretchr/testify/require"
 )
 

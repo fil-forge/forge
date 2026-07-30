@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/smelt/pkg/clients/guppy"
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/clients/guppy"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 )
 
 // Each storage permutation boots a full stack (~20 containers, including

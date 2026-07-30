@@ -7,7 +7,7 @@ import (
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/iam"
+	"github.com/fil-forge/forge/ingot/iam"
 )
 
 func TestVerificationKeyCache(t *testing.T) {

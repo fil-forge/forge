@@ -9,9 +9,9 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/hilt/cmd/client"
-	"github.com/fil-forge/hilt/pkg/config"
-	appfx "github.com/fil-forge/hilt/pkg/fx"
+	"github.com/fil-forge/forge/hilt/cmd/client"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
 )
 
 var cfgFile string

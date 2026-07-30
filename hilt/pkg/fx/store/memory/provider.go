@@ -3,16 +3,16 @@
 package memory
 
 import (
-	"github.com/fil-forge/hilt/pkg/store/accesskey"
-	memaccesskey "github.com/fil-forge/hilt/pkg/store/accesskey/memory"
-	"github.com/fil-forge/hilt/pkg/store/bucket"
-	membucket "github.com/fil-forge/hilt/pkg/store/bucket/memory"
-	"github.com/fil-forge/hilt/pkg/store/delegation"
-	memdelegation "github.com/fil-forge/hilt/pkg/store/delegation/memory"
-	"github.com/fil-forge/hilt/pkg/store/provider"
-	memprovider "github.com/fil-forge/hilt/pkg/store/provider/memory"
-	"github.com/fil-forge/hilt/pkg/store/tenant"
-	memtenant "github.com/fil-forge/hilt/pkg/store/tenant/memory"
+	"github.com/fil-forge/forge/hilt/pkg/store/accesskey"
+	memaccesskey "github.com/fil-forge/forge/hilt/pkg/store/accesskey/memory"
+	"github.com/fil-forge/forge/hilt/pkg/store/bucket"
+	membucket "github.com/fil-forge/forge/hilt/pkg/store/bucket/memory"
+	"github.com/fil-forge/forge/hilt/pkg/store/delegation"
+	memdelegation "github.com/fil-forge/forge/hilt/pkg/store/delegation/memory"
+	"github.com/fil-forge/forge/hilt/pkg/store/provider"
+	memprovider "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
+	"github.com/fil-forge/forge/hilt/pkg/store/tenant"
+	memtenant "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	"go.uber.org/fx"
 )
 

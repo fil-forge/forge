@@ -6,7 +6,7 @@ import (
 
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
 )
 
 // Commp is a no-op commp.Calculator. Enqueue records calls but does not

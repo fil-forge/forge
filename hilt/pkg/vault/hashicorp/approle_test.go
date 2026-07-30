@@ -5,9 +5,9 @@ import (
 	"runtime"
 	"testing"
 
-	htestutil "github.com/fil-forge/hilt/internal/testutil"
-	"github.com/fil-forge/hilt/pkg/vault"
-	vaulthashicorp "github.com/fil-forge/hilt/pkg/vault/hashicorp"
+	htestutil "github.com/fil-forge/forge/hilt/internal/testutil"
+	"github.com/fil-forge/forge/hilt/pkg/vault"
+	vaulthashicorp "github.com/fil-forge/forge/hilt/pkg/vault/hashicorp"
 	vaultclient "github.com/hashicorp/vault-client-go"
 	"github.com/hashicorp/vault-client-go/schema"
 	"github.com/stretchr/testify/require"

@@ -6,7 +6,7 @@ testing, and the conventions/gotchas of the codebase.
 
 ## What this is
 
-`github.com/fil-forge/ingot` is an **S3 gateway over the Forge network**. It runs
+`github.com/fil-forge/forge/ingot` is an **S3 gateway over the Forge network**. It runs
 two ways: an embeddable Go **library** a host (piri/guppy/sprue) imports
 in-process, and a standalone **daemon** (`ingot serve`, in `cmd/`). It presents
 each S3 bucket as a per-bucket MST, journals mutations to a local **two-plane**
@@ -100,7 +100,7 @@ Internal:
   `/ucan/conclude`, `/index/add`, `/provider/add`, `/access/delegate`, and the
   `/access` login flow.
 - **`iam/`** — the Hilt (auth-service) integration over the external
-  `github.com/fil-forge/hilt/pkg/client` (RFC: forge-s3-tenant-management):
+  `github.com/fil-forge/forge/hilt/pkg/client` (RFC: forge-s3-tenant-management):
   versitygw `IAMService`/`RequestIAMService` authorizing each non-root
   request via `/s3/request/authorize` (derived SigV4 key), plus
   `DelegationCache` — a TTL cache (go-cache) of Hilt-issued delegations

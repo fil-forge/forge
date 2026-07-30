@@ -13,7 +13,7 @@ import (
 	"github.com/fil-forge/filecoin-services/go/eip712"
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 
-	"github.com/fil-forge/piri/pkg/pdp/smartcontracts"
+	"github.com/fil-forge/forge/piri/pkg/pdp/smartcontracts"
 )
 
 func (p *PDPService) CreateProofSet(ctx context.Context) (res common.Hash, retErr error) {

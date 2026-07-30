@@ -16,16 +16,16 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/blockstore"
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/bucketauthority"
-	"github.com/fil-forge/ingot/config"
-	"github.com/fil-forge/ingot/internal/fasthttputil"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/logstore"
-	"github.com/fil-forge/ingot/registry"
-	"github.com/fil-forge/ingot/s3frontend"
-	"github.com/fil-forge/ingot/uploader"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/bucketauthority"
+	"github.com/fil-forge/forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/internal/fasthttputil"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/logstore"
+	"github.com/fil-forge/forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/s3frontend"
+	"github.com/fil-forge/forge/ingot/uploader"
 )
 
 // ServerDeps bundles the runtime collaborators of an ingot Server

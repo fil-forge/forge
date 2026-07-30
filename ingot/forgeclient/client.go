@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/fil-forge/ingot/internal/ucanexec"
-	"github.com/fil-forge/ingot/tokenstore"
+	"github.com/fil-forge/forge/ingot/internal/ucanexec"
+	"github.com/fil-forge/forge/ingot/tokenstore"
 	"github.com/fil-forge/libforge/receipt"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"

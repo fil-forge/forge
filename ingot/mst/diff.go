@@ -7,7 +7,7 @@ import (
 
 	cid "github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // DiffOp describes a single change between two MST roots.

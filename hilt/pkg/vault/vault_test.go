@@ -4,10 +4,10 @@ import (
 	"runtime"
 	"testing"
 
-	htestutil "github.com/fil-forge/hilt/internal/testutil"
-	"github.com/fil-forge/hilt/pkg/vault"
-	vaulthashicorp "github.com/fil-forge/hilt/pkg/vault/hashicorp"
-	vaultmemory "github.com/fil-forge/hilt/pkg/vault/memory"
+	htestutil "github.com/fil-forge/forge/hilt/internal/testutil"
+	"github.com/fil-forge/forge/hilt/pkg/vault"
+	vaulthashicorp "github.com/fil-forge/forge/hilt/pkg/vault/hashicorp"
+	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
 	vaultclient "github.com/hashicorp/vault-client-go"
 	"github.com/stretchr/testify/require"
 )

@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fil-forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/config"
 	"github.com/spf13/cobra"
 
-	"github.com/fil-forge/ingot/internal/build"
+	"github.com/fil-forge/forge/ingot/internal/build"
 )
 
 // cfgFile is bound to the persistent --config flag.

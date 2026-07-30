@@ -4,7 +4,7 @@
 package admin
 
 import (
-	"github.com/fil-forge/hilt/cmd/client/admin/provider"
+	"github.com/fil-forge/forge/hilt/cmd/client/admin/provider"
 	"github.com/spf13/cobra"
 )
 

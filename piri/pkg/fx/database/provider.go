@@ -10,10 +10,10 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/database"
-	"github.com/fil-forge/piri/pkg/database/postgresdb"
-	"github.com/fil-forge/piri/pkg/database/sqlitedb"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/database"
+	"github.com/fil-forge/forge/piri/pkg/database/postgresdb"
+	"github.com/fil-forge/forge/piri/pkg/database/sqlitedb"
 )
 
 // PostgreSQL schema names for each logical database

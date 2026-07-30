@@ -1,7 +1,7 @@
 package fx
 
 import (
-	"github.com/fil-forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/config"
 	"go.uber.org/fx"
 )
 

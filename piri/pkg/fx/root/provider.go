@@ -5,8 +5,8 @@ import (
 	"go.uber.org/fx"
 
 	"github.com/fil-forge/libforge/identity"
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/server"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/server"
 )
 
 // Module provides the root handler with route registrar tag

@@ -6,7 +6,7 @@ import (
 
 	"github.com/fil-forge/versitygw/s3err"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
 )
 
 // TestPartRange locks the GET/HEAD ?partNumber=N contract (docs/architecture.md

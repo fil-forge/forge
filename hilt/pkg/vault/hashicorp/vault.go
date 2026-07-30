@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	hiltvault "github.com/fil-forge/hilt/pkg/vault"
+	hiltvault "github.com/fil-forge/forge/hilt/pkg/vault"
 	vaultclient "github.com/hashicorp/vault-client-go"
 	"github.com/hashicorp/vault-client-go/schema"
 )

@@ -12,8 +12,8 @@ import (
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/ipni/go-libipni/maurl"
 
-	"github.com/fil-forge/piri/lib"
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/lib"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 // decodeProofChain base64-decodes a TOML-stored proof string into the

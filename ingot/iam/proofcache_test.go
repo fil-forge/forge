@@ -10,7 +10,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/stretchr/testify/require"
 
-	hiltiam "github.com/fil-forge/ingot/iam"
+	hiltiam "github.com/fil-forge/forge/ingot/iam"
 )
 
 // mintRetrieveChain builds the RFC chain bucket→tenant→access-key→agent for

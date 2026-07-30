@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	metricspostgres "github.com/fil-forge/sprue/pkg/store/metrics/postgres"
+	metricspostgres "github.com/fil-forge/forge/sprue/pkg/store/metrics/postgres"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/require"

@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/fil-forge/sprue/cmd/client/admin/provider"
+	"github.com/fil-forge/forge/sprue/cmd/client/admin/provider"
 	"github.com/spf13/cobra"
 )
 

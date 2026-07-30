@@ -9,8 +9,8 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/config"
-	piritestutil "github.com/fil-forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	piritestutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"
 )
 
 // staticConfig keeps BatchSize above anything Submit buffers so flush never

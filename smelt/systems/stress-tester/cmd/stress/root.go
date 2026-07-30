@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/fil-forge/smelt/systems/stress-tester/cmd/stress/retrieve"
-	"github.com/fil-forge/smelt/systems/stress-tester/cmd/stress/upload"
+	"github.com/fil-forge/forge/smelt/systems/stress-tester/cmd/stress/retrieve"
+	"github.com/fil-forge/forge/smelt/systems/stress-tester/cmd/stress/upload"
 )
 
 var (

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fil-forge/sprue/pkg/store"
+	"github.com/fil-forge/forge/sprue/pkg/store"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan"

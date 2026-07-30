@@ -3,7 +3,7 @@ package inmem
 import (
 	"context"
 
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/ucantone/did"
 )
 

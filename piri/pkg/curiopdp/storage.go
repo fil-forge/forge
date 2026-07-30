@@ -15,7 +15,7 @@ import (
 	"github.com/filecoin-project/curio/market/indexstore"
 	"github.com/filecoin-project/curio/tasks/pdpv0"
 
-	"github.com/fil-forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
 )
 
 // Compile-time proof that Piri's adapters satisfy Curio's pdpv0 storage seams.

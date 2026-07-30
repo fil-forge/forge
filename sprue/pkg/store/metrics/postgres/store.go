@@ -8,7 +8,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/fil-forge/sprue/pkg/store/metrics"
+	"github.com/fil-forge/forge/sprue/pkg/store/metrics"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"

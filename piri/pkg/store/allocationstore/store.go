@@ -10,26 +10,26 @@ import (
 	"github.com/ipfs/go-datastore"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/store/allocationstore/allocation"
-	"github.com/fil-forge/piri/pkg/store/genericstore"
-	"github.com/fil-forge/piri/pkg/store/objectstore"
-	"github.com/fil-forge/piri/pkg/store/objectstore/dsadapter"
-	"github.com/fil-forge/piri/pkg/store/objectstore/minio"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore/allocation"
+	"github.com/fil-forge/forge/piri/pkg/store/genericstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/dsadapter"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/minio"
 )
 
 // AllocationStore tracks the items that have been, or will soon be stored on
 // the storage node.
 type AllocationStore interface {
 	// Get retrieves an allocation for a blob (digest) in a space (DID). It
-	// returns [github.com/fil-forge/piri/pkg/store.ErrNotFound] if the allocation
+	// returns [github.com/fil-forge/forge/piri/pkg/store.ErrNotFound] if the allocation
 	// does not exist.
 	Get(context.Context, multihash.Multihash, did.DID) (allocation.Allocation, error)
 	// GetAny retrieves any allocation for a blob (digest), regardless of space.
-	// Returns [github.com/fil-forge/piri/pkg/store.ErrNotFound] if no allocation exists.
+	// Returns [github.com/fil-forge/forge/piri/pkg/store.ErrNotFound] if no allocation exists.
 	GetAny(context.Context, multihash.Multihash) (allocation.Allocation, error)
 	// GetAnyNonExpired retrieves any allocation for a blob that has not expired.
 	// The now parameter should be the current unix timestamp in seconds.
-	// Returns [github.com/fil-forge/piri/pkg/store.ErrNotFound] if no non-expired allocation exists.
+	// Returns [github.com/fil-forge/forge/piri/pkg/store.ErrNotFound] if no non-expired allocation exists.
 	GetAnyNonExpired(ctx context.Context, digest multihash.Multihash, now ucan.UnixTimestamp) (allocation.Allocation, error)
 	// Exists checks if any allocation exists for a blob (digest).
 	Exists(context.Context, multihash.Multihash) (bool, error)

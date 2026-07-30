@@ -12,7 +12,7 @@ import (
 
 	mh "github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 func testSpool(t *testing.T) *blockstore.Spool {

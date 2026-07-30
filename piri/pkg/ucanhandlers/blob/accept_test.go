@@ -15,9 +15,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/internal/testutil/pdpfake"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/invocationstore"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil/pdpfake"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/invocationstore"
 )
 
 // stubPublisher is a no-op publisher.Publisher used for unit tests.

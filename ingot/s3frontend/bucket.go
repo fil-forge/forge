@@ -13,10 +13,10 @@ import (
 	"github.com/ipfs/go-cid"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/bucketauthority"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/mst"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/bucketauthority"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 func (b *Backend) ListBuckets(ctx context.Context, input s3response.ListBucketsInput) (s3response.ListAllMyBucketsResult, error) {

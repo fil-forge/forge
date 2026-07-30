@@ -26,10 +26,10 @@ import (
 
 	"github.com/fil-forge/ucantone/ucan/receipt"
 
-	"github.com/fil-forge/piri/pkg/client/receipts"
-	"github.com/fil-forge/piri/pkg/store/consolidationstore"
-	"github.com/fil-forge/piri/pkg/store/consolidationstore/consolidation"
-	"github.com/fil-forge/piri/pkg/store/local/retrievaljournal"
+	"github.com/fil-forge/forge/piri/pkg/client/receipts"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore/consolidation"
+	"github.com/fil-forge/forge/piri/pkg/store/local/retrievaljournal"
 )
 
 const journalRotationPeriod = time.Hour * 12

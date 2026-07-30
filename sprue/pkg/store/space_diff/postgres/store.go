@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fil-forge/sprue/pkg/store"
-	spacediff "github.com/fil-forge/sprue/pkg/store/space_diff"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	spacediff "github.com/fil-forge/forge/sprue/pkg/store/space_diff"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 	"github.com/jackc/pgx/v5/pgconn"

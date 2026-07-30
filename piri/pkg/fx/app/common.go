@@ -3,15 +3,15 @@ package app
 import (
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/admin"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/config/dynamic"
-	"github.com/fil-forge/piri/pkg/fx/database"
-	"github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/fx/identity"
-	"github.com/fil-forge/piri/pkg/fx/store"
-	"github.com/fil-forge/piri/pkg/health"
-	"github.com/fil-forge/piri/pkg/service/proofs"
+	"github.com/fil-forge/forge/piri/pkg/admin"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/dynamic"
+	"github.com/fil-forge/forge/piri/pkg/fx/database"
+	"github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/fx/identity"
+	"github.com/fil-forge/forge/piri/pkg/fx/store"
+	"github.com/fil-forge/forge/piri/pkg/health"
+	"github.com/fil-forge/forge/piri/pkg/service/proofs"
 )
 
 func CommonModules(cfg app.AppConfig) fx.Option {

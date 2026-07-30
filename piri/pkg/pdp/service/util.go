@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"github.com/fil-forge/piri/pkg/pdp/proof"
+	"github.com/fil-forge/forge/piri/pkg/pdp/proof"
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/ipfs/go-cid"

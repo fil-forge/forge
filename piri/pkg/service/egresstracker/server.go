@@ -11,9 +11,9 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/fil-forge/go-ucanto/core/car"
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/local/retrievaljournal"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/local/retrievaljournal"
 )
 
 var _ echofx.RouteRegistrar = (*Server)(nil)

@@ -12,8 +12,8 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/forgeclient"
-	"github.com/fil-forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/forgeclient"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 
 // BlobLocation is where an accepted blob can be retrieved from, as resolved at

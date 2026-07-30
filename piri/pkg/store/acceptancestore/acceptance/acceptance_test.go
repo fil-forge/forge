@@ -9,7 +9,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/promise"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/store/acceptancestore/acceptance"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore/acceptance"
 )
 
 func TestRoundtrip(t *testing.T) {

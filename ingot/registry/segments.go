@@ -8,8 +8,8 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/logstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/logstore"
 )
 
 // Segment-level methods for *Postgres. These satisfy logstore.Meta;

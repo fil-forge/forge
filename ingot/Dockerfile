@@ -12,13 +12,23 @@
 #   dev         prod + a network/debug toolset and the `dlv` debugger, built
 #               from the debuggable binary; publishes as the :main-dev tag
 #
-# ingot is a standalone module and the build context is just this repo (the
-# parent go.work lives outside it), so the image build is hermetic on its own
-# go.mod. ENTRYPOINT is the bare binary: the compose `command:` supplies the
-# subcommand (e.g. serve --config ...), matching the smelt house style, and
-# lets the dev image be launched under dlv by overriding `command`.
+# BUILD CONTEXT IS THE REPO ROOT, not this directory:
 #
-# Build one target explicitly, e.g. `docker build --target dev -t ingot:dev .`.
+#     docker build -f ingot/Dockerfile --target prod .
+#
+# ingot's go.mod carries `replace` directives pointing at ../hilt and ../smelt,
+# so those sibling modules must exist in the context before `go mod download`
+# can resolve them. Only the three modules ingot actually needs are copied, so
+# a change to piri or sprue does not invalidate this image's layer cache.
+#
+# The build stays hermetic on go.mod: the root go.work is deliberately NOT
+# copied in, so the container build resolves exactly what a GOWORK=off build
+# resolves. Don't add it.
+#
+# ENTRYPOINT is the bare binary: the compose `command:` supplies the subcommand
+# (e.g. serve --config ...), matching the smelt house style, and lets the dev
+# image be launched under dlv by overriding `command`.
+#
 # To debug the dev image, override the command to exec under delve headless:
 #   dlv exec --headless --listen=:2345 --api-version=2 --accept-multiclient \
 #     /usr/bin/ingot -- serve --config /etc/ingot/config.yaml
@@ -28,10 +38,19 @@ FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
-COPY go.mod go.sum ./
+# Manifests first, for layer caching — including the replace targets, whose
+# go.mod files must be present for module resolution to succeed.
+COPY ingot/go.mod ingot/go.sum ./ingot/
+COPY hilt/go.mod hilt/go.sum ./hilt/
+COPY smelt/go.mod smelt/go.sum ./smelt/
+WORKDIR /src/ingot
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
-COPY . .
+WORKDIR /src
+COPY hilt/ ./hilt/
+COPY smelt/ ./smelt/
+COPY ingot/ ./ingot/
+WORKDIR /src/ingot
 
 # ---- production binary: stripped + static ----
 FROM build AS build-prod

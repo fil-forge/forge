@@ -34,7 +34,7 @@ cd "$TMP_DIR"
 
 # Clone repository
 echo "Cloning repository..."
-git clone https://github.com/fil-forge/piri.git
+git clone https://github.com/fil-forge/forge/piri.git
 cd piri
 
 # Checkout branch

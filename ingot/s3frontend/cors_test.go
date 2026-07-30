@@ -9,8 +9,8 @@ import (
 	"github.com/fil-forge/versitygw/auth"
 	"github.com/fil-forge/versitygw/s3err"
 
-	"github.com/fil-forge/ingot/inmem"
-	"github.com/fil-forge/ingot/internal/cors"
+	"github.com/fil-forge/forge/ingot/inmem"
+	"github.com/fil-forge/forge/ingot/internal/cors"
 )
 
 // GetBucketCors is what makes versitygw's CORS middlewares fire at all:

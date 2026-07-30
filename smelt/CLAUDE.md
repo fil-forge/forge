@@ -161,7 +161,7 @@ dlv connect localhost:2345
 # or VS Code "Connect to server" / GoLand "Go Remote"
 ```
 
-**IDE source mapping for sprue**: remote path `/go/src/sprue` maps to your local sprue checkout (e.g. `~/workspace/src/github.com/fil-forge/sprue`).
+**IDE source mapping for sprue**: remote path `/go/src/sprue` maps to your local sprue checkout (e.g. `~/workspace/src/github.com/fil-forge/forge/sprue`).
 
 To test a locally-built dev image instead of the published `:main-dev`:
 

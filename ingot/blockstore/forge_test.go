@@ -16,8 +16,8 @@ import (
 	"github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore/locator"
-	"github.com/fil-forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/blockstore/locator"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 
 // stubLocator returns one canned location for any digest, so retrieve gets

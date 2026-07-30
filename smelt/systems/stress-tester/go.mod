@@ -1,4 +1,4 @@
-module github.com/fil-forge/smelt/systems/stress-tester
+module github.com/fil-forge/forge/smelt/systems/stress-tester
 
 go 1.24.0
 

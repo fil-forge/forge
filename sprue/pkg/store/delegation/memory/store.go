@@ -6,8 +6,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/fil-forge/sprue/pkg/store"
-	dlgstore "github.com/fil-forge/sprue/pkg/store/delegation"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	dlgstore "github.com/fil-forge/forge/sprue/pkg/store/delegation"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	cid "github.com/ipfs/go-cid"

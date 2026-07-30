@@ -17,10 +17,10 @@ import (
 	"github.com/fil-forge/versitygw/s3response"
 	"github.com/ipfs/go-cid"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/bucketop"
-	"github.com/fil-forge/ingot/mst"
-	"github.com/fil-forge/ingot/registry"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/bucketop"
+	"github.com/fil-forge/forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // newUploadID returns a random 128-bit hex upload id.

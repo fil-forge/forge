@@ -28,11 +28,11 @@ import (
 	"github.com/fil-forge/versitygw/backend"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/bucketauthority"
-	"github.com/fil-forge/ingot/bucketop"
-	"github.com/fil-forge/ingot/registry"
-	"github.com/fil-forge/ingot/uploader"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/bucketauthority"
+	"github.com/fil-forge/forge/ingot/bucketop"
+	"github.com/fil-forge/forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/uploader"
 )
 
 // Backend implements versitygw's backend.Backend directly over the

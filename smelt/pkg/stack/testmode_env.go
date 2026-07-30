@@ -3,7 +3,7 @@ package stack
 import (
 	"fmt"
 
-	"github.com/fil-forge/smelt/pkg/manifest"
+	"github.com/fil-forge/forge/smelt/pkg/manifest"
 )
 
 // testModeEnv returns the SMELT_* environment variables pkg/stack sets when

@@ -10,7 +10,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store"
 )
 
 // /blob/release is performed by the upload service under a

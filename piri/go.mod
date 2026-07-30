@@ -1,4 +1,4 @@
-module github.com/fil-forge/piri
+module github.com/fil-forge/forge/piri
 
 go 1.26.0
 

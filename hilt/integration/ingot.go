@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fil-forge/hilt/pkg/client"
-	"github.com/fil-forge/hilt/pkg/sigv4"
+	"github.com/fil-forge/forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"

@@ -16,7 +16,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/fil-forge/piri/pkg/curiopdp/schema"
+	"github.com/fil-forge/forge/piri/pkg/curiopdp/schema"
 )
 
 // Shared Postgres container for harmonydb-backed tests, started lazily on

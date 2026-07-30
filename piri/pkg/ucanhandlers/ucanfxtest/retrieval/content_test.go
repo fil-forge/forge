@@ -19,8 +19,8 @@ import (
 	mh "github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/store/allocationstore/allocation"
-	contenthandler "github.com/fil-forge/piri/pkg/ucanhandlers/content"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore/allocation"
+	contenthandler "github.com/fil-forge/forge/piri/pkg/ucanhandlers/content"
 )
 
 // /space/content/retrieve is space-scoped: the invocation subject is

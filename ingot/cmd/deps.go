@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot"
+	"github.com/fil-forge/forge/ingot"
 )
 
 // loadAgentIdentity reads the agent's PEM-encoded ed25519 key and wraps it as an

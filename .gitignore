@@ -1,0 +1,8 @@
+# The workspace is a developer convenience only — `replace` directives in each
+# service's go.mod are the source of truth, so builds are correct with GOWORK=off
+# (which is what CI and the container builds use). Keeping the sum file out of
+# git avoids churn that would otherwise land on every dependency bump.
+go.work.sum
+
+# goreleaser output, per service
+*/dist/

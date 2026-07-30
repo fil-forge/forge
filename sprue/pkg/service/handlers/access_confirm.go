@@ -19,7 +19,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 
-	delegation_store "github.com/fil-forge/sprue/pkg/store/delegation"
+	delegation_store "github.com/fil-forge/forge/sprue/pkg/store/delegation"
 )
 
 func NewAccessConfirmHandler(id identity.Identity, delegationStore delegation_store.Store, logger *zap.Logger) server.Route {

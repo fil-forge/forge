@@ -93,7 +93,7 @@ Windows (including WSL2) is not a supported development host.
 Clone the repository and enter the directory:
 
 ```bash
-git clone https://github.com/fil-forge/smelt.git
+git clone https://github.com/fil-forge/forge/smelt.git
 cd smelt
 ```
 

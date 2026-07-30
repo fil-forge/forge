@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/fil-forge/ingot/internal/build"
+	"github.com/fil-forge/forge/ingot/internal/build"
 )
 
 func newVersionCmd() *cobra.Command {

@@ -7,7 +7,7 @@ import (
 
 	cbg "github.com/whyrusleeping/cbor-gen"
 
-	"github.com/fil-forge/piri/pkg/store/consolidationstore/consolidation"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore/consolidation"
 )
 
 const buildTag = "//go:build !codegen\n\n"

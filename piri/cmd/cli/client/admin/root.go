@@ -3,8 +3,8 @@ package admin
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/fil-forge/piri/cmd/cli/client/admin/config"
-	"github.com/fil-forge/piri/cmd/cli/client/admin/log"
+	"github.com/fil-forge/forge/piri/cmd/cli/client/admin/config"
+	"github.com/fil-forge/forge/piri/cmd/cli/client/admin/log"
 )
 
 var Cmd = &cobra.Command{

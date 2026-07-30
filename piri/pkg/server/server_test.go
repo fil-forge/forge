@@ -10,7 +10,7 @@ import (
 	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/build"
 )
 
 func TestVersionInfoHandler(t *testing.T) {

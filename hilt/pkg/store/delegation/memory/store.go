@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fil-forge/hilt/pkg/store"
-	dlgstore "github.com/fil-forge/hilt/pkg/store/delegation"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	dlgstore "github.com/fil-forge/forge/hilt/pkg/store/delegation"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"

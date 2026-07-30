@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/yugabyte/pgx/v5"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 func (p *PDPService) GetProofSetStatus(ctx context.Context, txHash common.Hash) (res *types.ProofSetStatus, retErr error) {

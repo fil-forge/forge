@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/fil-forge/piri/pkg/client"
+	"github.com/fil-forge/forge/piri/pkg/client"
 	"github.com/spf13/cobra"
 )
 

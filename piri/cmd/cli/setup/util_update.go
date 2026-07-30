@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/build"
 	"github.com/minio/selfupdate"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"

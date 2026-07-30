@@ -17,13 +17,13 @@ import (
 	"github.com/fil-forge/ucantone/server"
 	"github.com/fil-forge/ucantone/validator"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/access"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/blob"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/content"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/pdp"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/access"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/blob"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/content"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/pdp"
 )
 
 // Module composes the UCAN HTTP surface. It builds the two servers

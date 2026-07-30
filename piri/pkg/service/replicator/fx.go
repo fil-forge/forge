@@ -12,17 +12,17 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/lib/jobqueue"
-	"github.com/fil-forge/piri/lib/jobqueue/dialect"
-	"github.com/fil-forge/piri/lib/jobqueue/serializer"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
-	pdptypes "github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/service/publisher"
-	replicahandler "github.com/fil-forge/piri/pkg/service/storage/handlers/replica"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/delegationstore"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	"github.com/fil-forge/forge/piri/lib/jobqueue"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/dialect"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/serializer"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
+	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/service/publisher"
+	replicahandler "github.com/fil-forge/forge/piri/pkg/service/storage/handlers/replica"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/delegationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 var log = logging.Logger("replicator")

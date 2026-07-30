@@ -6,18 +6,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/fil-forge/piri/pkg/pdp/piece"
-	"github.com/fil-forge/piri/pkg/pdp/pipeline"
-	"github.com/fil-forge/piri/pkg/pdp/smartcontracts"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piece"
+	"github.com/fil-forge/forge/piri/pkg/pdp/pipeline"
+	"github.com/fil-forge/forge/piri/pkg/pdp/smartcontracts"
 	"github.com/filecoin-project/lotus/api"
 	"github.com/filecoin-project/lotus/api/client"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/curiopdp"
-	"github.com/fil-forge/piri/pkg/fx/pdp"
-	"github.com/fil-forge/piri/pkg/pdp/service"
-	"github.com/fil-forge/piri/pkg/wallet"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/curiopdp"
+	"github.com/fil-forge/forge/piri/pkg/fx/pdp"
+	"github.com/fil-forge/forge/piri/pkg/pdp/service"
+	"github.com/fil-forge/forge/piri/pkg/wallet"
 )
 
 var PDPModule = fx.Module("pdp",

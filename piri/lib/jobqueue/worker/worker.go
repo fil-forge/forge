@@ -26,10 +26,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fil-forge/piri/lib/jobqueue/logger"
-	"github.com/fil-forge/piri/lib/jobqueue/queue"
-	"github.com/fil-forge/piri/lib/jobqueue/serializer"
-	"github.com/fil-forge/piri/lib/jobqueue/traceutil"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/logger"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/queue"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/serializer"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/traceutil"
 )
 
 // JobFn is the job function to run.

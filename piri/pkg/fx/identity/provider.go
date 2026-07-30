@@ -6,7 +6,7 @@ import (
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/ucan"
 
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 var Module = fx.Module("identity",

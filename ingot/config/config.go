@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/multierr"
 
-	"github.com/fil-forge/ingot/internal/cors"
+	"github.com/fil-forge/forge/ingot/internal/cors"
 )
 
 // Config is ingot's own configuration.

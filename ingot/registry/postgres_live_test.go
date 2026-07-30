@@ -11,9 +11,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/migrations"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/migrations"
+	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
 )

@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 	"github.com/fil-forge/ucantone/multikey"
 )
 

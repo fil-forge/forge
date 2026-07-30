@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/fil-forge/ingot/fee/cose"
+	"github.com/fil-forge/forge/ingot/fee/cose"
 )
 
 // Example shows the envelope lifecycle: build a detached COSE_Encrypt, derive

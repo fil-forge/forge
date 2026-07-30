@@ -8,7 +8,7 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	mh "github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore/locator"
+	"github.com/fil-forge/forge/ingot/blockstore/locator"
 )
 
 // fakeLocStore is a minimal in-test LocationReader + InclusionReader (avoids

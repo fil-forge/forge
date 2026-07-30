@@ -1,4 +1,4 @@
-module github.com/fil-forge/hilt
+module github.com/fil-forge/forge/hilt
 
 go 1.26.4
 

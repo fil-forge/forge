@@ -5,12 +5,12 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/sprue/internal/testutil"
-	"github.com/fil-forge/sprue/pkg/store"
-	"github.com/fil-forge/sprue/pkg/store/customer"
-	customeraws "github.com/fil-forge/sprue/pkg/store/customer/aws"
-	customermemory "github.com/fil-forge/sprue/pkg/store/customer/memory"
-	customerpostgres "github.com/fil-forge/sprue/pkg/store/customer/postgres"
+	"github.com/fil-forge/forge/sprue/internal/testutil"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	"github.com/fil-forge/forge/sprue/pkg/store/customer"
+	customeraws "github.com/fil-forge/forge/sprue/pkg/store/customer/aws"
+	customermemory "github.com/fil-forge/forge/sprue/pkg/store/customer/memory"
+	customerpostgres "github.com/fil-forge/forge/sprue/pkg/store/customer/postgres"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )

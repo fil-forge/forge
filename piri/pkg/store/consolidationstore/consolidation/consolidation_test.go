@@ -8,7 +8,7 @@ import (
 	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/store/consolidationstore/consolidation"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore/consolidation"
 )
 
 func TestConsolidation(t *testing.T) {

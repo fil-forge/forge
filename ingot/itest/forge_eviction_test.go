@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"testing"
 
-	ingottest "github.com/fil-forge/ingot/testing"
+	ingottest "github.com/fil-forge/forge/ingot/testing"
 )
 
 // TestForgeReadAfterEviction proves the appliance read tier: after the local

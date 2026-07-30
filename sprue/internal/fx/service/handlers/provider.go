@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/fil-forge/sprue/pkg/service/handlers"
+	"github.com/fil-forge/forge/sprue/pkg/service/handlers"
 	"github.com/fil-forge/ucantone/ucan"
 	"go.uber.org/fx"
 )

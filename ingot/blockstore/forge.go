@@ -21,9 +21,9 @@ import (
 	mh "github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/blockstore/locator"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/internal/ucanexec"
+	"github.com/fil-forge/forge/ingot/blockstore/locator"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/internal/ucanexec"
 )
 
 // retrievalAuthTTL bounds the lifetime of per-space retrieval re-delegations

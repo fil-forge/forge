@@ -746,7 +746,7 @@ make fresh
 
 ### Where to Get Help
 
-- **File an issue**: [github.com/fil-forge/smelt/issues](https://github.com/fil-forge/smelt/issues)
+- **File an issue**: [github.com/fil-forge/forge/smelt/issues](https://github.com/fil-forge/forge/smelt/issues)
 - **Include in your issue**:
   - Output of `make status`
   - Relevant service logs (`docker compose logs <service>`)

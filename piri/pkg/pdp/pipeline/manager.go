@@ -8,7 +8,7 @@ import (
 	"github.com/filecoin-project/curio/harmony/harmonytask"
 	"github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/manager"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/manager"
 )
 
 // RootSubmitter buffers aggregate roots for on-chain submission, batching

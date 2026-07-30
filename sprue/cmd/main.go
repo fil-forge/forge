@@ -9,10 +9,10 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/sprue/cmd/client"
-	"github.com/fil-forge/sprue/cmd/identity"
-	"github.com/fil-forge/sprue/internal/config"
-	appfx "github.com/fil-forge/sprue/internal/fx"
+	"github.com/fil-forge/forge/sprue/cmd/client"
+	"github.com/fil-forge/forge/sprue/cmd/identity"
+	"github.com/fil-forge/forge/sprue/internal/config"
+	appfx "github.com/fil-forge/forge/sprue/internal/fx"
 )
 
 var cfgFile string

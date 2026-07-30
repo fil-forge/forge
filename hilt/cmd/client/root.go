@@ -3,9 +3,9 @@
 package client
 
 import (
-	"github.com/fil-forge/hilt/cmd/client/accesskey"
-	"github.com/fil-forge/hilt/cmd/client/admin"
-	"github.com/fil-forge/hilt/cmd/client/tenant"
+	"github.com/fil-forge/forge/hilt/cmd/client/accesskey"
+	"github.com/fil-forge/forge/hilt/cmd/client/admin"
+	"github.com/fil-forge/forge/hilt/cmd/client/tenant"
 	"github.com/spf13/cobra"
 )
 

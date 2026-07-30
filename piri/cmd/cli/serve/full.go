@@ -15,14 +15,14 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/fil-forge/piri/cmd/cli/setup"
-	"github.com/fil-forge/piri/cmd/cliutil"
-	"github.com/fil-forge/piri/pkg/config"
-	appconfig "github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/curiopdp"
-	"github.com/fil-forge/piri/pkg/fx/app"
-	"github.com/fil-forge/piri/pkg/presets"
-	"github.com/fil-forge/piri/pkg/telemetry"
+	"github.com/fil-forge/forge/piri/cmd/cli/setup"
+	"github.com/fil-forge/forge/piri/cmd/cliutil"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	appconfig "github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/curiopdp"
+	"github.com/fil-forge/forge/piri/pkg/fx/app"
+	"github.com/fil-forge/forge/piri/pkg/presets"
+	"github.com/fil-forge/forge/piri/pkg/telemetry"
 )
 
 var (
@@ -434,7 +434,7 @@ func initTelemetry(ctx context.Context, instanceID, network string, dataDir stri
 
 	if err := telemetry.StartHostMetrics(
 		ctx,
-		t.Metrics.Meter("github.com/fil-forge/piri/cli/serve"),
+		t.Metrics.Meter("github.com/fil-forge/forge/piri/cli/serve"),
 		dataDir,
 	); err != nil {
 		return fmt.Errorf("setting up telemetry host metrics: %w", err)

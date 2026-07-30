@@ -15,9 +15,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/piri/lib/jobqueue/dialect"
-	internalsql "github.com/fil-forge/piri/lib/jobqueue/internal/sql"
-	"github.com/fil-forge/piri/lib/jobqueue/logger"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/dialect"
+	internalsql "github.com/fil-forge/forge/piri/lib/jobqueue/internal/sql"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/logger"
 )
 
 //go:embed schema.sql

@@ -12,8 +12,8 @@ import (
 	"github.com/filecoin-project/curio/harmony/taskhelp"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/pdp/promise"
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/promise"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 const CommPTaskName = "PDPCommP"

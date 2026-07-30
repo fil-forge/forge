@@ -3,8 +3,8 @@ package pdp
 import (
 	"go.uber.org/fx"
 
-	pdptypes "github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
+	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
 )
 
 // Module wires the pdp/info capability into the body-CAR RPC server,

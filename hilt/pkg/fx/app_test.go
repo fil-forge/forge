@@ -3,8 +3,8 @@ package fx_test
 import (
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/config"
-	appfx "github.com/fil-forge/hilt/pkg/fx"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 )

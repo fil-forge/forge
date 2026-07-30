@@ -3,7 +3,7 @@ package logstore
 import (
 	"context"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // State describes the lifecycle stage of a segment. A segment is open

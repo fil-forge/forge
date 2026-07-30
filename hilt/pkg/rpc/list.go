@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	bucketsvc "github.com/fil-forge/hilt/pkg/rpc/service/bucket"
+	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"

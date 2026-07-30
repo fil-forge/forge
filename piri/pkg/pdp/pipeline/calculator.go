@@ -7,7 +7,7 @@ import (
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
 )
 
 // Entry is the pipeline's ingress: it implements commp.Calculator so

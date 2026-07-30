@@ -15,11 +15,11 @@ import (
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/receipt"
 
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/genericstore"
-	"github.com/fil-forge/piri/pkg/store/objectstore"
-	"github.com/fil-forge/piri/pkg/store/objectstore/dsadapter"
-	"github.com/fil-forge/piri/pkg/store/objectstore/minio"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/genericstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/dsadapter"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/minio"
 )
 
 // ReceiptStore stores UCAN invocation receipts.

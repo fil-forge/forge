@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"testing"
 
-	ingottest "github.com/fil-forge/ingot/testing"
+	ingottest "github.com/fil-forge/forge/ingot/testing"
 )
 
 // TestForgeNativeProvision proves the hilt onboarding path end-to-end on a

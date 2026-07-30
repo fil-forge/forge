@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
-	"github.com/fil-forge/piri/pkg/build"
-	"github.com/fil-forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/config"
 	"github.com/spf13/cobra"
 )
 

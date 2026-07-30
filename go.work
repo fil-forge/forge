@@ -1,0 +1,10 @@
+go 1.26.5
+
+use (
+	./hilt
+	./ingot
+	./piri
+	./smelt
+	./smelt/systems/stress-tester
+	./sprue
+)

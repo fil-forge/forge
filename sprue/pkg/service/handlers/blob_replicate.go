@@ -28,14 +28,14 @@ package handlers
 // 	"github.com/storacha/go-ucanto/server"
 // 	"github.com/storacha/go-ucanto/ucan"
 // 	"github.com/storacha/go-ucanto/validator"
-// 	"github.com/fil-forge/sprue/internal/config"
+// 	"github.com/fil-forge/forge/sprue/internal/config"
 //
-// 	"github.com/fil-forge/sprue/pkg/internal/ipldutil"
-// 	"github.com/fil-forge/sprue/pkg/piriclient"
-// 	"github.com/fil-forge/sprue/pkg/routing"
-// 	"github.com/fil-forge/sprue/pkg/store/agent"
-// 	blobregistry "github.com/fil-forge/sprue/pkg/store/blob_registry"
-// 	"github.com/fil-forge/sprue/pkg/store/replica"
+// 	"github.com/fil-forge/forge/sprue/pkg/internal/ipldutil"
+// 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
+// 	"github.com/fil-forge/forge/sprue/pkg/routing"
+// 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
+// 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
+// 	"github.com/fil-forge/forge/sprue/pkg/store/replica"
 // )
 
 // const (

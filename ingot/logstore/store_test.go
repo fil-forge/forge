@@ -16,7 +16,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // fakeMeta is an in-memory Meta implementation for tests. It keeps

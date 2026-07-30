@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	adminprovider "github.com/fil-forge/hilt/pkg/commands/admin/provider"
-	"github.com/fil-forge/hilt/pkg/store"
-	providerstore "github.com/fil-forge/hilt/pkg/store/provider"
+	adminprovider "github.com/fil-forge/forge/hilt/pkg/commands/admin/provider"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	providerstore "github.com/fil-forge/forge/hilt/pkg/store/provider"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"

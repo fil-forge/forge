@@ -1,4 +1,4 @@
-module github.com/fil-forge/smelt
+module github.com/fil-forge/forge/smelt
 
 go 1.25.7
 

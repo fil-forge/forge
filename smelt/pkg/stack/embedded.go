@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/fil-forge/smelt"
+	"github.com/fil-forge/forge/smelt"
 )
 
 // embeddedSnapshotsRoot is the path within smelt.EmbeddedFiles under

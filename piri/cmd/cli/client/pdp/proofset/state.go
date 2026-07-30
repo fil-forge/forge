@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/pdp/httpapi/client"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/pdp/httpapi/client"
 )
 
 var (

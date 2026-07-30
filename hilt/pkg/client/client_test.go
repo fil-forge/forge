@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/hilt/pkg/client"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"

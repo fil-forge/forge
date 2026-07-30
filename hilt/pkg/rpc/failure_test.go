@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/rpc/service/auth"
-	bucketsvc "github.com/fil-forge/hilt/pkg/rpc/service/bucket"
+	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
+	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/stretchr/testify/require"
 )

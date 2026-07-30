@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fil-forge/hilt/pkg/client"
-	"github.com/fil-forge/hilt/pkg/client/management"
-	"github.com/fil-forge/hilt/pkg/config"
-	appfx "github.com/fil-forge/hilt/pkg/fx"
+	"github.com/fil-forge/forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/hilt/pkg/client/management"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

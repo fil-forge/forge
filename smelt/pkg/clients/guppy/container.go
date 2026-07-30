@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"golang.org/x/sync/errgroup"
 )
 

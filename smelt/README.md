@@ -16,7 +16,7 @@ Smelt is a Docker Compose environment that runs every service in the Forge distr
 ### Start the Network
 
 ```bash
-git clone https://github.com/fil-forge/smelt.git
+git clone https://github.com/fil-forge/forge/smelt.git
 cd smelt
 make up
 ```

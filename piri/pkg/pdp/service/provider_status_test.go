@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/pdp/smartcontracts"
+	"github.com/fil-forge/forge/piri/pkg/pdp/smartcontracts"
 )
 
 func TestRequireProviderRegistered(t *testing.T) {

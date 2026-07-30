@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/hilt/pkg/store"
-	"github.com/fil-forge/hilt/pkg/store/bucket"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	"github.com/fil-forge/forge/hilt/pkg/store/bucket"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"

@@ -13,9 +13,9 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/sprue/internal/config"
-	"github.com/fil-forge/sprue/pkg/build"
-	"github.com/fil-forge/sprue/pkg/service"
+	"github.com/fil-forge/forge/sprue/internal/config"
+	"github.com/fil-forge/forge/sprue/pkg/build"
+	"github.com/fil-forge/forge/sprue/pkg/service"
 )
 
 // ServerModule provides the HTTP server with lifecycle management.
@@ -151,7 +151,7 @@ func serverInfoHandler(id identity.Identity) echo.HandlerFunc {
 		ID: id.DID().String(),
 		Build: buildInfo{
 			Version: build.Version,
-			Repo:    "https://github.com/fil-forge/sprue",
+			Repo:    "https://github.com/fil-forge/forge/sprue",
 		},
 	}
 	return func(c echo.Context) error {

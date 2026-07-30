@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 	"github.com/fil-forge/ucantone/did/resolver"
 	"github.com/stretchr/testify/require"
 )

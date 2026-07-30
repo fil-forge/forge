@@ -28,21 +28,21 @@ import (
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 
-	"github.com/fil-forge/piri/pkg/store/local/keystore"
-	"github.com/fil-forge/piri/pkg/wallet"
+	"github.com/fil-forge/forge/piri/pkg/store/local/keystore"
+	"github.com/fil-forge/forge/piri/pkg/wallet"
 
 	delgclient "github.com/fil-forge/delegator/client"
 
-	"github.com/fil-forge/piri/pkg/config"
-	appcfg "github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/curiopdp"
-	"github.com/fil-forge/piri/pkg/fx/app"
-	"github.com/fil-forge/piri/pkg/fx/root"
-	"github.com/fil-forge/piri/pkg/health"
-	"github.com/fil-forge/piri/pkg/pdp/service"
-	"github.com/fil-forge/piri/pkg/presets"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	appcfg "github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/curiopdp"
+	"github.com/fil-forge/forge/piri/pkg/fx/app"
+	"github.com/fil-forge/forge/piri/pkg/fx/root"
+	"github.com/fil-forge/forge/piri/pkg/health"
+	"github.com/fil-forge/forge/piri/pkg/pdp/service"
+	"github.com/fil-forge/forge/piri/pkg/presets"
 )
 
 var log = logging.Logger("cmd/init")

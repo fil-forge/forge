@@ -11,7 +11,7 @@ import (
 	block "github.com/ipfs/go-block-format"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // recordingFlush counts flushes per bucket so tests can assert each

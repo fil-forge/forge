@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/fil-forge/sprue/pkg/mailer"
+	"github.com/fil-forge/forge/sprue/pkg/mailer"
 )
 
 const (

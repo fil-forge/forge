@@ -13,9 +13,9 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/spf13/cobra"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/store/local/keystore"
-	"github.com/fil-forge/piri/pkg/wallet"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/store/local/keystore"
+	"github.com/fil-forge/forge/piri/pkg/wallet"
 )
 
 var log = logging.Logger("cli/wallet")

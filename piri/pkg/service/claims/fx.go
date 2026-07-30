@@ -3,7 +3,7 @@ package claims
 import (
 	"go.uber.org/fx"
 
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
 )
 
 var Module = fx.Module("claims",

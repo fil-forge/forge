@@ -23,9 +23,9 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/fil-forge/piri/pkg/pdp/smartcontracts"
-	"github.com/fil-forge/piri/pkg/pdp/tasks"
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/smartcontracts"
+	"github.com/fil-forge/forge/piri/pkg/pdp/tasks"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 // TODO we need to define non-retryable errors for the add root method, like lack of auth, and lack of dataset else this retries ~50 times

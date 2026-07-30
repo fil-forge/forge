@@ -15,7 +15,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	"github.com/fil-forge/piri/pkg/service/proofs"
+	"github.com/fil-forge/forge/piri/pkg/service/proofs"
 )
 
 // proofServiceSigner wraps a remote signing-service client and obtains an

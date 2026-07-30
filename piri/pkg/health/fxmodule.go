@@ -3,7 +3,7 @@ package health
 import (
 	"go.uber.org/fx"
 
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
 )
 
 // CheckerParams defines the parameters for NewChecker with optional ServerMode

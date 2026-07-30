@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fil-forge/hilt/pkg/api"
-	"github.com/fil-forge/hilt/pkg/build"
-	"github.com/fil-forge/hilt/pkg/config"
-	"github.com/fil-forge/hilt/pkg/echo/middleware"
+	"github.com/fil-forge/forge/hilt/pkg/api"
+	"github.com/fil-forge/forge/hilt/pkg/build"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/echo/middleware"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/server"
 	"github.com/labstack/echo/v4"
@@ -120,7 +120,7 @@ func serverInfoHandler(id identity.Identity) echo.HandlerFunc {
 		ID: id.DID().String(),
 		Build: buildInfo{
 			Version: build.Version,
-			Repo:    "https://github.com/fil-forge/hilt",
+			Repo:    "https://github.com/fil-forge/forge/hilt",
 		},
 	}
 	return func(c echo.Context) error {

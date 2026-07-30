@@ -5,9 +5,9 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	fxapp "github.com/fil-forge/piri/pkg/fx/app"
-	"github.com/fil-forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	fxapp "github.com/fil-forge/forge/piri/pkg/fx/app"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil"
 	"github.com/stretchr/testify/require"
 )
 

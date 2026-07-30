@@ -6,9 +6,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/build"
-	"github.com/fil-forge/hilt/pkg/config"
-	appfx "github.com/fil-forge/hilt/pkg/fx"
+	"github.com/fil-forge/forge/hilt/pkg/build"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -44,7 +44,7 @@ func TestServerInfoRoute(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &info))
 		require.Equal(t, id.DID().String(), info.ID)
 		require.Equal(t, build.Version, info.Build.Version)
-		require.Equal(t, "https://github.com/fil-forge/hilt", info.Build.Repo)
+		require.Equal(t, "https://github.com/fil-forge/forge/hilt", info.Build.Repo)
 	})
 
 	t.Run("returns a plain-text banner by default", func(t *testing.T) {
@@ -56,7 +56,7 @@ func TestServerInfoRoute(t *testing.T) {
 		require.Contains(t, rec.Header().Get("Content-Type"), "text/plain")
 		body := rec.Body.String()
 		require.Contains(t, body, "hilt "+build.Version)
-		require.Contains(t, body, "https://github.com/fil-forge/hilt")
+		require.Contains(t, body, "https://github.com/fil-forge/forge/hilt")
 		require.Contains(t, body, id.DID().String())
 	})
 }

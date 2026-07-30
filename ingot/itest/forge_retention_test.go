@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	ingottest "github.com/fil-forge/ingot/testing"
-	"github.com/fil-forge/smelt/pkg/stack"
+	ingottest "github.com/fil-forge/forge/ingot/testing"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 )
 
 // TestForgeReadAfterCatalogRetention proves catalog retention behaves as a

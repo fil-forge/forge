@@ -8,8 +8,8 @@ import (
 	"io"
 	"iter"
 
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/objectstore"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore"
 )
 
 // Codec defines encoding/decoding for a value type.

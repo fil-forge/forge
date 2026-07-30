@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/hilt/pkg/client"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	customercmds "github.com/fil-forge/libforge/commands/customer"
 	providercmds "github.com/fil-forge/libforge/commands/provider"

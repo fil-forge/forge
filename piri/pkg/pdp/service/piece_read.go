@@ -6,8 +6,8 @@ import (
 
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store"
 )
 
 func (p *PDPService) Read(ctx context.Context, data multihash.Multihash, options ...types.ReadPieceOption) (res *types.PieceReader, retErr error) {

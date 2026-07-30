@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/fil-forge/ingot/tokenstore"
+	"github.com/fil-forge/forge/ingot/tokenstore"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	contentcmds "github.com/fil-forge/libforge/commands/content"
 	indexcmds "github.com/fil-forge/libforge/commands/index"

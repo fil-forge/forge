@@ -18,8 +18,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
 
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
-	"github.com/fil-forge/ingot/iam"
+	hiltclient "github.com/fil-forge/forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/ingot/iam"
 )
 
 // fakeAuthorizer records the request it authorized and returns canned

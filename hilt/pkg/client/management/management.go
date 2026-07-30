@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/fil-forge/hilt/pkg/api"
+	"github.com/fil-forge/forge/hilt/pkg/api"
 	"go.uber.org/zap"
 )
 

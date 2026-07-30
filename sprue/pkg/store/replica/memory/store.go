@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fil-forge/libforge/bytemap"
-	"github.com/fil-forge/sprue/pkg/store/replica"
+	"github.com/fil-forge/forge/sprue/pkg/store/replica"
 	"github.com/fil-forge/ucantone/did"
 	cid "github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"

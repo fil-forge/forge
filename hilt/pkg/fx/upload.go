@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/fil-forge/hilt/pkg/client"
-	"github.com/fil-forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/hilt/pkg/config"
 	"github.com/fil-forge/libforge/identity"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"

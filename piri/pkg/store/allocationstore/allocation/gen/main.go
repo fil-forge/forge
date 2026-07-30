@@ -8,7 +8,7 @@ import (
 	jsg "github.com/alanshaw/dag-json-gen"
 	cbg "github.com/whyrusleeping/cbor-gen"
 
-	"github.com/fil-forge/piri/pkg/store/allocationstore/allocation"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore/allocation"
 )
 
 const buildTag = "//go:build !codegen\n\n"
