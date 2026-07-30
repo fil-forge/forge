@@ -1,19 +1,17 @@
 name: CI
 
-# Two tiers over one commit:
+# Two tiers, mirroring the old per-repo split but now over one commit:
 #
-#   unit   per-module, path-filtered, GOWORK=off — each service is an
+#   unit   per-module, path-filtered, GOWORK=off — each service is still an
 #          independent module and is tested as one, in seconds.
-#   stack  ONE full-stack run per PR: smelt's e2e smoke suite, then the S3
-#          gateway system suite (smelt/tests/s3), which boots the Forge stack
-#          with the working tree's ingot binary mounted over the published
-#          image. Sequential on one job: the suites sweep smeltery-*
-#          containers, so two stacks must never share a Docker host.
+#   stack  ONE full-stack run per PR, at the commit under test, with every
+#          in-repo service built from the working tree and mounted over the
+#          published images.
 #
-# The stack tier is the whole point of the monorepo: the services under test
-# are this commit, not a floating :main baseline. (Sibling services currently
-# run their published images; building every sibling from the working tree is
-# the ci/stack branch's workspace-binaries upgrade.)
+# The stack tier is the whole point of the monorepo. It resolves no binary for
+# an in-repo service from a registry image, so there is no floating `:main`
+# baseline to go stale and no lockfile to promote — "the stack" is just this
+# commit.
 
 on:
   pull_request:
@@ -106,44 +104,49 @@ jobs:
     name: stack
     needs: [changes, unit]
     if: needs.changes.outputs.any == 'true'
-    # Pinned rather than -latest so the Docker version doesn't drift from
-    # under us. The runner's preinstalled Docker is well past smelt's floor.
+    # Pinned rather than -latest so the Docker version doesn't drift from under
+    # us. The runner's preinstalled Docker is 28.x, well past smelt's 25+ floor.
     runs-on: ubuntu-24.04
     timeout-minutes: 50
-    defaults:
-      run:
-        working-directory: smelt
-    env:
-      GOWORK: off
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version-file: smelt/go.mod
+          go-version-file: go.work
           cache-dependency-path: |
-            smelt/go.sum
+            piri/go.sum
+            hilt/go.sum
+            sprue/go.sum
             ingot/go.sum
+            smelt/go.sum
 
       - name: Docker info
         run: |
           docker version
           docker compose version
 
-      - name: Stack e2e smoke suite
-        # -parallel 1: each e2e subtest boots a FULL stack; two booting at once
-        # overwhelms the 2-vCPU runner (runc "procReady not received"). One
-        # stack per Docker host, always.
-        run: go test -tags e2e -v -timeout 20m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
+      # NOTE: GOWORK is deliberately NOT off here. The root go.work is what
+      # tells smelt's pkg/workspace which services to build from source; in the
+      # monorepo it lists all of them, so Detect() returns every in-repo service
+      # and each is compiled from this commit and bind-mounted over the
+      # published image. No *_IMAGE override is set for any in-repo service.
+      - name: Full stack e2e (working-tree binaries)
+        working-directory: smelt
+        env:
+          SMELT_WORKSPACE: '1'
+        run: go test -tags e2e -v -timeout 30m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
 
-      # Boots the Forge stack with the working tree's ingot compiled and
-      # bind-mounted over the published image (the suite builds it itself —
-      # see localIngotBinary in tests/s3/stack_test.go).
+      # Also without GOWORK=off, and for the same reason: the S3 gateway system
+      # suite (smelt/tests/s3) detects the workspace and builds every in-repo
+      # service from the working tree rather than mounting only ingot. The
+      # suites run sequentially in this one job: each sweeps smeltery-*
+      # containers, so two stacks must never share a Docker host.
       - name: S3 gateway system suite
+        working-directory: smelt
         run: go test -tags itest -v -timeout 25m ./tests/s3/...
 
       - name: Dump container state on failure
         if: failure()
-        working-directory: .
         run: |
           mkdir -p /tmp/container-logs
           {

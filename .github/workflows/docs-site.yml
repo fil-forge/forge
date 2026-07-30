@@ -1,0 +1,40 @@
+name: Docs Site
+
+# piri's operator documentation. Keyed on piri's prefixed release tags rather
+# than any release in the repo — a hilt or ingot release must not redeploy
+# piri's docs.
+
+on:
+  push:
+    tags: ['piri/v*']
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install MkDocs + theme
+        run: pip install mkdocs mkdocs-material
+
+      - name: Build docs (strict)
+        run: mkdocs build --strict -f piri/docs/mkdocs.yml
+
+      - name: Deploy to GitHub Pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mkdocs gh-deploy --force -f piri/docs/mkdocs.yml

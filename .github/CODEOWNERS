@@ -1,0 +1,6 @@
+# Carried over from piri, which was the only repo with a CODEOWNERS file.
+# Broadened to the whole monorepo so review routing survives consolidation.
+#
+# Per-service owners can be added below as the team grows; a later, more
+# specific rule wins over an earlier one in CODEOWNERS.
+* @frrist @alanshaw
