@@ -1,0 +1,66 @@
+# IPNI System - InterPlanetary Network Indexer
+#
+# Content discovery indexer using storetheindex.
+# Provides content routing for the Forge network.
+#
+# Note: The storetheindex image is distroless with debug variant (has busybox shell).
+
+services:
+  # IPNI Init - One-time initialization
+  # Uses the same distroless debug image with busybox shell
+  # Runs as root to initialize the data directory, then chowns to nonroot (65532)
+  ipni-init:
+    image: ${IPNI_IMAGE:-ghcr.io/fil-forge/storetheindex:latest}
+    user: "0:0"
+    entrypoint: ["/busybox/sh", "-c"]
+    command:
+      - |
+        if [ -f /data/config ]; then
+          echo "IPNI config exists, skipping init"
+        else
+          echo "Initializing IPNI..."
+          /usr/local/bin/storetheindex init
+          chown -R 65532:65532 /data
+        fi
+    environment:
+      - STORETHEINDEX_PATH=/data
+    volumes:
+      - ipni-data:/data
+    restart: "no"
+    networks:
+      - forge-network
+
+  # IPNI (storetheindex) - Content discovery indexer
+  ipni:
+    image: ${IPNI_IMAGE:-ghcr.io/fil-forge/storetheindex:latest}
+    depends_on:
+      ipni-init:
+        condition: service_completed_successfully
+    ports:
+      - "${SMELT_IPNI_FINDER_PORT:-15090:3000}"  # Finder (queries)
+      # Note: 3001 (Ingest HTTP) not exposed to host - accessed via internal network
+      - "${SMELT_IPNI_ADMIN_PORT:-15091:3002}"   # Admin
+      - "${SMELT_IPNI_P2P_PORT:-15092:3003}"     # P2P (libp2p advertisement sync)
+    volumes:
+      - ipni-data:/data
+    entrypoint: ["/usr/local/bin/storetheindex", "daemon"]
+    environment:
+      - STORETHEINDEX_PATH=/data
+      # OTEL telemetry (enabled when using 'make up-telemetry')
+      - OTEL_TRACES_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_METRICS_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_ENDPOINT:-}
+      - OTEL_SERVICE_NAME=ipni
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/storetheindex", "admin", "status"]
+      start_interval: 1s
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - forge-network
+
+volumes:
+  ipni-data:

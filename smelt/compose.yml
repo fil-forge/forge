@@ -1,0 +1,40 @@
+# Forge Compose - Local Development Environment
+#
+# This is the root compose file that includes all system components.
+# Run with: docker compose up -d
+#
+# Individual systems can be run standalone from their directories.
+# Example: cd systems/blockchain && docker compose up -d
+#
+# Note: The forge-network must be created before starting.
+# Run `make init` or `./scripts/init.sh` first.
+
+# Pin project name so docker volume names (e.g. `smelt_piri-0-data`) are
+# stable across checkouts. Without this, compose derives the project name
+# from the current directory's basename — which breaks snapshot portability
+# for teammates who clone into differently-named dirs.
+name: smelt
+
+include:
+  - path: systems/blockchain/compose.yml
+  - path: systems/common/compose.yml
+  - path: systems/signing-service/compose.yml
+  - path: systems/delegator/compose.yml
+  - path: systems/indexing/compose.yml
+  - path: generated/compose/piri.yml
+  - path: systems/upload/compose.yml
+  - path: systems/guppy/compose.yml
+  - path: systems/plc/compose.yml
+  - path: systems/hilt/compose.yml
+  - path: systems/ingot/compose.yml
+
+networks:
+  forge-network:
+    # `make up` uses the shared external network (created by
+    # `make init`) so that `cd systems/X && docker compose up` can
+    # drop into the same network for standalone per-system runs.
+    # pkg/stack's SDK test path sets SMELT_NETWORK_EXTERNAL=false so
+    # each test stack gets its own project-scoped network — otherwise
+    # parallel stacks all collide on the one shared bridge (duplicate
+    # service DNS names across projects).
+    external: ${SMELT_NETWORK_EXTERNAL:-true}

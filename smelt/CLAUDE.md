@@ -1,0 +1,521 @@
+# Smelt - Local Development Environment for Forge
+
+This document provides context for AI-assisted development with Claude Code. It describes the project structure, key concepts, and common operations needed to work effectively with this codebase.
+
+## Project Overview
+
+Smelt orchestrates a complete Forge network on a single machine using Docker Compose. The environment includes 10+ services: blockchain, storage nodes, indexing, upload coordination, and a CLI client. Its purpose is straightforward: let developers test changes locally without deploying to production or coordinating with others.
+
+The name comes from metallurgy (extracting metal from ore), not ichthyology (a small fish). The metaphor is apt; the reality is Docker containers.
+
+## Key Concepts
+
+Understanding these concepts will save considerable debugging time.
+
+### Forge
+
+A decentralized storage network where data is stored across multiple providers with cryptographic verification. Content is addressed by CID (Content Identifier), and storage providers prove they actually hold the data they claim to hold.
+
+### UCAN (User Controlled Authorization Networks)
+
+Capability-based authorization using signed tokens. Instead of asking a server "may I do this?", a UCAN proves "I have been granted permission to do this." Key terminology:
+
+- **Invocation**: A signed request to perform an action
+- **Delegation**: Granting capabilities to another principal
+- **Receipt**: Proof that an invocation was executed
+- **Capability**: A specific permission (e.g., `space/blob/add`, `blob/allocate`)
+
+### DID (Decentralized Identifiers)
+
+Service identities follow the pattern `did:web:<service-name>` for human-readable names, mapped to `did:key:z6Mk...` cryptographic identifiers. Each service has its own keypair in `generated/keys/`.
+
+### PDP (Provable Data Possession)
+
+Blockchain-verified storage proofs. Piri (the storage node) periodically proves to on-chain contracts that it still holds stored data. The signing-service handles blockchain transaction signing.
+
+## Directory Structure
+
+```
+smelt/
+├── .env                     # Service image defaults (configurable)
+├── smelt.yml                # Piri node manifest (count + per-node storage)
+├── compose.yml              # Root compose file - includes all systems
+├── Makefile                 # Primary developer interface
+├── cmd/smelt/               # Go CLI: `smelt generate` reads smelt.yml
+├── pkg/
+│   ├── manifest/            # smelt.yml schema and resolution
+│   ├── generate/            # Compose + key generation from manifest
+│   ├── snapshot/            # Save/load/list/rm for stack state checkpoints
+│   └── stack/               # Go test stack API (testcontainers-go)
+├── scripts/
+│   └── init.sh             # Environment init (proofs + docker network)
+├── generated/               # Generated at runtime (gitignored)
+│   ├── keys/               # Ed25519 (.pem) and EVM (.hex) keys
+│   │   ├── piri-0.pem      # First piri node identity
+│   │   ├── piri-0-wallet.hex  # First piri EVM wallet (from Anvil account)
+│   │   ├── indexer.pem     # Indexer identity
+│   │   ├── delegator.pem   # Delegation service identity
+│   │   ├── upload.pem      # Upload service identity
+│   │   └── payer-key.hex   # Blockchain transaction signing
+│   ├── compose/            # Generated piri.yml (from `make generate`)
+│   ├── proofs/             # UCAN delegation proofs
+│   ├── snapshots/          # Saved stack-state checkpoints (snapshot save/load)
+│   ├── snapshot-scratch/   # Working chain state + session manifest when loaded
+│   └── generate-proofs.sh  # Proof generation (shell; TODO: migrate to Go)
+├── systems/                 # Service modules (each self-contained)
+│   ├── blockchain/         # Local EVM (Anvil) with PDP contracts
+│   ├── common/             # Shared infrastructure (DynamoDB Local, Redis)
+│   ├── signing-service/    # PDP blockchain signing
+│   ├── delegator/          # UCAN delegation issuance
+│   ├── indexing/           # Content discovery
+│   │   ├── ipni/          # InterPlanetary Network Indexer
+│   │   └── indexer/       # Content claims cache
+│   ├── piri/              # Storage node template (generator reads config from here)
+│   ├── upload/            # Upload orchestration (mock w3infra)
+│   ├── hilt/              # Tenant management (Fil One Tenant API + UCAN RPC)
+│   ├── plc/               # did:plc directory (reference impl; hilt publishes tenant DIDs here)
+│   ├── ingot/             # S3 facade (built from sibling ../ingot checkout)
+│   ├── guppy/             # CLI client
+│   ├── ingot/             # S3 gateway over Forge (+ its own postgres)
+│   ├── telemetry/         # Observability stack (present but not wired into Makefile)
+│   └── stress-tester/     # Load test runner (present but not wired into Makefile)
+└── docs/
+    ├── GETTING_STARTED.md  # First-time setup walkthrough
+    ├── ARCHITECTURE.md     # Service interaction diagrams and data flow
+    ├── MULTI_PIRI.md       # Multi-piri design and manifest reference
+    ├── SNAPSHOTS.md        # Snapshot save/load (skip slow cold-boot)
+    ├── TROUBLESHOOTING.md  # Common issues and diagnostics
+    └── EXTENDING.md        # Adding services and customizations
+```
+
+Each system directory contains:
+- `compose.yml` - Docker Compose configuration
+- `config/` - Service-specific configuration files
+- `entrypoint.sh` - Container initialization (where applicable)
+- `README.md` - System-specific documentation
+
+## Common Tasks
+
+### Configuring Piri Nodes
+
+Piri topology is declared in `smelt.yml` at the repo root. Edit this file to add, remove, or reconfigure nodes:
+
+```yaml
+version: 1
+piri:
+  nodes:
+    - storage:
+        db: sqlite       # or 'postgres'
+        blob: filesystem # or 's3'
+    # Add more nodes for multi-provider scenarios (up to 9 total)
+```
+
+Running `make generate` (or implicitly `make up`) regenerates `generated/compose/piri.yml` and any new keys. The Makefile has a file-target rule that reruns the generator whenever `smelt.yml` or any file under `cmd/smelt/`, `pkg/generate/`, or `pkg/manifest/` changes, so compose-invoking targets transparently stay in sync on fresh checkouts and post-`nuke` states.
+
+See [docs/MULTI_PIRI.md](docs/MULTI_PIRI.md) for the full manifest schema, shared infrastructure (postgres, MinIO), Anvil wallet mapping, and hot-add/remove behavior.
+
+### Starting and Stopping
+
+```bash
+make up        # Start all services (runs init if needed, regenerates compose if stale)
+make generate  # Regenerate compose + keys from smelt.yml (no container changes)
+make down      # Stop services (data preserved in volumes)
+make restart   # Stop then start
+make fresh     # Delete everything and rebuild (destructive)
+make clean     # Stop and delete volumes only (keeps keys)
+```
+
+### Viewing Status and Logs
+
+```bash
+make status                    # Service health overview
+make logs                      # Follow all logs
+docker compose logs -f piri    # Follow specific service
+docker compose logs -f upload indexer  # Multiple services
+```
+
+### Interactive Debugging
+
+```bash
+make shell-guppy    # Shell into guppy container
+make shell-piri     # Shell into piri container
+
+# Or directly:
+docker compose exec guppy bash
+docker compose exec piri bash
+docker compose exec upload sh
+```
+
+### Attaching a Go Debugger
+
+Some services publish `:main-dev` image variants with debug symbols (`-gcflags="all=-N -l"`) and `dlv` baked in. To run one under a debugger:
+
+```bash
+make debug-upload    # runs sprue under dlv, listening on localhost:2345
+```
+
+The service comes up normally (dlv uses `--continue`, so healthchecks and `post_start` hooks behave as usual). Attach a Delve client whenever:
+
+```bash
+dlv connect localhost:2345
+# or VS Code "Connect to server" / GoLand "Go Remote"
+```
+
+**IDE source mapping for sprue**: remote path `/go/src/sprue` maps to your local sprue checkout (e.g. `~/workspace/src/github.com/fil-forge/sprue`).
+
+To test a locally-built dev image instead of the published `:main-dev`:
+
+```bash
+UPLOAD_DEBUG_IMAGE=sprue:dev make debug-upload
+```
+
+To return a service to normal (non-debug) mode:
+
+```bash
+docker compose up -d --force-recreate upload
+```
+
+**Extending the pattern**: to debug another service, copy the `upload:` block in `compose.debug.yml` and (1) pick the next free debug port (2346, 2347, ...), (2) point `image:` at the service's `:main-dev` variant, (3) replace the binary path and args, and (4) add a matching `make debug-<service>` target. Services with non-trivial entrypoint scripts (e.g. piri's `entrypoint.sh` does DID and delegator registration) need a different strategy — typically teach the upstream entrypoint to `exec dlv ...` when a `DEBUG_DLV=1` env var is set, so the overlay just sets that env var rather than replacing `entrypoint:`.
+
+### Testing the Upload Flow
+
+The guppy CLI has a specific workflow that must be followed:
+
+```bash
+# Enter the guppy container
+make shell-guppy
+
+# 1. Login (email can be any valid email format)
+guppy login test@example.com
+
+# 2. Generate a space (returns space DID on stdout)
+#    The space DID looks like: did:key:z6Mk...
+export SPACE=$(guppy space generate)
+echo "Space: $SPACE"
+
+# 3. Create test data (minimum 1KB required for uploads)
+#    Use the randdir binary available in the guppy container:
+randdir --size 10KB --output /tmp/test-data
+
+#    randdir options:
+#      --size        Total size (e.g., 10KB, 1MB, 1GB)
+#      --output      Directory to create
+#      --seed        Seed for deterministic generation
+#      --min-file-size  Minimum file size (default 256KB)
+#      --max-file-size  Maximum file size (default 32MB)
+
+# 4. Add source to space (does NOT upload yet)
+guppy upload source add $SPACE /tmp/test-data
+
+# 5. Upload all sources in the space
+guppy upload $SPACE
+# Output: "Upload completed successfully: bafybeic..."
+
+# 6. Retrieve content (optional verification)
+#    Extract CID from upload output, then:
+guppy retrieve $SPACE <CID> /tmp/retrieved
+
+# The upload traverses: guppy -> upload -> piri -> indexer
+# with blockchain proofs submitted via signing-service
+```
+
+**Important notes:**
+- `guppy space generate` takes no arguments and returns the space DID on stdout
+- Files must be minimum 1KB (use `randdir` to generate test data)
+- Must add sources with `guppy upload source add $SPACE [PATH]` before uploading
+- Upload command is `guppy upload $SPACE` (uploads all sources in that space)
+- Uploads are per-space; when content changes and upload is re-run, changes are uploaded (like rsync)
+- Multiple sources can be added to a space; each gets its own CID in the upload output
+
+### Regenerating Keys and Proofs
+
+```bash
+make regen    # Regenerate all keys and proofs
+# Then restart services to pick up new keys:
+make clean && make up
+```
+
+### Snapshots
+
+Cold-boot of a stack pays for contract deploy + piri registration + delegator/upload provider registration — tens of seconds to minutes depending on topology. Snapshots capture the full post-registration state and let subsequent boots reach the same point in ~10s.
+
+```bash
+# With the stack healthy:
+./smelt snapshot save <name>        # freeze current state to generated/snapshots/<name>/
+./smelt snapshot list               # table of saved snapshots
+./smelt snapshot rm <name>          # delete a snapshot
+
+# Boot from a snapshot (loads + starts in one step):
+make up SNAPSHOT=<name>             # or SNAPSHOT=/abs/path/to/snapshot dir
+```
+
+`make up SNAPSHOT=X` installs the snapshot's `smelt.yml` as a *session manifest* at `generated/snapshot-scratch/smelt.yml` (the project's tracked `smelt.yml` is never touched). While the session manifest exists, `smelt generate` and `smelt snapshot save` read from it. Subsequent `make up` (no SNAPSHOT=) stays on the same topology until `make clean` or `make nuke` removes the session manifest.
+
+The blockchain container dumps chain state to `generated/snapshot-scratch/` on every SIGTERM, so `make down` + `make up` resumes from your current chain, not from the snapshot's frozen state.
+
+See [docs/SNAPSHOTS.md](docs/SNAPSHOTS.md) for the full picture — what's captured, session semantics, gotchas, troubleshooting.
+
+### Piri Storage Backends
+
+Storage backends are configured per-node in `smelt.yml` rather than via compose profiles. Each node entry can independently select `db: sqlite|postgres` and `blob: filesystem|s3`. When any node uses `postgres`, the generator emits a shared `piri-postgres` service plus a `piri-postgres-init` sidecar that idempotently creates per-node databases (`piri_0`, `piri_1`, ...). When any node uses `s3`, it emits a shared `piri-minio` service; each node gets a unique bucket prefix (`piri-0-`, `piri-1-`, ...).
+
+Example manifest with all four permutations:
+
+```yaml
+version: 1
+piri:
+  nodes:
+    - storage: { db: sqlite,   blob: filesystem }  # piri-0
+    - storage: { db: postgres, blob: filesystem }  # piri-1
+    - storage: { db: sqlite,   blob: s3 }          # piri-2
+    - storage: { db: postgres, blob: s3 }          # piri-3
+```
+
+**Go test stack API** (`pkg/stack`):
+```go
+// Multi-node
+s := stack.MustNewStack(t, stack.WithPiriCount(3))
+
+// Heterogeneous nodes
+s := stack.MustNewStack(t, stack.WithPiriNodes(
+    stack.PiriNodeConfig{},                        // piri-0: sqlite + filesystem
+    stack.PiriNodeConfig{Postgres: true, S3: true}, // piri-1: postgres + s3
+))
+
+// Access per-node endpoints
+s.PiriEndpointN(0)    // piri-0
+s.PiriEndpointN(1)    // piri-1
+s.PiriCount()         // number of nodes
+```
+
+## Service Ports
+
+All host-side ports live in a dedicated `15XXX` range to avoid collision with common dev tools (3000, 5432, 6379, 8000, 8080, 8545, 9000, ...). Container-internal ports are unchanged; only the host side of each mapping lives in the 15XXX range.
+
+| Service | Host Port | Protocol | Description |
+|---------|-----------|----------|-------------|
+| blockchain | 15000 | JSON-RPC | Anvil local EVM |
+| dynamodb-local | 15010 | HTTP | State persistence |
+| redis | 15020 | Redis | Indexer cache |
+| signing-service | 15030 | HTTP | PDP signing |
+| delegator | 15040 | HTTP/UCAN | Delegation issuance |
+| indexer | 15050 | HTTP/UCAN | Claims cache |
+| upload | 15060 | HTTP/UCAN | Upload coordination |
+| minio S3 | 15070 | S3 | Shared object storage |
+| minio console | 15071 | HTTP | MinIO web console |
+| smtp | 15080 | SMTP | smtp4dev inbound |
+| smtp4dev web | 15081 | HTTP | smtp4dev web UI / API |
+| ipni finder | 15090 | HTTP | Content discovery (queries) |
+| ipni admin | 15091 | HTTP | IPNI admin |
+| ipni p2p | 15092 | libp2p | Advertisement sync |
+| piri-{N} | 15100 + N | HTTP/UCAN | Storage node(s); N defined by `smelt.yml` (default 1, max 9) |
+| hilt | 15110 | HTTP/UCAN | Tenant management (Tenant API + UCAN RPC) |
+| hilt-postgres | 15111 | PostgreSQL | Hilt tenant/provider store |
+| hilt-vault | 15112 | HTTP | Hilt key vault (HashiCorp Vault dev mode) |
+| plc | 15120 | HTTP | did:plc directory (reference implementation) |
+| plc-postgres | 15121 | PostgreSQL | did:plc directory store |
+| ingot | 15130 | S3/HTTP | S3 gateway over Forge |
+| ingot-postgres | 15131 | PostgreSQL | Ingot registry/metadata |
+| guppy | (none) | CLI | Client container |
+
+**Piri Shared Storage** (only emitted when at least one node uses that backend):
+
+| Service | Host Port | Protocol | Description |
+|---------|-----------|----------|-------------|
+| piri-postgres | 5432 | PostgreSQL | Shared instance; per-node databases `piri_0`, `piri_1`, ... |
+| piri-minio S3 | 15072 | S3 | Per-node bucket prefix `piri-{N}-` |
+| piri-minio console | 15073 | HTTP | MinIO console |
+
+Note: Container-internal ports differ from host ports. E.g., piri listens on 3000 internally, exposed as 15100+N on the host; upload listens on 80 internally, exposed as 15060.
+
+## Configuration Files
+
+### Service Configuration
+- `systems/<service>/compose.yml` - Docker Compose for each system
+- `systems/<service>/config/` - Service-specific configuration
+- `systems/<service>/entrypoint.sh` - Container initialization scripts
+
+### Generated Credentials
+- `generated/keys/*.pem` - Ed25519 service identity keys
+- `generated/keys/*.pub` - Public keys (for reference)
+- `generated/keys/*.hex` - EVM keys (blockchain signing)
+- `generated/proofs/*.txt` - UCAN delegation proofs
+
+## Service Interactions
+
+The data flow for a typical upload:
+
+```mermaid
+sequenceDiagram
+    participant guppy
+    participant upload
+    participant piri
+    participant indexer
+
+    guppy->>upload: space/blob/add
+    upload->>piri: blob/allocate
+    piri-->>upload: (upload URL)
+    upload-->>guppy: (upload URL)
+    guppy->>piri: HTTP PUT blob
+    guppy->>upload: ucan/conclude
+    upload->>piri: blob/accept
+    piri-->>upload: (location claim)
+    upload->>indexer: claim/cache
+    guppy->>upload: space/index/add
+    upload->>indexer: assert/index
+```
+
+The signing-service and blockchain are involved when piri submits PDP proofs, but that happens asynchronously from the upload flow.
+
+## Development Conventions
+
+### Use Makefile Targets
+
+Prefer `make up` over raw `docker compose up -d`. The Makefile handles initialization, provides consistent flags, and documents available operations via `make help`.
+
+### Service Isolation
+
+Each system in `systems/<name>/` is self-contained and can theoretically run standalone, though most depend on other services. Dependencies are declared in each compose.yml via `depends_on` with health checks.
+
+### Network Topology
+
+All services connect to a shared `forge-network` Docker network. Service names are DNS-resolvable within the network (e.g., `http://piri:3000` from upload service).
+
+### Key Generation
+
+Keys are generated fresh per-installation and are not committed to version control. If you clone on a new machine, `make up` will generate new keys automatically.
+
+### DID Identity Pattern
+
+Services use `did:web:<service-name>` identifiers that map to `did:key:z6Mk...` cryptographic keys. The mapping is configured in each service's environment variables (`PRINCIPAL_MAPPING`).
+
+## Testing Checklist
+
+After making changes to service code or configuration:
+
+1. **Reset the environment**: `make fresh` (or `make clean && make up` to preserve keys)
+2. **Wait for health**: `make status` - all services should show "healthy"
+3. **Test upload flow**: `make shell-guppy` then run upload commands
+4. **Check logs**: `make logs` or target specific services
+
+## Troubleshooting
+
+### Services Won't Start
+
+```bash
+make status              # Check which services are unhealthy
+docker compose logs <service>  # Check specific service logs
+```
+
+Common causes:
+- Missing dependencies (check `depends_on` in compose.yml)
+- Port conflicts (another process using required ports)
+- Missing keys (`make init` or `make fresh`)
+
+### UCAN/Delegation Errors
+
+- Verify delegator is healthy: `curl http://localhost:15040/`
+- Check that upload service can reach DynamoDB
+- Confirm `PRINCIPAL_MAPPING` environment variables are correct
+
+### Piri Connection Failures
+
+- Check piri health: `curl http://localhost:15100/`
+- Verify signing-service is healthy (needed for PDP operations)
+- Check blockchain is running: `curl -X POST http://localhost:15000 -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'`
+
+### "Handler Not Found" Errors
+
+The capability string must match exactly. `space/blob/add` is not `blob/add`. Check the handler registration in the relevant service.
+
+## Related Repositories
+
+| Repository | Description |
+|------------|-------------|
+| `fil-forge/piri` | Storage node implementation |
+| `fil-forge/guppy` | CLI client |
+| `fil-forge/indexing-service` | Indexer service |
+| `fil-forge/delegator` | Delegation service |
+| `fil-forge/hilt` | Tenant management service |
+| `fil-forge/ingot` | S3 facade |
+| `fil-forge/go-ucanto` | UCAN implementation in Go |
+| `fil-forge/specs` | Protocol specifications |
+
+## Configurable Service Images
+
+Service images are configurable via environment variables, with defaults in `.env`. Useful for switching registries, testing a PR build, or overriding a specific component:
+
+```bash
+# Override one image
+PIRI_IMAGE=ghcr.io/fil-forge/piri:v1.2.3 make up
+
+# Override several at once
+PIRI_IMAGE=myregistry/piri:test GUPPY_IMAGE=myregistry/guppy:test make up
+```
+
+Available variables: `PIRI_IMAGE`, `GUPPY_IMAGE`, `DELEGATOR_IMAGE`, `INDEXER_IMAGE`, `IPNI_IMAGE`, `SIGNER_IMAGE`, `UPLOAD_IMAGE`, `HILT_IMAGE`, `INGOT_IMAGE`, `PLC_IMAGE`, `BLOCKCHAIN_IMAGE`. Defaults live in `.env`.
+
+## Developing Against Sibling Service Repos
+
+To work on a feature/bugfix spanning the service repos (and the shared `libforge` library)
+and validate it in smelt, use a **Go workspace** (`go.work`) plus `SMELT_WORKSPACE=1`: smelt
+compiles the services you're editing from local source and bind-mounts the binaries over the
+otherwise-published images — no Dockerfiles, no image rebuilds. **Full walkthrough:
+[docs/DEVELOPING.md](docs/DEVELOPING.md).**
+
+- `go.work` lives at the `fil-forge/` parent (above every repo, gitignored) and lists `smelt`
+  plus the repos you're editing — `go work init ./smelt ./piri`. The `use`-list is the
+  single source of truth for what gets rebuilt.
+- **libforge rule:** a service is rebuilt when its module is in the use-list; listing
+  `libforge` forces **all** services to rebuild (a published binary would still link the
+  published libforge).
+- Run `SMELT_WORKSPACE=1 make up` / `make fresh`, or `SMELT_WORKSPACE=1 go test -tags e2e ./tests/e2e`. The
+  flag runs `smelt workspace build` → binaries in `generated/bin/` + mounts in
+  `generated/compose/workspace.override.yml` (chained into `$(COMPOSE)`); a plain `make up`
+  removes the override and runs published images.
+- **Fast per-edit loop:** `docker compose stop <svc>` → `SMELT_WORKSPACE=1 make workspace-build`
+  → `docker compose start <svc>` (stop first — the bind-mounted binary is executing, so an
+  in-place rebuild hits `ETXTBSY`).
+
+Module → service / container binary map (see `pkg/workspace`):
+
+| module dir | service | container binary |
+|---|---|---|
+| `piri` | piri (all piri-N) | `/usr/bin/piri` |
+| `sprue` | upload | `/usr/bin/sprue` |
+| `piri-signing-service` | signing-service | `/usr/bin/signer` |
+| `indexing-service` | indexer | `/usr/bin/indexer` |
+| `delegator` | delegator | `/usr/bin/registrar` |
+| `guppy` | guppy | `/usr/bin/guppy` |
+| `hilt` | hilt | `/usr/bin/hilt` |
+| `ingot` | ingot | `/usr/bin/ingot` |
+
+In Go tests, `stack.WithWorkspaceBinaries()` does the same; `stack.WithServiceBinary(name, path)`
+mounts a specific prebuilt binary without the workspace machinery, and
+`stack.WithServiceConfig(name, path)` mounts a test-provided config file over the service's
+in-container config path.
+
+## Service Repos Own Their E2E Tests (Smelt as SDK)
+
+The inverse direction of the workspace flow: a service repo imports `smelt/pkg/stack` as a
+test dependency, boots the stack from its own e2e tests, and injects its working-tree binary
+via `stack.WithServiceBinary`. Compose files, configs, and embedded snapshots travel with the
+Go import (`go:embed`), so no smelt checkout is needed. Smelt owns each service's *system
+definition* (topology, ports, default config, keys) and asserts it boots healthy; the service
+repo owns its *behavior* tests. Ingot is the reference implementation
+(`ingot/itest`); see docs/DEVELOPING.md "Service repos own their e2e tests".
+
+## CI/CD
+
+GitHub Actions run on every PR and push to main (`.github/workflows/`):
+
+- **Go Test** / **Go Checks** — unit tests, vet, lint via the shared unified workflows.
+- **E2E** (`e2e.yml`) — `go test -tags e2e ./tests/e2e/...`: Docker-backed full-stack tests
+  (upload/retrieve smoke over the four storage-backend permutations, snapshot boot, ingot
+  system health). Dumps every container's logs on failure.
+
+## Further Reading
+
+- `docs/ARCHITECTURE.md` - Detailed service interaction diagrams and data flows
+- `README.md` - Quick start guide and architecture overview
+- Individual `systems/<service>/README.md` files for service-specific details
