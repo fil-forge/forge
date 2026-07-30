@@ -455,6 +455,12 @@ func maybeBinaryOverride(t *testing.T, tempDir string, cfg *config, nodes []mani
 			return "", fmt.Errorf("workspace binaries: %w", err)
 		}
 		for _, svc := range services {
+			// Held back so a pinned image can stand in for this service —
+			// mounting a working-tree binary over it would defeat the pin.
+			if cfg.workspaceExclude[svc] {
+				t.Logf("smeltery: NOT building %s from local source; it runs its resolved image", svc)
+				continue
+			}
 			path, err := workspace.BuildBinary(root, svc, tempDir)
 			if err != nil {
 				return "", fmt.Errorf("workspace binaries: %w", err)

@@ -1,0 +1,137 @@
+name: Compatibility
+
+# The monorepo makes HEAD-vs-HEAD free (see the stack job in ci.yml). It does
+# nothing for version skew in the field, which is where our actual deployments
+# live: we run sprue and hilt, third-party storage operators run piri and ingot
+# and upgrade when they choose. This workflow tests the skew.
+#
+# Nightly rather than per-PR, because it needs PUBLISHED images — a PR's code
+# has not been released yet, so there is nothing to pin it against. Also runs
+# before a release and on demand.
+#
+# The supported window is derived from each service's own tags. Per-service
+# semver means there is no single fleet version, so there is no single baseline
+# either: the baseline is a SET, one release per service.
+
+on:
+  schedule:
+    # 07:00 UTC daily — after the US evening merges, before the EU morning.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      window:
+        description: 'How many recent releases per service to test against'
+        required: false
+        default: '2'
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  window:
+    name: Resolve supported window
+    runs-on: ubuntu-latest
+    outputs:
+      piri: ${{ steps.resolve.outputs.piri }}
+      ingot: ${{ steps.resolve.outputs.ingot }}
+      base_piri: ${{ steps.resolve.outputs.base_piri }}
+      base_ingot: ${{ steps.resolve.outputs.base_ingot }}
+      base_sprue: ${{ steps.resolve.outputs.base_sprue }}
+      base_hilt: ${{ steps.resolve.outputs.base_hilt }}
+      ready: ${{ steps.resolve.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve versions from tags
+        id: resolve
+        env:
+          N: ${{ inputs.window || '2' }}
+        run: |
+          set -euo pipefail
+          ready=true
+          # Latest N tags for a service, newest first, as a comma-separated list.
+          window_for() {
+            git tag --list "$1/v*" --sort=-v:refname | head -n "$N" | sed "s|^$1/||" | paste -sd, -
+          }
+          latest_for() {
+            git tag --list "$1/v*" --sort=-v:refname | head -n 1 | sed "s|^$1/||"
+          }
+          for svc in piri ingot sprue hilt; do
+            latest=$(latest_for "$svc")
+            if [ -z "$latest" ]; then
+              echo "::warning::$svc has no release tags; compat cannot run until it does"
+              ready=false
+            fi
+            echo "base_$svc=$latest" >> "$GITHUB_OUTPUT"
+          done
+          for svc in piri ingot; do
+            echo "$svc=$(window_for "$svc")" >> "$GITHUB_OUTPUT"
+          done
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
+          echo "resolved window (N=$N):"; cat "$GITHUB_OUTPUT"
+
+  compat:
+    name: Version skew
+    needs: window
+    # Not a failure when there is nothing to test against — a repo that has not
+    # cut releases yet should not have a permanently red nightly.
+    if: needs.window.outputs.ready == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.work
+          cache-dependency-path: |
+            piri/go.sum
+            hilt/go.sum
+            sprue/go.sum
+            ingot/go.sum
+            smelt/go.sum
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GOWORK stays on: the services NOT pinned to a released image are built
+      # from HEAD by pkg/workspace, which is the whole point of the comparison.
+      - name: Run compatibility suite
+        working-directory: smelt
+        env:
+          COMPAT_PIRI_VERSIONS: ${{ needs.window.outputs.piri }}
+          COMPAT_INGOT_VERSIONS: ${{ needs.window.outputs.ingot }}
+          COMPAT_BASELINE_PIRI: ${{ needs.window.outputs.base_piri }}
+          COMPAT_BASELINE_INGOT: ${{ needs.window.outputs.base_ingot }}
+          COMPAT_BASELINE_SPRUE: ${{ needs.window.outputs.base_sprue }}
+          COMPAT_BASELINE_HILT: ${{ needs.window.outputs.base_hilt }}
+        run: go test -tags compat -v -timeout 55m -parallel 1 ./tests/compat/...
+
+      - name: Dump container state on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/container-logs
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "/tmp/container-logs/$c.log" 2>&1 || true
+            echo "::group::$c"; tail -200 "/tmp/container-logs/$c.log"; echo "::endgroup::"
+          done
+
+      - name: Upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compat-container-logs
+          path: /tmp/container-logs/
+          if-no-files-found: ignore
+          retention-days: 7
