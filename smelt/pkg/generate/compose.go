@@ -67,7 +67,7 @@ func GeneratePiriCompose(nodes []manifest.ResolvedPiriNode) ([]byte, error) {
 }
 
 func buildPiriService(node manifest.ResolvedPiriNode) ComposeService {
-	image := "${PIRI_IMAGE:-ghcr.io/fil-forge/piri:main}"
+	image := "${PIRI_IMAGE:-ghcr.io/fil-forge/forge/piri:main}"
 	if node.Image != "" {
 		image = node.Image
 	}

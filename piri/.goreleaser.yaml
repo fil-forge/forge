@@ -10,6 +10,12 @@ builds:
       # Sets the version variable in the build package to the build version prefixed with a 'v'
       # Sets the main.date to a static date for checksum verification. See https://goreleaser.com/customization/builds/#reproducible-builds.
       - -s -w -X github.com/fil-forge/forge/piri/pkg/build.version=v{{.Version}} -X github.com/fil-forge/forge/piri/pkg/build.Commit={{.Commit}} -X github.com/fil-forge/forge/piri/pkg/build.Date={{.CommitDate}} -X github.com/fil-forge/forge/piri/pkg/build.BuiltBy=goreleaser
+    flags:
+      # Required, not optional: `skiff` selects Curio's FFI-free variants, which
+      # is what makes the CGO_ENABLED=0 build below possible at all. Without it
+      # the build fails on undefined ffi.* symbols in curio/lib/ffiselect and
+      # harmony/resources/ffigpu. Mirrors the Makefile's TAGS.
+      - -tags=skiff
     goos:
       - linux
       - darwin
@@ -38,3 +44,38 @@ release:
 
 changelog:
   disable: true
+
+dockers:
+  # AMD64 image
+  - image_templates:
+      - "ghcr.io/fil-forge/forge/piri:{{ .Version }}-amd64"
+    dockerfile: Dockerfile.release
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    goarch: amd64
+
+  # ARM64 image
+  - image_templates:
+      - "ghcr.io/fil-forge/forge/piri:{{ .Version }}-arm64"
+    dockerfile: Dockerfile.release
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/fil-forge/forge/piri:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/fil-forge/forge/piri:{{ .Version }}-amd64"
+      - "ghcr.io/fil-forge/forge/piri:{{ .Version }}-arm64"

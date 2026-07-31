@@ -12,7 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/fil-forge/libforge v0.0.0-20260727220215-5e299c46f62f
-	github.com/fil-forge/ucantone v0.0.0-20260713122829-2662bddc02ab
+	github.com/fil-forge/ucantone v0.0.0-20260727203046-ccb77059de44
 	github.com/google/uuid v1.6.0
 	github.com/ipfs/go-cid v0.6.1
 	github.com/jackc/pgx/v5 v5.8.0

@@ -2,11 +2,22 @@
 FROM --platform=$BUILDPLATFORM golang:1.25-bookworm AS build
 ARG TARGETARCH
 ARG TARGETOS=linux
+# BUILD CONTEXT IS THE REPO ROOT, not this directory:
+#
+#     docker build -f sprue/Dockerfile --target prod .
+#
+# sprue has no intra-repo replace directives, so only its own subtree is copied
+# — a change to any sibling service leaves this image's layer cache intact.
+# The root go.work is deliberately not copied, keeping the build hermetic on
+# sprue's own go.mod.
+WORKDIR /go/src
+COPY sprue/go.mod sprue/go.sum* ./sprue/
 WORKDIR /go/src/sprue
-COPY go.mod go.sum* ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download || true
-COPY . .
+WORKDIR /go/src
+COPY sprue/ ./sprue/
+WORKDIR /go/src/sprue
 
 # Production build - stripped binary
 FROM build AS build-prod

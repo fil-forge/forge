@@ -447,7 +447,7 @@ Service images are configurable via environment variables, with defaults in `.en
 
 ```bash
 # Override one image
-PIRI_IMAGE=ghcr.io/fil-forge/piri:v1.2.3 make up
+PIRI_IMAGE=ghcr.io/fil-forge/forge/piri:v1.2.3 make up
 
 # Override several at once
 PIRI_IMAGE=myregistry/piri:test GUPPY_IMAGE=myregistry/guppy:test make up

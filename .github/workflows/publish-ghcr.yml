@@ -1,0 +1,121 @@
+name: Container
+
+# Publishes the mutable :main (and :sha-<short>) images on merge, per service.
+#
+# These are for humans: `make pull`, demos, and anyone who wants to run the
+# stack without building it. CI does NOT consume them for in-repo services —
+# the stack job in ci.yml builds every service from the working tree — so a
+# moved :main tag can no longer silently change what a test ran against.
+#
+# Images are ghcr.io/fil-forge/forge/<service>, following the repo. The old
+# ghcr.io/fil-forge/<service> packages are left in place so existing pulls and
+# already-published snapshots keep resolving.
+
+on:
+  pull_request:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+      any: ${{ steps.filter.outputs.changes != '[]' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            piri:
+              - 'piri/**'
+              - '.github/workflows/publish-ghcr.yml'
+            hilt:
+              - 'hilt/**'
+              - '.github/workflows/publish-ghcr.yml'
+            sprue:
+              - 'sprue/**'
+              - '.github/workflows/publish-ghcr.yml'
+            ingot:
+              - 'ingot/**'
+              - 'hilt/**'
+              - 'smelt/**'
+              - '.github/workflows/publish-ghcr.yml'
+
+  build:
+    name: ${{ github.event_name == 'pull_request' && 'build-check' || 'publish' }} (${{ matrix.service }})
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+          tags: |
+            type=raw,value=main,enable=${{ github.event_name == 'push' }}
+            type=sha,prefix=sha-,format=short
+
+      # NOTE the context is `.` (the repo root), not the service directory.
+      # ingot's go.mod resolves hilt and smelt through replace directives, so
+      # those siblings must be inside the build context; the others use the root
+      # too so every service builds identically. Each Dockerfile copies only the
+      # subtrees it needs, so this does not couple their layer caches.
+      - name: Build and push (prod)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          target: prod
+          push: ${{ github.event_name == 'push' }}
+          platforms: ${{ github.event_name == 'push' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      # piri's Dockerfile has no `dev` target; hilt, sprue and ingot ship one
+      # with debug tooling + dlv, published as :main-dev for smelt's
+      # compose.debug.yml / `make debug-<svc>` flow.
+      - name: Build and push (dev)
+        if: matrix.service != 'piri'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
+          target: dev
+          push: ${{ github.event_name == 'push' }}
+          platforms: ${{ github.event_name == 'push' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ matrix.service }}:main-dev
+          cache-from: type=gha,scope=${{ matrix.service }}-dev
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}-dev

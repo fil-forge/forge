@@ -16,7 +16,7 @@ the tenant as a customer with the upload service via `/customer/add`.
 
 ## Services
 
-- **hilt** - Tenant management service (`ghcr.io/fil-forge/hilt:main`)
+- **hilt** - Tenant management service (`ghcr.io/fil-forge/forge/hilt:main`)
 - **hilt-postgres** - PostgreSQL for hilt's tenant/provider/access-key stores
   (goose migrations run at hilt startup)
 - **hilt-vault** - HashiCorp Vault in dev mode for tenant/access-key private
