@@ -1,0 +1,20 @@
+# Runtime image for goreleaser release builds (see each service's
+# .goreleaser.yaml `dockers` block). Unlike docker/Dockerfile this does NOT
+# compile: goreleaser cross-compiles the per-arch binary and drops it into the
+# build context named after the service, so this just packages it — one file
+# for all services, selected by --build-arg SERVICE=<svc>.
+#
+# Mirrors docker/Dockerfile's `prod` target: debian-slim with ca-certificates,
+# curl and wget (the healthcheck tools the compose files use), bare ENTRYPOINT
+# through the fixed-name symlink so the compose `command:` supplies the
+# subcommand.
+FROM debian:bookworm-slim
+ARG SERVICE
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+COPY ${SERVICE} /usr/bin/${SERVICE}
+RUN ln -s "/usr/bin/${SERVICE}" /usr/local/bin/service-entrypoint
+ENTRYPOINT ["/usr/local/bin/service-entrypoint"]

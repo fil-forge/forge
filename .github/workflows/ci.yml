@@ -44,18 +44,23 @@ jobs:
           filters: |
             piri:
               - 'piri/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             hilt:
               - 'hilt/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             sprue:
               - 'sprue/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             ingot:
               - 'ingot/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             smelt:
               - 'smelt/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
 
   unit:
@@ -92,12 +97,21 @@ jobs:
             echo "GOFLAGS=-tags=skiff" >> "$GITHUB_ENV"
           fi
 
-      - name: go build
-        run: go build ./...
-      - name: go vet
-        run: go vet ./...
-      - name: go test
-        run: go test ./...
+      - run: go build ./...
+      - run: go vet ./...
+
+      # Placeholder gate: no repo-wide linter rules are adopted yet. When they
+      # are, they live in ONE root-level config shared by every service — do
+      # not add per-service lint configs.
+      - name: lint
+        run: echo "lint | no repo-wide linter rules adopted yet"
+
+      # A module's go.mod/go.sum must be exactly what tidy produces — drift
+      # here is how version skew between the services creeps back in.
+      - name: go.mod tidy check
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
+      - run: go test ./...
 
   # One stack run for the whole PR, not one per service. The four in-repo
   # service images are built HERE, from this commit, and handed to the suites
@@ -143,8 +157,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: piri
-          file: piri/Dockerfile
+          file: docker/Dockerfile
           target: prod
+          build-args: |
+            SERVICE=piri
+            BUILD_TAGS=skiff
           load: true
           push: false
           tags: forge-ci/piri:${{ github.sha }}
@@ -154,8 +171,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: hilt
-          file: hilt/Dockerfile
+          file: docker/Dockerfile
           target: prod
+          build-args: |
+            SERVICE=hilt
           load: true
           push: false
           tags: forge-ci/hilt:${{ github.sha }}
@@ -165,8 +184,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: sprue
-          file: sprue/Dockerfile
+          file: docker/Dockerfile
           target: prod
+          build-args: |
+            SERVICE=sprue
           load: true
           push: false
           tags: forge-ci/sprue:${{ github.sha }}
@@ -176,8 +197,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ingot
-          file: ingot/Dockerfile
+          file: docker/Dockerfile
           target: prod
+          build-args: |
+            SERVICE=ingot
+            MAIN_PKG=./cmd/ingot
           load: true
           push: false
           tags: forge-ci/ingot:${{ github.sha }}

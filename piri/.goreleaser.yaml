@@ -55,10 +55,11 @@ dockers:
   # AMD64 image
   - image_templates:
       - "ghcr.io/fil-forge/forge/piri:{{ .Version }}-amd64"
-    dockerfile: Dockerfile.release
+    dockerfile: ../docker/Dockerfile.release
     use: buildx
     build_flag_templates:
       - "--platform=linux/amd64"
+      - "--build-arg=SERVICE=piri"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
@@ -69,10 +70,11 @@ dockers:
   # ARM64 image
   - image_templates:
       - "ghcr.io/fil-forge/forge/piri:{{ .Version }}-arm64"
-    dockerfile: Dockerfile.release
+    dockerfile: ../docker/Dockerfile.release
     use: buildx
     build_flag_templates:
       - "--platform=linux/arm64"
+      - "--build-arg=SERVICE=piri"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
