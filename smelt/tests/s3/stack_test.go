@@ -75,7 +75,7 @@ func localIngotBinary(t *testing.T) string {
 		}
 		out := filepath.Join(dir, "ingot")
 		cmd := exec.Command("go", "build", "-o", out, "./cmd/ingot")
-		cmd.Dir = ".." // tests run in itest/; build from the module root
+		cmd.Dir = "../../../ingot" // tests run in smelt/tests/s3/; build from ingot's module root
 		cmd.Env = append(os.Environ(),
 			"CGO_ENABLED=0",
 			"GOOS=linux",

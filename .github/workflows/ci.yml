@@ -1,0 +1,162 @@
+name: CI
+
+# Two tiers over one commit:
+#
+#   unit   per-module, path-filtered, GOWORK=off — each service is an
+#          independent module and is tested as one, in seconds.
+#   stack  ONE full-stack run per PR: smelt's e2e smoke suite, then the S3
+#          gateway system suite (smelt/tests/s3), which boots the Forge stack
+#          with the working tree's ingot binary mounted over the published
+#          image. Sequential on one job: the suites sweep smeltery-*
+#          containers, so two stacks must never share a Docker host.
+#
+# The stack tier is the whole point of the monorepo: the services under test
+# are this commit, not a floating :main baseline. (Sibling services currently
+# run their published images; building every sibling from the working tree is
+# the ci/stack branch's workspace-binaries upgrade.)
+
+on:
+  pull_request:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Which services does this diff actually touch? No service module imports
+  # another (shared surface lives in libforge), so each filter is just the
+  # service's own subtree.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.filter.outputs.changes }}
+      any: ${{ steps.filter.outputs.changes != '[]' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            piri:
+              - 'piri/**'
+              - '.github/workflows/ci.yml'
+            hilt:
+              - 'hilt/**'
+              - '.github/workflows/ci.yml'
+            sprue:
+              - 'sprue/**'
+              - '.github/workflows/ci.yml'
+            ingot:
+              - 'ingot/**'
+              - '.github/workflows/ci.yml'
+            smelt:
+              - 'smelt/**'
+              - '.github/workflows/ci.yml'
+
+  unit:
+    name: unit (${{ matrix.service }})
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    env:
+      # Each service is a standalone module and is tested as one. The
+      # workspace is a developer convenience; go.mod is the source of truth,
+      # and this proves it is sufficient.
+      GOWORK: off
+      CGO_ENABLED: 0
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ matrix.service }}/go.mod
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+
+      # piri builds CGO-free only with `skiff`, which selects Curio's FFI-free
+      # variants; without it the build fails on undefined ffi.* symbols.
+      - name: Set build flags
+        run: |
+          if [ "${{ matrix.service }}" = "piri" ]; then
+            echo "GOFLAGS=-tags=skiff" >> "$GITHUB_ENV"
+          fi
+
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test ./...
+
+  # One stack run for the whole PR, not one per service.
+  stack:
+    name: stack
+    needs: [changes, unit]
+    if: needs.changes.outputs.any == 'true'
+    # Pinned rather than -latest so the Docker version doesn't drift from
+    # under us. The runner's preinstalled Docker is well past smelt's floor.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: smelt
+    env:
+      GOWORK: off
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: smelt/go.mod
+          cache-dependency-path: |
+            smelt/go.sum
+            ingot/go.sum
+
+      - name: Docker info
+        run: |
+          docker version
+          docker compose version
+
+      - name: Stack e2e smoke suite
+        run: go test -tags e2e -v -timeout 20m ./tests/e2e/...
+
+      # Boots the Forge stack with the working tree's ingot compiled and
+      # bind-mounted over the published image (the suite builds it itself —
+      # see localIngotBinary in tests/s3/stack_test.go).
+      - name: S3 gateway system suite
+        run: go test -tags itest -v -timeout 25m ./tests/s3/...
+
+      - name: Dump container state on failure
+        if: failure()
+        working-directory: .
+        run: |
+          mkdir -p /tmp/container-logs
+          {
+            echo "=== docker ps -a ==="; docker ps -a
+            echo; echo "=== docker network ls ==="; docker network ls
+            echo; echo "=== docker volume ls ==="; docker volume ls
+          } | tee /tmp/container-logs/_overview.txt
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "/tmp/container-logs/$c.log" 2>&1 || true
+            echo "::group::$c"
+            tail -200 "/tmp/container-logs/$c.log"
+            echo "::endgroup::"
+          done
+
+      - name: Upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-logs
+          path: /tmp/container-logs/
+          if-no-files-found: ignore
+          retention-days: 7
