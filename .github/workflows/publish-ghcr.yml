@@ -49,8 +49,6 @@ jobs:
               - '.github/workflows/publish-ghcr.yml'
             ingot:
               - 'ingot/**'
-              - 'hilt/**'
-              - 'smelt/**'
               - '.github/workflows/publish-ghcr.yml'
 
   build:
@@ -85,15 +83,14 @@ jobs:
             type=raw,value=main,enable=${{ github.event_name == 'push' }}
             type=sha,prefix=sha-,format=short
 
-      # NOTE the context is `.` (the repo root), not the service directory.
-      # ingot's go.mod resolves hilt and smelt through replace directives, so
-      # those siblings must be inside the build context; the others use the root
-      # too so every service builds identically. Each Dockerfile copies only the
-      # subtrees it needs, so this does not couple their layer caches.
+      # Each service directory is a self-contained build context: no module in
+      # the repo imports another (shared surface lives in libforge), so no
+      # Dockerfile needs a sibling. A change to one service can never
+      # invalidate another's layer cache.
       - name: Build and push (prod)
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.service }}
           file: ${{ matrix.service }}/Dockerfile
           target: prod
           push: ${{ github.event_name == 'push' }}
@@ -110,7 +107,7 @@ jobs:
         if: matrix.service != 'piri'
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.service }}
           file: ${{ matrix.service }}/Dockerfile
           target: dev
           push: ${{ github.event_name == 'push' }}
