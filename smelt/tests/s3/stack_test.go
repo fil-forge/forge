@@ -27,6 +27,8 @@ import (
 
 	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
+	s3cmd "github.com/fil-forge/libforge/commands/s3"
+	"github.com/fil-forge/libforge/s3perm"
 )
 
 // This file is the shared harness for the integration tests: they boot the
@@ -180,9 +182,15 @@ func waitHTTPOK(t *testing.T, url string, timeout time.Duration) {
 	t.Fatalf("%s not healthy after %s", url, timeout)
 }
 
-// hiltAllPermissions is every S3 permission hilt recognizes (its pkg/s3perm
-// map). The conformance cases exercise the whole S3 surface, so the test
-// tenant's access key carries them all.
+// hiltAllPermissions is every S3 permission hilt recognizes (libforge's
+// s3perm map). The conformance cases exercise the whole S3 surface, so the
+// test tenant's access key carries them all.
+//
+// KEEP IN LOCKSTEP with s3perm's permission map: a permission added there but
+// missing here makes hilt reject the operation as OperationNotPermitted, which
+// the suite sees as AccessDenied on cases expecting NoSuchBucket /
+// InvalidArgument — exactly how the multipart entries' absence broke the
+// conformance partition when hilt first ran from the same commit as the tests.
 var hiltAllPermissions = []string{
 	"s3:GetObject",
 	"s3:GetObjectVersion",
@@ -198,6 +206,34 @@ var hiltAllPermissions = []string{
 	"s3:CreateBucket",
 	"s3:ListAllMyBuckets",
 	"s3:DeleteBucket",
+	"s3:AbortMultipartUpload",
+	"s3:ListMultipartUploadParts",
+	"s3:ListBucketMultipartUploads",
+}
+
+// TestHiltPermissionsCoverS3Perm is the lockstep guard for the list above:
+// every permission must be one s3perm recognizes, and the widest multipart
+// operations' required permissions must all be present, so the conformance
+// key can never silently lag the permission model again.
+func TestHiltPermissionsCoverS3Perm(t *testing.T) {
+	have := map[string]bool{}
+	for _, p := range hiltAllPermissions {
+		if !s3perm.Valid(p) {
+			t.Errorf("hiltAllPermissions contains %q, which s3perm does not recognize", p)
+		}
+		have[p] = true
+	}
+	for _, op := range []s3cmd.Operation{
+		s3cmd.OpListBuckets, s3cmd.OpListBucket, s3cmd.OpGetObject, s3cmd.OpPutObject,
+		s3cmd.OpCreateBucket, s3cmd.OpDeleteObject, s3cmd.OpDeleteBucket,
+		s3cmd.OpCreateMultipartUpload, s3cmd.OpUploadPart, s3cmd.OpCompleteMultipartUpload,
+		s3cmd.OpAbortMultipartUpload, s3cmd.OpListMultipartUploadParts,
+		s3cmd.OpListBucketMultipartUploads,
+	} {
+		if perm := op.Permission(); !have[perm] {
+			t.Errorf("operation %s requires %q, missing from hiltAllPermissions", op, perm)
+		}
+	}
 }
 
 // hiltProvisionTenant provisions tenantID in hilt with an all-permission
