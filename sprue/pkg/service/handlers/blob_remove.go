@@ -5,14 +5,14 @@ import (
 	"context"
 	"fmt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
-	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
 	"github.com/fil-forge/forge/sprue/pkg/store/replica"
+	blobcmds "github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/libforge/digestutil"
+	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/errors"
@@ -80,7 +80,7 @@ func NewBlobRemoveHandler(router *routing.Service, nodeProvider piriclient.Provi
 			// with it the receipt chain to the primary — available for a
 			// retry if every forward fails.
 			for provider := range providers {
-				if err := forwardBlobRelease(req.Context(), router, nodeProvider, agentStore, provider, space, args.Digest); err != nil {
+				if err := forwardBlobRelease(req.Context(), router, nodeProvider, agentStore, provider, space, args.Digest, cause, req.Invocation()); err != nil {
 					log.Warn("failed to forward blob release to provider",
 						zap.Stringer("provider", provider), zap.Error(err))
 				}
@@ -124,8 +124,11 @@ func primaryProviderForBlob(ctx context.Context, agentStore agent.Store, cause c
 	return accInv.Subject(), nil
 }
 
-// forwardBlobRelease sends /blob/release {space, digest} to a single provider
-// and records the exchanged invocation + receipt in the agent store.
+// forwardBlobRelease sends /blob/release {space, digest, cause} to a single
+// provider and records the exchanged invocation + receipt in the agent store.
+// cause is the task link of the client /blob/remove invocation the release
+// translates, and remove is that invocation itself — it travels in the request
+// container so the node can verify the release against it.
 func forwardBlobRelease(
 	ctx context.Context,
 	router *routing.Service,
@@ -134,6 +137,8 @@ func forwardBlobRelease(
 	provider did.DID,
 	space did.DID,
 	digest multihash.Multihash,
+	cause cid.Cid,
+	remove ucan.Invocation,
 ) error {
 	info, err := router.GetProviderInfo(ctx, provider)
 	if err != nil {
@@ -150,6 +155,8 @@ func forwardBlobRelease(
 	_, inv, rcpt, err := client.Release(ctx, &piriclient.ReleaseRequest{
 		Space:  space,
 		Digest: digest,
+		Cause:  cause,
+		Remove: remove,
 	}, proofStore)
 	if err != nil {
 		return fmt.Errorf("executing release on provider: %w", err)
