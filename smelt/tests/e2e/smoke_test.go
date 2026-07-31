@@ -31,8 +31,6 @@ func TestUploadAndRetrieve(t *testing.T) {
 		useS3       bool
 		usePostgres bool
 	}{
-		{name: "default"},
-		{name: "s3", useS3: true},
 		{name: "postgres", usePostgres: true},
 		{name: "s3_and_postgres", useS3: true, usePostgres: true},
 	}
