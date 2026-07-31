@@ -25,7 +25,6 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/ingot/blockstore"
 	"github.com/fil-forge/forge/ingot/bucketauthority"
 	"github.com/fil-forge/forge/ingot/logstore"
@@ -33,6 +32,7 @@ import (
 	"github.com/fil-forge/forge/ingot/uploader"
 	"github.com/fil-forge/libforge/commands/s3"
 	"github.com/fil-forge/libforge/commands/s3/bucket"
+	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 )

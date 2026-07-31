@@ -54,7 +54,6 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	hiltclient "github.com/fil-forge/forge/hilt/pkg/client"
 	"github.com/fil-forge/forge/ingot/blockstore"
 	"github.com/fil-forge/forge/ingot/bucketauthority"
 	"github.com/fil-forge/forge/ingot/config"
@@ -65,6 +64,7 @@ import (
 	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/forge/ingot/tokenstore"
 	"github.com/fil-forge/forge/ingot/uploader"
+	hiltclient "github.com/fil-forge/libforge/client/hilt"
 )
 
 // ServiceIdentity carries the host's upload-service agent into the module. It

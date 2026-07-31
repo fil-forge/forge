@@ -5,10 +5,11 @@ import (
 	"context"
 	"crypto/md5"
 	"crypto/sha256"
-	"github.com/fil-forge/ucantone/did"
 	"io"
 	"path/filepath"
 	"testing"
+
+	"github.com/fil-forge/ucantone/did"
 
 	mh "github.com/multiformats/go-multihash"
 
