@@ -34,7 +34,13 @@ archives:
       {{- else }}{{ .Os }}{{ end }}_{{ .Arch }}
 
 release:
-  mode: keep-existing
+  # Disabled on purpose. The monorepo tags releases as <service>/vX.Y.Z, which
+  # goreleaser OSS cannot address: it derives the release from the parsed semver
+  # tag, and "piri/v1.2.3" is not valid semver. The release workflow therefore
+  # creates the prefixed GitHub release and uploads dist/ artifacts with `gh`,
+  # leaving goreleaser to do what it does well here -- build the cross-platform
+  # binaries and push the multi-arch images.
+  disable: true
 
 changelog:
   disable: true
@@ -43,10 +49,11 @@ dockers:
   # AMD64 image
   - image_templates:
       - "ghcr.io/fil-forge/forge/sprue:{{ .Version }}-amd64"
-    dockerfile: Dockerfile.release
+    dockerfile: ../docker/Dockerfile.release
     use: buildx
     build_flag_templates:
       - "--platform=linux/amd64"
+      - "--build-arg=SERVICE=sprue"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
@@ -57,10 +64,11 @@ dockers:
   # ARM64 image
   - image_templates:
       - "ghcr.io/fil-forge/forge/sprue:{{ .Version }}-arm64"
-    dockerfile: Dockerfile.release
+    dockerfile: ../docker/Dockerfile.release
     use: buildx
     build_flag_templates:
       - "--platform=linux/arm64"
+      - "--build-arg=SERVICE=sprue"
       - "--label=org.opencontainers.image.created={{.Date}}"
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"

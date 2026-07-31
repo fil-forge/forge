@@ -27,6 +27,7 @@ import (
 
 	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/workspace"
 	s3cmd "github.com/fil-forge/libforge/commands/s3"
 	"github.com/fil-forge/libforge/s3perm"
 )
@@ -106,33 +107,41 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 	t.Helper()
 	t.Logf("booting the smelt Forge stack (~1-2 min; first run also compiles ingot and pulls images)")
 	opts := []stack.Option{
-		// Postgres-backed piri: piri:main's curio PDP pipeline refuses
-		// sqlite ("curio PDP pipeline requires Postgres") as of 2026-07-24.
+		// Postgres-backed piri: piri's curio PDP pipeline refuses sqlite
+		// ("curio PDP pipeline requires Postgres") as of 2026-07-24.
 		stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
-		stack.WithServiceBinary("ingot", localIngotBinary(t)),
 	}
-	// Local-dev escape hatches: run against upload-service (sprue) / piri
-	// images the registry doesn't have yet — e.g. built from an unmerged
-	// branch. Unset (CI) uses the published defaults. These exist because the
-	// hilt integration made the forge stack cross-service: hilt mints did:plc
-	// tenant spaces, so both sprue (bucket create / catalog ship) and piri
-	// (the /content/retrieve read tier) must be able to resolve did:plc — a
-	// capability that lands in those services branch-by-branch.
-	if img := os.Getenv("INGOT_ITEST_UPLOAD_IMAGE"); img != "" {
-		t.Logf("using upload-service image override: %s", img)
-		opts = append(opts, stack.WithUploadImage(img))
+
+	// Every in-repo service — piri, sprue, hilt, ingot — runs THIS commit.
+	// How it gets there depends on who is running the suite:
+	//
+	//   CI (SMELT_STACK_PREBUILT set): the *_IMAGE env vars point at container
+	//   images built from this commit earlier in the job. The stack runs them
+	//   exactly as built — no binary mounts — so the artifact under test is the
+	//   artifact that ships, packaging included.
+	//
+	//   Local dev (active go workspace): every in-repo service is compiled from
+	//   the working tree and bind-mounted over its image — seconds instead of
+	//   image-build minutes while iterating.
+	//
+	// This replaces the old INGOT_ITEST_{PIRI,UPLOAD}_IMAGE / _PIRI_BINARY
+	// escape hatches. Those existed because the hilt integration made the stack
+	// cross-service (hilt mints did:plc tenant spaces, so sprue and piri both
+	// have to resolve did:plc) and that capability landed in each service
+	// branch-by-branch — you needed a way to point at an unmerged sibling. A
+	// cross-service change is now one commit, so there is nothing to point at.
+	if os.Getenv("SMELT_STACK_PREBUILT") != "" {
+		t.Logf("SMELT_STACK_PREBUILT set; running the provided images as built, no binary mounts")
+	} else if _, _, err := workspace.Detect(); err == nil {
+		opts = append(opts, stack.WithWorkspaceBinaries())
+	} else {
+		// No active workspace (e.g. a deliberate GOWORK=off run). Fall back to
+		// mounting only ingot; the siblings come from their published images,
+		// which reintroduces the floating baseline this suite otherwise avoids.
+		t.Logf("no active go workspace (%v); mounting only ingot, siblings from published images", err)
+		opts = append(opts, stack.WithServiceBinary("ingot", localIngotBinary(t)))
 	}
-	if img := os.Getenv("INGOT_ITEST_PIRI_IMAGE"); img != "" {
-		t.Logf("using piri image override: %s", img)
-		opts = append(opts, stack.WithPiriImage(img))
-	}
-	// Same idea one step earlier in the pipeline: mount a locally-built piri
-	// binary (linux, static) over the image's /usr/bin/piri — validates an
-	// unreleased piri/ucantone change with no image build at all.
-	if bin := os.Getenv("INGOT_ITEST_PIRI_BINARY"); bin != "" {
-		t.Logf("using piri binary override: %s", bin)
-		opts = append(opts, stack.WithPiriBinary(bin))
-	}
+
 	opts = append(opts, extra...)
 	s := stack.MustNewStack(t, opts...)
 	endpoint := s.IngotEndpoint()

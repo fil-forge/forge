@@ -33,6 +33,9 @@ type config struct {
 	// auto-detect-and-build of services from the active go.work use-list.
 	serviceBinaries   map[string]string
 	workspaceBinaries bool
+	// workspaceExclude names services that workspaceBinaries must NOT build,
+	// so a pinned image can stand in for them (see WithWorkspaceBinariesExcept).
+	workspaceExclude map[string]bool
 
 	// Config injection: bind-mount test-provided config files over a service's
 	// in-container config path, keyed by smelt service name.
@@ -188,6 +191,36 @@ func WithServiceConfig(service, path string) Option {
 func WithWorkspaceBinaries() Option {
 	return func(c *config) {
 		c.workspaceBinaries = true
+	}
+}
+
+// WithWorkspaceBinariesExcept is WithWorkspaceBinaries with the named services
+// held back: every other selected service is built from local source, and the
+// excluded ones run whatever image the stack resolves for them.
+//
+// This exists for compatibility testing. In the monorepo the default is that
+// everything comes from the working tree, which answers "did my change break
+// the system?" — but not "can the version we are about to ship interoperate
+// with the versions already in the field?". Operators upgrade piri and ingot on
+// their own schedule, so those run mixed in production. Pinning one service to
+// a released image while the rest come from HEAD is exactly that test:
+//
+//	s := stack.MustNewStack(t,
+//	    stack.WithWorkspaceBinariesExcept("piri"),
+//	    stack.WithPiriImage("ghcr.io/fil-forge/forge/piri:v1.0.0"),
+//	)
+//
+// Without the exclusion the workspace binary would be mounted over the pinned
+// image, and the test would silently exercise HEAD against HEAD.
+func WithWorkspaceBinariesExcept(services ...string) Option {
+	return func(c *config) {
+		c.workspaceBinaries = true
+		if c.workspaceExclude == nil {
+			c.workspaceExclude = map[string]bool{}
+		}
+		for _, s := range services {
+			c.workspaceExclude[s] = true
+		}
 	}
 }
 

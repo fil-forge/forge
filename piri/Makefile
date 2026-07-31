@@ -13,7 +13,18 @@ GOFLAGS=-ldflags="-X github.com/fil-forge/forge/piri/pkg/build.version=$(VERSION
 # is network-invariant. Verified by the smelt proving-loop e2e on a skiff-only binary.
 TAGS?=-tags "skiff"
 
-.PHONY: all build test clean
+# go.mod is the source of truth; the workspace is a dev convenience (matches CI).
+export GOWORK := off
+
+# Resolve the docker binary to an absolute path: directories named 'docker'
+# on PATH (including this repo's own docker/ when '.' is in PATH) break make's
+# direct exec of a bare 'docker'.
+DOCKER := $(shell command -v docker)
+
+# Container image via the monorepo-shared docker/Dockerfile (context = this dir).
+IMAGE_BUILD_ARGS := --build-arg SERVICE=piri --build-arg BUILD_TAGS=skiff
+
+.PHONY: all build test vet image image-dev clean
 
 all: build
 
@@ -31,6 +42,15 @@ FORCE:
 
 test:
 	CGO_ENABLED=0 go test $(TAGS) ./...
+
+vet:
+	CGO_ENABLED=0 go vet $(TAGS) ./...
+
+image:
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/piri:local .
+
+image-dev:
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/piri:local-dev .
 
 clean:
 	rm -f ./piri

@@ -211,29 +211,30 @@ pattern so smelt treats every forge service alike; where sprue and piri differ,
 we follow **sprue** (goreleaser builds the release container; `publish-ghcr.yml`
 stays main-only).
 
-**`Dockerfile`** is multi-stage / multi-target: `build` (base) → `build-prod`
-(stripped `-s -w`) / `build-dev` (`-gcflags=all=-N -l` + `dlv`) → runtime
-targets `prod` and `dev`. Both are `debian:bookworm-slim` + `curl` (smelt's
-healthcheck hits `/health`); `dev` adds a network/debug toolset + the `dlv`
-debugger and EXPOSEs `2345`. ENTRYPOINT is the **bare binary** — the compose
-`command:` supplies `serve …` (and lets the dev image run under dlv by
-overriding `command`). BuildKit cache mounts speed the module + build cache.
+The image builds from the **monorepo-shared `docker/Dockerfile`**
+(`--build-arg SERVICE=ingot MAIN_PKG=./cmd/ingot`, context = this directory) —
+there is no per-service Dockerfile. It is multi-stage / multi-target: `build`
+(base) → `build-prod` (stripped `-s -w`) / `build-dev` (`-gcflags=all=-N -l` +
+`dlv`) → runtime targets `prod` and `dev`, both `debian:bookworm-slim` with
+`curl` + `wget` for compose healthchecks; `dev` adds a network/debug toolset +
+the `dlv` debugger. ENTRYPOINT is the **bare binary** for every service — the
+compose `command:` supplies `serve …` (and lets the dev image run under dlv by
+overriding `command`).
 
 - **On merge to `main`** (`.github/workflows/publish-ghcr.yml`): publishes
-  `:main` + `:sha-<short>` (prod) and `:main-dev` (dev),
-  multi-arch amd64/arm64. PRs get a single-arch, no-push build-check of both
-  targets. `:main-dev` slots into smelt's `compose.debug.yml` / `make
-  debug-<svc>` flow.
+  `:main` + `:sha-<short>` (prod) and `:main-dev` (dev), multi-arch
+  amd64/arm64. PRs don't run it — ci.yml's stack job builds the prod images
+  from the PR tree and boots the stack on them. `:main-dev` is the ad-hoc
+  debugging artifact (smelt's `compose.debug.yml` / `make debug-<svc>` flow).
 
 **Releases** produce immutable `:vX.Y.Z` multi-arch containers **and**
 cross-platform binaries + a GitHub release, all via goreleaser. Cut one by
 bumping **`version.json`** on `main`:
 
-- `version.json` change → `releaser.yml` (ipdxco unified) tags `vX.Y.Z` +
-  creates the release → `release-binaries.yml` runs `goreleaser release`
-  (`.goreleaser.yaml` builds `./cmd/ingot`; the container uses
-  `Dockerfile.release`, which only *packages* the prebuilt binary — no compile).
-  `tagpush.yml` / `release-check.yml` are the tag / PR-bump checks.
+- `version.json` change → the root `release.yml` tags `ingot/vX.Y.Z`, creates
+  the GitHub release, and runs `goreleaser release` (`.goreleaser.yaml` builds
+  `./cmd/ingot`; the container uses the shared `docker/Dockerfile.release`,
+  which only *packages* the prebuilt binary — no compile).
 - The version is stamped into **`internal/build`** via `-ldflags -X` and
   surfaced by `ingot version` / `--version`; a plain `go build` reports `dev`
   plus the VCS revision from `debug.ReadBuildInfo()`.

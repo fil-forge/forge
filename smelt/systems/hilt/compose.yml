@@ -8,6 +8,8 @@
 services:
   hilt:
     image: ${HILT_IMAGE:-ghcr.io/fil-forge/forge/hilt:main}
+    # The common image's ENTRYPOINT is the bare binary; the subcommand is ours.
+    command: ["serve"]
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     ports:
       # Internal port 80 for did:web resolution

@@ -1,19 +1,17 @@
 name: CI
 
-# Two tiers over one commit:
+# Two tiers, mirroring the old per-repo split but now over one commit:
 #
-#   unit   per-module, path-filtered, GOWORK=off — each service is an
+#   unit   per-module, path-filtered, GOWORK=off — each service is still an
 #          independent module and is tested as one, in seconds.
-#   stack  ONE full-stack run per PR: smelt's e2e smoke suite, then the S3
-#          gateway system suite (smelt/tests/s3), which boots the Forge stack
-#          with the working tree's ingot binary mounted over the published
-#          image. Sequential on one job: the suites sweep smeltery-*
-#          containers, so two stacks must never share a Docker host.
+#   stack  ONE full-stack run per PR, at the commit under test, with every
+#          in-repo service built from the working tree and mounted over the
+#          published images.
 #
-# The stack tier is the whole point of the monorepo: the services under test
-# are this commit, not a floating :main baseline. (Sibling services currently
-# run their published images; building every sibling from the working tree is
-# the ci/stack branch's workspace-binaries upgrade.)
+# The stack tier is the whole point of the monorepo. It resolves no binary for
+# an in-repo service from a registry image, so there is no floating `:main`
+# baseline to go stale and no lockfile to promote — "the stack" is just this
+# commit.
 
 on:
   pull_request:
@@ -33,7 +31,7 @@ jobs:
   # another (shared surface lives in libforge), so each filter is just the
   # service's own subtree.
   changes:
-    name: Detect changes
+    name: detect changed services
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.filter.outputs.changes }}
@@ -46,22 +44,29 @@ jobs:
           filters: |
             piri:
               - 'piri/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             hilt:
               - 'hilt/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             sprue:
               - 'sprue/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             ingot:
               - 'ingot/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
             smelt:
               - 'smelt/**'
+              - 'docker/**'
               - '.github/workflows/ci.yml'
 
   unit:
-    name: unit (${{ matrix.service }})
+    # The check name spells out the gate order so a red X is legible from the
+    # PR checks list without clicking through.
+    name: unit ${{ matrix.service }} · build,vet,tidy,test
     needs: changes
     if: needs.changes.outputs.any == 'true'
     runs-on: ubuntu-latest
@@ -98,52 +103,166 @@ jobs:
         run: go build ./...
       - name: go vet
         run: go vet ./...
+
+      # Placeholder gate: no repo-wide linter rules are adopted yet. When they
+      # are, they live in ONE root-level config shared by every service — do
+      # not add per-service lint configs.
+      - name: lint
+        run: echo "lint | no repo-wide linter rules adopted yet"
+
+      # A module's go.mod/go.sum must be exactly what tidy produces — drift
+      # here is how version skew between the services creeps back in.
+      - name: go.mod tidy check
+        run: go mod tidy && git diff --exit-code go.mod go.sum
+
       - name: go test
         run: go test ./...
 
-  # One stack run for the whole PR, not one per service.
+  # One stack run for the whole PR, not one per service. The four in-repo
+  # service images are built HERE, from this commit, and handed to the suites
+  # through the runner's Docker daemon — never pushed to a registry. The
+  # artifact under test is the artifact that ships, packaging included; there
+  # is no binary-mounting layer in CI (that stays a local-dev fast path).
   stack:
-    name: stack
+    name: stack · images,e2e,s3-suite
     needs: [changes, unit]
     if: needs.changes.outputs.any == 'true'
-    # Pinned rather than -latest so the Docker version doesn't drift from
-    # under us. The runner's preinstalled Docker is well past smelt's floor.
+    # Pinned rather than -latest so the Docker version doesn't drift from under
+    # us. The runner's preinstalled Docker is 28.x, well past smelt's 25+ floor.
     runs-on: ubuntu-24.04
     timeout-minutes: 50
-    defaults:
-      run:
-        working-directory: smelt
     env:
       GOWORK: off
+      # The images built below, resolved by smelt's compose env plumbing.
+      PIRI_IMAGE: forge-ci/piri:${{ github.sha }}
+      HILT_IMAGE: forge-ci/hilt:${{ github.sha }}
+      INGOT_IMAGE: forge-ci/ingot:${{ github.sha }}
+      UPLOAD_IMAGE: forge-ci/sprue:${{ github.sha }}
+      # Tells the S3 suite the images above ARE this commit — run them as
+      # built, no binary mounts (see forgeStack in smelt/tests/s3).
+      SMELT_STACK_PREBUILT: '1'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
           go-version-file: smelt/go.mod
-          cache-dependency-path: |
-            smelt/go.sum
-            ingot/go.sum
+          cache-dependency-path: smelt/go.sum
 
       - name: Docker info
         run: |
           docker version
           docker compose version
 
-      - name: Stack e2e smoke suite
-        # -parallel 1: each e2e subtest boots a FULL stack; two booting at once
-        # overwhelms the 2-vCPU runner (runc "procReady not received"). One
-        # stack per Docker host, always.
-        run: go test -tags e2e -v -timeout 20m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
+      - uses: docker/setup-buildx-action@v3
 
-      # Boots the Forge stack with the working tree's ingot compiled and
-      # bind-mounted over the published image (the suite builds it itself —
-      # see localIngotBinary in tests/s3/stack_test.go).
+      # All four images at this commit, loaded into the local daemon. The
+      # cache scopes are shared with publish-ghcr.yml, so merges to main keep
+      # these warm and an unchanged service's build is a near no-op.
+      - name: Build piri image
+        uses: docker/build-push-action@v6
+        with:
+          context: piri
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=piri
+            BUILD_TAGS=skiff
+          load: true
+          push: false
+          tags: forge-ci/piri:${{ github.sha }}
+          cache-from: type=gha,scope=piri
+          cache-to: type=gha,mode=max,scope=piri
+      - name: Build hilt image
+        uses: docker/build-push-action@v6
+        with:
+          context: hilt
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=hilt
+          load: true
+          push: false
+          tags: forge-ci/hilt:${{ github.sha }}
+          cache-from: type=gha,scope=hilt
+          cache-to: type=gha,mode=max,scope=hilt
+      - name: Build sprue image
+        uses: docker/build-push-action@v6
+        with:
+          context: sprue
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=sprue
+          load: true
+          push: false
+          tags: forge-ci/sprue:${{ github.sha }}
+          cache-from: type=gha,scope=sprue
+          cache-to: type=gha,mode=max,scope=sprue
+      - name: Build ingot image
+        uses: docker/build-push-action@v6
+        with:
+          context: ingot
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=ingot
+            MAIN_PKG=./cmd/ingot
+          load: true
+          push: false
+          tags: forge-ci/ingot:${{ github.sha }}
+          cache-from: type=gha,scope=ingot
+          cache-to: type=gha,mode=max,scope=ingot
+
+      # The suites run sequentially in this one job: each sweeps smeltery-*
+      # containers, so two stacks must never share a Docker host.
+      # Both suites pipe through group-go-tests.awk (collapsible log group per
+      # top-level test) and tee a raw copy for the job summary below. shell:
+      # bash is explicit because that is what turns on pipefail — without it a
+      # failing go test would vanish behind the awk pipe's exit status.
+      - name: Full stack e2e (this commit's images)
+        working-directory: smelt
+        shell: bash
+        run: go test -tags e2e -v -timeout 30m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/... 2>&1 | tee /tmp/suite-e2e.log | awk -f "$GITHUB_WORKSPACE/.github/scripts/group-go-tests.awk"
+
       - name: S3 gateway system suite
-        run: go test -tags itest -v -timeout 25m ./tests/s3/...
+        working-directory: smelt
+        shell: bash
+        run: go test -tags itest -v -timeout 25m ./tests/s3/... 2>&1 | tee /tmp/suite-s3.log | awk -f "$GITHUB_WORKSPACE/.github/scripts/group-go-tests.awk"
+
+      # At-a-glance readout on the run's overview page: which images were
+      # built and each suite's case counts, without opening a single log.
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Stack tier"
+            echo
+            echo "All four service images are built from **this commit** (\`docker/Dockerfile\`), loaded into the runner's daemon — never pushed — and the suites boot the stack on them as-built."
+            echo
+            echo "| image | target | tag |"
+            echo "|---|---|---|"
+            for s in piri hilt sprue ingot; do
+              echo "| $s | prod | \`forge-ci/$s:${GITHUB_SHA}\` |"
+            done
+            echo
+            echo "| suite | passed | failed | skipped |"
+            echo "|---|---|---|---|"
+            for entry in "e2e smoke;/tmp/suite-e2e.log" "s3 system;/tmp/suite-s3.log"; do
+              name="${entry%;*}"; log="${entry#*;}"
+              if [ -f "$log" ]; then
+                p=$(grep -cE '^[[:space:]]*--- PASS:' "$log" || true)
+                f=$(grep -cE '^[[:space:]]*--- FAIL:' "$log" || true)
+                k=$(grep -cE '^[[:space:]]*--- SKIP:' "$log" || true)
+                echo "| $name | $p | $f | $k |"
+              else
+                echo "| $name | – | – | did not run |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dump container state on failure
         if: failure()
-        working-directory: .
         run: |
           mkdir -p /tmp/container-logs
           {

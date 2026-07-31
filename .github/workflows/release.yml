@@ -1,0 +1,161 @@
+name: Release
+
+# Per-service releases from a monorepo.
+#
+# Each service carries its own version.json and releases on its own cadence.
+# There is deliberately NO fleet version: we run sprue and hilt, but third-party
+# storage operators run piri and ingot and upgrade on their own schedule, so a
+# single stack-wide version number would imply a compatibility promise
+# ("piri v1.4 goes with ingot v1.4") that breaks the moment one is upgraded
+# without the other. What operators get instead is a published compatibility
+# matrix, backed by the compat workflow.
+#
+# Flow: bump <service>/version.json on main -> this workflow tags
+# <service>/vX.Y.Z, creates the GitHub release, and runs goreleaser for that
+# service only.
+#
+# Everything happens in ONE run on purpose. The obvious alternative — cut the
+# tag here and let a `push: tags:` workflow do the release — silently never
+# fires, because a tag pushed with GITHUB_TOKEN does not trigger workflows.
+# Doing both here avoids needing a PAT or GitHub App just to chain two jobs.
+
+on:
+  push:
+    branches: ['main']
+    paths: ['*/version.json']
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to release (piri|hilt|sprue|ingot)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Which services have a version.json whose version isn't tagged yet?
+  detect:
+    name: Detect pending releases
+    runs-on: ubuntu-latest
+    outputs:
+      pending: ${{ steps.scan.outputs.pending }}
+      any: ${{ steps.scan.outputs.pending != '[]' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Scan for untagged versions
+        id: scan
+        env:
+          ONLY: ${{ inputs.service }}
+        run: |
+          set -euo pipefail
+          pending='[]'
+          for f in */version.json; do
+            svc="${f%%/*}"
+            # smelt has no version.json and is not released; this loop simply
+            # never sees it. Guard anyway so a future one doesn't surprise us.
+            case "$svc" in piri|hilt|sprue|ingot) ;; *) continue ;; esac
+            [ -n "$ONLY" ] && [ "$ONLY" != "$svc" ] && continue
+            ver=$(jq -r .version "$f")
+            # version.json carries the leading v (e.g. "v0.2.4").
+            tag="$svc/$ver"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              echo "$tag already tagged, skipping"
+              continue
+            fi
+            echo "$tag is pending"
+            pending=$(echo "$pending" | jq -c --arg s "$svc" --arg v "$ver" '. + [{service:$s, version:$v}]')
+          done
+          echo "pending=$pending" >> "$GITHUB_OUTPUT"
+          echo "pending set: $pending"
+
+  release:
+    name: release ${{ matrix.entry.service }} ${{ matrix.entry.version }}
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      # One service at a time so a red release is attributable to exactly one
+      # service's delta.
+      max-parallel: 1
+      matrix:
+        entry: ${{ fromJSON(needs.detect.outputs.pending) }}
+    env:
+      SERVICE: ${{ matrix.entry.service }}
+      VERSION: ${{ matrix.entry.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ matrix.entry.service }}/go.mod
+          cache-dependency-path: ${{ matrix.entry.service }}/go.sum
+
+      - name: Create tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="$SERVICE/$VERSION"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$SERVICE $VERSION"
+          git push origin "refs/tags/$TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" --title "$SERVICE $VERSION" --notes "Release of $SERVICE $VERSION from the forge monorepo." --verify-tag
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GORELEASER_CURRENT_TAG is the BARE semver, not the prefixed tag:
+      # goreleaser parses it to derive {{ .Version }}, and "piri/v1.2.3" is not
+      # valid semver. --skip=validate stops it objecting that the parsed tag
+      # isn't the repo's most recent one. release.disable is set in each
+      # .goreleaser.yaml, so this builds binaries and pushes images but does not
+      # try to create the GitHub release — that already happened above.
+      - name: goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: '~> v2'
+          workdir: ${{ matrix.entry.service }}
+          args: release --clean --skip=validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: ${{ matrix.entry.version }}
+
+      - name: Upload artifacts to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ${{ matrix.entry.service }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(dist/*.tar.gz dist/*.zip dist/checksums.txt)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "no artifacts produced" >&2; exit 1
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber

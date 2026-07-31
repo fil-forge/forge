@@ -25,7 +25,11 @@ echo "  DID: $DID"
 echo "  Endpoint: $DYNAMODB_ENDPOINT"
 echo "  Table: $DYNAMODB_TABLE"
 
+# POSIX sh only in here: this runs under whatever /bin/sh the service image
+# ships — busybox ash on alpine, dash on debian. dash has no ${VAR:0:8}
+# substring expansion, so the date-stamp is computed separately.
 DATE=$(date -u +%Y%m%dT%H%M%SZ)
+DATESTAMP=$(date -u +%Y%m%d)
 ADDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 # Build the JSON body
@@ -36,7 +40,7 @@ BODY="{\"TableName\": \"${DYNAMODB_TABLE}\", \"Item\": {\"did\": {\"S\": \"${DID
 if wget -q -O /dev/null \
   --header="Content-Type: application/x-amz-json-1.0" \
   --header="X-Amz-Target: DynamoDB_20120810.PutItem" \
-  --header="Authorization: AWS4-HMAC-SHA256 Credential=dummy/${DATE:0:8}/us-west-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=dummy" \
+  --header="Authorization: AWS4-HMAC-SHA256 Credential=dummy/${DATESTAMP}/us-west-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=dummy" \
   --header="X-Amz-Date: $DATE" \
   --post-data="$BODY" \
   "$DYNAMODB_ENDPOINT" 2>/dev/null; then

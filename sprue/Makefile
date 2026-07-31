@@ -2,9 +2,18 @@ VERSION=$(shell awk -F'"' '/"version":/ {print $$4}' version.json)
 COMMIT=$(shell git rev-parse --short HEAD)
 DATE=$(shell date -u -Iseconds)
 GOFLAGS=-ldflags="-X github.com/fil-forge/forge/sprue/pkg/build.version=$(VERSION) -X github.com/fil-forge/forge/sprue/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/forge/sprue/pkg/build.Date=$(DATE) -X github.com/fil-forge/forge/sprue/pkg/build.BuiltBy=make"
-DOCKER := $(shell which docker)
+# go.mod is the source of truth; the workspace is a dev convenience (matches CI).
+export GOWORK := off
 
-.PHONY: all build test lint clean docker-build
+# Resolve the docker binary to an absolute path: directories named 'docker'
+# on PATH (including this repo's own docker/ when '.' is in PATH) break make's
+# direct exec of a bare 'docker'.
+DOCKER := $(shell command -v docker)
+
+# Container image via the monorepo-shared docker/Dockerfile (context = this dir).
+IMAGE_BUILD_ARGS := --build-arg SERVICE=sprue
+
+.PHONY: all build test vet lint image image-dev clean gen
 
 all: build
 
@@ -23,6 +32,9 @@ FORCE:
 test:
 	go test ./...
 
+vet:
+	go vet ./...
+
 lint:
 	go vet ./...
 	@if command -v golangci-lint >/dev/null 2>&1; then \
@@ -35,8 +47,11 @@ lint:
 clean:
 	rm -f ./sprue
 
-docker-build:
-	$(DOCKER) build -t sprue:latest .
+image:
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/sprue:local .
+
+image-dev:
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/sprue:local-dev .
 
 gen:
 	go generate ./...
