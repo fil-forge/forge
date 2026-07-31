@@ -112,10 +112,17 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 		stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
 	}
 
-	// Every in-repo service — piri, sprue, hilt, ingot — is compiled from THIS
-	// commit and bind-mounted over the published images. No *_IMAGE override is
-	// consulted, because in the monorepo there is no sibling version to choose:
-	// the siblings are right here.
+	// Every in-repo service — piri, sprue, hilt, ingot — runs THIS commit.
+	// How it gets there depends on who is running the suite:
+	//
+	//   CI (SMELT_STACK_PREBUILT set): the *_IMAGE env vars point at container
+	//   images built from this commit earlier in the job. The stack runs them
+	//   exactly as built — no binary mounts — so the artifact under test is the
+	//   artifact that ships, packaging included.
+	//
+	//   Local dev (active go workspace): every in-repo service is compiled from
+	//   the working tree and bind-mounted over its image — seconds instead of
+	//   image-build minutes while iterating.
 	//
 	// This replaces the old INGOT_ITEST_{PIRI,UPLOAD}_IMAGE / _PIRI_BINARY
 	// escape hatches. Those existed because the hilt integration made the stack
@@ -123,7 +130,9 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 	// have to resolve did:plc) and that capability landed in each service
 	// branch-by-branch — you needed a way to point at an unmerged sibling. A
 	// cross-service change is now one commit, so there is nothing to point at.
-	if _, _, err := workspace.Detect(); err == nil {
+	if os.Getenv("SMELT_STACK_PREBUILT") != "" {
+		t.Logf("SMELT_STACK_PREBUILT set; running the provided images as built, no binary mounts")
+	} else if _, _, err := workspace.Detect(); err == nil {
 		opts = append(opts, stack.WithWorkspaceBinaries())
 	} else {
 		// No active workspace (e.g. a deliberate GOWORK=off run). Fall back to

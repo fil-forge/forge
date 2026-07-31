@@ -99,7 +99,11 @@ jobs:
       - name: go test
         run: go test ./...
 
-  # One stack run for the whole PR, not one per service.
+  # One stack run for the whole PR, not one per service. The four in-repo
+  # service images are built HERE, from this commit, and handed to the suites
+  # through the runner's Docker daemon — never pushed to a registry. The
+  # artifact under test is the artifact that ships, packaging included; there
+  # is no binary-mounting layer in CI (that stays a local-dev fast path).
   stack:
     name: stack
     needs: [changes, unit]
@@ -108,39 +112,84 @@ jobs:
     # us. The runner's preinstalled Docker is 28.x, well past smelt's 25+ floor.
     runs-on: ubuntu-24.04
     timeout-minutes: 50
+    env:
+      GOWORK: off
+      # The images built below, resolved by smelt's compose env plumbing.
+      PIRI_IMAGE: forge-ci/piri:${{ github.sha }}
+      HILT_IMAGE: forge-ci/hilt:${{ github.sha }}
+      INGOT_IMAGE: forge-ci/ingot:${{ github.sha }}
+      UPLOAD_IMAGE: forge-ci/sprue:${{ github.sha }}
+      # Tells the S3 suite the images above ARE this commit — run them as
+      # built, no binary mounts (see forgeStack in smelt/tests/s3).
+      SMELT_STACK_PREBUILT: '1'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version-file: go.work
-          cache-dependency-path: |
-            piri/go.sum
-            hilt/go.sum
-            sprue/go.sum
-            ingot/go.sum
-            smelt/go.sum
+          go-version-file: smelt/go.mod
+          cache-dependency-path: smelt/go.sum
 
       - name: Docker info
         run: |
           docker version
           docker compose version
 
-      # NOTE: GOWORK is deliberately NOT off here. The root go.work is what
-      # tells smelt's pkg/workspace which services to build from source; in the
-      # monorepo it lists all of them, so Detect() returns every in-repo service
-      # and each is compiled from this commit and bind-mounted over the
-      # published image. No *_IMAGE override is set for any in-repo service.
-      - name: Full stack e2e (working-tree binaries)
+      - uses: docker/setup-buildx-action@v3
+
+      # All four images at this commit, loaded into the local daemon. The
+      # cache scopes are shared with publish-ghcr.yml, so merges to main keep
+      # these warm and an unchanged service's build is a near no-op.
+      - name: Build piri image
+        uses: docker/build-push-action@v6
+        with:
+          context: piri
+          file: piri/Dockerfile
+          target: prod
+          load: true
+          push: false
+          tags: forge-ci/piri:${{ github.sha }}
+          cache-from: type=gha,scope=piri
+          cache-to: type=gha,mode=max,scope=piri
+      - name: Build hilt image
+        uses: docker/build-push-action@v6
+        with:
+          context: hilt
+          file: hilt/Dockerfile
+          target: prod
+          load: true
+          push: false
+          tags: forge-ci/hilt:${{ github.sha }}
+          cache-from: type=gha,scope=hilt
+          cache-to: type=gha,mode=max,scope=hilt
+      - name: Build sprue image
+        uses: docker/build-push-action@v6
+        with:
+          context: sprue
+          file: sprue/Dockerfile
+          target: prod
+          load: true
+          push: false
+          tags: forge-ci/sprue:${{ github.sha }}
+          cache-from: type=gha,scope=sprue
+          cache-to: type=gha,mode=max,scope=sprue
+      - name: Build ingot image
+        uses: docker/build-push-action@v6
+        with:
+          context: ingot
+          file: ingot/Dockerfile
+          target: prod
+          load: true
+          push: false
+          tags: forge-ci/ingot:${{ github.sha }}
+          cache-from: type=gha,scope=ingot
+          cache-to: type=gha,mode=max,scope=ingot
+
+      # The suites run sequentially in this one job: each sweeps smeltery-*
+      # containers, so two stacks must never share a Docker host.
+      - name: Full stack e2e (this commit's images)
         working-directory: smelt
-        env:
-          SMELT_WORKSPACE: '1'
         run: go test -tags e2e -v -timeout 30m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
 
-      # Also without GOWORK=off, and for the same reason: the S3 gateway system
-      # suite (smelt/tests/s3) detects the workspace and builds every in-repo
-      # service from the working tree rather than mounting only ingot. The
-      # suites run sequentially in this one job: each sweeps smeltery-*
-      # containers, so two stacks must never share a Docker host.
       - name: S3 gateway system suite
         working-directory: smelt
         run: go test -tags itest -v -timeout 25m ./tests/s3/...
