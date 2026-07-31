@@ -220,7 +220,7 @@ debugger and EXPOSEs `2345`. ENTRYPOINT is the **bare binary** — the compose
 overriding `command`). BuildKit cache mounts speed the module + build cache.
 
 - **On merge to `main`** (`.github/workflows/publish-ghcr.yml`): publishes
-  `:main` + `:sha-<short>` (prod) and `:main-dev` + `:sha-<short>-dev` (dev),
+  `:main` + `:sha-<short>` (prod) and `:main-dev` (dev),
   multi-arch amd64/arm64. PRs get a single-arch, no-push build-check of both
   targets. `:main-dev` slots into smelt's `compose.debug.yml` / `make
   debug-<svc>` flow.
