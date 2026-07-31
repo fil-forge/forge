@@ -18,6 +18,13 @@ import (
 // the cold-boot time (smoke_test.go is the baseline; its typical run
 // is ~60-120s, this one should land in the low tens of seconds).
 func TestStackFromSnapshot(t *testing.T) {
+	// The only committed snapshot (3-piri-filesystem-sqlite) is a
+	// sqlite-backed piri topology, and piri's curio PDP pipeline now refuses
+	// sqlite ("curio PDP pipeline requires Postgres") — the fixture can never
+	// boot healthy again. Unskip once a postgres-backed snapshot is captured
+	// and committed to replace it.
+	t.Skip("skipping: committed snapshot pins a sqlite-backed piri, which current piri refuses to run")
+
 	if runtime.GOOS == "darwin" {
 		t.Skip("skipping on darwin (docker-in-docker flakiness)")
 	}
