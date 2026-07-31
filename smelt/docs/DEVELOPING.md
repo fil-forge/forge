@@ -189,7 +189,10 @@ calls `stack.CleanupLeaked` to sweep `smeltery-*` leftovers from crashed runs, a
 > host will tear the first run's stacks out from under it mid-boot.
 
 **Division of responsibility:** smelt owns each service's *system definition* (compose
-topology, ports, default config, key wiring) and asserts it boots healthy; the service repo
-owns its *behavior* tests. Ingot is the reference implementation of this pattern
-(`ingot/itest` + its gated `itest` CI job); new services should follow it
-rather than adding behavior tests to smelt's `tests/e2e/`.
+topology, ports, default config, key wiring) and asserts it boots healthy. Where the
+*behavior* tests live depends on where the service lives. An out-of-repo service (guppy,
+delegator) keeps them in its own repo, importing `smelt/pkg/stack` at a pseudo-version of
+the monorepo. An in-repo service's system suite lives in smelt's `tests/` directory —
+`tests/s3/` (ingot's S3 conformance partition + scenarios, gated by the `itest` build tag,
+run via `make test-s3`) is the reference implementation — because those suites exercise the
+entire stack at one commit and belong to the harness, not to any one service's module.

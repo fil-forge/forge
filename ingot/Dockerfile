@@ -17,9 +17,6 @@
 # resolves like any published module. The repo-root go.work is outside the
 # context, keeping the container build hermetic on go.mod alone.
 #
-# itest/ is a nested test-only module; `COPY . .` brings it along but its
-# go.mod makes it invisible to this module's build.
-#
 # ENTRYPOINT is the bare binary: the compose `command:` supplies the subcommand
 # (e.g. serve --config ...), matching the smelt house style, and lets the dev
 # image be launched under dlv by overriding `command`.

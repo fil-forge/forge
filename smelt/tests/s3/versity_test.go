@@ -1,6 +1,6 @@
 //go:build itest
 
-package itest
+package s3test
 
 import (
 	"testing"

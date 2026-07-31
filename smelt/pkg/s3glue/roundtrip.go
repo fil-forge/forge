@@ -1,4 +1,4 @@
-package testing
+package s3glue
 
 import (
 	"bytes"

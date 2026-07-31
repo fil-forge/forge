@@ -1,6 +1,6 @@
 //go:build itest
 
-package itest
+package s3test
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/fil-forge/versitygw/tests/integration"
 
-	ingottest "github.com/fil-forge/forge/ingot/testing"
+	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
 )
 
@@ -148,8 +148,8 @@ func withSmallBlobConfig() stack.Option {
 
 // forgeConfig is the roundtrip-helper config for a stack-deployed ingot,
 // signing with the given hilt-issued tenant credentials.
-func forgeConfig(endpoint, accessKey, secretKey string) ingottest.Config {
-	return ingottest.Config{
+func forgeConfig(endpoint, accessKey, secretKey string) s3glue.Config {
+	return s3glue.Config{
 		Endpoint:  endpoint,
 		AccessKey: accessKey,
 		SecretKey: secretKey,
@@ -160,7 +160,7 @@ func forgeConfig(endpoint, accessKey, secretKey string) ingottest.Config {
 // forgeS3Conf is the upstream-suite config for a stack-deployed ingot, for
 // invoking versitygw cases directly.
 func forgeS3Conf(endpoint, accessKey, secretKey string) *integration.S3Conf {
-	return ingottest.NewS3Conf(forgeConfig(endpoint, accessKey, secretKey))
+	return s3glue.NewS3Conf(forgeConfig(endpoint, accessKey, secretKey))
 }
 
 // waitHTTPOK polls url until it returns 2xx or the timeout elapses.

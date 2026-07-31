@@ -1,4 +1,4 @@
-package testing
+package s3glue
 
 import (
 	"github.com/fil-forge/versitygw/tests/integration"

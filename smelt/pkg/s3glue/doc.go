@@ -14,4 +14,4 @@
 // is expected to pass and known to fail — lives in itest/versity_*_test.go
 // and runs against the forge-mode deployment: `make itest` (Docker). Unit
 // tests (`make test`) cover libraries and pure logic only.
-package testing
+package s3glue

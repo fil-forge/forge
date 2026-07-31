@@ -1,6 +1,6 @@
 //go:build itest
 
-package itest
+package s3test
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	ingottest "github.com/fil-forge/forge/ingot/testing"
+	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
 )
 
@@ -36,14 +36,14 @@ func TestForgeReadAfterCatalogRetention(t *testing.T) {
 	cfg := forgeConfig(ingotEndpoint, accessKey, secretKey)
 
 	const bucket = "retention-bucket"
-	if err := ingottest.CreateBucket(ctx, cfg, bucket); err != nil {
+	if err := s3glue.CreateBucket(ctx, cfg, bucket); err != nil {
 		t.Fatalf("create bucket: %v", err)
 	}
 
 	// The early object: its manifest lands in the first catalog segment(s),
 	// which the later writes will push out of the retain window.
 	early := patternBytes(64 << 10)
-	if err := ingottest.PutBytes(ctx, cfg, bucket, "early-obj", early); err != nil {
+	if err := s3glue.PutBytes(ctx, cfg, bucket, "early-obj", early); err != nil {
 		t.Fatalf("put early object: %v", err)
 	}
 
@@ -65,7 +65,7 @@ func TestForgeReadAfterCatalogRetention(t *testing.T) {
 	// initial segment file is gone from the container.
 	waitFor(t, 5*time.Minute, "initial catalog segments to retire", func() bool {
 		key := fmt.Sprintf("filler/obj-%d", time.Now().UnixNano())
-		if err := ingottest.PutBytes(ctx, cfg, bucket, key, patternBytes(4<<10)); err != nil {
+		if err := s3glue.PutBytes(ctx, cfg, bucket, key, patternBytes(4<<10)); err != nil {
 			t.Fatalf("put filler object: %v", err)
 		}
 		// Slower than seal_age so each segment seals and ships with headroom
@@ -85,7 +85,7 @@ func TestForgeReadAfterCatalogRetention(t *testing.T) {
 
 	// GET the early object: its manifest exists only in a retired segment, so
 	// this read MUST come through inclusion → shard → ranged piri retrieval.
-	got, err := ingottest.GetBytes(ctx, cfg, bucket, "early-obj")
+	got, err := s3glue.GetBytes(ctx, cfg, bucket, "early-obj")
 	if err != nil {
 		t.Fatalf("get early object after its catalog segment retired: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestForgeReadAfterCatalogRetention(t *testing.T) {
 	// Undelimited list walks every leaf and fetches every manifest — the
 	// regression that motivated this test (root listing failed with
 	// "blockstore: not found" once a manifest's segment was retired).
-	keys, err := ingottest.ListKeys(ctx, cfg, bucket)
+	keys, err := s3glue.ListKeys(ctx, cfg, bucket)
 	if err != nil {
 		t.Fatalf("list bucket after retention: %v", err)
 	}

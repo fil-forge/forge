@@ -21,11 +21,11 @@ build:
 test:
 	$(GO) test ./...
 
-## itest: run the integration test suite (boots the Forge stack in Docker; ~6 min)
-# itest/ is its own (test-only) module so ingot's library go.mod does not
-# require the unpublished smelt harness — hence the cd.
+## itest: run ingot's system suite (boots the Forge stack in Docker; ~6 min)
+# The suite lives in smelt/tests/s3 — it validates the whole stack through
+# ingot's S3 API, so it belongs to the harness, not this library module.
 itest:
-	cd itest && $(GO) test -tags itest -v -timeout 30m ./...
+	$(MAKE) -C ../smelt test-s3
 
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:

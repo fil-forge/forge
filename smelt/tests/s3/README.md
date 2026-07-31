@@ -1,20 +1,22 @@
-# Integration tests (itest)
+# S3 gateway system tests
 
-Docker-backed integration tests behind the `itest` build tag. Everything here
-runs against a **forge-mode ingot deployed in the smelt Forge stack** (sprue,
-piri, indexing-service, postgres, ...) with a build of **this working tree**
+Docker-backed system tests behind the `itest` build tag. Everything here runs
+against a **forge-mode ingot deployed in the smelt Forge stack** (sprue, piri,
+indexing-service, postgres, ...) with a build of **the working tree's ingot**
 bind-mounted over the published image — what you just edited is what runs.
 There is no in-memory ingot anywhere: the deployment under test is the real
-one. No smelt checkout needed; compose files travel with the Go import.
+one. These suites validate the entire stack through ingot's S3 API, which is
+why they live in smelt (the harness) rather than in ingot's library module.
 
-The pattern: `make test` while iterating (seconds, no Docker), `make itest`
-when you're ready to wait for the real thing. CI does the same — unit tests
-first, integration only after they pass.
+The pattern: `make test` in ingot/ while iterating (seconds, no Docker), then
+this suite when you're ready to wait for the real thing — `make test-s3` here,
+or `make itest` in ingot/ (a forwarder). CI does the same — unit tests first,
+the stack only after they pass.
 
 ```bash
-make itest                                                  # everything (~10 min)
-go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v          # one category
-go test -tags itest ./itest -run 'TestForgeVersity/PutObject/success' -v  # one case
+make test-s3                                                     # everything (~10 min)
+go test -tags itest ./tests/s3/... -run 'TestForgeVersity/PutObject' -v          # one category
+go test -tags itest ./tests/s3/... -run 'TestForgeVersity/PutObject/success' -v  # one case
 ```
 
 ## Hilt-era provisioning and credentials
@@ -34,7 +36,7 @@ To run against an upload-service (sprue) image the registry doesn't have
 yet — e.g. one built from an unmerged branch — point the stack at it:
 
 ```bash
-INGOT_ITEST_UPLOAD_IMAGE=<image> make itest
+INGOT_ITEST_UPLOAD_IMAGE=<image> make test-s3
 ```
 
 **Teardown-blocked XFail rows:** a bucket that ever held a non-empty object
@@ -75,10 +77,10 @@ here and add new cases to the pass table (demote to xfail if they fail).
 Notes:
 
 - `GOWORK=off` matches the Makefile convention (a parent `go.work` may declare
-  a newer Go than the installed toolchain); `make itest` sets it for you.
+  a newer Go than the installed toolchain); `make test-s3` sets it for you.
 - **One itest run per Docker host at a time** — the pre-test sweep removes
   every `smeltery-*` container, including another suite's live stack.
 - The other services run their published `:main` images — `docker pull` them
   occasionally; compose won't refresh an existing tag.
 - CI runs this suite on every PR after unit tests pass
-  (`.github/workflows/go-test.yml`, job `itest`).
+  (the stack tier of the repo CI).

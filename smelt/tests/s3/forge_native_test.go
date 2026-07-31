@@ -1,12 +1,12 @@
 //go:build itest
 
-package itest
+package s3test
 
 import (
 	"bytes"
 	"testing"
 
-	ingottest "github.com/fil-forge/forge/ingot/testing"
+	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 )
 
 // TestForgeNativeProvision proves the hilt onboarding path end-to-end on a
@@ -34,13 +34,13 @@ func TestForgeNativeProvision(t *testing.T) {
 	cfg := forgeConfig(ingotEndpoint, accessKey, secretKey)
 	const bucket, key = "native-provision", "obj"
 	data := patternBytes(512 << 10)
-	if err := ingottest.CreateBucket(ctx, cfg, bucket); err != nil {
+	if err := s3glue.CreateBucket(ctx, cfg, bucket); err != nil {
 		t.Fatalf("create bucket: %v", err)
 	}
-	if err := ingottest.PutBytes(ctx, cfg, bucket, key, data); err != nil {
+	if err := s3glue.PutBytes(ctx, cfg, bucket, key, data); err != nil {
 		t.Fatalf("put object: %v", err)
 	}
-	got, err := ingottest.GetBytes(ctx, cfg, bucket, key)
+	got, err := s3glue.GetBytes(ctx, cfg, bucket, key)
 	if err != nil {
 		t.Fatalf("get object: %v", err)
 	}
