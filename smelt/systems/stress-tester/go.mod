@@ -1,6 +1,6 @@
 module github.com/fil-forge/forge/smelt/systems/stress-tester
 
-go 1.24.0
+go 1.26.5
 
 require (
 	github.com/glebarez/sqlite v1.11.0

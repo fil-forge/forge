@@ -1,6 +1,6 @@
 module github.com/fil-forge/forge/sprue
 
-go 1.25.3
+go 1.26.5
 
 require (
 	github.com/alanshaw/dag-json-gen v0.0.8
