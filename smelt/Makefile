@@ -38,7 +38,7 @@ workspace-build:
 		rm -f $(WORKSPACE_OVERRIDE); \
 	fi
 
-.PHONY: test-s3 help generate init up down restart clean nuke fresh logs pull build cli status guppy regen debug-upload ensure-state check-docker workspace-build shell-guppy shell-piri shell-upload shell-hilt
+.PHONY: test vet test-e2e itest test-s3 help generate init up down restart clean nuke fresh logs pull build cli status guppy regen debug-upload ensure-state check-docker workspace-build shell-guppy shell-piri shell-upload shell-hilt
 
 # Default target - show help
 help:
@@ -320,3 +320,18 @@ debug-upload: generated/compose/piri.yml ensure-state
 ## stack in Docker with the working tree's ingot mounted over the image (~6 min)
 test-s3:
 	GOWORK=off go test -tags itest -v -timeout 30m ./tests/s3/...
+
+## test: smelt's unit tests (fast, no Docker; the stack suites are test-s3/test-e2e)
+test:
+	GOWORK=off go test ./...
+
+## vet: go vet the smelt module
+vet:
+	GOWORK=off go vet ./...
+
+## test-e2e: the stack smoke suite — boots the full Forge stack in Docker
+test-e2e:
+	GOWORK=off go test -tags e2e -v -timeout 20m -parallel 1 ./tests/e2e/...
+
+## itest: alias for test-s3 (the S3 gateway system suite)
+itest: test-s3
