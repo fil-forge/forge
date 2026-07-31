@@ -3,6 +3,7 @@ go 1.26.5
 use (
 	./hilt
 	./ingot
+	./ingot/itest
 	./piri
 	./smelt
 	./smelt/systems/stress-tester

@@ -22,8 +22,10 @@ test:
 	$(GO) test ./...
 
 ## itest: run the integration test suite (boots the Forge stack in Docker; ~6 min)
+# itest/ is its own (test-only) module so ingot's library go.mod does not
+# require the unpublished smelt harness — hence the cd.
 itest:
-	$(GO) test -tags itest -v -timeout 30m ./itest
+	cd itest && $(GO) test -tags itest -v -timeout 30m ./...
 
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:

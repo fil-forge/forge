@@ -26,7 +26,7 @@ make test       # unit tests: GOWORK=off go test ./... (fast, no Docker)
 make itest      # integration tests: boots the Forge stack in Docker (~6 min)
 make gen        # regenerate bucket/cbor_gen.go after changing bucket types
 GOWORK=off go vet ./...
-GOWORK=off go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v  # one S3 category
+cd itest && GOWORK=off go test -tags itest ./... -run 'TestForgeVersity/PutObject' -v  # one S3 category (itest/ is its own module)
 GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 ```
 
@@ -100,7 +100,7 @@ Internal:
   `/ucan/conclude`, `/index/add`, `/provider/add`, `/access/delegate`, and the
   `/access` login flow.
 - **`iam/`** — the Hilt (auth-service) integration over the external
-  `github.com/fil-forge/forge/hilt/pkg/client` (RFC: forge-s3-tenant-management):
+  `github.com/fil-forge/libforge/client/hilt` (RFC: forge-s3-tenant-management):
   versitygw `IAMService`/`RequestIAMService` authorizing each non-root
   request via `/s3/request/authorize` (derived SigV4 key), plus
   `DelegationCache` — a TTL cache (go-cache) of Hilt-issued delegations
