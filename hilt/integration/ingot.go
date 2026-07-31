@@ -10,11 +10,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/fil-forge/forge/hilt/pkg/client"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
+	hiltclient "github.com/fil-forge/libforge/client/hilt"
+
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	"github.com/fil-forge/libforge/sigv4"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
@@ -35,7 +36,7 @@ import (
 // identity + its Hilt->Ingot proofs live in hilt); it signs its Sprue /blob/add
 // invocation as the same provider identity (ingotIssuer), with the bucket as subject.
 type mockIngot struct {
-	hilt        *client.Client
+	hilt        *hiltclient.Client
 	ingotIssuer ucan.Issuer
 	sprueID     did.DID
 	sprueExec   execution.Executor
@@ -48,7 +49,7 @@ type mockIngot struct {
 // newMockIngot starts the mock Ingot S3 endpoint. hilt calls Hilt (issuer = the
 // provider identity); ingotIssuer/sprueID/sprueExec are used to invoke /blob/add on
 // Sprue.
-func newMockIngot(hilt *client.Client, ingotIssuer ucan.Issuer, sprueID did.DID, sprueExec execution.Executor) *mockIngot {
+func newMockIngot(hilt *hiltclient.Client, ingotIssuer ucan.Issuer, sprueID did.DID, sprueExec execution.Executor) *mockIngot {
 	m := &mockIngot{
 		hilt:        hilt,
 		ingotIssuer: ingotIssuer,

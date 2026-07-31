@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	accesskeymemory "github.com/fil-forge/forge/hilt/pkg/store/accesskey/memory"
 	bucketmemory "github.com/fil-forge/forge/hilt/pkg/store/bucket/memory"
 	providermemory "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
@@ -14,6 +13,8 @@ import (
 	"github.com/fil-forge/forge/hilt/pkg/vault"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
 	s3 "github.com/fil-forge/libforge/commands/s3"
+	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
@@ -98,7 +99,7 @@ func TestAuthorize(t *testing.T) {
 		require.Equal(t, accessKey.DID(), authz.AccessKey.ID)
 		require.Equal(t, tenantID, authz.Tenant.ID)
 		require.Equal(t, region, authz.Region)
-		require.Equal(t, auth.OpGetObject, authz.Operation) // GET /bucket/object-key
+		require.Equal(t, s3.OpGetObject, authz.Operation) // GET /bucket/object-key
 		require.NotNil(t, authz.Bucket)
 		require.Equal(t, "bucket", authz.Bucket.Name)
 		require.NotNil(t, authz.Signed)
@@ -108,14 +109,14 @@ func TestAuthorize(t *testing.T) {
 		// The key is scoped to some other bucket, so it may not use "bucket".
 		az, _, _ := setup(t, accessKey, &setupConfig{accessKeyBuckets: []did.DID{testutil.RandomDID(t)}})
 		_, err := az.Authorize(ctx, providerID, signedObjectRequest(t, accessKey, "bucket", region))
-		require.ErrorIs(t, err, auth.ErrBucketNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrBucketNotPermitted)
 	})
 
 	t.Run("rejects an unknown bucket", func(t *testing.T) {
 		// The key may use any bucket (nil scope), but "nope" does not exist.
 		az, _, _ := setup(t, accessKey, nil)
 		_, err := az.Authorize(ctx, providerID, signedObjectRequest(t, accessKey, "nope", region))
-		require.ErrorIs(t, err, auth.ErrUnknownBucket)
+		require.ErrorIs(t, err, s3req.ErrUnknownBucket)
 	})
 
 	t.Run("rejects an operation the access key lacks permission for", func(t *testing.T) {
@@ -128,7 +129,7 @@ func TestAuthorize(t *testing.T) {
 		signed, err := sigv4.Presign(req, accessKey.KeyDID().Identifier(), secret, region, sigv4.SchemeV4, time.Now(), time.Hour)
 		require.NoError(t, err)
 		_, err = az.Authorize(ctx, providerID, s3.Request{Method: signed.Method, URL: signed.URL})
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects an invalid signature", func(t *testing.T) {
@@ -146,19 +147,19 @@ func TestAuthorize(t *testing.T) {
 		az := auth.NewAuthorizer(zap.NewNop(), accessKeys, tenants, providers, bucketmemory.New(), secrets)
 
 		_, err = az.Authorize(ctx, providerID, signedRequest(t, accessKey, region, time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrSignatureMismatch)
+		require.ErrorIs(t, err, s3req.ErrSignatureMismatch)
 	})
 
 	t.Run("rejects an unsigned request", func(t *testing.T) {
 		az, _, _ := setup(t, accessKey, nil)
 		_, err := az.Authorize(ctx, providerID, s3.Request{Method: "GET", URL: "https://s3.fil.one/bucket/object-key"})
-		require.ErrorIs(t, err, auth.ErrMalformedSignature)
+		require.ErrorIs(t, err, s3req.ErrMalformedSignature)
 	})
 
 	t.Run("rejects an unknown access key", func(t *testing.T) {
 		az := auth.NewAuthorizer(zap.NewNop(), accesskeymemory.New(), tenantmemory.New(), providermemory.New(), bucketmemory.New(), vaultmemory.New())
 		_, err := az.Authorize(ctx, providerID, signedRequest(t, accessKey, region, time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrUnknownAccessKey)
+		require.ErrorIs(t, err, s3req.ErrUnknownAccessKey)
 	})
 
 	t.Run("rejects when the access key secret is missing from the vault", func(t *testing.T) {
@@ -181,27 +182,27 @@ func TestAuthorize(t *testing.T) {
 		// A provider exists in eu-west-1, but it isn't the tenant's provider.
 		require.NoError(t, providers.Add(ctx, testutil.RandomDID(t), "eu-west-1"))
 		_, err := az.Authorize(ctx, providerID, signedRequest(t, accessKey, "eu-west-1", time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrRegionNotServed)
+		require.ErrorIs(t, err, s3req.ErrRegionNotServed)
 	})
 
 	t.Run("rejects a region no provider serves", func(t *testing.T) {
 		az, _, _ := setup(t, accessKey, nil)
 		// No provider is registered for eu-west-1, so validateRegion skips it.
 		_, err := az.Authorize(ctx, providerID, signedRequest(t, accessKey, "eu-west-1", time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrRegionNotServed)
+		require.ErrorIs(t, err, s3req.ErrRegionNotServed)
 	})
 
 	t.Run("rejects an expired presigned URL", func(t *testing.T) {
 		az, _, _ := setup(t, accessKey, nil)
 		// Validly signed, but two hours ago with only a one-hour window.
 		_, err := az.Authorize(ctx, providerID, signedRequest(t, accessKey, region, time.Now().Add(-2*time.Hour), time.Hour))
-		require.ErrorIs(t, err, auth.ErrSignatureExpired)
+		require.ErrorIs(t, err, s3req.ErrSignatureExpired)
 	})
 
 	t.Run("rejects an invocation not from the tenant's provider", func(t *testing.T) {
 		az, _, _ := setup(t, accessKey, nil)
 		_, err := az.Authorize(ctx, testutil.RandomDID(t), signedRequest(t, accessKey, region, time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrIssuerForbidden)
+		require.ErrorIs(t, err, s3req.ErrIssuerForbidden)
 	})
 
 	t.Run("rejects an expired access key", func(t *testing.T) {
@@ -210,7 +211,7 @@ func TestAuthorize(t *testing.T) {
 		past := time.Now().Add(-time.Hour)
 		az, _, _ := setup(t, accessKey, &setupConfig{accessKeyExpires: &past})
 		_, err := az.Authorize(ctx, providerID, signedRequest(t, accessKey, region, time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrAccessKeyExpired)
+		require.ErrorIs(t, err, s3req.ErrAccessKeyExpired)
 	})
 
 	t.Run("rejects a disabled tenant", func(t *testing.T) {
@@ -218,7 +219,7 @@ func TestAuthorize(t *testing.T) {
 		// the tenant is disabled (so disabled status is the only variable).
 		az, _, _ := setup(t, accessKey, &setupConfig{tenantStatus: tenant.Disabled})
 		_, err := az.Authorize(ctx, providerID, signedRequest(t, accessKey, region, time.Now(), time.Hour))
-		require.ErrorIs(t, err, auth.ErrTenantDisabled)
+		require.ErrorIs(t, err, s3req.ErrTenantDisabled)
 	})
 }
 

@@ -40,15 +40,19 @@ and `sprue` (the upload service; mirror its patterns where relevant).
 - `pkg/config` — viper config: file + `HILT_` env prefix (`.`→`_`) + cobra flags.
 - `pkg/api` — Tenant REST handlers + the partner-key auth middleware.
 - `pkg/rpc` — UCAN S3 command handlers; `pkg/rpc/service/auth` is the shared
-  `Authorizer` service.
-- `pkg/sigv4` — stdlib-only SigV4 / SigV4a verification, key derivation
-  (`DeriveKey`), and local verification (`VerifyWithKey`).
-- `pkg/s3perm` — S3-permission → Forge-command mapping (shared by `api` and `rpc`).
+  `Authorizer` service. The wire contract those handlers expose — named error
+  sentinels, `Operation`/`ClassifyRequest` — lives in libforge next to the
+  `commands/s3` bindings (`commands/s3`, `commands/s3/request`,
+  `commands/s3/bucket`), so Ingot consumes it without importing this module.
+- SigV4 verification (`libforge/sigv4`) and the S3-permission → Forge-command
+  mapping (`libforge/s3perm`) also live in libforge for the same reason.
 - `pkg/store/{tenant,accesskey,bucket,delegation,provider}` — each an interface
   with `memory` and `postgres` backends.
 - `pkg/vault` (`memory`, `hashicorp`) — private-key storage; `paths.go` has the
   key path helpers (`TenantKeyPath`, `AccessKeyPath`).
-- `pkg/client` — clients for external services (the Sprue `UploadClient`).
+- `pkg/client` — clients for external services (the Sprue `UploadClient`) and
+  the self-issued `AdminClient`. The client for Hilt's own `/s3/*` RPC API is
+  `libforge/client/hilt` (Ingot and the integration tests use it).
 - `pkg/migrations` — goose SQL migrations run on startup (unless skipped).
 - `internal/testutil` — test-only helpers (random DIDs/issuers, testcontainers).
 

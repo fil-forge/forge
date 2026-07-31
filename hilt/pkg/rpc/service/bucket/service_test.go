@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
+	s3req "github.com/fil-forge/libforge/commands/s3/request"
+
 	client "github.com/fil-forge/forge/hilt/pkg/client"
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
 	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/hilt/pkg/store"
 	accesskeymemory "github.com/fil-forge/forge/hilt/pkg/store/accesskey/memory"
 	bucketmemory "github.com/fil-forge/forge/hilt/pkg/store/bucket/memory"
@@ -24,6 +25,7 @@ import (
 	"github.com/fil-forge/libforge/commands/content"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
+	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
@@ -126,14 +128,14 @@ func TestCreate(t *testing.T) {
 	t.Run("rejects a key without s3:CreateBucket", func(t *testing.T) {
 		svc, _ := setup(t, []string{"s3:GetObject"}, &fakeSprue{}, delegationmemory.New())
 		_, _, err := svc.Create(ctx, providerID, args())
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects a duplicate bucket name", func(t *testing.T) {
 		svc, buckets := setup(t, []string{"s3:CreateBucket"}, &fakeSprue{}, delegationmemory.New())
 		require.NoError(t, buckets.Add(ctx, testutil.RandomDID(t), tenantID, bucketName))
 		_, _, err := svc.Create(ctx, providerID, args())
-		require.ErrorIs(t, err, bucketsvc.ErrBucketExists)
+		require.ErrorIs(t, err, s3bkt.ErrBucketExists)
 	})
 
 	t.Run("rolls back the bucket when provisioning fails", func(t *testing.T) {
@@ -219,19 +221,19 @@ func TestDelete(t *testing.T) {
 	t.Run("rejects a key without s3:DeleteBucket", func(t *testing.T) {
 		svc, _, _ := setup(t, []string{"s3:GetObject"}, &fakeSprue{empty: true})
 		_, err := svc.Delete(ctx, providerID, del(bucketName))
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects an unknown bucket", func(t *testing.T) {
 		svc, _, _ := setup(t, []string{"s3:DeleteBucket"}, &fakeSprue{empty: true})
 		_, err := svc.Delete(ctx, providerID, del("nope"))
-		require.ErrorIs(t, err, auth.ErrUnknownBucket)
+		require.ErrorIs(t, err, s3req.ErrUnknownBucket)
 	})
 
 	t.Run("rejects a non-empty bucket and keeps it", func(t *testing.T) {
 		svc, buckets, _ := setup(t, []string{"s3:DeleteBucket"}, &fakeSprue{empty: false})
 		_, err := svc.Delete(ctx, providerID, del(bucketName))
-		require.ErrorIs(t, err, bucketsvc.ErrBucketNotEmpty)
+		require.ErrorIs(t, err, s3bkt.ErrBucketNotEmpty)
 		_, err = buckets.GetByName(ctx, bucketName)
 		require.NoError(t, err)
 	})
@@ -325,14 +327,14 @@ func TestList(t *testing.T) {
 		svc, _, _ := setup(t, []string{"s3:ListAllMyBuckets"})
 		for _, param := range []string{"max-buckets=abc", "max-buckets=0", "max-buckets=-1", "max-buckets=10001"} {
 			_, err := svc.List(ctx, providerID, listArgs(param))
-			require.ErrorIs(t, err, bucketsvc.ErrInvalidArgument, "param %q", param)
+			require.ErrorIs(t, err, s3bkt.ErrInvalidArgument, "param %q", param)
 		}
 	})
 
 	t.Run("rejects a key without the list permission", func(t *testing.T) {
 		svc, _, _ := setup(t, []string{"s3:GetObject"})
 		_, err := svc.List(ctx, providerID, listArgs())
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects a validly-signed request for a different operation", func(t *testing.T) {
@@ -342,7 +344,7 @@ func TestList(t *testing.T) {
 		require.NoError(t, buckets.Add(ctx, testutil.RandomDID(t), tenantID, "bucket-a"))
 		args := &s3bkt.ListArguments{Request: presign(t, signer, "GET", "https://"+region+".s3.fil.one/bucket-a/object-key", region)}
 		_, err := svc.List(ctx, providerID, args)
-		require.ErrorIs(t, err, bucketsvc.ErrOperationMismatch)
+		require.ErrorIs(t, err, s3bkt.ErrOperationMismatch)
 	})
 }
 
@@ -389,13 +391,13 @@ func TestInfo(t *testing.T) {
 	t.Run("rejects an unknown bucket", func(t *testing.T) {
 		svc := setup(t, did.DID{})
 		_, _, err := svc.Info(ctx, &s3bkt.InfoArguments{Name: "nope", AccessKey: akDID})
-		require.ErrorIs(t, err, bucketsvc.ErrUnknownBucket)
+		require.ErrorIs(t, err, s3bkt.ErrUnknownBucket)
 	})
 
 	t.Run("rejects an unknown access key", func(t *testing.T) {
 		svc := setup(t, did.DID{})
 		_, _, err := svc.Info(ctx, &s3bkt.InfoArguments{Name: bucketName, AccessKey: testutil.RandomDID(t)})
-		require.ErrorIs(t, err, bucketsvc.ErrUnknownAccessKey)
+		require.ErrorIs(t, err, s3bkt.ErrUnknownAccessKey)
 	})
 
 	t.Run("returns empty delegations when no grant reaches the bucket", func(t *testing.T) {
