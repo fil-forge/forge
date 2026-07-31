@@ -1,5 +1,0 @@
-{
-  "cgo": false,
-  "skip32bit": true,
-  "skipOSes": ["windows"]
-}
