@@ -215,13 +215,51 @@ jobs:
 
       # The suites run sequentially in this one job: each sweeps smeltery-*
       # containers, so two stacks must never share a Docker host.
+      # Both suites pipe through group-go-tests.awk (collapsible log group per
+      # top-level test) and tee a raw copy for the job summary below. shell:
+      # bash is explicit because that is what turns on pipefail — without it a
+      # failing go test would vanish behind the awk pipe's exit status.
       - name: Full stack e2e (this commit's images)
         working-directory: smelt
-        run: go test -tags e2e -v -timeout 30m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
+        shell: bash
+        run: go test -tags e2e -v -timeout 30m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/... 2>&1 | tee /tmp/suite-e2e.log | awk -f "$GITHUB_WORKSPACE/.github/scripts/group-go-tests.awk"
 
       - name: S3 gateway system suite
         working-directory: smelt
-        run: go test -tags itest -v -timeout 25m ./tests/s3/...
+        shell: bash
+        run: go test -tags itest -v -timeout 25m ./tests/s3/... 2>&1 | tee /tmp/suite-s3.log | awk -f "$GITHUB_WORKSPACE/.github/scripts/group-go-tests.awk"
+
+      # At-a-glance readout on the run's overview page: which images were
+      # built and each suite's case counts, without opening a single log.
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Stack tier"
+            echo
+            echo "All four service images are built from **this commit** (\`docker/Dockerfile\`), loaded into the runner's daemon — never pushed — and the suites boot the stack on them as-built."
+            echo
+            echo "| image | target | tag |"
+            echo "|---|---|---|"
+            for s in piri hilt sprue ingot; do
+              echo "| $s | prod | \`forge-ci/$s:${GITHUB_SHA}\` |"
+            done
+            echo
+            echo "| suite | passed | failed | skipped |"
+            echo "|---|---|---|---|"
+            for entry in "e2e smoke;/tmp/suite-e2e.log" "s3 system;/tmp/suite-s3.log"; do
+              name="${entry%;*}"; log="${entry#*;}"
+              if [ -f "$log" ]; then
+                p=$(grep -cE '^[[:space:]]*--- PASS:' "$log" || true)
+                f=$(grep -cE '^[[:space:]]*--- FAIL:' "$log" || true)
+                k=$(grep -cE '^[[:space:]]*--- SKIP:' "$log" || true)
+                echo "| $name | $p | $f | $k |"
+              else
+                echo "| $name | – | – | did not run |"
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dump container state on failure
         if: failure()
