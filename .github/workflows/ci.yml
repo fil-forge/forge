@@ -31,7 +31,7 @@ jobs:
   # another (shared surface lives in libforge), so each filter is just the
   # service's own subtree.
   changes:
-    name: Detect changes
+    name: detect changed services
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.filter.outputs.changes }}
@@ -64,7 +64,9 @@ jobs:
               - '.github/workflows/ci.yml'
 
   unit:
-    name: unit (${{ matrix.service }})
+    # The check name spells out the gate order so a red X is legible from the
+    # PR checks list without clicking through.
+    name: unit ${{ matrix.service }} · build,vet,tidy,test
     needs: changes
     if: needs.changes.outputs.any == 'true'
     runs-on: ubuntu-latest
@@ -97,8 +99,10 @@ jobs:
             echo "GOFLAGS=-tags=skiff" >> "$GITHUB_ENV"
           fi
 
-      - run: go build ./...
-      - run: go vet ./...
+      - name: go build
+        run: go build ./...
+      - name: go vet
+        run: go vet ./...
 
       # Placeholder gate: no repo-wide linter rules are adopted yet. When they
       # are, they live in ONE root-level config shared by every service — do
@@ -111,7 +115,8 @@ jobs:
       - name: go.mod tidy check
         run: go mod tidy && git diff --exit-code go.mod go.sum
 
-      - run: go test ./...
+      - name: go test
+        run: go test ./...
 
   # One stack run for the whole PR, not one per service. The four in-repo
   # service images are built HERE, from this commit, and handed to the suites
@@ -119,7 +124,7 @@ jobs:
   # artifact under test is the artifact that ships, packaging included; there
   # is no binary-mounting layer in CI (that stays a local-dev fast path).
   stack:
-    name: stack
+    name: stack · images,e2e,s3-suite
     needs: [changes, unit]
     if: needs.changes.outputs.any == 'true'
     # Pinned rather than -latest so the Docker version doesn't drift from under
