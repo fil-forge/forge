@@ -21,9 +21,11 @@ build:
 test:
 	$(GO) test ./...
 
-## itest: run the integration test suite (boots the Forge stack in Docker; ~6 min)
+## itest: run ingot's system suite (boots the Forge stack in Docker; ~6 min)
+# The suite lives in smelt/tests/s3 — it validates the whole stack through
+# ingot's S3 API, so it belongs to the harness, not this library module.
 itest:
-	$(GO) test -tags itest -v -timeout 30m ./itest
+	$(MAKE) -C ../smelt test-s3
 
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:

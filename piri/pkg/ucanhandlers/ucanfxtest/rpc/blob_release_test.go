@@ -69,6 +69,7 @@ func (s *RPCSuite) TestBlobRelease_ReleasesClaimAndBytes() {
 		&blob.ReleaseArguments{
 			Space:  space,
 			Digest: digest,
+			Cause:  testutil.RandomCID(t),
 		},
 		invocation.WithAudience(service),
 		invocation.WithProofs(removeProof.Link()),
@@ -93,6 +94,7 @@ func (s *RPCSuite) TestBlobRelease_ReleasesClaimAndBytes() {
 		&blob.ReleaseArguments{
 			Space:  space,
 			Digest: digest,
+			Cause:  testutil.RandomCID(t),
 		},
 		invocation.WithAudience(service),
 		invocation.WithProofs(removeProof.Link()),
@@ -139,6 +141,7 @@ func (s *RPCSuite) TestBlobRelease_OtherSpaceRetainsBytes() {
 		&blob.ReleaseArguments{
 			Space:  spaceA,
 			Digest: digest,
+			Cause:  testutil.RandomCID(t),
 		},
 		invocation.WithAudience(service),
 		invocation.WithProofs(removeProof.Link()),

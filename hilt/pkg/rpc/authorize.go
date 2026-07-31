@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/forge/hilt/pkg/s3perm"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	"github.com/fil-forge/libforge/s3perm"
+	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"

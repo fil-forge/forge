@@ -3,9 +3,10 @@ package blockstore_test
 import (
 	"context"
 	"errors"
-	"github.com/fil-forge/ucantone/did"
 	"testing"
 	"time"
+
+	"github.com/fil-forge/ucantone/did"
 
 	block "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"

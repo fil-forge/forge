@@ -13,11 +13,11 @@ import (
 	v4 "github.com/fil-forge/versitygw/aws/signer/v4"
 	"github.com/fil-forge/versitygw/s3err"
 
-	hiltauth "github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/ingot/registry"
 	contentcmds "github.com/fil-forge/libforge/commands/content"
 	s3 "github.com/fil-forge/libforge/commands/s3"
+	hiltauth "github.com/fil-forge/libforge/commands/s3/request"
+	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/ucantone/did"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/multikey/ed25519"

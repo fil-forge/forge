@@ -1,6 +1,6 @@
 module github.com/fil-forge/forge/hilt
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/alanshaw/dag-json-gen v0.0.8
@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/fil-forge/libforge v0.0.0-20260727220215-5e299c46f62f
+	github.com/fil-forge/libforge v0.0.0-20260731172903-928cf2a21b7e
 	github.com/fil-forge/ucantone v0.0.0-20260727203046-ccb77059de44
 	github.com/hashicorp/vault-client-go v0.4.3
 	github.com/ipfs/go-cid v0.6.1

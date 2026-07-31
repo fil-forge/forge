@@ -3,8 +3,9 @@ package rpc
 import (
 	"errors"
 
-	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
-	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
+	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
+
+	s3req "github.com/fil-forge/libforge/commands/s3/request"
 )
 
 // failer is the subset of *binding.Response[OK] used to record a receipt failure.
@@ -17,19 +18,19 @@ type failer interface{ SetFailure(error) error }
 // unchanged; the dispatcher then reports them as a "HandlerExecutionError".
 func authFailure(res failer, err error) error {
 	switch {
-	case errors.Is(err, auth.ErrMalformedSignature),
-		errors.Is(err, auth.ErrInvalidAccessKeyID),
-		errors.Is(err, auth.ErrUnknownAccessKey),
-		errors.Is(err, auth.ErrSignatureMismatch),
-		errors.Is(err, auth.ErrSignatureExpired),
-		errors.Is(err, auth.ErrAccessKeyExpired),
-		errors.Is(err, auth.ErrTenantDisabled),
-		errors.Is(err, auth.ErrIssuerForbidden),
-		errors.Is(err, auth.ErrRegionNotServed),
-		errors.Is(err, auth.ErrUnsupportedOperation),
-		errors.Is(err, auth.ErrOperationNotPermitted),
-		errors.Is(err, auth.ErrUnknownBucket),
-		errors.Is(err, auth.ErrBucketNotPermitted):
+	case errors.Is(err, s3req.ErrMalformedSignature),
+		errors.Is(err, s3req.ErrInvalidAccessKeyID),
+		errors.Is(err, s3req.ErrUnknownAccessKey),
+		errors.Is(err, s3req.ErrSignatureMismatch),
+		errors.Is(err, s3req.ErrSignatureExpired),
+		errors.Is(err, s3req.ErrAccessKeyExpired),
+		errors.Is(err, s3req.ErrTenantDisabled),
+		errors.Is(err, s3req.ErrIssuerForbidden),
+		errors.Is(err, s3req.ErrRegionNotServed),
+		errors.Is(err, s3req.ErrUnsupportedOperation),
+		errors.Is(err, s3req.ErrOperationNotPermitted),
+		errors.Is(err, s3req.ErrUnknownBucket),
+		errors.Is(err, s3req.ErrBucketNotPermitted):
 		return res.SetFailure(err)
 	default:
 		return err
@@ -53,12 +54,12 @@ func adminFailure(res failer, err error) error {
 // authFailure for the auth rejections the bucket service propagates from Authorize.
 func bucketFailure(res failer, err error) error {
 	switch {
-	case errors.Is(err, bucketsvc.ErrOperationMismatch),
-		errors.Is(err, bucketsvc.ErrBucketExists),
-		errors.Is(err, bucketsvc.ErrBucketNotEmpty),
-		errors.Is(err, bucketsvc.ErrUnknownBucket),
-		errors.Is(err, bucketsvc.ErrUnknownAccessKey),
-		errors.Is(err, bucketsvc.ErrInvalidArgument):
+	case errors.Is(err, s3bkt.ErrOperationMismatch),
+		errors.Is(err, s3bkt.ErrBucketExists),
+		errors.Is(err, s3bkt.ErrBucketNotEmpty),
+		errors.Is(err, s3bkt.ErrUnknownBucket),
+		errors.Is(err, s3bkt.ErrUnknownAccessKey),
+		errors.Is(err, s3bkt.ErrInvalidArgument):
 		return res.SetFailure(err)
 	default:
 		return authFailure(res, err)

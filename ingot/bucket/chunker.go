@@ -5,8 +5,9 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
-	"github.com/fil-forge/ucantone/did"
 	"io"
+
+	"github.com/fil-forge/ucantone/did"
 
 	mh "github.com/multiformats/go-multihash"
 

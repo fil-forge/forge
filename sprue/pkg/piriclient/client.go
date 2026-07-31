@@ -7,10 +7,10 @@ import (
 	"slices"
 	"time"
 
+	"github.com/fil-forge/forge/sprue/pkg/lib/ucan_client"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	blobreplicacmds "github.com/fil-forge/libforge/commands/blob/replica"
 	ucanlib "github.com/fil-forge/libforge/ucan"
-	"github.com/fil-forge/forge/sprue/pkg/lib/ucan_client"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
@@ -201,6 +201,14 @@ func (c *Client) AcceptInvocation(ctx context.Context, req *AcceptRequest, proof
 type ReleaseRequest struct {
 	Space  did.DID
 	Digest multihash.Multihash
+	// Cause is the task link of the client `/blob/remove` invocation this
+	// release translates; it becomes the release's Cause argument.
+	Cause cid.Cid
+	// Remove is the `/blob/remove` invocation identified by Cause. It rides in
+	// the request container so the node can verify the release originates from
+	// the space (subject == Space, digest == Digest) rather than trusting the
+	// upload service.
+	Remove ucan.Invocation
 }
 
 // Release sends a /blob/release invocation to the piri node, releasing the
@@ -219,12 +227,18 @@ func (c *Client) Release(ctx context.Context, req *ReleaseRequest, proofStore uc
 		zap.Int("proofs", len(prfs)),
 	)
 
+	reqOpts := []execution.RequestOption{execution.WithDelegations(prfs...)}
+	if req.Remove != nil {
+		// The cause invocation must be present in the request container for
+		// the node to verify the release (see ReleaseRequest.Remove).
+		reqOpts = append(reqOpts, execution.WithInvocations(req.Remove))
+	}
 	releaseOK, rcpt, _, err := ucan_client.Execute[*blobcmds.ReleaseOK](
 		ctx,
 		c.client,
 		c.logger,
 		inv,
-		execution.WithDelegations(prfs...),
+		reqOpts...,
 	)
 	if err != nil {
 		return nil, nil, nil, err
@@ -255,6 +269,7 @@ func (c *Client) ReleaseInvocation(ctx context.Context, req *ReleaseRequest, pro
 		&blobcmds.ReleaseArguments{
 			Space:  req.Space,
 			Digest: req.Digest,
+			Cause:  req.Cause,
 		},
 		options...,
 	)

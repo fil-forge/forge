@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
-	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
+	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
+
+	s3req "github.com/fil-forge/libforge/commands/s3/request"
+
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -35,17 +37,17 @@ func requireName(t *testing.T, err error, want string) {
 func TestBucketFailure(t *testing.T) {
 	t.Run("wrapped bucket sentinel is set as failure with its name", func(t *testing.T) {
 		f := &recordingFailer{}
-		err := fmt.Errorf("%w: %q", bucketsvc.ErrBucketExists, "foo")
+		err := fmt.Errorf("%w: %q", s3bkt.ErrBucketExists, "foo")
 		require.NoError(t, bucketFailure(f, err))
 		require.True(t, f.called)
-		requireName(t, f.got, bucketsvc.BucketExistsErrorName)
+		requireName(t, f.got, s3bkt.BucketExistsErrorName)
 	})
 
 	t.Run("propagated auth sentinel is set as failure with its name", func(t *testing.T) {
 		f := &recordingFailer{}
-		require.NoError(t, bucketFailure(f, auth.ErrOperationNotPermitted))
+		require.NoError(t, bucketFailure(f, s3req.ErrOperationNotPermitted))
 		require.True(t, f.called)
-		requireName(t, f.got, auth.OperationNotPermittedErrorName)
+		requireName(t, f.got, s3req.OperationNotPermittedErrorName)
 	})
 
 	t.Run("unknown error is returned, not set as failure", func(t *testing.T) {
@@ -84,15 +86,15 @@ func TestAdminFailure(t *testing.T) {
 func TestAuthFailure(t *testing.T) {
 	t.Run("wrapped auth sentinel is set as failure with its name", func(t *testing.T) {
 		f := &recordingFailer{}
-		err := fmt.Errorf("verifying signature: %w", auth.ErrSignatureMismatch)
+		err := fmt.Errorf("verifying signature: %w", s3req.ErrSignatureMismatch)
 		require.NoError(t, authFailure(f, err))
 		require.True(t, f.called)
-		requireName(t, f.got, auth.SignatureMismatchErrorName)
+		requireName(t, f.got, s3req.SignatureMismatchErrorName)
 	})
 
 	t.Run("bucket sentinel is unknown to authFailure and returned", func(t *testing.T) {
 		f := &recordingFailer{}
-		require.ErrorIs(t, authFailure(f, bucketsvc.ErrBucketExists), bucketsvc.ErrBucketExists)
+		require.ErrorIs(t, authFailure(f, s3bkt.ErrBucketExists), s3bkt.ErrBucketExists)
 		require.False(t, f.called)
 	})
 }

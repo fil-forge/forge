@@ -2,22 +2,11 @@
 FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
 ARG TARGETARCH
 ARG TARGETOS=linux
-# BUILD CONTEXT IS THE REPO ROOT, not this directory:
-#
-#     docker build -f hilt/Dockerfile --target prod .
-#
-# hilt has no intra-repo replace directives, so only its own subtree is copied
-# — a change to any sibling service leaves this image's layer cache intact.
-# The root go.work is deliberately not copied, keeping the build hermetic on
-# hilt's own go.mod.
-WORKDIR /go/src
-COPY hilt/go.mod hilt/go.sum* ./hilt/
 WORKDIR /go/src/hilt
+COPY go.mod go.sum* ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download || true
-WORKDIR /go/src
-COPY hilt/ ./hilt/
-WORKDIR /go/src/hilt
+COPY . .
 
 # Production build - stripped binary
 FROM build AS build-prod

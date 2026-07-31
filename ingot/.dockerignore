@@ -10,3 +10,4 @@
 docker-compose*.yml
 compose*.yml
 LICENSE
+dist/

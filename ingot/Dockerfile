@@ -12,18 +12,10 @@
 #   dev         prod + a network/debug toolset and the `dlv` debugger, built
 #               from the debuggable binary; publishes as the :main-dev tag
 #
-# BUILD CONTEXT IS THE REPO ROOT, not this directory:
-#
-#     docker build -f ingot/Dockerfile --target prod .
-#
-# ingot's go.mod carries `replace` directives pointing at ../hilt and ../smelt,
-# so those sibling modules must exist in the context before `go mod download`
-# can resolve them. Only the three modules ingot actually needs are copied, so
-# a change to piri or sprue does not invalidate this image's layer cache.
-#
-# The build stays hermetic on go.mod: the root go.work is deliberately NOT
-# copied in, so the container build resolves exactly what a GOWORK=off build
-# resolves. Don't add it.
+# The build context is this directory; ingot's go.mod has no replace
+# directives (the shared hilt surface comes from libforge), so the module
+# resolves like any published module. The repo-root go.work is outside the
+# context, keeping the container build hermetic on go.mod alone.
 #
 # ENTRYPOINT is the bare binary: the compose `command:` supplies the subcommand
 # (e.g. serve --config ...), matching the smelt house style, and lets the dev
@@ -38,19 +30,11 @@ FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
-# Manifests first, for layer caching — including the replace targets, whose
-# go.mod files must be present for module resolution to succeed.
-COPY ingot/go.mod ingot/go.sum ./ingot/
-COPY hilt/go.mod hilt/go.sum ./hilt/
-COPY smelt/go.mod smelt/go.sum ./smelt/
-WORKDIR /src/ingot
+# Manifests first, for layer caching.
+COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
-WORKDIR /src
-COPY hilt/ ./hilt/
-COPY smelt/ ./smelt/
-COPY ingot/ ./ingot/
-WORKDIR /src/ingot
+COPY . .
 
 # ---- production binary: stripped + static ----
 FROM build AS build-prod

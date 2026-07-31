@@ -26,7 +26,7 @@ make test       # unit tests: GOWORK=off go test ./... (fast, no Docker)
 make itest      # integration tests: boots the Forge stack in Docker (~6 min)
 make gen        # regenerate bucket/cbor_gen.go after changing bucket types
 GOWORK=off go vet ./...
-GOWORK=off go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v  # one S3 category
+cd ../smelt && GOWORK=off go test -tags itest ./tests/s3/... -run 'TestForgeVersity/PutObject' -v  # one S3 category
 GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 ```
 
@@ -34,10 +34,10 @@ GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 
 **The test pattern — unit first, integration when you're ready to wait.**
 `make test` runs library/unit tests in seconds with no Docker. `make itest`
-runs `itest/` (build tag `itest`): it boots the full smelt Forge stack in
+runs the system suite in `smelt/tests/s3` (build tag `itest`): it boots the full smelt Forge stack in
 Docker, mounts THIS working tree's binary over the published ingot image, and
 validates the real network path — including the curated S3 conformance
-partition (`itest/versity_*_test.go`); see `itest/README.md`. CI mirrors the
+partition (`smelt/tests/s3/versity_*_test.go`); see `smelt/tests/s3/README.md`. CI mirrors the
 same ordering: the `itest` job only runs after the unit job passes
 (`.github/workflows/go-test.yml`).
 
@@ -100,7 +100,7 @@ Internal:
   `/ucan/conclude`, `/index/add`, `/provider/add`, `/access/delegate`, and the
   `/access` login flow.
 - **`iam/`** — the Hilt (auth-service) integration over the external
-  `github.com/fil-forge/forge/hilt/pkg/client` (RFC: forge-s3-tenant-management):
+  `github.com/fil-forge/libforge/client/hilt` (RFC: forge-s3-tenant-management):
   versitygw `IAMService`/`RequestIAMService` authorizing each non-root
   request via `/s3/request/authorize` (derived SigV4 key), plus
   `DelegationCache` — a TTL cache (go-cache) of Hilt-issued delegations
@@ -169,7 +169,7 @@ forge-mode daemon. Two tiers:
   `logstore/store_test.go`, `blockstore/{cache,staging}_test.go`,
   `forgeclient/accounts_test.go`, `cmd/space_test.go`, plus library helpers in
   `testing/` (thin S3-client glue: `Config`/`NewS3Conf`, roundtrip helpers).
-- **`make itest` — integration** (`itest/`, build tag `itest`, Docker):
+- **`make itest` — integration** (`smelt/tests/s3/`, build tag `itest`, Docker):
   boots the smelt Forge stack with THIS working tree's binary mounted over
   the published image.
   - **`versity_{bucket,object,multipart}_test.go`** — the S3 conformance
@@ -193,7 +193,7 @@ forge-mode daemon. Two tiers:
   *unexpected pass*, so a position-dependent case would flip there.
 - **When bumping versitygw:** new upstream cases are not picked up
   automatically — diff `group-tests.go` dispatch lists against the itest
-  tables and curate the additions (see `itest/README.md`).
+  tables and curate the additions (see `smelt/tests/s3/README.md`).
 
 ## Code generation & migrations
 
@@ -220,7 +220,7 @@ debugger and EXPOSEs `2345`. ENTRYPOINT is the **bare binary** — the compose
 overriding `command`). BuildKit cache mounts speed the module + build cache.
 
 - **On merge to `main`** (`.github/workflows/publish-ghcr.yml`): publishes
-  `:main` + `:sha-<short>` (prod) and `:main-dev` + `:sha-<short>-dev` (dev),
+  `:main` + `:sha-<short>` (prod) and `:main-dev` (dev),
   multi-arch amd64/arm64. PRs get a single-arch, no-push build-check of both
   targets. `:main-dev` slots into smelt's `compose.debug.yml` / `make
   debug-<svc>` flow.

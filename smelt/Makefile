@@ -38,7 +38,7 @@ workspace-build:
 		rm -f $(WORKSPACE_OVERRIDE); \
 	fi
 
-.PHONY: help generate init up down restart clean nuke fresh logs pull build cli status guppy regen debug-upload ensure-state check-docker workspace-build shell-guppy shell-piri shell-upload shell-hilt
+.PHONY: test-s3 help generate init up down restart clean nuke fresh logs pull build cli status guppy regen debug-upload ensure-state check-docker workspace-build shell-guppy shell-piri shell-upload shell-hilt
 
 # Default target - show help
 help:
@@ -315,3 +315,8 @@ debug-upload: generated/compose/piri.yml ensure-state
 	@echo "upload is running under Delve. Attach to localhost:2345:"
 	@echo "  dlv connect localhost:2345"
 	@echo "  (or VS Code 'Connect to server' / GoLand 'Go Remote')"
+
+## test-s3: run the S3 gateway system suite (smelt/tests/s3) — boots the Forge
+## stack in Docker with the working tree's ingot mounted over the image (~6 min)
+test-s3:
+	GOWORK=off go test -tags itest -v -timeout 30m ./tests/s3/...

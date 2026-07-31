@@ -10,3 +10,4 @@
 docker-compose*.yml
 LICENSE
 version.json
+dist/

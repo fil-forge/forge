@@ -501,9 +501,11 @@ The inverse direction of the workspace flow: a service repo imports `smelt/pkg/s
 test dependency, boots the stack from its own e2e tests, and injects its working-tree binary
 via `stack.WithServiceBinary`. Compose files, configs, and embedded snapshots travel with the
 Go import (`go:embed`), so no smelt checkout is needed. Smelt owns each service's *system
-definition* (topology, ports, default config, keys) and asserts it boots healthy; the service
-repo owns its *behavior* tests. Ingot is the reference implementation
-(`ingot/itest`); see docs/DEVELOPING.md "Service repos own their e2e tests".
+definition* (topology, ports, default config, keys) and asserts it boots healthy. For
+*out-of-repo* services (guppy, delegator), the service repo owns its behavior tests and
+imports `pkg/stack` at a pseudo-version. For in-repo services the system suites live here,
+in `tests/` — `tests/s3/` (ingot's S3 conformance + scenarios) is the reference — because
+they validate the whole stack at this commit, not one service; see docs/DEVELOPING.md.
 
 ## CI/CD
 

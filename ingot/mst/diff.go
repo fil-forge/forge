@@ -3,6 +3,7 @@ package mst
 import (
 	"context"
 	"fmt"
+
 	"github.com/fil-forge/ucantone/did"
 
 	cid "github.com/ipfs/go-cid"
