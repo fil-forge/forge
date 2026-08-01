@@ -32,8 +32,8 @@ import (
 
 	"github.com/fil-forge/forge/smelt/pkg/generate"
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
+	"gopkg.in/yaml.v3"
 	"github.com/fil-forge/forge/smelt/pkg/snapshot"
-	"github.com/fil-forge/forge/smelt/pkg/workspace"
 )
 
 // Stack represents a running Forge network.
@@ -167,9 +167,10 @@ func NewStack(ctx context.Context, t *testing.T, opts ...Option) (*Stack, error)
 	composePath := filepath.Join(tempDir, "compose.yml")
 	composeFiles := []string{composePath}
 
-	// Binary injection: build any workspace-selected services and/or use
-	// explicitly-provided binaries, then mount them over the published images.
-	overridePath, err := maybeBinaryOverride(t, tempDir, cfg, resolvedNodes)
+	// Config injection: mount any test-provided config files over the
+	// services' in-container config paths. Code always arrives as a container
+	// image — there is no binary-mounting mechanism.
+	overridePath, err := maybeConfigOverride(t, tempDir, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -442,75 +443,54 @@ func (s *Stack) IngotEndpoint() string {
 	return fmt.Sprintf("http://%s:%s", host, port.Port())
 }
 
-// maybeBinaryOverride builds workspace-selected service binaries (when enabled)
-// and writes a compose override mounting them — plus any explicitly-provided
-// binaries (WithServiceBinary / WithPiriBinary) — over the published images.
-// Returns "" when there are no binaries to inject.
-func maybeBinaryOverride(t *testing.T, tempDir string, cfg *config, nodes []manifest.ResolvedPiriNode) (string, error) {
-	bins := map[string]string{}
+// serviceConfigPaths maps a smelt service name to its in-container config
+// path, for WithServiceConfig overrides. A file mounted at a path inside an
+// existing directory mount shadows just that file (Docker resolves nested
+// binds by path depth), so a config override coexists with the base compose's
+// config-dir mount. Extend as services grow config-override support.
+var serviceConfigPaths = map[string]string{
+	"ingot": "/etc/ingot/config.yaml",
+}
 
-	if cfg.workspaceBinaries {
-		root, services, err := workspace.Detect()
-		if err != nil {
-			return "", fmt.Errorf("workspace binaries: %w", err)
-		}
-		for _, svc := range services {
-			// Held back so a pinned image can stand in for this service —
-			// mounting a working-tree binary over it would defeat the pin.
-			if cfg.workspaceExclude[svc] {
-				t.Logf("smeltery: NOT building %s from local source; it runs its resolved image", svc)
-				continue
-			}
-			path, err := workspace.BuildBinary(root, svc, tempDir)
-			if err != nil {
-				return "", fmt.Errorf("workspace binaries: %w", err)
-			}
-			bins[svc] = path
-			t.Logf("smeltery: built %s from local source (%s)", svc, path)
-		}
-	}
-
-	// Explicit binaries win over workspace-built ones.
-	for svc, path := range cfg.serviceBinaries {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return "", err
-		}
-		if _, err := os.Stat(abs); err != nil {
-			return "", fmt.Errorf("%s binary not found at %s: %w", svc, abs, err)
-		}
-		bins[svc] = abs
-		t.Logf("smeltery: mounting %s binary from %s", svc, abs)
-	}
-
-	configs := map[string]string{}
-	for svc, path := range cfg.serviceConfigs {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return "", err
-		}
-		if _, err := os.Stat(abs); err != nil {
-			return "", fmt.Errorf("%s config not found at %s: %w", svc, abs, err)
-		}
-		configs[svc] = abs
-		t.Logf("smeltery: mounting %s config from %s", svc, abs)
-	}
-
-	if len(bins) == 0 && len(configs) == 0 {
+// maybeConfigOverride writes a compose override mounting any test-provided
+// config files (WithServiceConfig) read-only over the services' in-container
+// config paths. Returns "" when there is nothing to mount.
+func maybeConfigOverride(t *testing.T, tempDir string, cfg *config) (string, error) {
+	if len(cfg.serviceConfigs) == 0 {
 		return "", nil
 	}
 
-	nodeNames := make([]string, len(nodes))
-	for i, n := range nodes {
-		nodeNames[i] = n.Name
+	type svc struct {
+		Volumes []string `yaml:"volumes"`
 	}
-	data, err := workspace.RenderOverride(bins, configs, nodeNames)
+	doc := struct {
+		Services map[string]svc `yaml:"services"`
+	}{Services: map[string]svc{}}
+
+	for service, path := range cfg.serviceConfigs {
+		containerPath, ok := serviceConfigPaths[service]
+		if !ok {
+			return "", fmt.Errorf("service %q has no registered config path to override", service)
+		}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return "", err
+		}
+		if _, err := os.Stat(abs); err != nil {
+			return "", fmt.Errorf("%s config not found at %s: %w", service, abs, err)
+		}
+		doc.Services[service] = svc{Volumes: []string{fmt.Sprintf("%s:%s:ro", abs, containerPath)}}
+		t.Logf("smeltery: mounting %s config from %s", service, abs)
+	}
+
+	body, err := yaml.Marshal(doc)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshal config override: %w", err)
 	}
+	header := []byte("# Auto-generated by smelt's stack SDK -- DO NOT EDIT\n# Mounts test-provided config files over the services' config paths.\n")
 	overridePath := filepath.Join(tempDir, "compose.override.yml")
-	if err := os.WriteFile(overridePath, data, 0644); err != nil {
-		return "", fmt.Errorf("write binary override: %w", err)
+	if err := os.WriteFile(overridePath, append(header, body...), 0644); err != nil {
+		return "", fmt.Errorf("write config override: %w", err)
 	}
 	return overridePath, nil
 }

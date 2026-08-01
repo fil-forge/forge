@@ -2,8 +2,8 @@
 
 Docker-backed system tests behind the `itest` build tag. Everything here runs
 against a **forge-mode ingot deployed in the smelt Forge stack** (sprue, piri,
-indexing-service, postgres, ...) with a build of **the working tree's ingot**
-bind-mounted over the published image — what you just edited is what runs.
+indexing-service, postgres, ...) on **container images built from the working
+tree** — what you just edited is what runs, packaging included.
 There is no in-memory ingot anywhere: the deployment under test is the real
 one. These suites validate the entire stack through ingot's S3 API, which is
 why they live in smelt (the harness) rather than in ingot's library module.
@@ -32,11 +32,12 @@ The stack's service images are mutable `:main` tags that Docker never
 re-pulls — if hilt errors with "unsupported DID method in did:web" or sprue
 with "handler not found" (did:plc resolution and `/blob/list` landed on
 sprue main 2026-07-17), re-pull `ghcr.io/fil-forge/{hilt,sprue,...}:main`.
-To run against an upload-service (sprue) image the registry doesn't have
-yet — e.g. one built from an unmerged branch — point the stack at it:
+The suite always runs on explicit `*_IMAGE` values (`make test-s3` builds
+this working tree's images and sets them); to substitute any image — e.g. one
+built from an unmerged branch — override its var:
 
 ```bash
-INGOT_ITEST_UPLOAD_IMAGE=<image> make test-s3
+UPLOAD_IMAGE=<image> make test-s3
 ```
 
 **Teardown-blocked XFail rows:** a bucket that ever held a non-empty object

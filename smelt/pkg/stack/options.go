@@ -27,16 +27,6 @@ type config struct {
 	ipniImage       string
 	ingotImage      string
 
-	// Binary injection: bind-mount host-built binaries over the published
-	// images instead of rebuilding the image. serviceBinaries holds explicit
-	// prebuilt binaries keyed by smelt service name; workspaceBinaries enables
-	// auto-detect-and-build of services from the active go.work use-list.
-	serviceBinaries   map[string]string
-	workspaceBinaries bool
-	// workspaceExclude names services that workspaceBinaries must NOT build,
-	// so a pinned image can stand in for them (see WithWorkspaceBinariesExcept).
-	workspaceExclude map[string]bool
-
 	// Config injection: bind-mount test-provided config files over a service's
 	// in-container config path, keyed by smelt service name.
 	serviceConfigs map[string]string
@@ -140,87 +130,18 @@ func WithPiriImage(image string) Option {
 	}
 }
 
-// WithServiceBinary mounts a prebuilt binary over a service's binary in the
-// container, replacing the image's copy without rebuilding the image. The
-// binary must be a static linux/amd64 build. service is a smelt service name
-// (piri, upload, signing-service, indexer, delegator, guppy).
-//
-// For building from a local checkout via the Go workspace, prefer
-// WithWorkspaceBinaries; this option is the explicit, prebuilt-binary escape
-// hatch.
-func WithServiceBinary(service, path string) Option {
-	return func(c *config) {
-		if c.serviceBinaries == nil {
-			c.serviceBinaries = map[string]string{}
-		}
-		c.serviceBinaries[service] = path
-	}
-}
-
-// WithPiriBinary mounts a local piri binary into the piri container(s),
-// replacing the image's binary for fast iteration. The binary must be compiled
-// for linux/amd64. Equivalent to WithServiceBinary("piri", path).
-func WithPiriBinary(path string) Option {
-	return WithServiceBinary("piri", path)
-}
-
 // WithServiceConfig mounts a test-provided config file over a service's
 // in-container config path (e.g. ingot's /etc/ingot/config.yaml), replacing
 // the default that ships with smelt's system definition. This lets a service
 // repo's e2e tests exercise config changes without a smelt release. Only
-// services with a registered config path support this (see pkg/workspace);
-// NewStack errors for others.
+// services with a registered config path support this (see serviceConfigPaths
+// in stack.go); NewStack errors for others.
 func WithServiceConfig(service, path string) Option {
 	return func(c *config) {
 		if c.serviceConfigs == nil {
 			c.serviceConfigs = map[string]string{}
 		}
 		c.serviceConfigs[service] = path
-	}
-}
-
-// WithWorkspaceBinaries builds every service selected by the active Go
-// workspace (go.work) from local sibling source and mounts the resulting
-// binaries over the published images. Selection follows the use-list: a service
-// is built when its module is listed; if libforge is listed, all services are
-// rebuilt. Requires an active go.work (see pkg/workspace).
-//
-// Example:
-//
-//	s := stack.MustNewStack(t, stack.WithWorkspaceBinaries())
-func WithWorkspaceBinaries() Option {
-	return func(c *config) {
-		c.workspaceBinaries = true
-	}
-}
-
-// WithWorkspaceBinariesExcept is WithWorkspaceBinaries with the named services
-// held back: every other selected service is built from local source, and the
-// excluded ones run whatever image the stack resolves for them.
-//
-// This exists for compatibility testing. In the monorepo the default is that
-// everything comes from the working tree, which answers "did my change break
-// the system?" — but not "can the version we are about to ship interoperate
-// with the versions already in the field?". Operators upgrade piri and ingot on
-// their own schedule, so those run mixed in production. Pinning one service to
-// a released image while the rest come from HEAD is exactly that test:
-//
-//	s := stack.MustNewStack(t,
-//	    stack.WithWorkspaceBinariesExcept("piri"),
-//	    stack.WithPiriImage("ghcr.io/fil-forge/forge/piri:v1.0.0"),
-//	)
-//
-// Without the exclusion the workspace binary would be mounted over the pinned
-// image, and the test would silently exercise HEAD against HEAD.
-func WithWorkspaceBinariesExcept(services ...string) Option {
-	return func(c *config) {
-		c.workspaceBinaries = true
-		if c.workspaceExclude == nil {
-			c.workspaceExclude = map[string]bool{}
-		}
-		for _, s := range services {
-			c.workspaceExclude[s] = true
-		}
 	}
 }
 

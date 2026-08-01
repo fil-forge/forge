@@ -4,41 +4,20 @@ DOCKER := $(shell which docker)
 # Set YES=1 to skip confirmation prompts (e.g., make nuke YES=1)
 YES ?= 0
 
-# Set SMELT_WORKSPACE=1 to run service containers against binaries built from
-# your local sibling checkouts (selected via the active go.work use-list; see
-# the "Developing Against Sibling Service Repos" section in CLAUDE.md). When
-# enabled, `smelt workspace build` compiles the selected binaries and writes
-# generated/compose/workspace.override.yml, which is chained in below so every
-# compose call mounts them over the published images.
-SMELT_WORKSPACE ?= 0
+# Code enters the stack as CONTAINER IMAGES, never as mounted binaries. To run
+# the stack against the working tree, build the in-repo service images and
+# point the *_IMAGE compose vars at them — `make up-local` does both.
+COMPOSE = $(DOCKER) compose
 
-WORKSPACE_OVERRIDE := generated/compose/workspace.override.yml
+# The working tree's images, as built by the per-service `image` targets
+# (root `make images`). Exported into compose/go-test by the local targets.
+LOCAL_IMAGES_ENV = PIRI_IMAGE=forge/piri:local HILT_IMAGE=forge/hilt:local INGOT_IMAGE=forge/ingot:local UPLOAD_IMAGE=forge/sprue:local
 
-# Chain the workspace binary-mount override into every compose call, but only
-# when it exists on disk. `workspace-build` (a prereq of up/build/fresh) creates
-# it when SMELT_WORKSPACE=1 and removes it otherwise, so a plain `make up` never
-# picks up a stale override.
-#
-# The existence check is a shell command substitution ($$(...)), NOT make's
-# $(wildcard)/$(if). workspace-build creates the override mid-recipe (e.g. `up`
-# runs it on one line, then `$(COMPOSE) up` on the next), but make expands a
-# recipe's functions up front and caches directory listings, so $(wildcard)
-# would still report the file absent. Deferring `test -f` to the shell at
-# recipe-execution time always reflects what workspace-build just reconciled.
-COMPOSE = $(DOCKER) compose $$(test -f $(WORKSPACE_OVERRIDE) && echo "-f compose.yml -f $(WORKSPACE_OVERRIDE)")
+# local-images: build the four in-repo service images from this working tree.
+local-images:
+	$(MAKE) -C .. images
 
-# workspace-build reconciles the override to the current SMELT_WORKSPACE value:
-# build the selected sibling binaries + write the override when enabled, else
-# remove any stale override so published images are used. Prereq of the
-# container-starting targets (up / build / fresh).
-workspace-build:
-	@if [ "$(SMELT_WORKSPACE)" = "1" ]; then \
-		go run ./cmd/smelt workspace build; \
-	else \
-		rm -f $(WORKSPACE_OVERRIDE); \
-	fi
-
-.PHONY: test vet test-e2e itest test-s3 help generate init up down restart clean nuke fresh logs pull build cli status guppy regen debug-upload ensure-state check-docker workspace-build shell-guppy shell-piri shell-upload shell-hilt
+.PHONY: test vet test-e2e itest test-s3 help generate init up down restart clean nuke fresh logs pull build cli status guppy regen ensure-state check-docker local-images up-local shell-guppy shell-piri shell-upload shell-hilt
 
 # Default target - show help
 help:
@@ -80,14 +59,12 @@ help:
 	@echo "  make shell-guppy   Open shell in guppy container"
 	@echo ""
 	@echo "Debugging:"
-	@echo "  make debug-upload  Run upload (sprue) under Delve on localhost:2345"
+	@echo "  make debug-<svc>   Run a service under Delve (piri, hilt, ingot, upload)"
 	@echo ""
 	@echo "Options:"
 	@echo "  YES=1              Skip confirmation prompts (e.g., make nuke YES=1)"
-	@echo "  SMELT_WORKSPACE=1  Run containers against binaries built from your local"
-	@echo "                     sibling checkouts (selected via the active go.work"
-	@echo "                     use-list). 'SMELT_WORKSPACE=1 make up' compiles them"
-	@echo "                     and mounts them over the published images."
+	@echo "  make up-local      Run the stack on this working tree's containers"
+	@echo "                     (builds forge/<svc>:local images, then up)"
 	@echo ""
 	@echo "Destructive commands (clean, nuke, fresh) require confirmation."
 	@echo ""
@@ -166,7 +143,6 @@ up: ensure-state
 			echo "WARNING: ucantool not found - skipping proof top-up"; \
 		fi \
 	fi
-	$(MAKE) workspace-build
 	$(COMPOSE) up -d --remove-orphans
 	@echo ""
 	@echo "Services starting. Run 'make status' to check health."
@@ -204,9 +180,6 @@ clean: generated/compose/piri.yml check-docker
 	rm -rf generated/snapshot-scratch/anvil-state.json generated/snapshot-scratch/deployed-addresses.json
 	@# End any active snapshot session so `make up` goes back to project smelt.yml.
 	rm -f generated/snapshot-scratch/smelt.yml
-	@# Drop any workspace binary-mount override so the next plain `make up`
-	@# starts from published images.
-	rm -f $(WORKSPACE_OVERRIDE)
 	@echo ""
 	@echo "Services stopped, volumes removed, chain state reset."
 	@echo "Keys and proofs preserved. Run 'make up' to restart."
@@ -240,7 +213,6 @@ fresh: generated/compose/piri.yml check-docker
 	@echo "Rebuilding and starting fresh..."
 	$(MAKE) init
 	$(MAKE) ensure-state
-	$(MAKE) workspace-build
 	$(COMPOSE) build
 	$(COMPOSE) up -d --remove-orphans
 	@echo ""
@@ -275,7 +247,6 @@ cli: smelt
 
 # Build all images
 build: generated/compose/piri.yml ensure-state
-	$(MAKE) workspace-build
 	$(COMPOSE) build
 
 # Follow logs from all services
@@ -304,22 +275,33 @@ shell-upload: ensure-state
 shell-hilt: ensure-state
 	$(COMPOSE) exec hilt bash
 
-# Run upload (sprue) under Delve for remote debugging.
-# See compose.debug.yml for the overlay; attach to localhost:2345.
-debug-upload: generated/compose/piri.yml ensure-state
-	@if [ ! -d "generated/keys" ] || [ -z "$$(ls -A generated/keys 2>/dev/null)" ]; then \
+# Run one service under Delve for remote debugging, on its dev image.
+# See compose.debug.yml for the overlay, image env overrides, and the host
+# port table (upload 2345, hilt 2346, ingot 2347, piri 2348). Only the named
+# service is recreated on the overlay; the rest of the stack is untouched.
+DEBUG_SERVICES := upload hilt ingot piri
+.PHONY: $(addprefix debug-,$(DEBUG_SERVICES))
+$(addprefix debug-,$(DEBUG_SERVICES)): debug-%: generated/compose/piri.yml ensure-state
+	@if [ ! -d "generated/keys" ] || [ -z "$$(ls -A generated/keys 2>/dev/null)" ] || [ -z "$$(ls -A generated/proofs 2>/dev/null)" ]; then \
 		$(MAKE) init; \
+	else \
+		$(MAKE) generate; \
+		if command -v "$${UCANTOOL:-ucantool}" >/dev/null 2>&1; then \
+			./generated/generate-proofs.sh; \
+		else \
+			echo "WARNING: ucantool not found - skipping proof top-up"; \
+		fi \
 	fi
-	$(DOCKER) compose -f compose.yml -f compose.debug.yml up -d --force-recreate upload
+	$(DOCKER) compose -f compose.yml -f compose.debug.yml up -d --force-recreate $(if $(filter piri,$*),piri-0,$*)
 	@echo ""
-	@echo "upload is running under Delve. Attach to localhost:2345:"
-	@echo "  dlv connect localhost:2345"
+	@echo "$* is running under Delve. Attach with:"
+	@echo "  dlv connect localhost:$(if $(filter upload,$*),2345,$(if $(filter hilt,$*),2346,$(if $(filter ingot,$*),2347,2348)))"
 	@echo "  (or VS Code 'Connect to server' / GoLand 'Go Remote')"
 
-## test-s3: run the S3 gateway system suite (smelt/tests/s3) — boots the Forge
-## stack in Docker with the working tree's ingot mounted over the image (~6 min)
-test-s3:
-	GOWORK=off go test -tags itest -v -timeout 30m ./tests/s3/...
+## test-s3: run the S3 gateway system suite (smelt/tests/s3) — builds this
+## working tree's container images and boots the Forge stack on them (~10 min)
+test-s3: local-images
+	$(LOCAL_IMAGES_ENV) GOWORK=off go test -tags itest -v -timeout 30m ./tests/s3/...
 
 ## test: smelt's unit tests (fast, no Docker; the stack suites are test-s3/test-e2e)
 test:
@@ -329,9 +311,18 @@ test:
 vet:
 	GOWORK=off go vet ./...
 
-## test-e2e: the stack smoke suite — boots the full Forge stack in Docker
-test-e2e:
-	GOWORK=off go test -tags e2e -v -timeout 20m -parallel 1 ./tests/e2e/...
+## test-e2e: the stack smoke suite — builds this working tree's container
+## images and boots the full Forge stack on them
+test-e2e: local-images
+	$(LOCAL_IMAGES_ENV) GOWORK=off go test -tags e2e -v -timeout 20m -parallel 1 ./tests/e2e/...
 
 ## itest: alias for test-s3 (the S3 gateway system suite)
 itest: test-s3
+
+## up-local: run the stack on this working tree's containers — builds the four
+## forge/<svc>:local images and starts the stack pointing at them. The
+## replacement for the old binary-mount workspace flow: iterate on a service
+## with `make -C <svc> image && make -C smelt up-local` (only changed layers
+## rebuild).
+up-local: local-images
+	$(LOCAL_IMAGES_ENV) $(MAKE) up

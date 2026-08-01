@@ -82,8 +82,8 @@ registration fails for any other reason (mirroring
 - **Image versions**: the flow needs hilt with did:web resolver support
   (hilt `02b2afc`, config `HILT_SERVER_INSECURE_DID_RESOLUTION` — set in
   `compose.yml`) and sprue with the `/customer/add` handler (sprue
-  `1f27110`). If the published `:main` images predate these, build from
-  source with `SMELT_WORKSPACE=1 make up`.
+  `1f27110`). If the published `:main` images predate these, build the
+  working tree's images and run on them: `make up-local`.
 - **Stale upload-postgres volumes**: sprue renamed the `customer.account`
   column to `external_account` by editing its initial migration in place, so
   stacks whose `upload-postgres-data` volume predates sprue `1f27110` fail

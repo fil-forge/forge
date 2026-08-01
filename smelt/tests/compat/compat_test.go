@@ -87,20 +87,50 @@ func pinnedVersions(t *testing.T, service string) []string {
 	return out
 }
 
-// pinOption maps a service name to the stack option that pins its image.
-// Only the operator-facing services are covered: piri and ingot are the ones
-// third parties run and therefore the ones that can lag. sprue and hilt we
-// deploy ourselves and can upgrade together, so a version skew between them is
-// our own scheduling problem rather than a compatibility contract.
-func pinOption(service, image string) (stack.Option, bool) {
+// serviceImageOption maps an in-repo service name to the stack option that
+// sets its container image. Keys follow the baseline/env naming: piri, ingot,
+// sprue, hilt.
+func serviceImageOption(service, image string) (stack.Option, bool) {
 	switch service {
 	case "piri":
 		return stack.WithPiriImage(image), true
 	case "ingot":
 		return stack.WithIngotImage(image), true
+	case "sprue":
+		return stack.WithUploadImage(image), true
+	case "hilt":
+		return stack.WithHiltImage(image), true
 	default:
 		return nil, false
 	}
+}
+
+// headImageEnv names the environment variable carrying each service's
+// THIS-COMMIT image reference. The compat workflow builds those images in-job
+// (forge-ci/<svc>:<sha>); a local run gets them from `make images`
+// (forge/<svc>:local).
+var headImageEnv = map[string]string{
+	"piri":  "PIRI_IMAGE",
+	"ingot": "INGOT_IMAGE",
+	"sprue": "UPLOAD_IMAGE",
+	"hilt":  "HILT_IMAGE",
+}
+
+// headImages resolves the image references for this commit's services from
+// the environment, skipping when any is unset: containers are the only way
+// code enters a stack, so HEAD images are the suite's precondition — it never
+// compiles or mounts anything itself.
+func headImages(t *testing.T) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	for svc, key := range headImageEnv {
+		v := strings.TrimSpace(os.Getenv(key))
+		if v == "" {
+			t.Skipf("%s unset; HEAD images are required (CI builds them in-job; locally run `make images` and export %s=forge/%s:local)", key, key, svc)
+		}
+		out[svc] = v
+	}
+	return out
 }
 
 // TestPinnedPeer boots the stack with one service at a released image and every
@@ -110,26 +140,36 @@ func TestPinnedPeer(t *testing.T) {
 		t.Skip("skipping on darwin (docker-in-docker flakiness)")
 	}
 
+	// Only the operator-facing services get pinned: piri and ingot are the
+	// ones third parties run and therefore the ones that can lag. sprue and
+	// hilt we deploy ourselves and can upgrade together, so a version skew
+	// between them is our own scheduling problem, not a compat contract.
 	for _, service := range []string{"piri", "ingot"} {
 		t.Run(service, func(t *testing.T) {
 			for _, version := range pinnedVersions(t, service) {
 				t.Run(version, func(t *testing.T) {
+					head := headImages(t)
 					image := fmt.Sprintf("%s/%s:%s", imageRepo, service, version)
-					pin, ok := pinOption(service, image)
-					if !ok {
-						t.Fatalf("no pin option for %s", service)
+
+					// Every service runs a container, nothing is mounted:
+					// HEAD images for the fleet, the released image for the
+					// one pinned service. Setting all four explicitly means
+					// no reliance on env-vs-option precedence — what each
+					// container runs is spelled out here.
+					opts := []stack.Option{stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true})}
+					for svc, img := range head {
+						if svc == service {
+							img = image
+						}
+						o, ok := serviceImageOption(svc, img)
+						if !ok {
+							t.Fatalf("no image option for %s", svc)
+						}
+						opts = append(opts, o)
 					}
 
-					// The exclusion is load-bearing: without it the workspace
-					// binary would be mounted over the pinned image and this
-					// would quietly become a HEAD-vs-HEAD run that always
-					// passes.
-					s := stack.MustNewStack(t,
-						stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
-						stack.WithWorkspaceBinariesExcept(service),
-						pin,
-					)
-					t.Logf("compat: %s pinned to %s, all other services from HEAD", service, image)
+					s := stack.MustNewStack(t, opts...)
+					t.Logf("compat: %s pinned to %s, all other services at HEAD images", service, image)
 
 					assertUploadRetrieve(t, s)
 				})
@@ -166,37 +206,31 @@ func TestRollingUpgrade(t *testing.T) {
 
 	for _, upgraded := range []string{"piri", "ingot"} {
 		t.Run("upgrade_"+upgraded, func(t *testing.T) {
-			opts := []stack.Option{
-				stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
-				// Everything from the released baseline set...
-				stack.WithPiriImage(fmt.Sprintf("%s/piri:%s", imageRepo, baseline["piri"])),
-				stack.WithIngotImage(fmt.Sprintf("%s/ingot:%s", imageRepo, baseline["ingot"])),
-				stack.WithUploadImage(fmt.Sprintf("%s/sprue:%s", imageRepo, baseline["sprue"])),
-				stack.WithHiltImage(fmt.Sprintf("%s/hilt:%s", imageRepo, baseline["hilt"])),
+			head := headImages(t)
+
+			// Everything runs the released baseline image except the one
+			// service under upgrade, which runs THIS commit's image. All
+			// containers, nothing mounted — the upgraded service's packaging
+			// is the new packaging too, exactly what a real upgrade ships.
+			opts := []stack.Option{stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true})}
+			for _, svc := range []string{"piri", "ingot", "sprue", "hilt"} {
+				img := fmt.Sprintf("%s/%s:%s", imageRepo, svc, baseline[svc])
+				if svc == upgraded {
+					img = head[svc]
+				}
+				o, ok := serviceImageOption(svc, img)
+				if !ok {
+					t.Fatalf("no image option for %s", svc)
+				}
+				opts = append(opts, o)
 			}
-			// ...except the one service under upgrade, which comes from HEAD.
-			// Building only that service keeps the rest genuinely old.
-			opts = append(opts, stack.WithWorkspaceBinariesExcept(otherThan(upgraded)...))
 
 			s := stack.MustNewStack(t, opts...)
-			t.Logf("compat: fleet at baseline set %v, %s upgraded to HEAD", baseline, upgraded)
+			t.Logf("compat: fleet at baseline set %v, %s upgraded to HEAD image %s", baseline, upgraded, head[upgraded])
 
 			assertUploadRetrieve(t, s)
 		})
 	}
-}
-
-// otherThan returns every in-repo service except the named one, for use as the
-// exclusion list — i.e. "build only `service` from HEAD".
-func otherThan(service string) []string {
-	all := []string{"piri", "ingot", "upload", "hilt"}
-	var out []string
-	for _, s := range all {
-		if s != service {
-			out = append(out, s)
-		}
-	}
-	return out
 }
 
 // assertUploadRetrieve drives the full network path — guppy -> sprue -> piri ->

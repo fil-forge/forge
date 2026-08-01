@@ -354,9 +354,10 @@ Note that you cannot announce to production IPNI from a local piri—production 
 ### Building Locally
 
 Smelt's service compose entries reference **published** images and carry no `build:` contexts,
-so `make build` / `docker compose build` do not rebuild them. To run a service from your own
-source, compile it from a local checkout via the Go workspace flow — see
-[Developing Against Sibling Service Repos](DEVELOPING.md). To pin or swap a published image tag,
+so `make build` / `docker compose build` do not rebuild them. To run the in-repo services from
+your own source, build their images from the working tree and point the stack at them —
+`make up-local`, or per-service `make -C ../<svc> image` + the `*_IMAGE` vars. See
+[Developing Against The Working Tree](DEVELOPING.md). To pin or swap a published image tag,
 see [Using Custom Image Tags](#using-custom-image-tags) below.
 
 ### Using Custom Image Tags
@@ -387,13 +388,18 @@ docker tag smelt-upload:latest ghcr.io/yourorg/upload:dev
 docker push ghcr.io/yourorg/upload:dev
 ```
 
-### Using Local Builds of Service Repositories
+### Using Local Builds of the In-Repo Services
 
-To develop a service (or the shared `libforge` library) against the full stack, use a Go
-workspace plus `SMELT_WORKSPACE=1`. Smelt compiles your local checkouts into static binaries
-and bind-mounts them over the published images — no image rebuilds, no per-repo Dockerfiles.
+To develop a service against the full stack, build its container image from the working tree
+and run the stack on it — code enters the stack as images, never as mounted binaries:
 
-See **[Developing Against Sibling Service Repos](DEVELOPING.md)** for the full workflow,
+```bash
+make up-local                      # all four in-repo services from this tree
+make -C ../piri image              # or rebuild just one (seconds when cached)
+PIRI_IMAGE=forge/piri:local docker compose up -d --force-recreate piri-0
+```
+
+See **[Developing Against The Working Tree](DEVELOPING.md)** for the full workflow,
 including the fast per-edit rebuild loop.
 
 ## Running Individual Systems Standalone

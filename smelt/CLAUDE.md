@@ -148,25 +148,31 @@ docker compose exec upload sh
 
 ### Attaching a Go Debugger
 
-Some services publish `:main-dev` image variants with debug symbols (`-gcflags="all=-N -l"`) and `dlv` baked in. To run one under a debugger:
+Every service publishes a `:main-dev` image variant with debug symbols
+(`-gcflags="all=-N -l"`) and `dlv` baked in (the shared `docker/Dockerfile`'s
+`dev` target). To run one under a debugger:
 
 ```bash
-make debug-upload    # runs sprue under dlv, listening on localhost:2345
-```
-
-The service comes up normally (dlv uses `--continue`, so healthchecks and `post_start` hooks behave as usual). Attach a Delve client whenever:
-
-```bash
+make debug-upload    # also: debug-hilt (2346), debug-ingot (2347), debug-piri (2348)
 dlv connect localhost:2345
 # or VS Code "Connect to server" / GoLand "Go Remote"
 ```
 
-**IDE source mapping for sprue**: remote path `/go/src/sprue` maps to your local sprue checkout (e.g. `~/workspace/src/github.com/fil-forge/forge/sprue`).
+Only the named service is recreated on the `compose.debug.yml` overlay; the
+rest of the stack keeps running normally. hilt/ingot/upload wrap the binary in
+a headless dlv via the overlay's `entrypoint:`; piri's entrypoint script does
+real setup first (DID extraction, delegator registration, init), so the
+overlay instead sets `DEBUG_DLV=1` and `systems/piri/entrypoint.sh` execs dlv
+itself at the final step.
 
-To test a locally-built dev image instead of the published `:main-dev`:
+**IDE source mapping**: remote path `/src` maps to the service's directory in
+your checkout (e.g. `~/workspace/src/github.com/fil-forge/forge/sprue`).
+
+To debug a locally-built dev image instead of the published `:main-dev`:
 
 ```bash
-UPLOAD_DEBUG_IMAGE=sprue:dev make debug-upload
+make -C ../sprue image-dev
+UPLOAD_IMAGE_DEV=forge/sprue:local-dev make debug-upload
 ```
 
 To return a service to normal (non-debug) mode:
@@ -174,8 +180,6 @@ To return a service to normal (non-debug) mode:
 ```bash
 docker compose up -d --force-recreate upload
 ```
-
-**Extending the pattern**: to debug another service, copy the `upload:` block in `compose.debug.yml` and (1) pick the next free debug port (2346, 2347, ...), (2) point `image:` at the service's `:main-dev` variant, (3) replace the binary path and args, and (4) add a matching `make debug-<service>` target. Services with non-trivial entrypoint scripts (e.g. piri's `entrypoint.sh` does DID and delegator registration) need a different strategy — typically teach the upstream entrypoint to `exec dlv ...` when a `DEBUG_DLV=1` env var is set, so the overlay just sets that env var rather than replacing `entrypoint:`.
 
 ### Testing the Upload Flow
 
@@ -455,52 +459,39 @@ PIRI_IMAGE=myregistry/piri:test GUPPY_IMAGE=myregistry/guppy:test make up
 
 Available variables: `PIRI_IMAGE`, `GUPPY_IMAGE`, `DELEGATOR_IMAGE`, `INDEXER_IMAGE`, `IPNI_IMAGE`, `SIGNER_IMAGE`, `UPLOAD_IMAGE`, `HILT_IMAGE`, `INGOT_IMAGE`, `PLC_IMAGE`, `BLOCKCHAIN_IMAGE`. Defaults live in `.env`.
 
-## Developing Against Sibling Service Repos
+## Developing Against The Working Tree (Local Images)
 
-To work on a feature/bugfix spanning the service repos (and the shared `libforge` library)
-and validate it in smelt, use a **Go workspace** (`go.work`) plus `SMELT_WORKSPACE=1`: smelt
-compiles the services you're editing from local source and bind-mounts the binaries over the
-otherwise-published images — no Dockerfiles, no image rebuilds. **Full walkthrough:
-[docs/DEVELOPING.md](docs/DEVELOPING.md).**
+Code enters the stack as **container images, never as mounted binaries**. To
+run the stack against what you are editing, build the in-repo service images
+and point the `*_IMAGE` vars at them — `make up-local` does both:
 
-- `go.work` lives at the `fil-forge/` parent (above every repo, gitignored) and lists `smelt`
-  plus the repos you're editing — `go work init ./smelt ./piri`. The `use`-list is the
-  single source of truth for what gets rebuilt.
-- **libforge rule:** a service is rebuilt when its module is in the use-list; listing
-  `libforge` forces **all** services to rebuild (a published binary would still link the
-  published libforge).
-- Run `SMELT_WORKSPACE=1 make up` / `make fresh`, or `SMELT_WORKSPACE=1 go test -tags e2e ./tests/e2e`. The
-  flag runs `smelt workspace build` → binaries in `generated/bin/` + mounts in
-  `generated/compose/workspace.override.yml` (chained into `$(COMPOSE)`); a plain `make up`
-  removes the override and runs published images.
-- **Fast per-edit loop:** `docker compose stop <svc>` → `SMELT_WORKSPACE=1 make workspace-build`
-  → `docker compose start <svc>` (stop first — the bind-mounted binary is executing, so an
-  in-place rebuild hits `ETXTBSY`).
+```bash
+make up-local        # root `make images` (forge/<svc>:local) + up on those tags
+```
 
-Module → service / container binary map (see `pkg/workspace`):
+Iterating on one service after the stack is up (only changed layers rebuild —
+deps-first Dockerfile caching makes this seconds after the first build):
 
-| module dir | service | container binary |
-|---|---|---|
-| `piri` | piri (all piri-N) | `/usr/bin/piri` |
-| `sprue` | upload | `/usr/bin/sprue` |
-| `piri-signing-service` | signing-service | `/usr/bin/signer` |
-| `indexing-service` | indexer | `/usr/bin/indexer` |
-| `delegator` | delegator | `/usr/bin/registrar` |
-| `guppy` | guppy | `/usr/bin/guppy` |
-| `hilt` | hilt | `/usr/bin/hilt` |
-| `ingot` | ingot | `/usr/bin/ingot` |
+```bash
+make -C ../piri image
+PIRI_IMAGE=forge/piri:local docker compose up -d --force-recreate piri-0
+```
 
-In Go tests, `stack.WithWorkspaceBinaries()` does the same; `stack.WithServiceBinary(name, path)`
-mounts a specific prebuilt binary without the workspace machinery, and
-`stack.WithServiceConfig(name, path)` mounts a test-provided config file over the service's
-in-container config path.
+The stack test suites do this automatically: `make test-s3` / `make test-e2e`
+(and the root `make itest` / `make e2e`) build the four local images and run
+against them — the s3 suite refuses to run without explicit `*_IMAGE` values,
+so it can never silently test published `:main` images.
+
+In Go tests, `stack.WithServiceConfig(name, path)` mounts a test-provided
+config file over a service's in-container config path (config files are data,
+not code — they are the one thing tests may mount).
 
 ## Service Repos Own Their E2E Tests (Smelt as SDK)
 
-The inverse direction of the workspace flow: a service repo imports `smelt/pkg/stack` as a
-test dependency, boots the stack from its own e2e tests, and injects its working-tree binary
-via `stack.WithServiceBinary`. Compose files, configs, and embedded snapshots travel with the
-Go import (`go:embed`), so no smelt checkout is needed. Smelt owns each service's *system
+A service repo imports `smelt/pkg/stack` as a test dependency, boots the stack from its own
+e2e tests, and points the stack at an image built from its working tree (e.g.
+`stack.WithGuppyImage(stack.BuildGuppyImage(t, ".."))`). Compose files, configs, and embedded
+snapshots travel with the Go import (`go:embed`), so no smelt checkout is needed. Smelt owns each service's *system
 definition* (topology, ports, default config, keys) and asserts it boots healthy. For
 *out-of-repo* services (guppy, delegator), the service repo owns its behavior tests and
 imports `pkg/stack` at a pseudo-version. For in-repo services the system suites live here,
@@ -509,12 +500,14 @@ they validate the whole stack at this commit, not one service; see docs/DEVELOPI
 
 ## CI/CD
 
-GitHub Actions run on every PR and push to main (`.github/workflows/`):
+GitHub Actions live at the repo root (`.github/workflows/`):
 
-- **Go Test** / **Go Checks** — unit tests, vet, lint via the shared unified workflows.
-- **E2E** (`e2e.yml`) — `go test -tags e2e ./tests/e2e/...`: Docker-backed full-stack tests
-  (upload/retrieve smoke over the four storage-backend permutations, snapshot boot, ingot
-  system health). Dumps every container's logs on failure.
+- **CI** (`ci.yml`) — per-service unit gates, then ONE stack run per PR: the four service
+  images are built from the commit and the e2e + s3 suites boot the stack on them. Dumps
+  every container's logs on failure.
+- **Compatibility** (`compat.yml`) — nightly version-skew suite: released images vs this
+  commit's images (see tests/compat).
+- **Container** (`publish-ghcr.yml`) — publishes `:main`/`:sha-*`/`:main-dev` on merge.
 
 ## Further Reading
 

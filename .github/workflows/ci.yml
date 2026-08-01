@@ -121,8 +121,9 @@ jobs:
   # One stack run for the whole PR, not one per service. The four in-repo
   # service images are built HERE, from this commit, and handed to the suites
   # through the runner's Docker daemon — never pushed to a registry. The
-  # artifact under test is the artifact that ships, packaging included; there
-  # is no binary-mounting layer in CI (that stays a local-dev fast path).
+  # artifact under test is the artifact that ships, packaging included.
+  # Containers are the ONLY way code enters a stack — there is no
+  # binary-mounting mechanism, in CI or anywhere else.
   stack:
     name: stack · images,e2e,s3-suite
     needs: [changes, unit]
@@ -138,9 +139,6 @@ jobs:
       HILT_IMAGE: forge-ci/hilt:${{ github.sha }}
       INGOT_IMAGE: forge-ci/ingot:${{ github.sha }}
       UPLOAD_IMAGE: forge-ci/sprue:${{ github.sha }}
-      # Tells the S3 suite the images above ARE this commit — run them as
-      # built, no binary mounts (see forgeStack in smelt/tests/s3).
-      SMELT_STACK_PREBUILT: '1'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6

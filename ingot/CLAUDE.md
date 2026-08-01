@@ -35,7 +35,7 @@ GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 **The test pattern — unit first, integration when you're ready to wait.**
 `make test` runs library/unit tests in seconds with no Docker. `make itest`
 runs the system suite in `smelt/tests/s3` (build tag `itest`): it boots the full smelt Forge stack in
-Docker, mounts THIS working tree's binary over the published ingot image, and
+Docker on container images built from THIS working tree, and
 validates the real network path — including the curated S3 conformance
 partition (`smelt/tests/s3/versity_*_test.go`); see `smelt/tests/s3/README.md`. CI mirrors the
 same ordering: the `itest` job only runs after the unit job passes
@@ -170,8 +170,8 @@ forge-mode daemon. Two tiers:
   `forgeclient/accounts_test.go`, `cmd/space_test.go`, plus library helpers in
   `testing/` (thin S3-client glue: `Config`/`NewS3Conf`, roundtrip helpers).
 - **`make itest` — integration** (`smelt/tests/s3/`, build tag `itest`, Docker):
-  boots the smelt Forge stack with THIS working tree's binary mounted over
-  the published image.
+  boots the smelt Forge stack on container images built from THIS working
+  tree (`make itest` builds them).
   - **`versity_{bucket,object,multipart}_test.go`** — the S3 conformance
     partition: per upstream versitygw group, a curated pass table (every case
     must pass) and an XFail table (known-failing, reported as SKIP; an

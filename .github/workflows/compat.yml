@@ -90,13 +90,10 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version-file: go.work
-          cache-dependency-path: |
-            piri/go.sum
-            hilt/go.sum
-            sprue/go.sum
-            ingot/go.sum
-            smelt/go.sum
+          go-version-file: smelt/go.mod
+          cache-dependency-path: smelt/go.sum
+
+      - uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -105,11 +102,74 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # GOWORK stays on: the services NOT pinned to a released image are built
-      # from HEAD by pkg/workspace, which is the whole point of the comparison.
+      # HEAD enters the stack as CONTAINERS, same as ci.yml's stack job: the
+      # four images are built here from this commit (shared gha cache scopes
+      # keep it near no-op) and handed to the tests via the *_IMAGE env. The
+      # tests pin the released side per-case with explicit image options —
+      # nothing is compiled on the host or mounted into a container.
+      - name: Build piri image
+        uses: docker/build-push-action@v6
+        with:
+          context: piri
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=piri
+            BUILD_TAGS=skiff
+          load: true
+          push: false
+          tags: forge-ci/piri:${{ github.sha }}
+          cache-from: type=gha,scope=piri
+          cache-to: type=gha,mode=max,scope=piri
+      - name: Build hilt image
+        uses: docker/build-push-action@v6
+        with:
+          context: hilt
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=hilt
+          load: true
+          push: false
+          tags: forge-ci/hilt:${{ github.sha }}
+          cache-from: type=gha,scope=hilt
+          cache-to: type=gha,mode=max,scope=hilt
+      - name: Build sprue image
+        uses: docker/build-push-action@v6
+        with:
+          context: sprue
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=sprue
+          load: true
+          push: false
+          tags: forge-ci/sprue:${{ github.sha }}
+          cache-from: type=gha,scope=sprue
+          cache-to: type=gha,mode=max,scope=sprue
+      - name: Build ingot image
+        uses: docker/build-push-action@v6
+        with:
+          context: ingot
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=ingot
+            MAIN_PKG=./cmd/ingot
+          load: true
+          push: false
+          tags: forge-ci/ingot:${{ github.sha }}
+          cache-from: type=gha,scope=ingot
+          cache-to: type=gha,mode=max,scope=ingot
+
       - name: Run compatibility suite
         working-directory: smelt
         env:
+          GOWORK: off
+          PIRI_IMAGE: forge-ci/piri:${{ github.sha }}
+          HILT_IMAGE: forge-ci/hilt:${{ github.sha }}
+          INGOT_IMAGE: forge-ci/ingot:${{ github.sha }}
+          UPLOAD_IMAGE: forge-ci/sprue:${{ github.sha }}
           COMPAT_PIRI_VERSIONS: ${{ needs.window.outputs.piri }}
           COMPAT_INGOT_VERSIONS: ${{ needs.window.outputs.ingot }}
           COMPAT_BASELINE_PIRI: ${{ needs.window.outputs.base_piri }}

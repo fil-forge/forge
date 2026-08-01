@@ -12,12 +12,8 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -27,16 +23,16 @@ import (
 
 	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
-	"github.com/fil-forge/forge/smelt/pkg/workspace"
 	s3cmd "github.com/fil-forge/libforge/commands/s3"
 	"github.com/fil-forge/libforge/s3perm"
 )
 
 // This file is the shared harness for the integration tests: they boot the
 // full smelt Forge stack (sprue + piri + indexer + postgres + ...) via
-// smelt's Go SDK and mount the WORKING TREE's ingot binary over the published
-// image, so every S3 call exercises this checkout's code against the real
-// network path. Requires Docker; runs behind the itest build tag:
+// smelt's Go SDK, running the WORKING TREE's container images for every
+// in-repo service, so every S3 call exercises this checkout's code — and its
+// packaging — against the real network path. Requires Docker; runs behind the
+// itest build tag:
 //
 //	make itest
 
@@ -57,47 +53,22 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-var (
-	buildOnce   sync.Once
-	builtBinary string
-	buildErr    error
-)
-
-// localIngotBinary compiles the working tree's ingot daemon once per test
-// run as a static linux binary suitable for bind-mounting over the published
-// image's /usr/bin/ingot. GOARCH follows the test host so the binary matches
-// the Docker host's container platform; GOWORK=off matches the Makefile
-// convention (the parent go.work may declare a newer Go than the toolchain).
-func localIngotBinary(t *testing.T) string {
+// requireHeadImages fails fast unless the four *_IMAGE env vars name the
+// images built from THIS commit. Containers are the only way code enters the
+// stack — there is no binary-mounting fallback — and without this guard a
+// bare `go test` would silently boot the published :main images and test
+// yesterday's code. CI builds the images in-job; locally `make itest` builds
+// forge/<svc>:local and sets the env for you.
+func requireHeadImages(t *testing.T) {
 	t.Helper()
-	buildOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "ingot-itest-bin-")
-		if err != nil {
-			buildErr = err
-			return
+	for _, key := range []string{"PIRI_IMAGE", "HILT_IMAGE", "INGOT_IMAGE", "UPLOAD_IMAGE"} {
+		if strings.TrimSpace(os.Getenv(key)) == "" {
+			t.Fatalf("%s unset: this suite tests the working tree's containers, not published images — run via `make itest` (or `make -C smelt test-s3`), which builds forge/<svc>:local and sets the env", key)
 		}
-		out := filepath.Join(dir, "ingot")
-		cmd := exec.Command("go", "build", "-o", out, "./cmd/ingot")
-		cmd.Dir = "../../../ingot" // tests run in smelt/tests/s3/; build from ingot's module root
-		cmd.Env = append(os.Environ(),
-			"CGO_ENABLED=0",
-			"GOOS=linux",
-			"GOARCH="+runtime.GOARCH,
-			"GOWORK=off",
-		)
-		if outb, err := cmd.CombinedOutput(); err != nil {
-			buildErr = fmt.Errorf("go build ./cmd/ingot: %v\n%s", err, outb)
-			return
-		}
-		builtBinary = out
-	})
-	if buildErr != nil {
-		t.Fatalf("build local ingot binary: %v", buildErr)
 	}
-	return builtBinary
 }
 
-// forgeStack boots the smelt stack with the working tree's ingot injected
+// forgeStack boots the smelt stack on the working tree's service images
 // (plus any extra stack options), waits for ingot's S3 listener, and returns
 // the stack and ingot's host endpoint. Callers must provision a hilt tenant
 // first (hiltProvisionTenant) and sign with its credentials. The stack lives until the calling test —
@@ -105,43 +76,18 @@ func localIngotBinary(t *testing.T) string {
 // booting in a parent test and passing the conf into t.Run subtests.
 func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 	t.Helper()
-	t.Logf("booting the smelt Forge stack (~1-2 min; first run also compiles ingot and pulls images)")
+	t.Logf("booting the smelt Forge stack (~1-2 min on first run while images pull)")
+	// Every in-repo service — piri, sprue, hilt, ingot — runs THIS commit's
+	// container image, provided through the *_IMAGE env (CI builds them
+	// in-job; `make itest` builds forge/<svc>:local). The artifact under test
+	// is the artifact that ships, packaging included — nothing is compiled on
+	// the host or mounted over an image.
+	requireHeadImages(t)
 	opts := []stack.Option{
 		// Postgres-backed piri: piri's curio PDP pipeline refuses sqlite
 		// ("curio PDP pipeline requires Postgres") as of 2026-07-24.
 		stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
 	}
-
-	// Every in-repo service — piri, sprue, hilt, ingot — runs THIS commit.
-	// How it gets there depends on who is running the suite:
-	//
-	//   CI (SMELT_STACK_PREBUILT set): the *_IMAGE env vars point at container
-	//   images built from this commit earlier in the job. The stack runs them
-	//   exactly as built — no binary mounts — so the artifact under test is the
-	//   artifact that ships, packaging included.
-	//
-	//   Local dev (active go workspace): every in-repo service is compiled from
-	//   the working tree and bind-mounted over its image — seconds instead of
-	//   image-build minutes while iterating.
-	//
-	// This replaces the old INGOT_ITEST_{PIRI,UPLOAD}_IMAGE / _PIRI_BINARY
-	// escape hatches. Those existed because the hilt integration made the stack
-	// cross-service (hilt mints did:plc tenant spaces, so sprue and piri both
-	// have to resolve did:plc) and that capability landed in each service
-	// branch-by-branch — you needed a way to point at an unmerged sibling. A
-	// cross-service change is now one commit, so there is nothing to point at.
-	if os.Getenv("SMELT_STACK_PREBUILT") != "" {
-		t.Logf("SMELT_STACK_PREBUILT set; running the provided images as built, no binary mounts")
-	} else if _, _, err := workspace.Detect(); err == nil {
-		opts = append(opts, stack.WithWorkspaceBinaries())
-	} else {
-		// No active workspace (e.g. a deliberate GOWORK=off run). Fall back to
-		// mounting only ingot; the siblings come from their published images,
-		// which reintroduces the floating baseline this suite otherwise avoids.
-		t.Logf("no active go workspace (%v); mounting only ingot, siblings from published images", err)
-		opts = append(opts, stack.WithServiceBinary("ingot", localIngotBinary(t)))
-	}
-
 	opts = append(opts, extra...)
 	s := stack.MustNewStack(t, opts...)
 	endpoint := s.IngotEndpoint()

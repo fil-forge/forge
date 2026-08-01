@@ -1,182 +1,83 @@
-# Developing Against Sibling Service Repos
+# Developing Against The Working Tree
 
-Smelt normally runs **published** images for every service. When you're changing the code
-of a service — or the shared `libforge` library — and want to validate it in the full stack,
-use a **Go workspace** (`go.work`) plus the `SMELT_WORKSPACE=1` flag.
+Code enters the smelt stack as **container images, never as mounted binaries**.
+Working on a service (or a cross-service change — the monorepo makes that one
+commit) and validating it in the stack means building the in-repo images from
+your working tree and pointing the stack at them.
 
 ## What this gives you
 
-With the flag set, smelt:
+- The artifact you test is the artifact that ships: your code AND its
+  packaging (Dockerfile, base image, entrypoint) — not a host-compiled binary
+  smuggled into yesterday's image.
+- One code path everywhere: `make up-local`, `make itest`, and CI's stack job
+  all differ only in image tags.
 
-1. reads the active `go.work` to decide which services you're editing,
-2. compiles each from your local checkout into a static `linux/amd64` binary (the workspace
-   bakes in your cross-module edits, including a local `libforge`), and
-3. bind-mounts each binary over the binary in the otherwise-**published** image.
-
-So the published image still provides the runtime (base OS, certs, side tools like guppy's
-`randdir`); only the one binary you changed is swapped in. There are **no Dockerfiles to
-maintain, no image rebuilds, and no `go.work` inside Docker** — the compile happens on the host
-where the workspace already resolves local source. A plain `make up` (no flag) runs pure
-published images, exactly as before.
-
-## Sibling layout
-
-`go.work` lives at the `fil-forge/` parent — *above* every repo — so Go's upward search finds
-it from any of them. It must list `smelt` plus the repos you're editing:
-
-```
-~/workspace/src/github.com/fil-forge/
-├── go.work                 # the workspace file (local-only; see below)
-├── smelt/                  # this repo
-├── libforge/               # shared library
-├── piri/               # piri storage node
-├── sprue/                  # upload service
-├── indexing-service/       # indexer
-├── delegator/              # delegator
-├── piri-signing-service/   # signing-service
-└── guppy/                  # CLI client
-```
-
-## 1. Create the workspace (once)
+## Run the stack on your working tree
 
 ```bash
-cd ~/workspace/src/github.com/fil-forge
-go work init ./smelt ./piri        # list smelt + whatever you're editing
+make up-local    # builds forge/<svc>:local for piri/hilt/sprue/ingot, then `up`
 ```
 
-`go.work` is local-only — it sits above every git repo and is conventionally gitignored, so it
-is never committed. `rm go.work` reverts everything to the pinned module versions. The same
-file also makes your editor and `go test` resolve the local sibling source, so there are no
-`replace` directives to add to any `go.mod`.
-
-The `use`-list is the **single source of truth** for what gets rebuilt.
-
-### Including guppy or ingot: the genproto replace
-
-If you put `./guppy` (or `./ingot`) in the `use`-list, the build fails with an *ambiguous import*
-for `google.golang.org/genproto/googleapis/{rpc,api}/...`: those modules pull the **pre-split
-monolithic** `google.golang.org/genproto` (≈2021) transitively, and its `rpc`/`api` packages
-collide with the **split** genproto modules smelt requires. Add a workspace-local `replace` that
-bumps the monolith to a post-split version (where those packages are delegated to the split
-modules):
-
-```
-go 1.26.1
-
-use (
-	./smelt
-	./guppy
-	./ingot
-)
-
-replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20260526163538-3dc84a4a5aaa
-```
-
-This lives only in `go.work` (gitignored), so it never touches any committed `go.mod`. Other
-siblings (piri-pdp, sprue, …) don't need it.
-
-> Ingot's forge e2e tests live in the **ingot repo** (`itest/`), not in smelt
-> — see "Service repos own their e2e tests" below. Put `./ingot` in the `use`-list (plus the
-> replace above) only when you want `SMELT_WORKSPACE=1` smelt runs to rebuild ingot from local
-> source.
-
-### Selection and the `libforge` rule
-
-A service is rebuilt from local source when its module dir is in the `use`-list. Because the
-siblings resolve `libforge` *only* through the workspace, **listing `libforge` forces all six
-services to rebuild** — a published binary would otherwise still link the published `libforge`.
-
-| Editing… | put in `go.work` | smelt rebuilds |
-|---|---|---|
-| just piri | `./smelt ./piri` | piri |
-| upload + indexer | `./smelt ./sprue ./indexing-service` | upload, indexer |
-| the shared lib | `./smelt ./libforge` | **all six services** |
-
-Module → service → container binary (defined in `pkg/workspace`):
-
-| module dir | service | container binary |
-|---|---|---|
-| `piri` | piri (every piri-N) | `/usr/bin/piri` |
-| `sprue` | upload | `/usr/bin/sprue` |
-| `piri-signing-service` | signing-service | `/usr/bin/signer` |
-| `indexing-service` | indexer | `/usr/bin/indexer` |
-| `delegator` | delegator | `/usr/bin/registrar` |
-| `guppy` | guppy | `/usr/bin/guppy` |
-
-## 2. Run with local binaries
-
-```bash
-SMELT_WORKSPACE=1 make up        # compile selected services + mount over images + start
-SMELT_WORKSPACE=1 make fresh     # same, from a clean slate
-
-# In the Go test stack (the e2e suite is behind the `e2e` build tag):
-SMELT_WORKSPACE=1 go test -tags e2e ./tests/e2e -run TestUploadAndRetrieve
-```
-
-(Run from inside `smelt/` so `go.work` is picked up — verify with `go env GOWORK`.)
-
-## How it works
-
-`SMELT_WORKSPACE=1` makes the Makefile run `smelt workspace build`, which:
-
-- compiles each selected service into `generated/bin/<service>`, and
-- writes `generated/compose/workspace.override.yml` — a compose override that mounts each
-  binary `:ro` at its container path (the piri entry fans out to every `piri-N` node).
-
-That override is chained into every `$(COMPOSE)` call while the file exists. A plain `make up`
-deletes it, so you fall back to published images. (`make clean` / `make nuke` also remove it.)
-
-In the Go test stack the same machinery runs via `stack.WithWorkspaceBinaries()`; the e2e test
-turns it on when `SMELT_WORKSPACE=1` is set. To inject a specific prebuilt binary without the
-workspace, use `stack.WithServiceBinary("upload", "/path/to/sprue")`.
+`up-local` runs the root `make images` (each service's `image` target builds
+via the shared `docker/Dockerfile` with the service directory as context) and
+starts the stack with the `*_IMAGE` compose vars pointing at the local tags.
+A plain `make up` runs published `:main` images, exactly as before.
 
 ## Fast per-edit loop
 
-Once the stack is up with `SMELT_WORKSPACE=1`, you don't need to re-boot it for a one-line
-change — rebuild just the affected service's binary and restart its container. The rest of the
-stack (and the chain state) stays up, so you skip the slow contract-deploy + registration boot:
+Once the stack is up you don't need to re-boot it for a one-line change —
+rebuild the affected service's image and recreate its container. Deps-first
+layer caching makes the rebuild seconds after the first build; the rest of the
+stack (and the chain state) stays up:
 
 ```bash
-docker compose stop piri-0              # + piri-1 piri-2 … for multi-node setups
-SMELT_WORKSPACE=1 make workspace-build  # recompiles selected services into generated/bin/
-docker compose start piri-0
+make -C ../piri image
+PIRI_IMAGE=forge/piri:local docker compose up -d --force-recreate piri-0
 ```
 
-Stop the container **first**: its `/usr/bin/piri` is the bind-mounted binary that's currently
-executing, and rebuilding over an executing file fails with `text file busy` (`ETXTBSY`).
-Stopping releases it; starting re-execs the freshly built binary.
+## Stack test suites
 
-Keep the `use`-list narrow (e.g. just `./smelt ./piri`) so `workspace-build` only recompiles
-what you're working on.
+`make test-s3` and `make test-e2e` (root: `make itest` / `make e2e`) build the
+four local images and run the suites against them. The s3 suite hard-fails if
+the `*_IMAGE` env is missing rather than fall back to published images — a
+local run can never silently test `:main`.
 
-## Turning it off / troubleshooting
+```bash
+make test-s3                                    # the whole S3 system suite
+cd tests/s3 && PIRI_IMAGE=forge/piri:local HILT_IMAGE=forge/hilt:local \
+  INGOT_IMAGE=forge/ingot:local UPLOAD_IMAGE=forge/sprue:local \
+  GOWORK=off go test -tags itest -run TestForgeVersity/PutObject -v ./...
+```
 
-- **Back to published images:** run any `make` target *without* `SMELT_WORKSPACE=1` (it removes
-  the override), or `rm go.work` to also drop local resolution for your editor.
-- **Build/selection surprises:** `go env GOWORK` shows the active workspace; if it's empty,
-  `SMELT_WORKSPACE=1` will error asking you to `go work init`. Confirm every sibling in the
-  `use`-list actually exists on disk.
-- **A service won't come up healthy:** that's your local code running — check its logs
-  (`docker compose logs -f <service>`). The injection is working; the failure is in the binary
-  you just built.
+Config files are the one thing tests may mount (`stack.WithServiceConfig`):
+they are data, not code.
+
+## Troubleshooting
+
+- **A service won't come up healthy:** that's your local image running — check
+  `docker compose logs -f <service>`. The injection is working; the failure is
+  in the code (or its packaging, which is the point).
+- **Old code seems to be running:** confirm the container's image
+  (`docker compose images <svc>`) is the `:local` tag and rebuild it —
+  `make -C ../<svc> image` is cheap.
 
 ## Service repos own their e2e tests (smelt as SDK)
 
-The workspace flow above is for validating changes *inside smelt runs*. The complementary —
-and for day-to-day service development, preferred — direction is the service repo importing
-**smelt as a Go test dependency** and orchestrating the stack from its own e2e tests:
+The local-images flow above is for validating changes *inside smelt runs*. The
+complementary direction is an out-of-repo service importing **smelt as a Go
+test dependency** and orchestrating the stack from its own e2e tests:
 
 ```go
 s := stack.MustNewStack(t,
     stack.WithPiriNodes(stack.PiriNodeConfig{}),
-    // Mount the working tree's binary over the published image. Build it
-    // yourself (CGO_ENABLED=0 GOOS=linux GOARCH=<host arch>); see ingot's
-    // itest/stack_test.go for a sync.Once build helper.
-    stack.WithServiceBinary("ingot", localBinary),
-    // Optional: exercise a config change without a smelt release.
+    // Run the working tree's container image. BuildGuppyImage builds it from
+    // the repo's own Dockerfile; the returned tag is cleaned up with the test.
+    stack.WithGuppyImage(stack.BuildGuppyImage(t, "..")),
+    // Optional: exercise a config change without a smelt release. Config
+    // files are data, not code — the one thing tests may mount.
     stack.WithServiceConfig("ingot", "testdata/config.yaml"),
 )
-endpoint := s.IngotEndpoint()
 ```
 
 Everything travels with the Go import — compose files, per-service configs, and embedded

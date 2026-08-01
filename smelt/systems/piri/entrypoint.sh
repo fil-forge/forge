@@ -124,6 +124,14 @@ if [ -f "$OVERRIDES_CONFIG" ]; then
     fi
 fi
 
-# Step 4: Start piri server
+# Step 4: Start piri server. DEBUG_DLV=1 wraps the binary in a headless Delve
+# listener on :2345 — set by smelt's compose.debug.yml, which also selects the
+# dev image (the prod image ships no dlv). The wrap happens here rather than
+# in the overlay's entrypoint because everything above this line is real setup
+# that must still run.
+if [ -n "${DEBUG_DLV:-}" ]; then
+    echo "[4/4] Starting piri under dlv (headless :2345)..."
+    exec /usr/bin/dlv exec --headless --listen=:2345 --api-version=2 --accept-multiclient --continue /usr/bin/piri -- serve full --config "$CONFIG_FILE" "$@"
+fi
 echo "[4/4] Starting piri..."
 exec /usr/bin/piri serve full --config "$CONFIG_FILE" "$@"

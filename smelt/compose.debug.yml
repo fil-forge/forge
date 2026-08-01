@@ -1,0 +1,55 @@
+# Debug overlay: run a service under the Delve debugger, on its dev image.
+#
+#     make debug-<svc>          (svc: upload | hilt | ingot | piri)
+#     dlv connect localhost:<port>
+#
+# Each service gets the :main-dev image variant (debug-friendly binary,
+# -gcflags=all=-N -l, dlv baked in — see docker/Dockerfile's dev target) with
+# its process wrapped in a headless dlv listener. Only the service you
+# `make debug-<svc>` is recreated on the overlay; the rest of the stack keeps
+# running its normal images.
+#
+# Host debug ports (in-container it is always :2345):
+#
+#     upload 2345    hilt 2346    ingot 2347    piri-0 2348
+#
+# To debug a locally-built dev image instead of the published one:
+#
+#     make -C ../<svc> image-dev
+#     UPLOAD_IMAGE_DEV=forge/sprue:local-dev make debug-upload
+#
+# hilt/ingot/upload swap ENTRYPOINT for dlv directly. piri cannot — its
+# entrypoint script does real setup (DID extraction, delegator registration,
+# init) before the binary runs — so the overlay sets DEBUG_DLV=1 and the
+# entrypoint's final exec wraps piri in dlv itself (systems/piri/entrypoint.sh).
+
+services:
+  upload:
+    image: ${UPLOAD_IMAGE_DEV:-ghcr.io/fil-forge/forge/sprue:main-dev}
+    entrypoint: ["/usr/bin/dlv", "exec", "--headless", "--listen=:2345", "--api-version=2", "--accept-multiclient", "--continue", "/usr/bin/sprue", "--"]
+    command: ["serve", "--config", "/etc/sprue/config.yaml"]
+    ports:
+      - "2345:2345"
+
+  hilt:
+    image: ${HILT_IMAGE_DEV:-ghcr.io/fil-forge/forge/hilt:main-dev}
+    entrypoint: ["/usr/bin/dlv", "exec", "--headless", "--listen=:2345", "--api-version=2", "--accept-multiclient", "--continue", "/usr/bin/hilt", "--"]
+    command: ["serve"]
+    ports:
+      - "2346:2345"
+
+  ingot:
+    image: ${INGOT_IMAGE_DEV:-ghcr.io/fil-forge/forge/ingot:main-dev}
+    entrypoint: ["/usr/bin/dlv", "exec", "--headless", "--listen=:2345", "--api-version=2", "--accept-multiclient", "--continue", "/usr/bin/ingot", "--"]
+    command: ["serve", "--config", "/etc/ingot/config.yaml"]
+    ports:
+      - "2347:2345"
+
+  # The first piri node. Debugging piri-N: copy this block, adjust the name
+  # and pick the next free host port.
+  piri-0:
+    image: ${PIRI_IMAGE_DEV:-ghcr.io/fil-forge/forge/piri:main-dev}
+    environment:
+      DEBUG_DLV: "1"
+    ports:
+      - "2348:2345"
