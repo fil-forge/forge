@@ -53,13 +53,15 @@ registered provider.
 - upload (service_healthy)
 - ingot-postgres (service_healthy)
 
-## Build Requirement
+## Image
 
-The image builds from the sibling checkout (`build.context: ../../../ingot`),
-so `fil-forge/ingot` must be checked out next to smelt. Test stacks
-(`pkg/stack`) extract compose files to a temp dir without the sibling, so
-build the image once first (`make up` or `docker compose build ingot`) — the
-`smelt-ingot:dev` tag is then reused.
+Runs `ghcr.io/fil-forge/forge/ingot:main` by default (override with
+`INGOT_IMAGE`). To run the working tree's build instead:
+
+```bash
+make -C ../../../ingot image      # builds forge/ingot:local via docker/Dockerfile
+INGOT_IMAGE=forge/ingot:local make up    # or just `make up-local`
+```
 
 ## Smoke Test
 

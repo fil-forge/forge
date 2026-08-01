@@ -45,7 +45,7 @@ docker compose version                            # Should show "Docker Compose 
 If `docker compose` fails but `docker-compose` works, you have the legacy
 version. Upgrade Docker Desktop or install the compose plugin separately.
 
-### Go 1.22+
+### Go 1.26+
 
 Go is required for two things:
 
@@ -93,8 +93,8 @@ Windows (including WSL2) is not a supported development host.
 Clone the repository and enter the directory:
 
 ```bash
-git clone https://github.com/fil-forge/forge/smelt.git
-cd smelt
+git clone https://github.com/fil-forge/forge.git
+cd forge/smelt
 ```
 
 That's it. The actual initialization happens when you first start the network.

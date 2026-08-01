@@ -74,11 +74,14 @@ smelt/
 │   ├── upload/            # Upload orchestration (mock w3infra)
 │   ├── hilt/              # Tenant management (Fil One Tenant API + UCAN RPC)
 │   ├── plc/               # did:plc directory (reference impl; hilt publishes tenant DIDs here)
-│   ├── ingot/             # S3 facade (built from sibling ../ingot checkout)
 │   ├── guppy/             # CLI client
 │   ├── ingot/             # S3 gateway over Forge (+ its own postgres)
 │   ├── telemetry/         # Observability stack (present but not wired into Makefile)
 │   └── stress-tester/     # Load test runner (present but not wired into Makefile)
+├── tests/                   # Stack test suites (run via make test-s3 / test-e2e)
+│   ├── e2e/                # Smoke: upload/retrieve over storage permutations
+│   ├── s3/                 # S3 gateway system suite (conformance + scenarios)
+│   └── compat/             # Version-skew suites (nightly; released vs HEAD images)
 └── docs/
     ├── GETTING_STARTED.md  # First-time setup walkthrough
     ├── ARCHITECTURE.md     # Service interaction diagrams and data flow
@@ -130,7 +133,7 @@ make clean     # Stop and delete volumes only (keeps keys)
 ```bash
 make status                    # Service health overview
 make logs                      # Follow all logs
-docker compose logs -f piri    # Follow specific service
+docker compose logs -f piri-0  # Follow specific service
 docker compose logs -f upload indexer  # Multiple services
 ```
 

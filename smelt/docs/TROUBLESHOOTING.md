@@ -658,7 +658,7 @@ which ucantool
 
 ```bash
 # Option 1: Install Go and re-run init
-# (Go 1.22+ required)
+# (Go 1.26+ required)
 brew install go  # macOS
 # or
 sudo apt install golang-go  # Debian/Ubuntu

@@ -10,14 +10,14 @@ Smelt is a Docker Compose environment that runs every service in the Forge distr
 
 - Docker engine 25+ (verified by the Makefile; older engines silently degrade on healthchecks and break snapshot portability)
 - Docker Compose
-- Go 1.22+ (required for `smelt generate`, the multi-piri manifest generator, and for UCAN delegation proof generation)
+- Go 1.26+ (required for `smelt generate`, the multi-piri manifest generator, and for UCAN delegation proof generation)
 - Linux or macOS host
 
 ### Start the Network
 
 ```bash
-git clone https://github.com/fil-forge/forge/smelt.git
-cd smelt
+git clone https://github.com/fil-forge/forge.git
+cd forge/smelt
 make up
 ```
 
@@ -70,6 +70,9 @@ All host ports live in a dedicated `15XXX` range to avoid collision with common 
 | smtp4dev        | 15080, 15081       | SMTP server, Email UI and API                                                    |
 | ipni            | 15090, 15091, 15092| Content discovery (finder, admin, p2p)                                           |
 | piri-{N}        | 15100+N            | Storage node(s) with PDP proofs; N declared in `smelt.yml` (default 1, max 9)    |
+| hilt            | 15110              | Tenant management (S3 tenants, access keys, buckets)                             |
+| plc             | 15120              | did:plc directory (hilt publishes tenant DIDs here)                              |
+| ingot           | 15130              | S3 gateway over the Forge network                                                |
 | guppy           | —                  | CLI client for uploads (no exposed port)                                         |
 
 ## Architecture
@@ -97,9 +100,21 @@ flowchart TB
         email["smtp4dev :15080"]
     end
 
+    subgraph S3["S3 Gateway Path"]
+        ingot["ingot :15130"]
+        hilt["hilt :15110"]
+        plc["plc :15120"]
+    end
+
     guppy --> upload
     guppy --> piri
     guppy --> indexer
+
+    ingot --> hilt
+    ingot --> upload
+    ingot --> indexer
+    hilt --> plc
+    hilt --> upload
 
     upload --> piri
     upload --> indexer
@@ -133,6 +148,8 @@ flowchart TB
 | `make logs`                   | Follow logs from all services                                             |
 | `make status`                 | Show service health                                                       |
 | `make shell-guppy`            | Shell into the guppy container                                            |
+| `make up-local`               | Start the network on containers built from this working tree              |
+| `make debug-<svc>`            | Run upload/hilt/ingot/piri under a remote Delve debugger                  |
 | `./smelt snapshot save NAME`  | Save the running stack's state as a named snapshot                        |
 | `./smelt snapshot list`       | List saved snapshots                                                      |
 | `./smelt snapshot rm NAME`    | Delete a snapshot                                                         |
@@ -162,7 +179,7 @@ gotchas — lives in [docs/SNAPSHOTS.md](docs/SNAPSHOTS.md).
 - **[Multi-Piri Configuration](docs/MULTI_PIRI.md)** — Running multiple piri nodes via `smelt.yml`
 - **[Snapshots](docs/SNAPSHOTS.md)** — Capture and restore stack state to skip cold-boot time
 - **[Architecture Guide](docs/ARCHITECTURE.md)** — How the services connect and why
-- **[Developing Across Service Repos](docs/DEVELOPING.md)** — Run local changes to piri/sprue/libforge/etc. in the stack via `go.work`
+- **[Developing Against The Working Tree](docs/DEVELOPING.md)** — Run your local changes in the stack as locally-built container images
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** — When things go wrong (they will)
 - **[Extending Smelt](docs/EXTENDING.md)** — Adding services or modifying the environment
 

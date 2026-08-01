@@ -71,10 +71,17 @@ flowchart TB
     dynamodb --> piri
     ipni --> indexer["indexer<br/>:15050→:80"]
 
-    piri --> upload["upload (mock svc)<br/>:15060→:80"]
+    piri --> upload["upload (sprue)<br/>:15060→:80"]
     indexer --> upload
 
     upload --> guppy["guppy (CLI)"]
+
+    plc["plc (did:plc dir)<br/>:15120→:3000"]
+    upload --> hilt["hilt (tenants)<br/>:15110→:80"]
+    plc --> hilt
+    hilt --> ingot["ingot (S3 gateway)<br/>:15130→:9000"]
+    upload --> ingot
+    indexer --> ingot
 ```
 
 When any piri node declares `db: postgres` or `blob: s3` in `smelt.yml`, the generator also emits shared `piri-postgres` and/or `piri-minio` services that all affected nodes share. See the [Piri Shared Storage Backends](#piri-shared-storage-backends-conditional) section below for details.
@@ -138,7 +145,7 @@ were working with.
 
 **Role**: InterPlanetary Network Indexer - the canonical content discovery layer.
 
-**Build context**: `../storetheindex`
+**Image**: published `ghcr.io/fil-forge/storetheindex` (external repository)
 
 **What it does**:
 - **Container port 3000 / host 15090 (Finder)**: Handles content queries - "Where can I find CID X?"
@@ -160,7 +167,7 @@ were working with.
 
 **Role**: Forge's caching layer for content claims - sits between clients and IPNI.
 
-**Build context**: `../indexing-service`
+**Image**: published `ghcr.io/fil-forge/indexing-service:main` (external repository)
 
 **Identity**: `did:web:indexer` (mapped via PRINCIPAL_MAPPING to a did:key)
 
@@ -202,7 +209,7 @@ were working with.
 
 **Role**: Simplified replacement for w3infra's upload-api. Orchestrates the upload workflow.
 
-**Build context**: `../sprue` (external repository)
+**Image**: `ghcr.io/fil-forge/forge/sprue:main` — built in-repo from the shared `docker/Dockerfile` (`SERVICE=sprue`)
 
 **Identity**: `did:key:z6MkugC4LAhCir6Pv6S6p63G1c6Ju4sTwq5xt6Fxn1a1MkvE` (derived from PRIVATE_KEY)
 
@@ -247,7 +254,7 @@ pkg/indexerclient/client.go → UCAN client for Indexer communication (assert/in
 
 **Role**: Storage node(s) implementing the Forge storage protocol with PDP proofs. Smelt runs one or more piri nodes based on `smelt.yml`; each is a separate service (`piri-0`, `piri-1`, ..., up to `piri-8`) with its own key, wallet, data volume, and on-chain provider registration. Host port is `15100 + N` where N is the node index.
 
-**Build context**: `../piri`
+**Image**: `ghcr.io/fil-forge/forge/piri:main` — built in-repo from the shared `docker/Dockerfile` (`SERVICE=piri`, `BUILD_TAGS=skiff`)
 
 **Identity**: Each node has a unique `did:key:z6Mk...` derived from `generated/keys/piri-{N}.pem`. Per-node identities are what allow multiple piri services to register as distinct providers in the PDP contracts.
 
@@ -317,7 +324,7 @@ Both services are only emitted into `generated/compose/piri.yml` when at least o
 
 **Role**: Command-line client for uploading and retrieving content from Forge.
 
-**Build context**: `../guppy`
+**Image**: published `ghcr.io/fil-forge/guppy:main-dev` (external repository)
 
 **What it does**:
 - Shards large files into smaller blobs
@@ -369,7 +376,7 @@ Both services are only emitted into `generated/compose/piri.yml` when at least o
 
 **Role**: Signs PDP blockchain operations on behalf of storage providers.
 
-**Build context**: `../piri-signing-service`
+**Image**: published `ghcr.io/fil-forge/piri-signing-service:main` (external repository)
 
 **What it does**:
 - Holds the payer key for blockchain transactions
@@ -386,7 +393,7 @@ Both services are only emitted into `generated/compose/piri.yml` when at least o
 
 **Role**: UCAN delegation service - issues delegations to registered storage providers.
 
-**Build context**: `../delegator`
+**Image**: published `ghcr.io/fil-forge/delegator:main` (external repository)
 
 **Identity**: `did:web:delegator` (mapped to `did:key:z6MkqWbQaLBrYRKqyYwWakW97UcY4NFwgeiXxMuvv6Nf4gkr`)
 
@@ -403,6 +410,68 @@ Both services are only emitted into `generated/compose/piri.yml` when at least o
 - **piri** → delegator: Requests delegation during init
 - **delegator** → dynamodb: Stores delegations in provider-info table
 - **upload** → dynamodb: Reads delegations for proof chains
+
+---
+
+### 11. Hilt - Container port 80 (host 15110)
+
+**Role**: Tenant management for the S3 gateway — owns tenants, their access
+keys, and their buckets, plus the UCAN delegations and key material behind
+them.
+
+**Image**: `ghcr.io/fil-forge/forge/hilt:main` — built in-repo from the shared
+`docker/Dockerfile` (`SERVICE=hilt`)
+
+**What it does**:
+- Partner-facing Tenant REST API (create tenants, issue S3 access keys)
+- UCAN RPC API (`/s3/*` commands) that Ingot invokes to authorize each signed
+  S3 request and to create/delete/list buckets
+- Mints tenant `did:plc` identities and publishes them to the plc directory
+- Registers tenants as customers with the upload service
+- Backed by its own postgres (15111) and a dev-mode HashiCorp Vault (15112)
+  for private keys
+
+**Interactions**:
+- **ingot** → hilt: `/s3/request/authorize`, `/s3/bucket/*` (UCAN RPC)
+- **hilt** → plc: publishes tenant did:plc genesis operations
+- **hilt** → upload: `/customer/add` when provisioning a tenant
+
+---
+
+### 12. PLC - Container port 3000 (host 15120)
+
+**Role**: `did:plc` directory (reference implementation). Resolves the
+tenant DIDs hilt mints.
+
+**Image**: published did:plc reference implementation (external), with its own
+postgres (15121)
+
+**Interactions**:
+- **hilt** → plc: publishes genesis operations
+- **piri / sprue** → plc: resolve tenant `did:plc` identities during content
+  retrieval and bucket provisioning
+
+---
+
+### 13. Ingot - Container port 9000 (host 15130)
+
+**Role**: S3 gateway over the Forge network — presents each S3 bucket as a
+per-bucket MST, journals writes locally, and ships sealed segments to Forge.
+
+**Image**: `ghcr.io/fil-forge/forge/ingot:main` — built in-repo from the
+shared `docker/Dockerfile` (`SERVICE=ingot`, `MAIN_PKG=./cmd/ingot`)
+
+**What it does**:
+- Serves the S3 REST API (SigV4-signed requests, versitygw front end)
+- Authorizes every non-root request through hilt (`/s3/request/authorize`)
+- Ships data to Forge through sprue + piri, reads back via the indexer and
+  piri's `/content/retrieve`
+- Backed by its own postgres (15131) for bucket + segment metadata
+
+**Interactions**:
+- **ingot** → hilt: request authorization + bucket lifecycle
+- **ingot** → upload (sprue): blob/index/upload adds on the ship path
+- **ingot** → indexer / piri: network reads for evicted content
 
 ---
 
