@@ -51,7 +51,7 @@ type options struct {
 	libforge, ucantone    string
 	libRef                string
 	guppy, indexing       string
-	libConsumerRef        string
+	consumerRef           string
 	liveDir               string
 	liveRepos             []string
 	liveRef               string
@@ -87,7 +87,7 @@ func parseOptions() (*options, error) {
 	flag.StringVar(&o.libRef, "lib-ref", "origin/main", "the libraries' main ref (falls back to main, then HEAD)")
 	flag.StringVar(&o.guppy, "guppy", "/home/user/guppy", "path of a guppy clone ('' to skip)")
 	flag.StringVar(&o.indexing, "indexing-service", "/home/user/indexing-service", "path of an indexing-service clone ('' to skip)")
-	flag.StringVar(&o.libConsumerRef, "consumer-ref", "origin/main", "ref of guppy/indexing-service to read (falls back to main, then HEAD)")
+	flag.StringVar(&o.consumerRef, "consumer-ref", "origin/main", "ref of guppy/indexing-service to read (falls back to main, then HEAD)")
 	flag.StringVar(&o.liveDir, "live-dir", "/home/user/fil-forge", "directory holding the live per-service clones")
 	flag.StringVar(&live, "live-repos", "piri,hilt,sprue,ingot,smelt,delegator,piri-signing-service", "comma-separated live repo names under -live-dir")
 	flag.StringVar(&o.liveRef, "live-ref", "HEAD", "ref of the live repos to read")
@@ -1260,7 +1260,7 @@ func run(o *options) (*Result, error) {
 		if x.dir == "" {
 			continue
 		}
-		c, err := loadConsumer(x.name, "library-consumer", x.dir, o.libConsumerRef, "", libsByName, o.verbose)
+		c, err := loadConsumer(x.name, "library-consumer", x.dir, o.consumerRef, "", libsByName, o.verbose)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", x.name, err)
 		}
@@ -1544,6 +1544,18 @@ func reproduceCommand(o *options) string {
 	var b strings.Builder
 	b.WriteString("cd tools/divergence && GOWORK=off go run .")
 	fmt.Fprintf(&b, " -from %s -to %s -context-from %s -today %s", o.from.Format("2006-01-02"), o.to.Format("2006-01-02"), o.contextFrom.Format("2006-01-02"), o.today.Format("2006-01-02"))
+	if o.forgeRef != "HEAD" {
+		fmt.Fprintf(&b, " -forge-ref %s", o.forgeRef)
+	}
+	if o.libRef != "origin/main" {
+		fmt.Fprintf(&b, " -lib-ref %s", o.libRef)
+	}
+	if o.consumerRef != "origin/main" {
+		fmt.Fprintf(&b, " -consumer-ref %s", o.consumerRef)
+	}
+	if o.liveRef != "HEAD" {
+		fmt.Fprintf(&b, " -live-ref %s", o.liveRef)
+	}
 	if o.libforge != "/home/user/libforge" {
 		fmt.Fprintf(&b, " -libforge %s", o.libforge)
 	}

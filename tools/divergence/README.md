@@ -14,8 +14,12 @@ the output files.
 ## Run
 
 ```
-cd tools/divergence && GOWORK=off go run . -from 2026-08-01 -to 2026-08-31 -today 2026-09-03
+cd tools/divergence && GOWORK=off go run . -from 2026-08-01 -to 2026-08-31 -context-from 2026-07-01 -today 2026-09-03 -forge-ref f60dd59
 ```
+
+(`-forge-ref f60dd59` pins the forge snapshot under study — forge main's last
+push — so re-running from a later commit of this branch reports the same forge
+head; drop it to analyse the checkout's own HEAD.)
 
 or `./run.sh` with the same arguments. `GOWORK=off` because the tool is its own
 module and is deliberately not listed in the repository's `go.work`. Defaults
