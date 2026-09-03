@@ -223,6 +223,20 @@ in August. Mixed-version windows (ucantone #49: new decoders reject old
 executors' receipts) existed from 08-17 to 08-21 across the fleet's pins;
 whether any environment ran mixed is not recoverable from git.
 
+### S12. The inventory contradicts the plan's classification for three packages
+
+`package-inventory-notes.md`: `identity` is imported by every first-party
+module that uses libforge (14 of 14 scanned, including delegator,
+indexing-service, piri-signing-service and guppy), `digestutil` by guppy (14
+files) and indexing-service (4), `bytemap` by guppy (4) and indexing-service
+(3). A compiler-enforced monorepo `internal/` for those three, as the plan
+proposes, would break four modules outside forge. `blobindex`'s heaviest
+consumer is indexing-service (16 files), which the recorded RFC vote keeps out
+of the monorepo. And `commands/**` is 87% generated code (27,122 LOC, 3,446
+hand-written); `commands/debug` has no importer anywhere. Every LOC figure the
+plan quoted reproduced exactly; the plan's closure figures counted direct
+imports (`guppy/pkg/client`: 15 direct, **45** transitive modules).
+
 ## Costs measured
 
 Filled in from Experiments A, C and E as they complete; see the linked
@@ -252,6 +266,9 @@ documents for the raw logs.
   head `1647cc2`): every `unit` job including the new `commands` and
   `internal` ones, and the full `stack` job (root-context images, e2e, S3
   suite) **green**, 17 min 40 s end to end. See `commands-move.md`.
+- **B — inventory:** 64 libforge packages, 70 guppy, 82 ucantone; tool runs
+  in 7 s warm (1 min 23 s cold, network for `go list`); see
+  `package-inventory.md` and the notes.
 - **E — August divergence:** the case study (`polyrepo-august-casestudy.md`)
   counts 2 wire-visible libforge changes, 3 wire-visible ucantone changes and
   about 3 service-to-service contract changes in August, 22 human pin-bump
