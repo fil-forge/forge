@@ -1,0 +1,475 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+)
+
+// handWrittenMarker separates the generated part of the markdown report from
+// the hand-written analysis below it. Everything from the marker to the end of
+// the file is carried over verbatim on every run.
+const handWrittenMarker = "<!-- divergence: hand-written analysis below this line is preserved by tools/divergence -->"
+
+func writeOutputs(o *options, res *Result) error {
+	if err := os.MkdirAll(filepath.Dir(o.out), 0o755); err != nil {
+		return err
+	}
+	js, err := json.MarshalIndent(res, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(o.out+".json", append(js, '\n'), 0o644); err != nil {
+		return err
+	}
+	md := renderMarkdown(o, res)
+	tail := "\n" + handWrittenMarker + "\n\n## Reading the numbers\n\n_(hand-written analysis goes here; the generator keeps everything below the marker)_\n"
+	if old, err := os.ReadFile(o.out + ".md"); err == nil {
+		if i := strings.Index(string(old), handWrittenMarker); i >= 0 {
+			tail = "\n" + string(old[i:])
+		}
+	}
+	return os.WriteFile(o.out+".md", []byte(md+tail), 0o644)
+}
+
+// ---------------------------------------------------------------------------
+// markdown helpers
+// ---------------------------------------------------------------------------
+
+func cell(s string) string {
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return s
+}
+
+func mdTable(b *strings.Builder, headers []string, rows [][]string) {
+	b.WriteString("| " + strings.Join(headers, " | ") + " |\n")
+	b.WriteString("|" + strings.Repeat(" --- |", len(headers)) + "\n")
+	for _, r := range rows {
+		for len(r) < len(headers) {
+			r = append(r, "")
+		}
+		cells := make([]string, len(r))
+		for i, c := range r {
+			cells[i] = cell(c)
+		}
+		b.WriteString("| " + strings.Join(cells, " | ") + " |\n")
+	}
+	b.WriteString("\n")
+}
+
+func day(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.UTC().Format("2006-01-02")
+}
+
+func stamp(t time.Time) string {
+	if t.IsZero() {
+		return "-"
+	}
+	return t.UTC().Format("2006-01-02 15:04")
+}
+
+func f1(v float64) string { return fmt.Sprintf("%.1f", v) }
+
+func yesno(b bool) string {
+	if b {
+		return "yes"
+	}
+	return "no"
+}
+
+func trunc(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n-1] + "…"
+}
+
+func countBot(total, bot int) string {
+	if total == 0 {
+		return "0"
+	}
+	if bot == 0 {
+		return fmt.Sprintf("%d", total)
+	}
+	return fmt.Sprintf("%d (%d)", total, bot)
+}
+
+// ---------------------------------------------------------------------------
+// report
+// ---------------------------------------------------------------------------
+
+func renderMarkdown(o *options, res *Result) string {
+	var b strings.Builder
+	w := func(format string, a ...any) { fmt.Fprintf(&b, format, a...) }
+
+	w("# Divergence of libforge/ucantone consumers, %s..%s\n\n", res.Window[0], res.Window[1])
+	w("Generated %s UTC by `tools/divergence` from local git history only (no network). ", res.GeneratedAt.Format("2006-01-02 15:04"))
+	w("Context period shown alongside: %s..%s. \"Today\" for current-lag figures: %s.\n\n", res.Context[0], res.Context[1], res.Today)
+	w("Reproduce from the forge repository root:\n\n```\n%s\n```\n\n", res.Command)
+	w("The tables below are regenerated on every run; the hand-written section **Reading the numbers** at the end is preserved.\n\n")
+
+	// Repositories.
+	w("## Repositories read\n\n")
+	var rows [][]string
+	for _, r := range res.Repos {
+		sh := "full"
+		if r.Shallow {
+			sh = "shallow, oldest " + day(r.Oldest)
+		}
+		rows = append(rows, []string{r.Name, "`" + r.Ref + "`", "`" + r.Head[:12] + "`", day(r.HeadTime), sh, r.Note})
+	}
+	mdTable(&b, []string{"repo", "ref", "head", "head date", "history", "note"}, rows)
+
+	// (a)
+	w("## a. Commits and merged PRs per repo per ISO week\n\n")
+	w("Cells are `total (dependabot)`. Commits are all commits reachable on the ref (forge: first-parent only, because its history embeds the imported service histories). ")
+	w("Merged PRs = merge commits + squash commits whose subject ends in `(#N)`. Weeks are ISO weeks (Monday start) by committer date, UTC. Weeks inside the measurement window are marked `*`.\n\n")
+	renderWeekly(&b, res, o, func(ws *WeekStats) string { return countBot(ws.Commits, ws.BotCommits) }, "Commits per week")
+	renderWeekly(&b, res, o, func(ws *WeekStats) string { return countBot(ws.PRs, ws.BotPRs) }, "Merged PRs per week")
+
+	w("### Monthly totals\n\n")
+	ctxMonth := o.contextFrom.Format("2006-01")
+	winMonth := o.from.Format("2006-01")
+	rows = nil
+	for _, name := range res.WeeklyOrder {
+		p := res.Periods[name]
+		get := func(m string) *WeekStats {
+			if p[m] == nil {
+				return &WeekStats{}
+			}
+			return p[m]
+		}
+		c, wn := get(ctxMonth), get(winMonth)
+		rows = append(rows, []string{name,
+			countBot(c.Commits, c.BotCommits), countBot(c.PRs, c.BotPRs),
+			countBot(wn.Commits, wn.BotCommits), countBot(wn.PRs, wn.BotPRs),
+			fmt.Sprintf("%d", wn.HumanCommits), fmt.Sprintf("%d", wn.HumanPRs)})
+	}
+	mdTable(&b, []string{"repo", ctxMonth + " commits", ctxMonth + " PRs", winMonth + " commits", winMonth + " PRs", winMonth + " human commits", winMonth + " human PRs"}, rows)
+
+	// (b)
+	w("## b. Library commits that changed a package a consumer imports\n\n")
+	w("A library commit (first-parent unit on main: a squash commit or a merge) \"changed an imported package\" when a non-test `.go` file changed in a package that at least one consumer imports (static scan of the consumers at the refs above; `gen/` folds into its parent package). ")
+	w("`wire-visible` follows each library's rule, stated under its table.\n\n")
+	for _, name := range libs {
+		ls := res.Libraries[name]
+		w("### %s (`%s`, tip `%s` %s)\n\n", name, ls.Module, ls.Tip.Short, day(ls.Tip.Time))
+		w("Wire-visible rule: %s.\n\n", ls.WireRule)
+		metrics := []struct{ key, label string }{
+			{"commits", "first-parent commits"},
+			{"dependabot", "of which dependabot"},
+			{"human", "of which human"},
+			{"human_code", "human commits touching non-test Go code"},
+			{"changed_imported_package", "changed a package some consumer imports"},
+			{"imported_wire_visible", "… of those, wire-visible"},
+			{"imported_internal", "… of those, internal"},
+			{"wire_visible", "wire-visible (all)"},
+			{"needs_coordination", "needs coordination (breaking + additive-required)"},
+			{"class:breaking", "class: breaking"},
+			{"class:additive-required", "class: additive-required"},
+			{"class:additive-optional", "class: additive-optional"},
+			{"class:internal", "class: internal"},
+			{"class:UNCLASSIFIED", "class: UNCLASSIFIED (needs curation)"},
+		}
+		rows = nil
+		for _, m := range metrics {
+			c, wn := ls.Counts["context"][m.key], ls.Counts["window"][m.key]
+			if m.key == "class:UNCLASSIFIED" && c == 0 && wn == 0 {
+				continue
+			}
+			rows = append(rows, []string{m.label, fmt.Sprintf("%d", c), fmt.Sprintf("%d", wn)})
+		}
+		mdTable(&b, []string{"metric", res.Context[0] + ".." + res.Context[1], res.Window[0] + ".." + res.Window[1]}, rows)
+
+		rows = nil
+		for _, ch := range ls.Changes {
+			mark := ""
+			if ch.InWindow {
+				mark = "*"
+			}
+			var pkgs string
+			if len(ch.Packages) > 0 {
+				pkgs = "`" + strings.Join(ch.Packages, "`, `") + "`"
+			} else if ch.TestOnly {
+				pkgs = "(tests only)"
+			} else if !ch.GoChange {
+				pkgs = "(no Go code)"
+			}
+			if len(ch.RegenOnly) > 0 {
+				if pkgs != "" {
+					pkgs += "; "
+				}
+				pkgs += fmt.Sprintf("regenerated codecs only in %d pkgs", len(ch.RegenOnly))
+			}
+			var importers []string
+			for k := range ch.ImportedBy {
+				importers = append(importers, k)
+			}
+			sort.Strings(importers)
+			imp := fmt.Sprintf("%d", len(importers))
+			if len(importers) > 0 {
+				imp += ": " + strings.Join(shortNames(importers), ", ")
+			}
+			pr := ""
+			if ch.PR > 0 {
+				pr = fmt.Sprintf("#%d", ch.PR)
+			} else if !ch.Dependabot && ch.GoChange {
+				pr = "direct push"
+			}
+			rows = append(rows, []string{day(ch.Time) + mark, "`" + ch.Short + "`", ch.Author, pr, trunc(ch.Subject, 70), pkgs, imp, ch.WireVisible, ch.Class})
+		}
+		mdTable(&b, []string{"date", "sha", "author", "PR", "subject", "packages changed", "imported by", "wire-visible", "class"}, rows)
+	}
+
+	// (c)
+	w("## c. Would a coordinated service-side change have been needed?\n\n")
+	w("Classes: **(i) additive-optional** — new surface, peers keep working unchanged; **(ii) additive-required** — a new field, command or rule a peer must adopt for the system to keep working; ")
+	w("**(iii) breaking** — an exported identifier removed, renamed or re-typed, or an encoding/validation rule changed so that old peers' messages or code fail; **(iv) internal** — no exported or wire behaviour change. ")
+	w("The class and evidence come from `tools/divergence/classification.json`, written by reading each diff; a commit marked `UNCLASSIFIED` is new history the file does not cover yet. ")
+	w("The uptake table under each commit shows, per consumer, the first commit whose pin contains the change and how many days after the library commit that was; \"method\" says how containment was decided (ancestry, content identity for PR-branch pins, timestamp for SHAs missing locally). ")
+	w("`imports` marks consumers that import a package the commit changed.\n\n")
+	for _, name := range libs {
+		ls := res.Libraries[name]
+		w("### %s\n\n", name)
+		for _, ch := range ls.Changes {
+			if ch.Class == "dependabot" || ch.Class == "non-code" || ch.Class == "test-only" || ch.Class == "regen-only" {
+				continue
+			}
+			mark := ""
+			if ch.InWindow {
+				mark = " (in window)"
+			}
+			w("#### `%s` %s — %s%s\n\n", ch.Short, day(ch.Time), cell(ch.Subject), mark)
+			w("Class **%s**; wire-visible: %s; author %s", ch.Class, ch.WireVisible, ch.Author)
+			if ch.PR > 0 {
+				w("; PR #%d", ch.PR)
+			}
+			w(".\n\n")
+			if ch.Evidence != "" {
+				w("Evidence: %s\n\n", ch.Evidence)
+			}
+			if ch.Note != "" {
+				w("Note: %s\n\n", ch.Note)
+			}
+			rows = nil
+			for _, u := range ch.Uptake {
+				if u.NotYet {
+					rows = append(rows, []string{u.Consumer, yesno(u.Imports), "not as of its head", "-", "`" + u.PinSHA + "`", "-"})
+					continue
+				}
+				rows = append(rows, []string{u.Consumer, yesno(u.Imports), day(u.Date) + " `" + u.ConsumerSHA + "`", f1(u.Days), "`" + u.PinSHA + "`", u.Method})
+			}
+			mdTable(&b, []string{"consumer", "imports", "first commit containing it", "days after", "pin", "method"}, rows)
+		}
+	}
+
+	// (d)
+	w("## d. Pin lag\n\n")
+	w("For every consumer, each commit that changed its libforge or ucantone pin. `pin date` is the pinned commit's committer time (from the pseudo-version); `main head then` is the library's newest first-parent main commit at the consumer commit's time; ")
+	w("`lag` = main head then − pin date, in days; `base lag` uses the pin's merge-base with main when the pin is not on main; `behind` = first-parent main commits between the pin (or its merge-base) and the main head at that time. ")
+	w("Only events on or after %s are listed here; the JSON has the full series (forge/<svc> before 2026-07-30 is the imported service history).\n\n", res.Context[0])
+	for _, c := range res.Consumers {
+		for _, name := range libs {
+			evs := c.Pins[name]
+			var shown []*PinEvent
+			for _, ev := range evs {
+				if !ev.ConsumerTime.Before(o.contextFrom) {
+					shown = append(shown, ev)
+				}
+			}
+			if len(evs) == 0 {
+				continue
+			}
+			w("### %s → %s (%d events in total, %d shown)\n\n", c.Name, name, len(evs), len(shown))
+			if len(shown) == 0 {
+				cur := c.Current[name]
+				if cur != nil {
+					w("No pin change since %s; pin `%s` (%s) set on %s by `%s`.\n\n", res.Context[0], cur.PinSHA, day(cur.PinTime), day(cur.ConsumerTime), cur.ConsumerSHA)
+				}
+				continue
+			}
+			rows = nil
+			for _, ev := range shown {
+				if ev.Removed {
+					rows = append(rows, []string{day(ev.ConsumerTime), "`" + ev.ConsumerSHA + "`", trunc(ev.Subject, 50), "(dependency removed)", "", "", "", "", "", ""})
+					continue
+				}
+				onMain := yesno(ev.OnMain)
+				if !ev.InLocal {
+					onMain = "unknown (not in local clone)"
+				} else if !ev.OnMain {
+					onMain = "NO (merge-base `" + ev.MergeBase + "` " + day(ev.MergeBaseTime) + ")"
+				}
+				subj := trunc(ev.Subject, 50)
+				if ev.Import {
+					subj = "[subtree import] " + subj
+				}
+				behind := fmt.Sprintf("%d", ev.CommitsBehind)
+				if ev.CommitsBehind < 0 {
+					behind = "?"
+				}
+				rows = append(rows, []string{day(ev.ConsumerTime), "`" + ev.ConsumerSHA + "`", subj, "`" + ev.PinSHA + "`", day(ev.PinTime), onMain, "`" + ev.MainHead + "` " + day(ev.MainHeadTime), f1(ev.LagDays), f1(ev.BaseLagDays), behind})
+			}
+			mdTable(&b, []string{"consumer commit", "sha", "subject", "new pin", "pin date", "pin on main", "main head then", "lag d", "base lag d", "behind"}, rows)
+		}
+	}
+
+	w("### Lag today (%s)\n\n", res.Today)
+	w("`lag` = library tip − pin date; `base lag` from the merge-base for pins off main; `behind` = first-parent main commits after the pin/merge-base; `pin age` = today − pin date. `tree=` names a main commit whose tree is identical to an off-main pin (a PR head merged unchanged).\n\n")
+	for _, name := range libs {
+		rows = nil
+		for _, tl := range res.TodayLags {
+			if tl.Lib != name {
+				continue
+			}
+			onMain := yesno(tl.OnMain)
+			if !tl.InLocal {
+				onMain = "unknown"
+			} else if !tl.OnMain {
+				onMain = "NO, merge-base `" + tl.MergeBase + "` " + day(tl.MergeBaseTime)
+				if tl.TreeEqualMain != "" {
+					onMain += ", tree=`" + tl.TreeEqualMain + "`"
+				}
+			}
+			behind := fmt.Sprintf("%d", tl.CommitsBehind)
+			if tl.CommitsBehind < 0 {
+				behind = "?"
+			}
+			rows = append(rows, []string{tl.Consumer, "`" + tl.PinSHA + "`", day(tl.PinTime), onMain, "`" + tl.TipSHA + "` " + day(tl.TipTime), f1(tl.LagDays), f1(tl.BaseLagDays), behind, f1(tl.PinAgeDays)})
+		}
+		w("#### %s\n\n", name)
+		mdTable(&b, []string{"consumer", "pin", "pin date", "pin on main", "main tip", "lag d", "base lag d", "behind", "pin age d"}, rows)
+	}
+
+	// (e)
+	w("## e. How far apart the fleet actually was\n\n")
+	w("The fleet here is every consumer except the frozen forge modules (%d consumers). For each library, one row per Monday plus today: how many distinct pins were in force, the spread in days between the oldest and newest pin, and the largest and median lag behind the library main head of that day.\n\n", countFleet(res))
+	for _, name := range libs {
+		w("### %s pin spread\n\n", name)
+		rows = nil
+		snaps := res.Snapshots[name]
+		for i, s := range snaps {
+			d, _ := time.Parse("2006-01-02", s.Day)
+			last := i == len(snaps)-1
+			if d.Weekday() != time.Monday && !last {
+				continue
+			}
+			label := s.Day
+			if last {
+				label += " (today)"
+			}
+			rows = append(rows, []string{label, fmt.Sprintf("%d", s.Distinct), f1(s.SpreadDays), s.OldestPin, s.NewestPin, f1(s.MaxLagDays) + " (" + s.MaxLagWho + ")", f1(s.MedianLag)})
+		}
+		mdTable(&b, []string{"day", "distinct pins", "spread d", "oldest pin", "newest pin", "max lag d (who)", "median lag d"}, rows)
+		// Window aggregates.
+		var inWin []DaySnapshot
+		for _, s := range snaps {
+			if s.Day >= res.Window[0] && s.Day <= res.Window[1] {
+				inWin = append(inWin, s)
+			}
+		}
+		if len(inWin) > 0 {
+			single, maxSpread, maxDistinct := 0, 0.0, 0
+			for _, s := range inWin {
+				if s.Distinct == 1 {
+					single++
+				}
+				if s.SpreadDays > maxSpread {
+					maxSpread = s.SpreadDays
+				}
+				if s.Distinct > maxDistinct {
+					maxDistinct = s.Distinct
+				}
+			}
+			w("In the window (%d days): days on which the whole fleet shared one %s pin: **%d**; most distinct pins on one day: **%d**; widest spread between oldest and newest pin: **%.1f days**.\n\n", len(inWin), name, single, maxDistinct, maxSpread)
+		}
+	}
+
+	w("### Straddles of breaking / additive-required changes\n\n")
+	w("Days on which at least one consumer that imports a package the commit changed already contained the change while another such consumer did not — the periods during which two live components were on incompatible library states. Only classified `breaking` and `additive-required` commits are considered; consumers that do not import a changed package are not peers for that commit and are left out.\n\n")
+	rows = nil
+	for _, s := range res.Straddles {
+		open := ""
+		if s.Open {
+			open = " (still open)"
+		}
+		rows = append(rows, []string{s.Lib, "`" + s.SHA + "`", trunc(s.Subject, 55), s.Class, s.From + " → " + s.To + open, fmt.Sprintf("%d", s.Days), strings.Join(shortNames(s.Ahead), ", "), strings.Join(shortNames(s.Behind), ", "), strings.Join(shortNames(s.BehindEnd), ", ")})
+	}
+	if len(rows) == 0 {
+		w("No straddles found.\n\n")
+	} else {
+		mdTable(&b, []string{"lib", "commit", "subject", "class", "period", "days", "ahead at start", "behind at start", "behind at end"}, rows)
+	}
+
+	// Import sets (compact) for reference.
+	w("### Import sets used\n\n")
+	rows = nil
+	for _, c := range res.Consumers {
+		rows = append(rows, []string{c.Name, c.GoDirective, fmt.Sprintf("%d", len(c.Imports["libforge"])), fmt.Sprintf("%d", len(c.Imports["ucantone"])),
+			trunc(strings.Join(c.Imports["libforge"], " "), 200)})
+	}
+	mdTable(&b, []string{"consumer", "go directive", "libforge pkgs", "ucantone pkgs", "libforge packages imported (non-test)"}, rows)
+
+	// Caveats.
+	w("## Caveats\n\n")
+	for _, c := range res.Caveats {
+		w("- %s\n", c)
+	}
+	w("\n")
+	return b.String()
+}
+
+func countFleet(res *Result) int {
+	n := 0
+	for _, c := range res.Consumers {
+		if c.Kind != "forge-module" {
+			n++
+		}
+	}
+	return n
+}
+
+func shortNames(names []string) []string {
+	out := make([]string, len(names))
+	for i, n := range names {
+		out[i] = strings.TrimPrefix(n, "live/")
+	}
+	return out
+}
+
+func renderWeekly(b *strings.Builder, res *Result, o *options, get func(*WeekStats) string, title string) {
+	fmt.Fprintf(b, "### %s\n\n", title)
+	headers := append([]string{"week"}, res.WeeklyOrder...)
+	var rows [][]string
+	for _, wk := range res.Weeks {
+		var y, n int
+		fmt.Sscanf(wk, "%d-W%d", &y, &n)
+		// Monday of the ISO week.
+		jan4 := time.Date(y, 1, 4, 0, 0, 0, 0, time.UTC)
+		mon := weekStart(jan4).AddDate(0, 0, (n-1)*7)
+		label := wk + " (" + mon.Format("01-02") + ")"
+		if !mon.AddDate(0, 0, 6).Before(o.from) && !mon.After(o.to) {
+			label += " *"
+		}
+		row := []string{label}
+		for _, name := range res.WeeklyOrder {
+			v := "0"
+			for _, ws := range res.Weekly[name] {
+				if ws.Week == wk {
+					v = get(ws)
+				}
+			}
+			row = append(row, v)
+		}
+		rows = append(rows, row)
+	}
+	mdTable(b, headers, rows)
+}

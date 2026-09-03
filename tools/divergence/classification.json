@@ -1,0 +1,145 @@
+{
+  "_comment": "Hand-curated classification of every human code commit on libforge and ucantone main between 2026-07-01 and 2026-08-31, written by reading each diff (`git show <sha> -- . ':!*_gen*' ':!*_test.go'`). Keys are commit-SHA prefixes on the library's main (first-parent). Commits not listed here are reported as UNCLASSIFIED by tools/divergence rather than guessed. wire_visible: libforge follows the path rule (commands/**, blobindex/**) and is stated here only for the record; for ucantone it is the reviewed verdict.",
+  "classes": {
+    "additive-optional": "(i) new surface; peers keep working unchanged",
+    "additive-required": "(ii) a new field, command or rule that a peer must adopt for the system to keep working",
+    "breaking": "(iii) an exported identifier removed/renamed/re-typed, or an encoding or validation rule changed so that old peers' messages or code fail",
+    "internal": "(iv) no exported or wire behaviour change"
+  },
+  "libforge": {
+    "f0706e1": {
+      "class": "additive-optional",
+      "wire_visible": true,
+      "evidence": "1134 insertions, no deletions: new packages commands/customer (`Add` = /customer/add), commands/s3 (Request, PermissionSet, KeySet, ProofSet with hand-written codecs), commands/s3/bucket (`Create`, `Delete`, `Info`, `List`) and commands/s3/request (`Authorize` = /s3/request/authorize, AuthorizeArguments, AuthorizeOK).",
+      "note": "Merged 2026-07-01 16:23 UTC, so it opens the context period. New commands for the then-new hilt service; hilt pinned it the next day (479c0cd), sprue and smelt (which serve /customer/add) within 9 days."
+    },
+    "a3aa293": {
+      "class": "breaking",
+      "wire_visible": true,
+      "evidence": "commands/s3/request/types.go: `Bucket did.DID` with tag `cborgen:\"bucket\"` becomes `Bucket *did.DID` with `cborgen:\"bucket,omitempty\" dagjsongen:\"bucket,omitempty\"` in AuthorizeOK (re-typed exported field; the key is now omitted for bucket-less requests such as CreateBucket/ListAllMyBuckets).",
+      "note": "Direct push to main without a PR. Go-level break for every reader of `AuthorizeOK.Bucket`; wire-tolerant only for readers that accept a missing key. hilt (the author's own consumer) bumped 21 minutes later (c3e8ad4)."
+    },
+    "aac837a": {
+      "class": "breaking",
+      "wire_visible": true,
+      "evidence": "commands/blob/types.go: RemoveArguments gains a required `Space did.DID` `cborgen:\"space\"` (encoding of an existing command's arguments changes); new AbortArguments{Space,Digest,Cause} and RejectArguments{Space,Digest}; new bindings `Abort` (/blob/abort) and `Reject` (/blob/reject); commands/upload/remove.go doc comment only.",
+      "note": "Direct push to main without a PR. A /blob/remove client without `space` is rejected by a service that requires it."
+    },
+    "aba2bd2": {
+      "class": "additive-optional",
+      "wire_visible": true,
+      "evidence": "commands/ucan/revoke.go: new `Revoke = binding.Bind[*RevokeArguments, *RevokeOK](command.MustParse(\"/ucan/revoke\"))`; commands/ucan/types.go: new `RevokeArguments{Revoke cid.Cid, Path []cid.Cid}`.",
+      "note": "A new command nobody has to serve until they choose to; hilt started issuing revocations on 2026-08-19 (ef14123)."
+    },
+    "7fc3b2c": {
+      "class": "internal",
+      "wire_visible": false,
+      "evidence": "identity/identity.go (merge of f06be16): `multikey.DeriveVerificationMethod(doc.Fragment(\"#key-0\"), ...)` becomes `doc.Fragment(\"key-0\")` (the old form serialised as `#%23key-0`) and `vm.Controller = doc.ID` is set.",
+      "note": "Outside commands/blobindex, so internal by the libforge rule, but it changes the DID document every service serves at /.well-known/did.json. Rolled out as same-day bumps in hilt (b9ad649), sprue (2f89e90) and delegator (626fc76) on 2026-07-24, paired with ucantone ccb7705 three days later."
+    },
+    "5e299c4": {
+      "class": "breaking",
+      "wire_visible": true,
+      "evidence": "commands/blob/types.go: `Space` removed from RemoveArguments and from AbortArguments (encoding of two existing commands changes); new `ReleaseArguments{Space, Digest}` and binding `Release` (/blob/release); new error names MissingCause (abort) and BlobAccepted (reject).",
+      "note": "Author marked it `feat!`. sprue (the upload service, which serves /blob/remove) bumped 3 minutes after the merge (922f744, same author group); piri pinned an earlier head of the PR branch (3e5e6ba, tree-identical for commands/blob) on 2026-07-30; ingot and smelt followed on 2026-08-05."
+    },
+    "b13386b": {
+      "class": "additive-required",
+      "wire_visible": true,
+      "evidence": "commands/blob/types.go: ReleaseArguments gains `Cause cid.Cid` `cborgen:\"cause\"` (required, no omitempty); commands/blob/release.go: the node MUST reject a release whose cause invocation is absent from the request container (UnknownCause) or does not match Space/Digest (InvalidCause).",
+      "note": "Author marked it `feat!`. The encoding only gains a key, but the node-side rule makes it mandatory: an upload service without it is refused by a node with it. sprue (0fa0743 `fix: blob release cause`) and piri (8509dfa `feat: validate release cause`) both bumped on 2026-08-06, 7 days later, each with the matching code change."
+    },
+    "f54066c": {
+      "class": "internal",
+      "wire_visible": false,
+      "evidence": "attestation/signer.go: `attest.Proof.Invoke(...)` now passes `invocation.WithNoNonce()` and `invocation.WithNoExpiration()`.",
+      "note": "Changes the bytes of every attested signature (the embedded /ucan/attest/proof invocation loses nonce and exp) so that identical inputs attest identically; verifiers accept both forms, so no consumer action was needed."
+    },
+    "2585ed1": {
+      "class": "additive-required",
+      "wire_visible": true,
+      "evidence": "commands/s3/request/types.go: AuthorizeOK gains `Tenant did.DID` `cborgen:\"tenant\" dagjsongen:\"tenant\"` (required); go.mod: `go 1.25.3` -> `go 1.27.0` and dag-json-gen 0.0.9; every commands/**/json_gen.go regenerated (cosmetic `written` counter change).",
+      "note": "The commit body says ingot needs the tenant DID to encrypt to the tenant's wrap key, so the S3 gateway depends on the authorizer (hilt) emitting the field. hilt (server) and ingot (client) both pinned the PR branch head c9252ac, which is tree-identical to this squash commit, on 2026-08-28 - hilt 26 minutes before the merge. The `go` directive bump means every consumer that takes this commit must build with Go 1.27."
+    }
+  },
+  "ucantone": {
+    "79141c5": {
+      "class": "internal",
+      "wire_visible": false,
+      "evidence": "execution/response.go: `x.(errors.Named)` type assertion replaced by `errors.As(x, &namedErr)` when building the receipt error value.",
+      "note": "Wrapped Named errors now surface their stable name in receipts instead of `UnknownError`; a bug fix in the executor, no API or encoding change."
+    },
+    "ef993e1": {
+      "class": "additive-required",
+      "wire_visible": true,
+      "evidence": "did/plc/plc.go: new `plc.Parse` and `IdentifierLength`; validator/validator.go: when a document declares no capability relationship (`verRel == nil || verRel.IsZero()`) all of its verification methods are tried, and an unsupported VM type is recorded as a rejection instead of aborting.",
+      "note": "Validation rule relaxed so that did:plc documents (which carry only verificationMethod) can sign tokens. A peer that must validate tokens from did:plc principals needs it: sprue bumped the same day (e7d28a6 `feat: allow did:plc accounts to provision spaces`, to a PR-branch head), piri on 2026-07-21 (1688014)."
+    },
+    "639fffe": {
+      "class": "additive-optional",
+      "wire_visible": false,
+      "evidence": "did/plc/resolver.go: new exported `Cache` interface and options `WithCache`, `WithCacheTTL`; Resolve issues If-None-Match and serves the cached document on 304.",
+      "note": "New options only; no encoding or validation change."
+    },
+    "30be293": {
+      "class": "additive-optional",
+      "wire_visible": true,
+      "evidence": "ucan/container/container.go: `Decode` trims surrounding whitespace before dispatching on the codec byte, for the base64 codecs only.",
+      "note": "Decoding accepts strictly more inputs; nothing a peer has to do."
+    },
+    "ccb7705": {
+      "class": "additive-required",
+      "wire_visible": true,
+      "evidence": "did/verificationrelationship.go: new `declared` flag; `All()` returns every method of the document when the relationship was never declared (the PLC directory's documents), and exactly its references when declared.",
+      "note": "Forge's ucantone pin. Direct push to main. piri took it the same day (c917fb6 `deps: update latest ucantone; did verification fix`), ingot on 07-28 (a7684d7): a coordinated verification fix paired with libforge 7fc3b2c."
+    },
+    "5f00b99": {
+      "class": "internal",
+      "wire_visible": false,
+      "evidence": "CI migration to the pinned Unified CI workflows; multikey/multikey.go: one error string reworded for staticcheck ST1005; staticcheck.conf files added.",
+      "note": "No API change."
+    },
+    "bfc05d9": {
+      "class": "breaking",
+      "wire_visible": true,
+      "evidence": "ucan/receipt/receipt.go: receipts no longer set `aud` and `fromInvocation` rejects an invocation with a defined audience (`invalid receipt, audience must be omitted`); receipts default to `exp: null` (WithNoExpiration first) with new `receipt.WithExpiration`; ucan/ucan.go: `Expiration() *UnixTimestamp` added to the `ucan.Receipt` interface; execution/dispatcher: handler-error receipts get a 30 s TTL (`DefaultHandlerErrorReceiptTTL`, `WithHandlerErrorReceiptTTL`).",
+      "note": "A consumer on this commit cannot decode receipts issued by a peer that is not (they carry `aud`), and any other implementation of `ucan.Receipt` stops compiling. Seven consumers bumped past it within 3-4 days in one sweep (2026-08-20/21: hilt 80f80f3, sprue b403a68, piri b3b91be, ingot de3ca05, guppy d74fd06, indexing-service 9eb6204, piri-signing-service bacd87b); delegator on 08-27; smelt and the frozen forge never."
+    },
+    "e926fd5": {
+      "class": "additive-optional",
+      "wire_visible": true,
+      "evidence": "ucan/invocation/invocation.go: `iat` is no longer defaulted to now (emitted only when WithIssuedAt is given); execution/response.go: `WithReceiptTimestamp(true)` now really sets the receipt's `iat`.",
+      "note": "The encoding of emitted invocations changes (no `iat` by default), but `iat` is optional in the spec and no consumer reads `IssuedAt()` outside tests, so nothing had to move."
+    },
+    "3a20cd5": {
+      "class": "breaking",
+      "wire_visible": true,
+      "evidence": "validator/validator.go: only a nil relationship falls back to all methods; an explicitly empty `capabilityInvocation`/`capabilityDelegation` now endorses nothing (`verRel.All()`); did/verificationrelationship.go: declared-empty round-trips as `[]`, undeclared as `null`, `IsZero` means undeclared.",
+      "note": "Validation rule tightened: a DID document with `\"capabilityInvocation\": []` is rejected after this. libforge's identity.DIDDocument declares both relationships with the key and did:plc documents declare none, so no known fil-forge principal was affected; classified on the rule, not on observed impact."
+    },
+    "9bb30b7": {
+      "class": "internal",
+      "wire_visible": false,
+      "evidence": "Codec methods move to codec.go files (ucan/delegation/policy, ucan/promise), `ErrorModelWithCause` to errors/datamodel/cause.go and did:plc helpers to did/plc/operation.go, all within their packages; every `*_gen*.go` regenerated with dag-json-gen 0.0.9; Makefile `gen`/`gen-check` and a codegen workflow added.",
+      "note": "1920 insertions / 1537 deletions with no exported API or encoding change - review noise for consumers, nothing to adopt."
+    },
+    "6ad0099": {
+      "class": "additive-optional",
+      "wire_visible": true,
+      "evidence": "New packages multikey/mldsa44 (Signer, code 0x131a), multikey/mldsa44/verifier (Verifier, code 0x1210, self-registers) and varsig/algorithm/mldsa (single-segment algorithm 0x1210); go.mod: `go 1.25.0` -> `go 1.27.0`.",
+      "note": "A new signature algorithm; peers without it cannot verify ML-DSA-signed tokens, but nothing issues them yet. The `go` directive bump forces Go 1.27 on every consumer that takes this commit: piri, hilt, sprue, ingot and delegator moved to `go 1.27.0`; smelt (1.25.9), piri-signing-service (1.25.3), guppy (1.26.1) and indexing-service (1.25.7) sit on older pins."
+    },
+    "dacea7a": {
+      "class": "additive-required",
+      "wire_visible": true,
+      "evidence": "validator/validator.go: when a verifier factory cannot use a method's material (unknown key code, malformed multibase, missing property) the method is recorded as a rejection and the search continues; only context cancellation still aborts.",
+      "note": "A relaxation, but one a peer needs as soon as any principal's DID document also carries a non-signing key: hilt's per-tenant X25519 wrap-key registry (059df06, same day) is exactly that, and piri (b9ed572), sprue (f99dda9) and delegator (b5552f1) followed on 2026-08-27, ingot on 08-28 (0ed4bd8)."
+    },
+    "8d7eb73": {
+      "class": "additive-optional",
+      "wire_visible": true,
+      "evidence": "ucan/container/container.go (merge of 55dbe1e): new exported `DecodeTransport(input []byte) (byte, []byte, error)`; `Decode` now calls it, signature and behaviour unchanged.",
+      "note": "Additive; for tools that inspect containers."
+    }
+  }
+}
