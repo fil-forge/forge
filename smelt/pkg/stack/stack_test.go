@@ -3,6 +3,7 @@ package stack
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/fil-forge/forge/smelt"
@@ -195,4 +196,26 @@ func TestResolveNodes(t *testing.T) {
 			t.Errorf("node 1: expected sqlite/filesystem, got %s/%s", nodes[1].Storage.DB, nodes[1].Storage.Blob)
 		}
 	})
+}
+
+// A WithWorkspaceBinariesExcept name the workspace cannot build must be an
+// error, not a silent no-op. The name that makes this real is sprue's: its
+// compose service is "upload", so excluding "sprue" would hold back nothing and
+// the working-tree sprue would be mounted over the image a test believed it had
+// pinned. Runs without Docker and without an active go.work — the check
+// deliberately precedes workspace.Detect.
+func TestWorkspaceExcludeUnknownService(t *testing.T) {
+	cfg := defaultConfig()
+	WithWorkspaceBinariesExcept("sprue", "hilt")(cfg)
+	_, err := maybeBinaryOverride(t, t.TempDir(), cfg, nil)
+	if err == nil {
+		t.Fatal("expected an error for an exclusion naming an unknown service")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, `"sprue"`) || !strings.Contains(msg, "upload") {
+		t.Fatalf("error should name the bad exclusion and list the known services, got: %v", err)
+	}
+	if strings.Contains(msg, `"hilt"`) {
+		t.Fatalf("error should not blame the valid exclusion, got: %v", err)
+	}
 }

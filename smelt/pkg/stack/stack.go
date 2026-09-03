@@ -21,6 +21,8 @@ import (
 	osexec "os/exec"
 	"os/user"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -450,6 +452,22 @@ func maybeBinaryOverride(t *testing.T, tempDir string, cfg *config, nodes []mani
 	bins := map[string]string{}
 
 	if cfg.workspaceBinaries {
+		// An exclusion naming a service the workspace cannot build is a
+		// silent no-op: nothing is held back, the working-tree binary is
+		// mounted over the image the caller believed it had pinned, and a
+		// compatibility run quietly becomes HEAD-vs-HEAD. Refuse it before
+		// touching the workspace. (The trap is real: smelt's compose name for
+		// sprue is "upload".)
+		var unknown []string
+		for svc := range cfg.workspaceExclude {
+			if _, ok := workspace.Services[svc]; !ok {
+				unknown = append(unknown, svc)
+			}
+		}
+		if len(unknown) > 0 {
+			sort.Strings(unknown)
+			return "", fmt.Errorf("workspace binaries: WithWorkspaceBinariesExcept names no smelt service: %q (known: %s); the exclusion would hold nothing back", unknown, strings.Join(workspace.ServiceNames(), ", "))
+		}
 		root, services, err := workspace.Detect()
 		if err != nil {
 			return "", fmt.Errorf("workspace binaries: %w", err)

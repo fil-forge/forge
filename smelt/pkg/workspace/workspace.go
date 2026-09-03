@@ -59,6 +59,29 @@ var Services = map[string]serviceBuild{
 	"ingot":           {moduleDir: "ingot", buildTarget: "./cmd/ingot", binPath: "/usr/bin/ingot", configPath: "/etc/ingot/config.yaml"},
 }
 
+// BinPath returns the in-container path of the named smelt service's binary —
+// the path RenderOverride mounts a locally built binary over — and false for a
+// service this package cannot build. Exported so a test that has to prove what
+// a container is actually running (smelt/tests/compat) reads the path from the
+// same table that does the mounting, and cannot drift from it.
+func BinPath(service string) (string, bool) {
+	spec, ok := Services[service]
+	if !ok {
+		return "", false
+	}
+	return spec.binPath, true
+}
+
+// ServiceNames returns the smelt service names this package can build, sorted.
+func ServiceNames() []string {
+	names := make([]string, 0, len(Services))
+	for name := range Services {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // libforgeDir is the workspace dir of the shared library. Its presence in the
 // use-list forces a rebuild of every service (see package doc).
 const libforgeDir = "libforge"
