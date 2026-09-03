@@ -127,6 +127,45 @@ internal package … not allowed`). So "monorepo `internal/`" in the plan's
 classification table can be a real, shared, compiler-enforced module — not
 just a convention.
 
+### S7. Four first-party modules outside forge compile against `libforge/commands`
+
+Found by the compiler, not by grep. Moving `commands/**` into the repo and
+rewriting piri's imports produced three type errors at two seams:
+
+- `github.com/fil-forge/piri-signing-service/pkg/types.SigningService.SignAddPieces`
+  takes `[]libforge/commands/pdp/sign.PieceProofs`
+  (`piri/pkg/pdp/service/roots_add.go`, `piri/pkg/service/signer/proofservicesigner.go`);
+- `github.com/fil-forge/go-ipni-tools/pkg/advertisement.ShardCID` takes
+  `libforge/commands/assert.LocationArguments`
+  (`piri/pkg/service/publisher/publisher.go`).
+
+A wider grep over the module cache (the versions piri and ingot pin) shows
+`go-ipni-tools`, `piri-signing-service`, `indexing-service` and `delegator`
+together reference nine `libforge/commands/*` packages in their code
+(`assert` 12 references, `pdp/sign` 7, `claim` 7, `space/egress` 3, `content` 3,
+`access` 3, `pdp` 2, `blob/replica` 2, `blob` 2). So the plan's open question
+"does anyone compile against `commands/**`?" has a partial answer: **yes, at
+least four first-party libraries do, in their exported APIs.** Whether any
+*partner* does remains a human question. On this branch the two seams keep
+using libforge's copy of the type (`commands-move.md`); a real move would have
+to migrate those four modules to `forge/commands` — making it a published
+module after all — or keep `libforge/commands` canonical.
+
+### S8. `go work sync` broke the `GOWORK=off` build, and only CI noticed
+
+After the Experiment A bump, `go work sync` raised requirements in each
+module's `go.mod` to the workspace-wide union (hilt: `golang.org/x/net v0.57.0
+→ v0.58.0`) and recorded the new hashes only in `go.work.sum`, which
+`.gitignore` excludes. Every module built and tested locally (workspace mode).
+The first CI dispatch of the branch
+([run 33795942498](https://github.com/fil-forge/forge/actions/runs/33795942498))
+failed all five `unit` jobs in 76 seconds with `missing go.sum entry for go.mod
+file`. `GOWORK=off go mod tidy` per module added 213 `go.sum` lines and nothing
+else; `go work sync` was then a no-op. This is the consolidation plan's trap 3
+observed in the wild, and the argument for its proposed `go work sync && git
+diff --exit-code` gate — with the addition that the gate must run `go mod tidy`
+under `GOWORK=off` afterwards, or it will pass locally and fail in CI.
+
 ## Costs measured
 
 Filled in from Experiments A, C and E as they complete; see the linked
@@ -159,6 +198,12 @@ documents for the raw logs.
    `require` lines are the source of truth.
 5. **`ci.yml` premise drift.** "No service module imports another" is false in
    the live polyrepo (ingot → hilt) and was false in forge before PR #3.
+6. **`go work sync` vs `GOWORK=off` (S8).** Sync leaves per-module `go.sum`
+   incomplete; the workspace hides it. Fixed on this branch by a per-module
+   tidy; needs a gate.
+7. **`compat.yml` skips on `workflow_dispatch` too.** The dispatch input is
+   only `window`; there is no way to run the suite without tags. Fixed on this
+   branch (Experiment D).
 
 ## Decisions needed from humans
 
