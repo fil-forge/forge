@@ -31,6 +31,17 @@
 //	                   catches expand/contract violations, because it exercises
 //	                   the window where old and new are both live.
 //
+// Both shapes can pass vacuously if the stack does not run what the test
+// believes it runs: HEAD enters a stack as a binary bind-mounted over a
+// published image (pkg/workspace), so a pinned service with the mount still in
+// place is HEAD wearing a released label, and a "HEAD" service without the
+// mount is whatever floating image compose resolved. Every test therefore
+// proves its provenance from `docker inspect` before it asserts anything else
+// (assertProvenance), and logs one `compat: exercised …` line per stack it
+// actually compared — the workflow fails a run that logged none.
+// TestProvenanceGuardFires boots the mislabelled stack the guard exists for
+// and shows it rejected.
+//
 // Every name in this suite — which services exist, what smelt calls them, what
 // the registry calls them, how each is pinned — comes from the one table below
 // (services). The suite used to spell the compose names in one list and the
@@ -45,10 +56,12 @@ package compat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -123,6 +136,16 @@ func (s service) ref(tag string) string {
 	return fmt.Sprintf("%s/%s:%s", imageRepo, s.image, tag)
 }
 
+// row returns the table row for a compose service name.
+func row(compose string) (service, bool) {
+	for _, s := range services {
+		if s.compose == compose {
+			return s, true
+		}
+	}
+	return service{}, false
+}
+
 // operatorRun returns the rows that get pinned / upgraded one at a time.
 func operatorRun() []service {
 	var out []service
@@ -194,10 +217,19 @@ func baselineSet(t *testing.T) map[string]string {
 	return out
 }
 
-// baseOptions is the topology every compat stack shares.
+// baseOptions is the topology every compat stack shares, plus the guppy client
+// image when COMPAT_GUPPY_IMAGE pins one. Without the pin the client is
+// whatever ghcr.io/fil-forge/guppy:main-dev floats to (smelt's compose
+// default), which makes a guppy drift indistinguishable from a service skew;
+// the workflow's guppy_image input exists to tell them apart.
 func baseOptions(t *testing.T) []stack.Option {
 	t.Helper()
-	return []stack.Option{stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true})}
+	opts := []stack.Option{stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true})}
+	if img := strings.TrimSpace(os.Getenv("COMPAT_GUPPY_IMAGE")); img != "" {
+		t.Logf("compat: guppy client pinned to %s", img)
+		opts = append(opts, stack.WithGuppyImage(img))
+	}
+	return opts
 }
 
 // TestPinnedPeer boots the stack with one service at a released image and every
@@ -212,11 +244,12 @@ func TestPinnedPeer(t *testing.T) {
 			for _, version := range pinnedVersions(t, svc) {
 				t.Run(version, func(t *testing.T) {
 					image := svc.ref(version)
+					want := provenance{svc.compose: image}
 
 					// The exclusion is load-bearing: without it the workspace
 					// binary would be mounted over the pinned image and this
 					// would quietly become a HEAD-vs-HEAD run that always
-					// passes.
+					// passes. assertProvenance is what makes that loud.
 					opts := append(baseOptions(t),
 						stack.WithWorkspaceBinariesExcept(svc.compose),
 						svc.pin(image),
@@ -224,7 +257,9 @@ func TestPinnedPeer(t *testing.T) {
 					s := stack.MustNewStack(t, opts...)
 					t.Logf("compat: %s pinned to %s, all other services from HEAD", svc.image, image)
 
+					assertProvenance(t, s, want)
 					assertUploadRetrieve(t, s)
+					logExercised(t, "pinned-peer", want)
 				})
 			}
 		})
@@ -253,8 +288,13 @@ func TestRollingUpgrade(t *testing.T) {
 			// service under upgrade, whose baseline image is what the HEAD
 			// binary is mounted over, so no floating :main is pulled...
 			opts := baseOptions(t)
+			want := provenance{}
 			for _, svc := range services {
-				opts = append(opts, svc.pin(svc.ref(baseline[svc.image])))
+				image := svc.ref(baseline[svc.image])
+				opts = append(opts, svc.pin(image))
+				if svc.compose != upgraded.compose {
+					want[svc.compose] = image
+				}
 			}
 			// ...except that the one service under upgrade comes from HEAD.
 			// Building only that service keeps the rest genuinely old.
@@ -263,9 +303,150 @@ func TestRollingUpgrade(t *testing.T) {
 			s := stack.MustNewStack(t, opts...)
 			t.Logf("compat: fleet at baseline set %v, %s upgraded to HEAD", baseline, upgraded.image)
 
+			assertProvenance(t, s, want)
 			assertUploadRetrieve(t, s)
+			logExercised(t, "rolling-upgrade", want)
 		})
 	}
+}
+
+// TestProvenanceGuardFires proves the suite CAN fail. It boots the exact
+// configuration the provenance guard exists to catch — piri pinned to a
+// released image but WITHOUT the workspace exclusion, so the HEAD binary is
+// mounted over the pinned image and the stack is HEAD-vs-HEAD wearing a
+// released label — and asserts that checkProvenance rejects it.
+//
+// Opt-in via COMPAT_EXPECT_PIN_MISMATCH=1 (the workflow's expect_pin_mismatch
+// input) because it boots a full stack for no compatibility signal; run it
+// when touching the guard, the service table, or pkg/workspace's mounting:
+//
+//	COMPAT_EXPECT_PIN_MISMATCH=1 COMPAT_PIRI_VERSIONS=sha-96a672e \
+//	    go test -tags compat -run TestProvenanceGuardFires ./tests/compat
+//
+// TestCheckProvenance covers the same logic against a fake inspector without
+// Docker; this is the end-to-end proof that the real stack, the real mounts
+// and the real inspect output line up with what the guard expects. It logs no
+// `compat: exercised` line: nothing was compared.
+func TestProvenanceGuardFires(t *testing.T) {
+	if os.Getenv("COMPAT_EXPECT_PIN_MISMATCH") == "" {
+		t.Skip("COMPAT_EXPECT_PIN_MISMATCH unset; set it to 1 to boot a deliberately mislabelled stack and prove the provenance guard rejects it")
+	}
+	if runtime.GOOS == "darwin" {
+		t.Skip("skipping on darwin (docker-in-docker flakiness)")
+	}
+	piri, ok := row("piri")
+	if !ok {
+		t.Fatal("service table has no piri row")
+	}
+	image := piri.ref(pinnedVersions(t, piri)[0])
+
+	// No WithWorkspaceBinariesExcept: every workspace service, piri included,
+	// is built from HEAD and mounted — over the image we just pinned.
+	opts := append(baseOptions(t), stack.WithWorkspaceBinaries(), piri.pin(image))
+	s := stack.MustNewStack(t, opts...)
+
+	err := checkProvenance(t.Context(), s, provenance{piri.compose: image})
+	if err == nil {
+		t.Fatalf("provenance guard did NOT fire on a HEAD binary mounted over pinned %s — the suite can pass vacuously", image)
+	}
+	t.Logf("provenance guard fired as expected:\n%v", err)
+}
+
+// provenance is what a stack's in-repo services are expected to run, keyed by
+// compose service name: the pinned image ref for a pinned service; a service
+// absent from the map is expected to run a HEAD build.
+type provenance map[string]string
+
+// inspector is the slice of *stack.Stack that checkProvenance needs. It is an
+// interface so TestCheckProvenance can drive the guard from a fake without a
+// Docker daemon.
+type inspector interface {
+	Inspect(ctx context.Context, service string) (*stack.ContainerInfo, error)
+	PiriServiceNames() []string
+}
+
+// checkProvenance inspects every in-repo service's container(s) and returns an
+// error naming every way the stack differs from want:
+//
+//   - a pinned service must have been created from exactly the pinned ref and
+//     must have NO bind mount at its binary path — the image's own binary is
+//     what runs;
+//   - a HEAD service must have a bind mount at its binary path — a
+//     working-tree build is what runs, whatever image sits underneath.
+//
+// It checks all of them rather than stopping at the first, so one failure
+// shows the whole picture.
+func checkProvenance(ctx context.Context, s inspector, want provenance) error {
+	var errs []error
+	for _, svc := range services {
+		binPath, err := svc.binPath()
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		names := []string{svc.compose}
+		if svc.compose == "piri" {
+			names = s.PiriServiceNames()
+			if len(names) == 0 {
+				errs = append(errs, errors.New("piri: the stack reports no piri nodes, nothing to inspect"))
+				continue
+			}
+		}
+		pinnedRef, pinned := want[svc.compose]
+		for _, name := range names {
+			info, err := s.Inspect(ctx, name)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", name, err))
+				continue
+			}
+			mount, mounted := info.BindMountAt(binPath)
+			if pinned {
+				if info.Image != pinnedRef {
+					errs = append(errs, fmt.Errorf("%s: pinned to %s but the container was created from %q", name, pinnedRef, info.Image))
+				}
+				if mounted {
+					errs = append(errs, fmt.Errorf("%s: pinned to %s but a binary is bind-mounted over %s (from %s) — the pin is a label and HEAD is what runs", name, pinnedRef, binPath, mount.Source))
+				}
+			} else if !mounted {
+				errs = append(errs, fmt.Errorf("%s: expected a HEAD binary bind-mounted at %s, found none — the container runs image %q as-is, so this commit is not under test", name, binPath, info.Image))
+			}
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// assertProvenance fails the test, with the full list of mismatches, unless
+// the stack runs exactly what want says.
+func assertProvenance(t *testing.T, s *stack.Stack, want provenance) {
+	t.Helper()
+	if err := checkProvenance(t.Context(), s, want); err != nil {
+		t.Fatalf("compat: stack provenance mismatch — this run would not have tested what it claims:\n%v", err)
+	}
+	t.Logf("compat: provenance verified: %s", describe(want))
+}
+
+// logExercised writes the one line per stack the workflow counts. It comes
+// after the assertions, so the line means "booted, provenance proven, upload
+// and retrieve passed" — a run with none of these lines compared nothing.
+func logExercised(t *testing.T, shape string, want provenance) {
+	t.Helper()
+	t.Logf("compat: exercised shape=%s %s", shape, describe(want))
+}
+
+// describe renders a provenance as one stable, greppable line:
+// pinned=<compose>@<ref>,… head=<compose>,… (each list sorted).
+func describe(want provenance) string {
+	var pinned, head []string
+	for _, svc := range services {
+		if ref, ok := want[svc.compose]; ok {
+			pinned = append(pinned, svc.compose+"@"+ref)
+		} else {
+			head = append(head, svc.compose)
+		}
+	}
+	sort.Strings(pinned)
+	sort.Strings(head)
+	return fmt.Sprintf("pinned=%s head=%s", strings.Join(pinned, ","), strings.Join(head, ","))
 }
 
 // assertUploadRetrieve drives the full network path — guppy -> sprue -> piri ->
