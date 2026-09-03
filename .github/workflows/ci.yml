@@ -28,9 +28,11 @@ concurrency:
 
 jobs:
   # Which services does this diff actually touch? No service module imports
-  # another (shared surface lives in libforge), so each filter is the service's
-  # own subtree plus the paths outside every subtree that still change what the
-  # services build or how they are tested. Those shared paths are repeated in
+  # another, but every service consumes the in-repo commands/ (wire contract)
+  # and internal/ (repo-private helpers) modules through a replace directive,
+  # so each filter is the service's own subtree, both shared modules, and the
+  # paths outside every subtree that still change what the services build or
+  # how they are tested. Those shared paths are repeated in
   # every filter on purpose: a path missing from ALL filters is a change that
   # merges with no CI at all — dorny/paths-filter reports "no changes", `any`
   # is false and both tiers skip, green. Keep the shared list identical across
@@ -49,29 +51,49 @@ jobs:
           filters: |
             piri:
               - 'piri/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
               - '.github/scripts/**'
             hilt:
               - 'hilt/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
               - '.github/scripts/**'
             sprue:
               - 'sprue/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
               - '.github/scripts/**'
             ingot:
               - 'ingot/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
               - '.github/scripts/**'
             smelt:
               - 'smelt/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
               - '.github/scripts/**'
+            # The in-repo modules get a unit job of their own (build, vet, tidy,
+            # test — and for commands, the codegen gate). Any change to them
+            # also selects every service above, which is what the stack tier
+            # needs: the wire contract changed, boot everything.
+            commands:
+              - 'commands/**'
+              - '.github/workflows/ci.yml'
+            internal:
+              - 'internal/**'
+              - '.github/workflows/ci.yml'
 
   unit:
     # The check name spells out the gate order so a red X is legible from the
@@ -113,6 +135,13 @@ jobs:
         run: go build ./...
       - name: go vet
         run: go vet ./...
+
+      # The wire contract's codecs are generated (cbor-gen + dag-json-gen). A
+      # type edited without regenerating is a silent wire change; a generator
+      # that no longer compiles goes unnoticed until someone runs go generate.
+      - name: codegen gate
+        if: matrix.service == 'commands'
+        run: make codegen-build gen-check
 
       # Placeholder gate: no repo-wide linter rules are adopted yet. When they
       # are, they live in ONE root-level config shared by every service — do
@@ -171,7 +200,7 @@ jobs:
       - name: Build piri image
         uses: docker/build-push-action@v6
         with:
-          context: piri
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -185,7 +214,7 @@ jobs:
       - name: Build hilt image
         uses: docker/build-push-action@v6
         with:
-          context: hilt
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -198,7 +227,7 @@ jobs:
       - name: Build sprue image
         uses: docker/build-push-action@v6
         with:
-          context: sprue
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -211,7 +240,7 @@ jobs:
       - name: Build ingot image
         uses: docker/build-push-action@v6
         with:
-          context: ingot
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |

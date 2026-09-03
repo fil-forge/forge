@@ -45,18 +45,26 @@ jobs:
           filters: |
             piri:
               - 'piri/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/publish-ghcr.yml'
             hilt:
               - 'hilt/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/publish-ghcr.yml'
             sprue:
               - 'sprue/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/publish-ghcr.yml'
             ingot:
               - 'ingot/**'
+              - 'commands/**'
+              - 'internal/**'
               - 'docker/**'
               - '.github/workflows/publish-ghcr.yml'
 
@@ -105,7 +113,7 @@ jobs:
       - name: Build and push (prod)
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service }}
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -121,7 +129,7 @@ jobs:
       - name: Build and push (dev)
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service }}
+          context: .
           file: docker/Dockerfile
           target: dev
           build-args: |
