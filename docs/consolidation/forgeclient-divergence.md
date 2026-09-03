@@ -40,7 +40,7 @@ Other forge commits touching the copies (`git log -- ingot/forgeclient ingot/tok
 Script (run from anywhere; writes into `$S`):
 
 ```bash
-S=/tmp/claude-0/-home-user/cc0bd1c5-ddd8-5b18-827e-8db8c74e6de7/scratchpad/inv-forgeclient
+S=$(mktemp -d)   # any scratch dir with carry/ main/ forge/ subdirectories
 CARRY=11f8a6c
 cd /home/user/guppy
 for f in accessdelegate accounts blobadd claimaccess client indexadd options pollclaim provideradd requestaccess spaces; do

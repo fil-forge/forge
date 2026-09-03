@@ -182,6 +182,47 @@ observed in the wild, and the argument for its proposed `go work sync && git
 diff --exit-code` gate — with the addition that the gate must run `go mod tidy`
 under `GOWORK=off` afterwards, or it will pass locally and fail in CI.
 
+### S9. forge `main` plus today's floating `guppy:main-dev` is predicted to fail its own smoke test
+
+From `guppy-status.md` (G12–G13, code reading, not executed): ucantone #49
+(2026-08-17) made receipt decoding reject a receipt that carries `aud`, which
+every pre-#49 executor sets. `smelt/systems/guppy/compose.yml` runs
+`ghcr.io/fil-forge/guppy:main-dev` (floating; today guppy `d74fd06`, ucantone
+`3a20cd5`, post-#49). forge `main` at `f60dd59` runs ucantone `ccb7705`
+(pre-#49). A new guppy against an old sprue fails at the first `/blob/add`
+receipt with `missing receipt for task`. Nothing has booted that combination
+since 2026-07-31 (no push to forge, and the nightly boots nothing — S3), so the
+stack job on `main` is green only because it has not run. The POC branch is
+on post-#49 ucantone and is not affected. Concrete fix regardless of layout:
+pin `GUPPY_IMAGE` to a `sha-*-dev` tag in `ci.yml` and `compat.yml`.
+
+### S10. Auto-merged Dependabot commits get no CI and no images (guppy; likely libforge and ucantone too)
+
+`guppy-status.md` G5: guppy's `dependabot-auto-merge.yml` merges with
+`secrets.GITHUB_TOKEN`, and pushes made with that token do not trigger `push`
+workflows, so 25 of the last 40 commits on guppy `main` — including HEAD
+`e87812b` — never ran `Test`, `Check` or `Container` on `main`; the newest
+published image is `d74fd06` (2026-08-21). libforge (`c2b2789`) and ucantone
+(`db4f8c0`) adopted the same auto-merge workflow on 2026-07-31; whether their
+`main` commits are affected the same way was not checked (their PR checks still
+run before merge, and neither publishes images). Speculation flagged as such.
+
+### S11. In the polyrepo, the two-step rollout is one person doing same-day fan-out
+
+From `polyrepo-august-casestudy.md`: every wire-visible libforge or ucantone
+change in August was followed by consumer bumps authored by the same person
+within 0–4 days (two "sweeps", 08-20/21 across seven repos and 08-27/28 across
+six), 14 pure dependency-bump PRs, zero by Dependabot, no Go source changes in
+any pure bump. hilt merged its consumer PR 26 minutes *before* libforge PR #64
+merged, pinning the PR-head pseudo-version `c9252ac` — the same shape of pin
+that stranded forge on `928cf2a`, harmless there only because the squash merge
+produced a byte-identical module tree (verified). The attestation fix took 17
+days to reach sprue, its only production consumer, and a sprue bump three days
+after the fix landed two commits short of it. smelt and delegator never bumped
+in August. Mixed-version windows (ucantone #49: new decoders reject old
+executors' receipts) existed from 08-17 to 08-21 across the fleet's pins;
+whether any environment ran mixed is not recoverable from git.
+
 ## Costs measured
 
 Filled in from Experiments A, C and E as they complete; see the linked
@@ -197,7 +238,12 @@ documents for the raw logs.
   failed in 76 s on the `go work sync` go.sum gap (S8).
 - **C — `commands/**` (+ the four PR #52 packages) into the repo as modules:**
   see `commands-move.md`.
-- **E — August divergence:** see `divergence-august-2026.md`.
+- **E — August divergence:** the case study (`polyrepo-august-casestudy.md`)
+  counts 2 wire-visible libforge changes, 3 wire-visible ucantone changes and
+  about 3 service-to-service contract changes in August, 22 human pin-bump
+  commits across 9 repos, and lags of 0–4 days for coordinated changes versus
+  17–18 days for an uncoordinated fix. The scripted measurement is
+  `divergence-august-2026.md`.
 
 ## Latent bugs found
 
@@ -281,5 +327,7 @@ From the plan, with what this POC adds:
 | # | question | answer | evidence |
 |---|---|---|---|
 | 5 | where did `sigv4`, `s3perm`, `client/hilt`, `ucan/zapucan`, `commands/s3` go? | never merged: four live only on libforge PR #52; `commands/s3` is on `main` but PR #52 adds the symbols forge uses; origin was hilt | S1 |
+| 6 | is guppy functional against the current stack? | yes for the smoke path (login, space, 10 MB upload with one replica, retrieve), with a version-pair qualifier: today's floating `main-dev` image is post-ucantone-#49 and forge `main` is pre-#49 (S9). guppy is idle, not broken: no feature commit since July, main HEAD never CI-tested or published (S10). Retrieved bytes are never compared; most guppy commands are untested by any stack path | `guppy-status.md` |
 | 7 | does `DESIGN_NOTES.md` §B substantiate the guppy→ingot cycle? | there is no §B; the cycle is asserted in "Known gaps" and contradicted by guppy's code and history | S5 |
-| 1, 3, 4, 2, 6, 8 | see the per-experiment documents | | |
+| 8 | how divergent is `ingot/forgeclient` from `guppy/pkg/client`? | planning numbers all reproduced exactly. `tokenstore`: zero divergence (one header comment per file). `forgeclient`: four substantive items, all in `blobadd.go`/`indexadd.go` (per-call `WithProofStore`, explicit `Content-Length` on the PUT, dropped `/pdp/accept` requirement, parameter order + options); everything else is deletion of unused surface, the logger swap, renames. Upstream fixes were hand-applied 27–32 days late; guppy `pkg/client` has had no commits since 2026-06-19, and the *live* ingot has since grown the copy further (`BlobConclude`/`BlobAbort`/`BlobRemove`) — the flow has reversed | `forgeclient-divergence.md` |
+| 1, 2, 3, 4 | see `cost-report-libforge-bump.md`, `divergence-august-2026.md`, `commands-move.md`, `compat-validation.md` | | |
