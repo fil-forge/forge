@@ -1,0 +1,1111 @@
+# Divergence of libforge/ucantone consumers, 2026-08-01..2026-08-31
+
+Generated 2026-09-03 23:07 UTC by `tools/divergence` from local git history only (no network). Context period shown alongside: 2026-07-01..2026-07-31. "Today" for current-lag figures: 2026-09-03.
+
+Reproduce from the forge repository root:
+
+```
+cd tools/divergence && GOWORK=off go run . -from 2026-08-01 -to 2026-08-31 -context-from 2026-07-01 -today 2026-09-03
+```
+
+The tables below are regenerated on every run; the hand-written section **Reading the numbers** at the end is preserved.
+
+## Repositories read
+
+| repo | ref | head | head date | history | note |
+| --- | --- | --- | --- | --- | --- |
+| libforge | `origin/main` | `2585ed1e5e50` | 2026-08-28 | full |  |
+| ucantone | `origin/main` | `8d7eb73066ce` | 2026-08-28 | full |  |
+| forge | `HEAD` | `f60dd5969c28` | 2026-07-31 | full | modules with libforge/ucantone requires: hilt, ingot, piri, smelt, sprue |
+| live/piri | `HEAD` | `e54658e20e48` | 2026-08-28 | shallow, oldest 2026-05-07 |  |
+| live/hilt | `HEAD` | `cb1bc0b84e7b` | 2026-08-28 | full |  |
+| live/sprue | `HEAD` | `5954487929dd` | 2026-08-28 | shallow, oldest 2026-05-07 |  |
+| live/ingot | `HEAD` | `59fcb5e41850` | 2026-08-29 | full |  |
+| live/smelt | `HEAD` | `640b11ba6376` | 2026-08-28 | shallow, oldest 2026-05-29 |  |
+| live/delegator | `HEAD` | `314b6d68d65d` | 2026-08-28 | shallow, oldest 2026-05-07 |  |
+| live/piri-signing-service | `HEAD` | `8472ad9e9c8b` | 2026-08-22 | shallow, oldest 2026-06-19 |  |
+| guppy | `origin/main` | `e87812b9c6cd` | 2026-08-28 | full |  |
+| indexing-service | `origin/main` | `ba731057e79c` | 2026-08-28 | full |  |
+
+## a. Commits and merged PRs per repo per ISO week
+
+Cells are `total (dependabot)`. Commits are all commits reachable on the ref (forge: first-parent only, because its history embeds the imported service histories). Merged PRs = merge commits + squash commits whose subject ends in `(#N)`. Weeks are ISO weeks (Monday start) by committer date, UTC. Weeks inside the measurement window are marked `*`.
+
+### Commits per week
+
+| week | libforge | ucantone | live/piri | live/hilt | live/sprue | live/ingot | live/smelt | live/delegator | live/piri-signing-service | guppy | indexing-service | forge (first-parent) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-W27 (06-29) | 1 | 0 | 14 | 13 | 2 | 12 | 0 | 0 | 0 | 1 | 1 | 0 |
+| 2026-W28 (07-06) | 0 | 1 | 0 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 2026-W29 (07-13) | 2 | 1 | 2 | 4 | 2 | 3 | 5 | 2 | 2 | 2 | 2 | 0 |
+| 2026-W30 (07-20) | 3 | 2 | 8 | 4 | 3 | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 2026-W31 (07-27) * | 10 (5) | 6 (2) | 15 (10) | 1 | 16 (10) | 34 (7) | 4 (1) | 10 (6) | 6 (3) | 11 (8) | 11 (8) | 11 |
+| 2026-W32 (08-03) * | 2 (1) | 0 | 6 (4) | 2 | 8 (6) | 6 (3) | 3 (1) | 2 (2) | 0 | 10 (10) | 13 (13) | 0 |
+| 2026-W33 (08-10) * | 0 | 0 | 7 (7) | 0 | 5 (5) | 10 (3) | 0 | 2 (2) | 0 | 2 (2) | 13 (13) | 0 |
+| 2026-W34 (08-17) * | 1 (1) | 4 (1) | 22 (8) | 11 | 7 (3) | 11 (6) | 4 | 6 (4) | 4 (1) | 3 (2) | 9 (8) | 0 |
+| 2026-W35 (08-24) * | 1 | 6 | 10 (5) | 5 | 4 (3) | 19 (4) | 5 | 5 (4) | 0 | 1 (1) | 6 (6) | 0 |
+| 2026-W36 (08-31) * | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+### Merged PRs per week
+
+| week | libforge | ucantone | live/piri | live/hilt | live/sprue | live/ingot | live/smelt | live/delegator | live/piri-signing-service | guppy | indexing-service | forge (first-parent) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-W27 (06-29) | 1 | 0 | 5 | 6 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 2026-W28 (07-06) | 0 | 0 | 0 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 2026-W29 (07-13) | 0 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | 0 |
+| 2026-W30 (07-20) | 2 | 2 | 4 | 2 | 2 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 2026-W31 (07-27) * | 9 (5) | 4 (2) | 14 (10) | 1 | 16 (10) | 16 (7) | 3 (1) | 9 (6) | 4 (3) | 10 (8) | 10 (8) | 8 |
+| 2026-W32 (08-03) * | 2 (1) | 0 | 6 (4) | 1 | 8 (6) | 6 (3) | 2 (1) | 2 (2) | 0 | 10 (10) | 13 (13) | 0 |
+| 2026-W33 (08-10) * | 0 | 0 | 7 (7) | 0 | 5 (5) | 6 (3) | 0 | 2 (2) | 0 | 2 (2) | 13 (13) | 0 |
+| 2026-W34 (08-17) * | 1 (1) | 4 (1) | 16 (8) | 8 | 6 (3) | 11 (6) | 4 | 5 (4) | 3 (1) | 3 (2) | 9 (8) | 0 |
+| 2026-W35 (08-24) * | 1 | 5 | 8 (5) | 5 | 4 (3) | 19 (4) | 5 | 5 (4) | 0 | 1 (1) | 6 (6) | 0 |
+| 2026-W36 (08-31) * | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+### Monthly totals
+
+| repo | 2026-07 commits | 2026-07 PRs | 2026-08 commits | 2026-08 PRs | 2026-08 human commits | 2026-08 human PRs |
+| --- | --- | --- | --- | --- | --- | --- |
+| libforge | 9 | 6 | 11 (7) | 10 (7) | 4 | 3 |
+| ucantone | 6 | 4 | 14 (3) | 12 (3) | 11 | 9 |
+| live/piri | 27 | 12 | 57 (34) | 49 (34) | 23 | 15 |
+| live/hilt | 26 | 14 | 18 | 14 | 18 | 14 |
+| live/sprue | 13 | 10 | 36 (27) | 35 (27) | 9 | 8 |
+| live/ingot | 40 | 8 | 56 (23) | 52 (23) | 33 | 29 |
+| live/smelt | 8 | 4 | 15 (2) | 13 (2) | 13 | 11 |
+| live/delegator | 6 | 4 | 23 (18) | 21 (18) | 5 | 3 |
+| live/piri-signing-service | 2 | 1 | 10 (4) | 7 (4) | 6 | 3 |
+| guppy | 5 | 3 | 25 (23) | 24 (23) | 2 | 1 |
+| indexing-service | 4 | 2 | 51 (48) | 50 (48) | 3 | 2 |
+| forge (first-parent) | 11 | 8 | 0 | 0 | 0 | 0 |
+
+## b. Library commits that changed a package a consumer imports
+
+A library commit (first-parent unit on main: a squash commit or a merge) "changed an imported package" when a non-test `.go` file changed in a package that at least one consumer imports (static scan of the consumers at the refs above; `gen/` folds into its parent package). `wire-visible` follows each library's rule, stated under its table.
+
+### libforge (`github.com/fil-forge/libforge`, tip `2585ed1` 2026-08-28)
+
+Wire-visible rule: a change to a non-test .go file under `commands/**` or `blobindex/**`.
+
+| metric | 2026-07-01..2026-07-31 | 2026-08-01..2026-08-31 |
+| --- | --- | --- |
+| first-parent commits | 8 | 11 |
+| of which dependabot | 0 | 7 |
+| of which human | 8 | 4 |
+| human commits touching non-test Go code | 7 | 2 |
+| changed a package some consumer imports | 7 | 2 |
+| … of those, wire-visible | 6 | 1 |
+| … of those, internal | 1 | 1 |
+| wire-visible (all) | 6 | 1 |
+| needs coordination (breaking + additive-required) | 4 | 1 |
+| class: breaking | 3 | 0 |
+| class: additive-required | 1 | 1 |
+| class: additive-optional | 2 | 0 |
+| class: internal | 1 | 1 |
+
+| date | sha | author | PR | subject | packages changed | imported by | wire-visible | class |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-01 | `f0706e1` | ash | #44 | feat: customer add command and Hilt S3 commands (#40) (#44) | `commands/customer`, `commands/s3`, `commands/s3/bucket`, `commands/s3/request` | 8: forge/hilt, forge/ingot, forge/smelt, forge/sprue, hilt, ingot, smelt, sprue | yes | additive-optional |
+| 2026-07-13 | `a3aa293` | Alan Shaw | direct push | fix: make bucket optional | `commands/s3/request` | 6: forge/hilt, forge/ingot, forge/smelt, hilt, ingot, smelt | yes | breaking |
+| 2026-07-17 | `aac837a` | Forrest | direct push | add space to blob remove, abort, and reject, | `commands/blob`, `commands/upload` | 12: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, delegator, hilt, ingot, piri, smelt, sprue | yes | breaking |
+| 2026-07-20 | `aba2bd2` | ash | #47 | feat: add `/ucan/revoke` command (#47) | `commands/ucan` | 5: forge/ingot, forge/sprue, guppy, ingot, sprue | yes | additive-optional |
+| 2026-07-24 | `7fc3b2c` | Miroslav Bajtoš | #48 | Fix DID verification method ID encoding and add controller (#48) | `identity` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | no | internal |
+| 2026-07-27 | `5e299c4` | Forrest | #49 | feat!: align removal capabilities with the blob-removal RFC (#49) | `commands/blob` | 12: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, delegator, hilt, ingot, piri, smelt, sprue | yes | breaking |
+| 2026-07-30 | `b13386b` | ash | #50 | feat!: add cause to blob release arguments (#50) | `commands/blob` | 12: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, delegator, hilt, ingot, piri, smelt, sprue | yes | additive-required |
+| 2026-07-31 | `83c8499` | Petra Jaros | #41 | ci: add Dependabot (go modules + GitHub Actions) (#41) | (no Go code) | 0 | no | non-code |
+| 2026-08-01* | `98764a7` | Hannah Howard | #58 | ci: pin Unified CI reusables to a commit SHA (#58) | (no Go code) | 0 | no | non-code |
+| 2026-08-01* | `c2b2789` | hannahhoward |  | ci: auto-approve and auto-merge Dependabot patch/minor updates | (no Go code) | 0 | no | non-code |
+| 2026-08-01* | `79f6384` | dependabot[bot] | #53 | chore(deps): bump github.com/filecoin-project/go-fil-commp-hashhash f… | (no Go code) | 0 | no | dependabot |
+| 2026-08-01* | `1020656` | dependabot[bot] | #55 | chore(deps): bump github.com/alanshaw/dag-json-gen from 0.0.6 to 0.0.… | (no Go code) | 0 | no | dependabot |
+| 2026-08-01* | `35f36db` | dependabot[bot] | #54 | chore(deps): bump github.com/ipfs/go-cid from 0.6.1 to 0.6.2 (#54) | (no Go code) | 0 | no | dependabot |
+| 2026-08-01* | `68affd7` | dependabot[bot] | #57 | chore(deps): bump the github-actions group with 2 updates (#57) | (no Go code) | 0 | no | dependabot |
+| 2026-08-01* | `850148f` | dependabot[bot] | #56 | chore(deps): bump github.com/ipfs/go-log/v2 from 2.9.1 to 2.9.2 (#56) | (no Go code) | 0 | no | dependabot |
+| 2026-08-03* | `f54066c` | ash | #51 | fix: attestation idempotency (#51) | `attestation` | 2: forge/sprue, sprue | no | internal |
+| 2026-08-07* | `3e6895b` | dependabot[bot] | #60 | chore(deps): bump the github-actions group with 2 updates (#60) | (no Go code) | 0 | no | dependabot |
+| 2026-08-21* | `7ceb1bf` | dependabot[bot] | #63 | chore(deps): bump github.com/stretchr/testify from 1.11.1 to 1.12.1 (… | (no Go code) | 0 | no | dependabot |
+| 2026-08-28* | `2585ed1` | ash | #64 | feat: add tenant DID to authorization response (#64) | `commands/s3/request`; regenerated codecs only in 14 pkgs | 6: forge/hilt, forge/ingot, forge/smelt, hilt, ingot, smelt | yes | additive-required |
+
+### ucantone (`github.com/fil-forge/ucantone`, tip `8d7eb73` 2026-08-28)
+
+Wire-visible rule: a change under `ucan/`, `validator/`, `execution/`, `varsig/`, `multikey/` or `did/` that alters an exported type, an encoding or a validation rule (path match = candidate; final call curated per commit from the diff).
+
+| metric | 2026-07-01..2026-07-31 | 2026-08-01..2026-08-31 |
+| --- | --- | --- |
+| first-parent commits | 6 | 13 |
+| of which dependabot | 0 | 3 |
+| of which human | 6 | 10 |
+| human commits touching non-test Go code | 5 | 8 |
+| changed a package some consumer imports | 5 | 7 |
+| … of those, wire-visible | 3 | 5 |
+| … of those, internal | 2 | 2 |
+| wire-visible (all) | 3 | 6 |
+| needs coordination (breaking + additive-required) | 2 | 3 |
+| class: breaking | 0 | 2 |
+| class: additive-required | 2 | 1 |
+| class: additive-optional | 2 | 3 |
+| class: internal | 1 | 2 |
+
+| date | sha | author | PR | subject | packages changed | imported by | wire-visible | class |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-06 | `79141c5` | Alan Shaw | direct push | fix: use errors.As instead of type assertion | `execution` | 11: forge/hilt, forge/ingot, forge/piri, forge/sprue, guppy, indexing-service, hilt, ingot, piri, piri-signing-service, sprue | no | internal |
+| 2026-07-17 | `ef993e1` | ash | #38 | feat: add did:plc parse method (#38) | `did/plc`, `validator` | 9: forge/hilt, forge/piri, forge/sprue, indexing-service, hilt, ingot, piri, piri-signing-service, sprue | yes | additive-required |
+| 2026-07-23 | `639fffe` | ash | #40 | feat: add `did:plc` resolver cache (#40) | `did/plc` | 7: forge/hilt, forge/piri, forge/sprue, hilt, ingot, piri, sprue | no | additive-optional |
+| 2026-07-23 | `30be293` | ash | #41 | feat: whitespace prefix/suffix tolerance for string encodings (#41) | `ucan/container` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | additive-optional |
+| 2026-07-27 | `ccb7705` | frrist | direct push | fix: verification relationships default to all methods when undeclared | `did` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | additive-required |
+| 2026-07-31 | `de9c6eb` | Petra Jaros | #34 | ci: add Dependabot (go modules + GitHub Actions) (#34) | (no Go code) | 0 | no | non-code |
+| 2026-08-01* | `5f00b99` | Hannah Howard | #46 | ci: migrate to Unified CI test/check (pinned) (#46) | `multikey` | 13: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, smelt, sprue | no | internal |
+| 2026-08-01* | `db4f8c0` | hannahhoward |  | ci: auto-approve and auto-merge Dependabot patch/minor updates | (no Go code) | 0 | no | non-code |
+| 2026-08-01* | `e783cc7` | dependabot[bot] | #44 | chore(deps): bump github.com/ipfs/go-cid from 0.6.1 to 0.6.2 (#44) | (no Go code) | 0 | no | dependabot |
+| 2026-08-01* | `525b7ed` | dependabot[bot] | #47 | chore(deps): bump the github-actions group across 1 directory with 2 … | (no Go code) | 0 | no | dependabot |
+| 2026-08-17* | `bfc05d9` | ash | #49 | fix: align receipts with the updated receipt spec (#49) | `execution`, `execution/dispatcher`, `ucan`, `ucan/receipt` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | breaking |
+| 2026-08-17* | `e926fd5` | ash | #50 | fix: invocation issued at time and receipt timestamps option (#50) | `execution`, `ucan/invocation` | 11: forge/hilt, forge/ingot, forge/piri, forge/sprue, guppy, indexing-service, hilt, ingot, piri, piri-signing-service, sprue | yes | additive-optional |
+| 2026-08-17* | `3a20cd5` | ash | #43 | fix: explicit empty `capabilityInvocation` or `capabilityDelegation` … | `did`, `validator` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | breaking |
+| 2026-08-21* | `cfc49f8` | dependabot[bot] | #51 | chore(deps): bump github.com/stretchr/testify from 1.11.1 to 1.12.1 (… | (no Go code) | 0 | no | dependabot |
+| 2026-08-24* | `9bb30b7` | ash | #52 | refactor: adopt CBOR/JSON codegen method from libforge (#52) | `did/plc`, `errors/datamodel`, `examples/types`, `result/datamodel`, `testutil/datamodel`, `ucan/container/datamodel`, `ucan/delegation/datamodel`, `ucan/delegation/policy`, `ucan/delegation/policy/datamodel`, `ucan/delegation/policy/internal/fixtures/datamodel`, `ucan/delegation/policy/selector/datamodel`, `ucan/delegation/policy/selector/internal/fixtures/datamodel`, `ucan/envelope/datamodel`, `ucan/invocation/datamodel`, `ucan/promise`, `ucan/promise/datamodel`, `ucan/receipt/datamodel`, `validator/internal/fixtures/datamodel` | 10: forge/hilt, forge/ingot, forge/piri, forge/sprue, guppy, indexing-service, hilt, ingot, piri, sprue | no | internal |
+| 2026-08-24* | `6ad0099` | Petra Jaros | #37 | feat: add post-quantum ML-DSA-44 signer, verifier and varsig algorith… | `multikey/mldsa44`, `multikey/mldsa44/verifier`, `varsig/algorithm/mldsa`; regenerated codecs only in 10 pkgs | 0 | yes | additive-optional |
+| 2026-08-27* | `dacea7a` | ash | #53 | fix(validator): skip unsupported verifications methods do not fail va… | `validator` | 8: forge/hilt, forge/piri, forge/sprue, indexing-service, hilt, piri, piri-signing-service, sprue | yes | additive-required |
+| 2026-08-27* | `25cf834` | ash | #54 | docs: add AGENTS.md (#54) | (no Go code) | 0 | no | non-code |
+| 2026-08-28* | `8d7eb73` | Miroslav Bajtoš | #55 | Export the container transport decode (#55) | `ucan/container` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | additive-optional |
+
+## c. Would a coordinated service-side change have been needed?
+
+Classes: **(i) additive-optional** — new surface, peers keep working unchanged; **(ii) additive-required** — a new field, command or rule a peer must adopt for the system to keep working; **(iii) breaking** — an exported identifier removed, renamed or re-typed, or an encoding/validation rule changed so that old peers' messages or code fail; **(iv) internal** — no exported or wire behaviour change. The class and evidence come from `tools/divergence/classification.json`, written by reading each diff; a commit marked `UNCLASSIFIED` is new history the file does not cover yet. The uptake table under each commit shows, per consumer, the first commit whose pin contains the change and how many days after the library commit that was; "method" says how containment was decided (ancestry, content identity for PR-branch pins, timestamp for SHAs missing locally). `imports` marks consumers that import a package the commit changed.
+
+### libforge
+
+#### `f0706e1` 2026-07-01 — feat: customer add command and Hilt S3 commands (#40) (#44)
+
+Class **additive-optional**; wire-visible: yes; author ash; PR #44.
+
+Evidence: 1134 insertions, no deletions: new packages commands/customer (`Add` = /customer/add), commands/s3 (Request, PermissionSet, KeySet, ProofSet with hand-written codecs), commands/s3/bucket (`Create`, `Delete`, `Info`, `List`) and commands/s3/request (`Authorize` = /s3/request/authorize, AuthorizeArguments, AuthorizeOK).
+
+Note: Merged 2026-07-01 16:23 UTC, so it opens the context period. New commands for the then-new hilt service; hilt pinned it the next day (479c0cd), sprue and smelt (which serve /customer/add) within 9 days.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-02 `393b6a1` | 0.9 | `f0706e1641a3` | ancestry |
+| forge/ingot | yes | 2026-07-02 `1f64c3f` | 1.1 | `f0706e1641a3` | ancestry |
+| forge/piri | no | 2026-07-30 `7f464f8` | 29.1 | `3e5e6ba95711` | ancestry |
+| forge/smelt | yes | 2026-07-10 `bc95fe4` | 8.9 | `f0706e1641a3` | ancestry |
+| forge/sprue | yes | 2026-07-09 `0a8100d` | 7.9 | `f0706e1641a3` | ancestry |
+| live/piri | no | 2026-07-30 `c19a7b2` | 29.1 | `3e5e6ba95711` | ancestry |
+| live/hilt | yes | 2026-07-02 `479c0cd` | 0.9 | `f0706e1641a3` | ancestry |
+| live/sprue | yes | 2026-07-09 `1f27110` | 7.9 | `f0706e1641a3` | ancestry |
+| live/ingot | yes | 2026-07-02 `e6bdc45` | 1.1 | `f0706e1641a3` | ancestry |
+| live/smelt | yes | 2026-07-10 `072976a` | 8.9 | `f0706e1641a3` | ancestry |
+| live/delegator | no | 2026-07-10 `1775d58` | 8.9 | `f0706e1641a3` | ancestry |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 49.9 | `3e6895b41be5` | ancestry |
+| guppy | no | 2026-08-21 `d74fd06` | 50.6 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 50.0 | `3e6895b41be5` | ancestry |
+
+#### `a3aa293` 2026-07-13 — fix: make bucket optional
+
+Class **breaking**; wire-visible: yes; author Alan Shaw.
+
+Evidence: commands/s3/request/types.go: `Bucket did.DID` with tag `cborgen:"bucket"` becomes `Bucket *did.DID` with `cborgen:"bucket,omitempty" dagjsongen:"bucket,omitempty"` in AuthorizeOK (re-typed exported field; the key is now omitted for bucket-less requests such as CreateBucket/ListAllMyBuckets).
+
+Note: Direct push to main without a PR. Go-level break for every reader of `AuthorizeOK.Bucket`; wire-tolerant only for readers that accept a missing key. hilt (the author's own consumer) bumped 21 minutes later (c3e8ad4).
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-13 `5f598c9` | 0.0 | `a3aa293b990c` | ancestry |
+| forge/ingot | yes | 2026-07-21 `a4f93ef` | 8.0 | `a3aa293b990c` | ancestry |
+| forge/piri | no | 2026-07-30 `7f464f8` | 17.4 | `3e5e6ba95711` | ancestry |
+| forge/smelt | yes | 2026-07-22 `58f5990` | 9.3 | `a3aa293b990c` | ancestry |
+| forge/sprue | no | 2026-07-24 `f69d5e0` | 11.2 | `7fc3b2cec1ef` | ancestry |
+| live/piri | no | 2026-07-30 `c19a7b2` | 17.4 | `3e5e6ba95711` | ancestry |
+| live/hilt | yes | 2026-07-13 `c3e8ad4` | 0.0 | `a3aa293b990c` | ancestry |
+| live/sprue | no | 2026-07-24 `50cd990` | 11.2 | `7fc3b2cec1ef` | ancestry |
+| live/ingot | yes | 2026-07-21 `02af9fc` | 8.0 | `a3aa293b990c` | ancestry |
+| live/smelt | yes | 2026-07-22 `45063e5` | 9.3 | `a3aa293b990c` | ancestry |
+| live/delegator | no | 2026-07-28 `93a1bd6` | 15.1 | `7fc3b2cec1ef` | ancestry |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 38.2 | `3e6895b41be5` | ancestry |
+| guppy | no | 2026-08-21 `d74fd06` | 38.9 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 38.2 | `3e6895b41be5` | ancestry |
+
+#### `aac837a` 2026-07-17 — add space to blob remove, abort, and reject,
+
+Class **breaking**; wire-visible: yes; author Forrest.
+
+Evidence: commands/blob/types.go: RemoveArguments gains a required `Space did.DID` `cborgen:"space"` (encoding of an existing command's arguments changes); new AbortArguments{Space,Digest,Cause} and RejectArguments{Space,Digest}; new bindings `Abort` (/blob/abort) and `Reject` (/blob/reject); commands/upload/remove.go doc comment only.
+
+Note: Direct push to main without a PR. A /blob/remove client without `space` is rejected by a service that requires it.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-24 `ce51e46` | 6.8 | `7fc3b2cec1ef` | ancestry |
+| forge/ingot | yes | 2026-07-28 `7dba254` | 11.1 | `7fc3b2cec1ef` | ancestry |
+| forge/piri | yes | 2026-07-30 `7f464f8` | 13.1 | `3e5e6ba95711` | ancestry |
+| forge/smelt | yes | 2026-07-31 `96a672e` | 14.0 | `5e299c46f62f` | ancestry |
+| forge/sprue | yes | 2026-07-24 `f69d5e0` | 6.9 | `7fc3b2cec1ef` | ancestry |
+| live/piri | yes | 2026-07-30 `c19a7b2` | 13.1 | `3e5e6ba95711` | ancestry |
+| live/hilt | yes | 2026-07-24 `ba71f84` | 6.8 | `7fc3b2cec1ef` | ancestry |
+| live/sprue | yes | 2026-07-24 `50cd990` | 6.9 | `7fc3b2cec1ef` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 11.1 | `7fc3b2cec1ef` | ancestry |
+| live/smelt | yes | 2026-08-05 `f0b69e6` | 19.2 | `5e299c46f62f` | ancestry |
+| live/delegator | yes | 2026-07-28 `93a1bd6` | 10.8 | `7fc3b2cec1ef` | ancestry |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 33.8 | `3e6895b41be5` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 34.5 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 33.9 | `3e6895b41be5` | ancestry |
+
+#### `aba2bd2` 2026-07-20 — feat: add `/ucan/revoke` command (#47)
+
+Class **additive-optional**; wire-visible: yes; author ash; PR #47.
+
+Evidence: commands/ucan/revoke.go: new `Revoke = binding.Bind[*RevokeArguments, *RevokeOK](command.MustParse("/ucan/revoke"))`; commands/ucan/types.go: new `RevokeArguments{Revoke cid.Cid, Path []cid.Cid}`.
+
+Note: A new command nobody has to serve until they choose to; hilt started issuing revocations on 2026-08-19 (ef14123).
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | no | 2026-07-24 `ce51e46` | 4.1 | `7fc3b2cec1ef` | ancestry |
+| forge/ingot | yes | 2026-07-28 `7dba254` | 8.4 | `7fc3b2cec1ef` | ancestry |
+| forge/piri | no | 2026-07-30 `7f464f8` | 10.4 | `3e5e6ba95711` | ancestry |
+| forge/smelt | no | 2026-07-31 `96a672e` | 11.4 | `5e299c46f62f` | ancestry |
+| forge/sprue | yes | 2026-07-24 `f69d5e0` | 4.2 | `7fc3b2cec1ef` | ancestry |
+| live/piri | no | 2026-07-30 `c19a7b2` | 10.4 | `3e5e6ba95711` | ancestry |
+| live/hilt | no | 2026-07-24 `ba71f84` | 4.1 | `7fc3b2cec1ef` | ancestry |
+| live/sprue | yes | 2026-07-24 `50cd990` | 4.2 | `7fc3b2cec1ef` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 8.4 | `7fc3b2cec1ef` | ancestry |
+| live/smelt | no | 2026-08-05 `f0b69e6` | 16.6 | `5e299c46f62f` | ancestry |
+| live/delegator | no | 2026-07-28 `93a1bd6` | 8.1 | `7fc3b2cec1ef` | ancestry |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 31.1 | `3e6895b41be5` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 31.8 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 31.2 | `3e6895b41be5` | ancestry |
+
+#### `7fc3b2c` 2026-07-24 — Fix DID verification method ID encoding and add controller (#48)
+
+Class **internal**; wire-visible: no; author Miroslav Bajtoš; PR #48.
+
+Evidence: identity/identity.go (merge of f06be16): `multikey.DeriveVerificationMethod(doc.Fragment("#key-0"), ...)` becomes `doc.Fragment("key-0")` (the old form serialised as `#%23key-0`) and `vm.Controller = doc.ID` is set.
+
+Note: Outside commands/blobindex, so internal by the libforge rule, but it changes the DID document every service serves at /.well-known/did.json. Rolled out as same-day bumps in hilt (b9ad649), sprue (2f89e90) and delegator (626fc76) on 2026-07-24, paired with ucantone ccb7705 three days later.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-24 `ce51e46` | 0.1 | `7fc3b2cec1ef` | ancestry |
+| forge/ingot | yes | 2026-07-28 `7dba254` | 4.3 | `7fc3b2cec1ef` | ancestry |
+| forge/piri | yes | 2026-07-31 `96a672e` | 7.3 | `5e299c46f62f` | ancestry |
+| forge/smelt | yes | 2026-07-31 `96a672e` | 7.3 | `5e299c46f62f` | ancestry |
+| forge/sprue | yes | 2026-07-24 `f69d5e0` | 0.1 | `7fc3b2cec1ef` | ancestry |
+| live/piri | yes | 2026-08-06 `8509dfa` | 13.0 | `b13386bc395a` | ancestry |
+| live/hilt | yes | 2026-07-24 `ba71f84` | 0.1 | `7fc3b2cec1ef` | ancestry |
+| live/sprue | yes | 2026-07-24 `50cd990` | 0.1 | `7fc3b2cec1ef` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 4.3 | `7fc3b2cec1ef` | ancestry |
+| live/smelt | yes | 2026-08-05 `f0b69e6` | 12.5 | `5e299c46f62f` | ancestry |
+| live/delegator | yes | 2026-07-28 `93a1bd6` | 4.1 | `7fc3b2cec1ef` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 27.1 | `3e6895b41be5` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 27.8 | `3e6895b41be5` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 27.2 | `3e6895b41be5` | ancestry |
+
+#### `5e299c4` 2026-07-27 — feat!: align removal capabilities with the blob-removal RFC (#49)
+
+Class **breaking**; wire-visible: yes; author Forrest; PR #49.
+
+Evidence: commands/blob/types.go: `Space` removed from RemoveArguments and from AbortArguments (encoding of two existing commands changes); new `ReleaseArguments{Space, Digest}` and binding `Release` (/blob/release); new error names MissingCause (abort) and BlobAccepted (reject).
+
+Note: Author marked it `feat!`. sprue (the upload service, which serves /blob/remove) bumped 3 minutes after the merge (922f744, same author group); piri pinned an earlier head of the PR branch (3e5e6ba, tree-identical for commands/blob) on 2026-07-30; ingot and smelt followed on 2026-08-05.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-31 `96a672e` | 3.9 | `5e299c46f62f` | ancestry |
+| forge/ingot | yes | 2026-07-31 `96a672e` | 3.9 | `5e299c46f62f` | ancestry |
+| forge/piri | yes | 2026-07-30 `7f464f8` | 2.9 | `3e5e6ba95711` | content |
+| forge/smelt | yes | 2026-07-31 `96a672e` | 3.9 | `5e299c46f62f` | ancestry |
+| forge/sprue | yes | 2026-07-27 `2a66898` | 0.1 | `5e299c46f62f` | ancestry |
+| live/piri | yes | 2026-07-30 `c19a7b2` | 2.9 | `3e5e6ba95711` | content |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 23.5 | `3e6895b41be5` | ancestry |
+| live/sprue | yes | 2026-07-27 `922f744` | 0.1 | `5e299c46f62f` | ancestry |
+| live/ingot | yes | 2026-08-06 `a0250c3` | 9.1 | `5e299c46f62f` | ancestry |
+| live/smelt | yes | 2026-08-05 `f0b69e6` | 9.1 | `5e299c46f62f` | ancestry |
+| live/delegator | yes | not as of its head | - | `7fc3b2cec1ef` | - |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 23.6 | `3e6895b41be5` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 24.4 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 23.7 | `3e6895b41be5` | ancestry |
+
+#### `b13386b` 2026-07-30 — feat!: add cause to blob release arguments (#50)
+
+Class **additive-required**; wire-visible: yes; author ash; PR #50.
+
+Evidence: commands/blob/types.go: ReleaseArguments gains `Cause cid.Cid` `cborgen:"cause"` (required, no omitempty); commands/blob/release.go: the node MUST reject a release whose cause invocation is absent from the request container (UnknownCause) or does not match Space/Digest (InvalidCause).
+
+Note: Author marked it `feat!`. The encoding only gains a key, but the node-side rule makes it mandatory: an upload service without it is refused by a node with it. sprue (0fa0743 `fix: blob release cause`) and piri (8509dfa `feat: validate release cause`) both bumped on 2026-08-06, 7 days later, each with the matching code change.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-31 `8d55284` | 1.5 | `928cf2a21b7e` | ancestry |
+| forge/ingot | yes | 2026-07-31 `8d55284` | 1.5 | `928cf2a21b7e` | ancestry |
+| forge/piri | yes | 2026-07-31 `8d55284` | 1.5 | `928cf2a21b7e` | ancestry |
+| forge/smelt | yes | 2026-07-31 `8d55284` | 1.5 | `928cf2a21b7e` | ancestry |
+| forge/sprue | yes | 2026-07-31 `8d55284` | 1.5 | `928cf2a21b7e` | ancestry |
+| live/piri | yes | 2026-08-06 `8509dfa` | 7.0 | `b13386bc395a` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 20.9 | `3e6895b41be5` | ancestry |
+| live/sprue | yes | 2026-08-06 `0fa0743` | 7.0 | `850148f3084e` | ancestry |
+| live/ingot | yes | 2026-08-21 `de3ca05` | 21.8 | `3e6895b41be5` | ancestry |
+| live/smelt | yes | not as of its head | - | `5e299c46f62f` | - |
+| live/delegator | yes | not as of its head | - | `7fc3b2cec1ef` | - |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 21.1 | `3e6895b41be5` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 21.8 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 21.2 | `3e6895b41be5` | ancestry |
+
+#### `f54066c` 2026-08-03 — fix: attestation idempotency (#51) (in window)
+
+Class **internal**; wire-visible: no; author ash; PR #51.
+
+Evidence: attestation/signer.go: `attest.Proof.Invoke(...)` now passes `invocation.WithNoNonce()` and `invocation.WithNoExpiration()`.
+
+Note: Changes the bytes of every attested signature (the embedded /ucan/attest/proof invocation loses nonce and exp) so that identical inputs attest identically; verifiers accept both forms, so no consumer action was needed.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | no | not as of its head | - | `928cf2a21b7e` | - |
+| forge/ingot | no | not as of its head | - | `928cf2a21b7e` | - |
+| forge/piri | no | not as of its head | - | `928cf2a21b7e` | - |
+| forge/smelt | no | not as of its head | - | `928cf2a21b7e` | - |
+| forge/sprue | yes | not as of its head | - | `928cf2a21b7e` | - |
+| live/piri | no | 2026-08-20 `b3b91be` | 16.9 | `3e6895b41be5` | ancestry |
+| live/hilt | no | 2026-08-20 `80f80f3` | 16.8 | `3e6895b41be5` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 16.8 | `3e6895b41be5` | ancestry |
+| live/ingot | no | 2026-08-21 `de3ca05` | 17.7 | `3e6895b41be5` | ancestry |
+| live/smelt | no | not as of its head | - | `5e299c46f62f` | - |
+| live/delegator | no | not as of its head | - | `7fc3b2cec1ef` | - |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 16.9 | `3e6895b41be5` | ancestry |
+| guppy | no | 2026-08-21 `d74fd06` | 17.6 | `3e6895b41be5` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 17.0 | `3e6895b41be5` | ancestry |
+
+#### `2585ed1` 2026-08-28 — feat: add tenant DID to authorization response (#64) (in window)
+
+Class **additive-required**; wire-visible: yes; author ash; PR #64.
+
+Evidence: commands/s3/request/types.go: AuthorizeOK gains `Tenant did.DID` `cborgen:"tenant" dagjsongen:"tenant"` (required); go.mod: `go 1.25.3` -> `go 1.27.0` and dag-json-gen 0.0.9; every commands/**/json_gen.go regenerated (cosmetic `written` counter change).
+
+Note: The commit body says ingot needs the tenant DID to encrypt to the tenant's wrap key, so the S3 gateway depends on the authorizer (hilt) emitting the field. hilt (server) and ingot (client) both pinned the PR branch head c9252ac, which is tree-identical to this squash commit, on 2026-08-28 - hilt 26 minutes before the merge. The `go` directive bump means every consumer that takes this commit must build with Go 1.27.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `928cf2a21b7e` | - |
+| forge/ingot | yes | not as of its head | - | `928cf2a21b7e` | - |
+| forge/piri | no | not as of its head | - | `928cf2a21b7e` | - |
+| forge/smelt | yes | not as of its head | - | `928cf2a21b7e` | - |
+| forge/sprue | no | not as of its head | - | `928cf2a21b7e` | - |
+| live/piri | no | not as of its head | - | `3e6895b41be5` | - |
+| live/hilt | yes | 2026-08-28 `cb1bc0b` | 0.0 | `c9252ac89b0e` | content |
+| live/sprue | no | not as of its head | - | `3e6895b41be5` | - |
+| live/ingot | yes | 2026-08-28 `1365193` | 0.0 | `c9252ac89b0e` | content |
+| live/smelt | yes | not as of its head | - | `5e299c46f62f` | - |
+| live/delegator | no | not as of its head | - | `7fc3b2cec1ef` | - |
+| live/piri-signing-service | no | not as of its head | - | `3e6895b41be5` | - |
+| guppy | no | not as of its head | - | `3e6895b41be5` | - |
+| indexing-service | no | not as of its head | - | `3e6895b41be5` | - |
+
+### ucantone
+
+#### `79141c5` 2026-07-06 — fix: use errors.As instead of type assertion
+
+Class **internal**; wire-visible: no; author Alan Shaw.
+
+Evidence: execution/response.go: `x.(errors.Named)` type assertion replaced by `errors.As(x, &namedErr)` when building the receipt error value.
+
+Note: Wrapped Named errors now surface their stable name in receipts instead of `UnknownError`; a bug fix in the executor, no API or encoding change.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-09 `aa7b2a6` | 3.0 | `79141c5cc52e` | ancestry |
+| forge/ingot | yes | 2026-07-14 `d93a2e6` | 8.5 | `79141c5cc52e` | ancestry |
+| forge/piri | yes | 2026-07-21 `320f815` | 14.8 | `ef993e165c8e` | ancestry |
+| forge/smelt | no | 2026-07-10 `bc95fe4` | 4.1 | `79141c5cc52e` | ancestry |
+| forge/sprue | yes | 2026-07-17 `20fcc14` | 11.2 | `2662bddc02ab` | ancestry |
+| live/piri | yes | 2026-07-21 `1688014` | 14.8 | `ef993e165c8e` | ancestry |
+| live/hilt | yes | 2026-07-09 `082decf` | 3.0 | `79141c5cc52e` | ancestry |
+| live/sprue | yes | 2026-07-17 `e7d28a6` | 11.2 | `2662bddc02ab` | ancestry |
+| live/ingot | yes | 2026-07-14 `1c3c2dd` | 8.5 | `79141c5cc52e` | ancestry |
+| live/smelt | no | 2026-07-10 `072976a` | 4.1 | `79141c5cc52e` | ancestry |
+| live/delegator | no | 2026-07-10 `1775d58` | 4.1 | `79141c5cc52e` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 45.1 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 45.8 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 45.2 | `3a20cd59fabc` | ancestry |
+
+#### `ef993e1` 2026-07-17 — feat: add did:plc parse method (#38)
+
+Class **additive-required**; wire-visible: yes; author ash; PR #38.
+
+Evidence: did/plc/plc.go: new `plc.Parse` and `IdentifierLength`; validator/validator.go: when a document declares no capability relationship (`verRel == nil || verRel.IsZero()`) all of its verification methods are tried, and an unsupported VM type is recorded as a rejection instead of aborting.
+
+Note: Validation rule relaxed so that did:plc documents (which carry only verificationMethod) can sign tokens. A peer that must validate tokens from did:plc principals needs it: sprue bumped the same day (e7d28a6 `feat: allow did:plc accounts to provision spaces`, to a PR-branch head), piri on 2026-07-21 (1688014).
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-31 `96a672e` | 14.1 | `ccb77059de44` | ancestry |
+| forge/ingot | no | 2026-07-28 `7dba254` | 11.1 | `ccb77059de44` | ancestry |
+| forge/piri | yes | 2026-07-21 `320f815` | 3.6 | `ef993e165c8e` | ancestry |
+| forge/smelt | no | 2026-07-31 `96a672e` | 14.1 | `ccb77059de44` | ancestry |
+| forge/sprue | yes | 2026-07-31 `96a672e` | 14.1 | `ccb77059de44` | ancestry |
+| live/piri | yes | 2026-07-21 `1688014` | 3.6 | `ef993e165c8e` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 33.7 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 33.7 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 11.1 | `ccb77059de44` | ancestry |
+| live/smelt | no | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | no | 2026-08-27 `b5552f1` | 40.9 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 33.9 | `3a20cd59fabc` | ancestry |
+| guppy | no | 2026-08-21 `d74fd06` | 34.6 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 33.9 | `3a20cd59fabc` | ancestry |
+
+#### `639fffe` 2026-07-23 — feat: add `did:plc` resolver cache (#40)
+
+Class **additive-optional**; wire-visible: no; author ash; PR #40.
+
+Evidence: did/plc/resolver.go: new exported `Cache` interface and options `WithCache`, `WithCacheTTL`; Resolve issues If-None-Match and serves the cached document on 304.
+
+Note: New options only; no encoding or validation change.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-31 `96a672e` | 8.4 | `ccb77059de44` | ancestry |
+| forge/ingot | no | 2026-07-28 `7dba254` | 5.4 | `ccb77059de44` | ancestry |
+| forge/piri | yes | 2026-07-27 `f896394` | 4.5 | `ccb77059de44` | ancestry |
+| forge/smelt | no | 2026-07-31 `96a672e` | 8.4 | `ccb77059de44` | ancestry |
+| forge/sprue | yes | 2026-07-31 `96a672e` | 8.4 | `ccb77059de44` | ancestry |
+| live/piri | yes | 2026-07-27 `c917fb6` | 4.5 | `ccb77059de44` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 28.0 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 28.0 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 5.4 | `ccb77059de44` | ancestry |
+| live/smelt | no | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | no | 2026-08-27 `b5552f1` | 35.2 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 28.2 | `3a20cd59fabc` | ancestry |
+| guppy | no | 2026-08-21 `d74fd06` | 28.9 | `3a20cd59fabc` | ancestry |
+| indexing-service | no | 2026-08-20 `9eb6204` | 28.3 | `3a20cd59fabc` | ancestry |
+
+#### `30be293` 2026-07-23 — feat: whitespace prefix/suffix tolerance for string encodings (#41)
+
+Class **additive-optional**; wire-visible: yes; author ash; PR #41.
+
+Evidence: ucan/container/container.go: `Decode` trims surrounding whitespace before dispatching on the codec byte, for the base64 codecs only.
+
+Note: Decoding accepts strictly more inputs; nothing a peer has to do.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-31 `96a672e` | 8.4 | `ccb77059de44` | ancestry |
+| forge/ingot | yes | 2026-07-28 `7dba254` | 5.4 | `ccb77059de44` | ancestry |
+| forge/piri | yes | 2026-07-27 `f896394` | 4.5 | `ccb77059de44` | ancestry |
+| forge/smelt | yes | 2026-07-31 `96a672e` | 8.4 | `ccb77059de44` | ancestry |
+| forge/sprue | yes | 2026-07-31 `96a672e` | 8.4 | `ccb77059de44` | ancestry |
+| live/piri | yes | 2026-07-27 `c917fb6` | 4.5 | `ccb77059de44` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 28.0 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 28.0 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 5.4 | `ccb77059de44` | ancestry |
+| live/smelt | yes | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | yes | 2026-08-27 `b5552f1` | 35.2 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 28.2 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 28.9 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 28.2 | `3a20cd59fabc` | ancestry |
+
+#### `ccb7705` 2026-07-27 — fix: verification relationships default to all methods when undeclared
+
+Class **additive-required**; wire-visible: yes; author frrist.
+
+Evidence: did/verificationrelationship.go: new `declared` flag; `All()` returns every method of the document when the relationship was never declared (the PLC directory's documents), and exactly its references when declared.
+
+Note: Forge's ucantone pin. Direct push to main. piri took it the same day (c917fb6 `deps: update latest ucantone; did verification fix`), ingot on 07-28 (a7684d7): a coordinated verification fix paired with libforge 7fc3b2c.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | 2026-07-31 `96a672e` | 3.9 | `ccb77059de44` | ancestry |
+| forge/ingot | yes | 2026-07-28 `7dba254` | 1.0 | `ccb77059de44` | ancestry |
+| forge/piri | yes | 2026-07-27 `f896394` | 0.0 | `ccb77059de44` | ancestry |
+| forge/smelt | yes | 2026-07-31 `96a672e` | 3.9 | `ccb77059de44` | ancestry |
+| forge/sprue | yes | 2026-07-31 `96a672e` | 3.9 | `ccb77059de44` | ancestry |
+| live/piri | yes | 2026-07-27 `c917fb6` | 0.0 | `ccb77059de44` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 23.6 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 23.6 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-07-28 `a7684d7` | 1.0 | `ccb77059de44` | ancestry |
+| live/smelt | yes | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | yes | 2026-08-27 `b5552f1` | 30.8 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 23.7 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 24.4 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 23.8 | `3a20cd59fabc` | ancestry |
+
+#### `5f00b99` 2026-08-01 — ci: migrate to Unified CI test/check (pinned) (#46) (in window)
+
+Class **internal**; wire-visible: no; author Hannah Howard; PR #46.
+
+Evidence: CI migration to the pinned Unified CI workflows; multikey/multikey.go: one error string reworded for staticcheck ST1005; staticcheck.conf files added.
+
+Note: No API change.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | 2026-08-20 `b3b91be` | 19.3 | `3a20cd59fabc` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 19.2 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 19.2 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-08-21 `de3ca05` | 20.1 | `3a20cd59fabc` | ancestry |
+| live/smelt | yes | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | yes | 2026-08-27 `b5552f1` | 26.4 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | no | 2026-08-20 `bacd87b` | 19.3 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 20.1 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 19.4 | `3a20cd59fabc` | ancestry |
+
+#### `bfc05d9` 2026-08-17 — fix: align receipts with the updated receipt spec (#49) (in window)
+
+Class **breaking**; wire-visible: yes; author ash; PR #49.
+
+Evidence: ucan/receipt/receipt.go: receipts no longer set `aud` and `fromInvocation` rejects an invocation with a defined audience (`invalid receipt, audience must be omitted`); receipts default to `exp: null` (WithNoExpiration first) with new `receipt.WithExpiration`; ucan/ucan.go: `Expiration() *UnixTimestamp` added to the `ucan.Receipt` interface; execution/dispatcher: handler-error receipts get a 30 s TTL (`DefaultHandlerErrorReceiptTTL`, `WithHandlerErrorReceiptTTL`).
+
+Note: A consumer on this commit cannot decode receipts issued by a peer that is not (they carry `aud`), and any other implementation of `ucan.Receipt` stops compiling. Seven consumers bumped past it within 3-4 days in one sweep (2026-08-20/21: hilt 80f80f3, sprue b403a68, piri b3b91be, ingot de3ca05, guppy d74fd06, indexing-service 9eb6204, piri-signing-service bacd87b); delegator on 08-27; smelt and the frozen forge never.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | 2026-08-20 `b3b91be` | 3.1 | `3a20cd59fabc` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 3.0 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 3.0 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-08-21 `de3ca05` | 3.9 | `3a20cd59fabc` | ancestry |
+| live/smelt | yes | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | yes | 2026-08-27 `b5552f1` | 10.2 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 3.1 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 3.9 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 3.2 | `3a20cd59fabc` | ancestry |
+
+#### `e926fd5` 2026-08-17 — fix: invocation issued at time and receipt timestamps option (#50) (in window)
+
+Class **additive-optional**; wire-visible: yes; author ash; PR #50.
+
+Evidence: ucan/invocation/invocation.go: `iat` is no longer defaulted to now (emitted only when WithIssuedAt is given); execution/response.go: `WithReceiptTimestamp(true)` now really sets the receipt's `iat`.
+
+Note: The encoding of emitted invocations changes (no `iat` by default), but `iat` is optional in the spec and no consumer reads `IssuedAt()` outside tests, so nothing had to move.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | no | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | 2026-08-20 `b3b91be` | 2.9 | `3a20cd59fabc` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 2.8 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 2.8 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-08-21 `de3ca05` | 3.7 | `3a20cd59fabc` | ancestry |
+| live/smelt | no | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | no | 2026-08-27 `b5552f1` | 10.0 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 2.9 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 3.6 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 3.0 | `3a20cd59fabc` | ancestry |
+
+#### `3a20cd5` 2026-08-17 — fix: explicit empty `capabilityInvocation` or `capabilityDelegation` endorse nothing (#43) (in window)
+
+Class **breaking**; wire-visible: yes; author ash; PR #43.
+
+Evidence: validator/validator.go: only a nil relationship falls back to all methods; an explicitly empty `capabilityInvocation`/`capabilityDelegation` now endorses nothing (`verRel.All()`); did/verificationrelationship.go: declared-empty round-trips as `[]`, undeclared as `null`, `IsZero` means undeclared.
+
+Note: Validation rule tightened: a DID document with `"capabilityInvocation": []` is rejected after this. libforge's identity.DIDDocument declares both relationships with the key and did:plc documents declare none, so no known fil-forge principal was affected; classified on the rule, not on observed impact.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | 2026-08-20 `b3b91be` | 2.8 | `3a20cd59fabc` | ancestry |
+| live/hilt | yes | 2026-08-20 `80f80f3` | 2.7 | `3a20cd59fabc` | ancestry |
+| live/sprue | yes | 2026-08-20 `b403a68` | 2.7 | `3a20cd59fabc` | ancestry |
+| live/ingot | yes | 2026-08-21 `de3ca05` | 3.6 | `3a20cd59fabc` | ancestry |
+| live/smelt | yes | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | yes | 2026-08-27 `b5552f1` | 9.9 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 2.9 | `3a20cd59fabc` | ancestry |
+| guppy | yes | 2026-08-21 `d74fd06` | 3.6 | `3a20cd59fabc` | ancestry |
+| indexing-service | yes | 2026-08-20 `9eb6204` | 2.9 | `3a20cd59fabc` | ancestry |
+
+#### `9bb30b7` 2026-08-24 — refactor: adopt CBOR/JSON codegen method from libforge (#52) (in window)
+
+Class **internal**; wire-visible: no; author ash; PR #52.
+
+Evidence: Codec methods move to codec.go files (ucan/delegation/policy, ucan/promise), `ErrorModelWithCause` to errors/datamodel/cause.go and did:plc helpers to did/plc/operation.go, all within their packages; every `*_gen*.go` regenerated with dag-json-gen 0.0.9; Makefile `gen`/`gen-check` and a codegen workflow added.
+
+Note: 1920 insertions / 1537 deletions with no exported API or encoding change - review noise for consumers, nothing to adopt.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | no | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | 2026-08-27 `b9ed572` | 3.1 | `25cf8340b9a1` | ancestry |
+| live/hilt | yes | 2026-08-27 `059df06` | 3.2 | `25cf8340b9a1` | ancestry |
+| live/sprue | yes | 2026-08-27 `f99dda9` | 3.1 | `25cf8340b9a1` | ancestry |
+| live/ingot | yes | 2026-08-28 `0ed4bd8` | 4.0 | `25cf8340b9a1` | ancestry |
+| live/smelt | no | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | no | 2026-08-27 `b5552f1` | 3.1 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | no | not as of its head | - | `3a20cd59fabc` | - |
+| guppy | yes | not as of its head | - | `3a20cd59fabc` | - |
+| indexing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+
+#### `6ad0099` 2026-08-24 — feat: add post-quantum ML-DSA-44 signer, verifier and varsig algorithm (#37) (in window)
+
+Class **additive-optional**; wire-visible: yes; author Petra Jaros; PR #37.
+
+Evidence: New packages multikey/mldsa44 (Signer, code 0x131a), multikey/mldsa44/verifier (Verifier, code 0x1210, self-registers) and varsig/algorithm/mldsa (single-segment algorithm 0x1210); go.mod: `go 1.25.0` -> `go 1.27.0`.
+
+Note: A new signature algorithm; peers without it cannot verify ML-DSA-signed tokens, but nothing issues them yet. The `go` directive bump forces Go 1.27 on every consumer that takes this commit: piri, hilt, sprue, ingot and delegator moved to `go 1.27.0`; smelt (1.25.9), piri-signing-service (1.25.3), guppy (1.26.1) and indexing-service (1.25.7) sit on older pins.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | no | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | no | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | no | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | no | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | no | not as of its head | - | `ccb77059de44` | - |
+| live/piri | no | 2026-08-27 `b9ed572` | 3.0 | `25cf8340b9a1` | ancestry |
+| live/hilt | no | 2026-08-27 `059df06` | 3.1 | `25cf8340b9a1` | ancestry |
+| live/sprue | no | 2026-08-27 `f99dda9` | 3.0 | `25cf8340b9a1` | ancestry |
+| live/ingot | no | 2026-08-28 `0ed4bd8` | 3.9 | `25cf8340b9a1` | ancestry |
+| live/smelt | no | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | no | 2026-08-27 `b5552f1` | 3.0 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | no | not as of its head | - | `3a20cd59fabc` | - |
+| guppy | no | not as of its head | - | `3a20cd59fabc` | - |
+| indexing-service | no | not as of its head | - | `3a20cd59fabc` | - |
+
+#### `dacea7a` 2026-08-27 — fix(validator): skip unsupported verifications methods do not fail validation entirely (#53) (in window)
+
+Class **additive-required**; wire-visible: yes; author ash; PR #53.
+
+Evidence: validator/validator.go: when a verifier factory cannot use a method's material (unknown key code, malformed multibase, missing property) the method is recorded as a rejection and the search continues; only context cancellation still aborts.
+
+Note: A relaxation, but one a peer needs as soon as any principal's DID document also carries a non-signing key: hilt's per-tenant X25519 wrap-key registry (059df06, same day) is exactly that, and piri (b9ed572), sprue (f99dda9) and delegator (b5552f1) followed on 2026-08-27, ingot on 08-28 (0ed4bd8).
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | no | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | no | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | 2026-08-27 `b9ed572` | 0.1 | `25cf8340b9a1` | ancestry |
+| live/hilt | yes | 2026-08-27 `059df06` | 0.1 | `25cf8340b9a1` | ancestry |
+| live/sprue | yes | 2026-08-27 `f99dda9` | 0.1 | `25cf8340b9a1` | ancestry |
+| live/ingot | no | 2026-08-28 `0ed4bd8` | 1.0 | `25cf8340b9a1` | ancestry |
+| live/smelt | no | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | no | 2026-08-27 `b5552f1` | 0.1 | `25cf8340b9a1` | ancestry |
+| live/piri-signing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+| guppy | no | not as of its head | - | `3a20cd59fabc` | - |
+| indexing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+
+#### `8d7eb73` 2026-08-28 — Export the container transport decode (#55) (in window)
+
+Class **additive-optional**; wire-visible: yes; author Miroslav Bajtoš; PR #55.
+
+Evidence: ucan/container/container.go (merge of 55dbe1e): new exported `DecodeTransport(input []byte) (byte, []byte, error)`; `Decode` now calls it, signature and behaviour unchanged.
+
+Note: Additive; for tools that inspect containers.
+
+| consumer | imports | first commit containing it | days after | pin | method |
+| --- | --- | --- | --- | --- | --- |
+| forge/hilt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/ingot | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/piri | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/smelt | yes | not as of its head | - | `ccb77059de44` | - |
+| forge/sprue | yes | not as of its head | - | `ccb77059de44` | - |
+| live/piri | yes | not as of its head | - | `25cf8340b9a1` | - |
+| live/hilt | yes | not as of its head | - | `25cf8340b9a1` | - |
+| live/sprue | yes | not as of its head | - | `25cf8340b9a1` | - |
+| live/ingot | yes | not as of its head | - | `25cf8340b9a1` | - |
+| live/smelt | yes | not as of its head | - | `79141c5cc52e` | - |
+| live/delegator | yes | not as of its head | - | `25cf8340b9a1` | - |
+| live/piri-signing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+| guppy | yes | not as of its head | - | `3a20cd59fabc` | - |
+| indexing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+
+## d. Pin lag
+
+For every consumer, each commit that changed its libforge or ucantone pin. `pin date` is the pinned commit's committer time (from the pseudo-version); `main head then` is the library's newest first-parent main commit at the consumer commit's time; `lag` = main head then − pin date, in days; `base lag` uses the pin's merge-base with main when the pin is not on main; `behind` = first-parent main commits between the pin (or its merge-base) and the main head at that time. Only events on or after 2026-07-01 are listed here; the JSON has the full series (forge/<svc> before 2026-07-30 is the imported service history).
+
+### forge/hilt → libforge (6 events in total, 6 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `393b6a1` | feat: initial management API implementation (#1) … | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-13 | `5f598c9` | fix: bucket DID optional in auth return | `a3aa293b990c` | 2026-07-13 | yes | `a3aa293` 2026-07-13 | 0.0 | 0.0 | 0 |
+| 2026-07-24 | `ce51e46` | Upgrade libforge dependency to latest commit (#34) | `7fc3b2cec1ef` | 2026-07-24 | yes | `7fc3b2c` 2026-07-24 | 0.0 | 0.0 | 0 |
+| 2026-07-30 | `0c2ccfd` | [subtree import] chore: import hilt | `7fc3b2cec1ef` | 2026-07-24 | yes | `b13386b` 2026-07-30 | 6.0 | 6.0 | 2 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `5e299c46f62f` | 2026-07-27 | yes | `b13386b` 2026-07-30 | 2.6 | 2.6 | 1 |
+| 2026-07-31 | `8d55284` | Refactor/drop replaces (#3) | `928cf2a21b7e` | 2026-07-31 | NO (merge-base `b13386b` 2026-07-30) | `83c8499` 2026-07-31 | 0.1 | 1.3 | 1 |
+
+### forge/hilt → ucantone (4 events in total, 4 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `393b6a1` | feat: initial management API implementation (#1) … | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-09 | `aa7b2a6` | refactor: add service layer (#24) (#25) (#26) (#2… | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+| 2026-07-30 | `0c2ccfd` | [subtree import] chore: import hilt | `79141c5cc52e` | 2026-07-06 | yes | `ccb7705` 2026-07-27 | 21.4 | 21.4 | 4 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+
+### forge/ingot → libforge (7 events in total, 6 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `1f64c3f` | Merge pull request #31 from fil-forge/claude/ucan… | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-21 | `a4f93ef` | feat: add Hilt client and wire with FX (#35) | `a3aa293b990c` | 2026-07-13 | yes | `aba2bd2` 2026-07-20 | 7.0 | 7.0 | 2 |
+| 2026-07-28 | `7dba254` | fix(read): resolve retention-retired catalog bloc… | `7fc3b2cec1ef` | 2026-07-24 | yes | `5e299c4` 2026-07-27 | 3.4 | 3.4 | 1 |
+| 2026-07-30 | `a08351d` | [subtree import] chore: import ingot | `7fc3b2cec1ef` | 2026-07-24 | yes | `b13386b` 2026-07-30 | 6.0 | 6.0 | 2 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `5e299c46f62f` | 2026-07-27 | yes | `b13386b` 2026-07-30 | 2.6 | 2.6 | 1 |
+| 2026-07-31 | `8d55284` | Refactor/drop replaces (#3) | `928cf2a21b7e` | 2026-07-31 | NO (merge-base `b13386b` 2026-07-30) | `83c8499` 2026-07-31 | 0.1 | 1.3 | 1 |
+
+### forge/ingot → ucantone (5 events in total, 4 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `1f64c3f` | Merge pull request #31 from fil-forge/claude/ucan… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-14 | `d93a2e6` | test: forge-only integration tests — curated ve… | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+| 2026-07-28 | `7dba254` | fix(read): resolve retention-retired catalog bloc… | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+| 2026-07-30 | `a08351d` | [subtree import] chore: import ingot | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+
+### forge/piri → libforge (8 events in total, 5 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `610ae5c` | deps: bump ucantone (v1 DID context) and libforge… | `2b55dbcf944f` | 2026-06-30 | yes | `f0706e1` 2026-07-01 | 0.8 | 0.8 | 1 |
+| 2026-07-30 | `7f464f8` | implement blob/release and blob/reject; migrate j… | `3e5e6ba95711` | 2026-07-23 | NO (merge-base `aba2bd2` 2026-07-20) | `b13386b` 2026-07-30 | 6.6 | 10.1 | 3 |
+| 2026-07-30 | `4d9b3be` | [subtree import] chore: import piri | `3e5e6ba95711` | 2026-07-23 | NO (merge-base `aba2bd2` 2026-07-20) | `b13386b` 2026-07-30 | 6.6 | 10.1 | 3 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `5e299c46f62f` | 2026-07-27 | yes | `b13386b` 2026-07-30 | 2.6 | 2.6 | 1 |
+| 2026-07-31 | `8d55284` | Refactor/drop replaces (#3) | `928cf2a21b7e` | 2026-07-31 | NO (merge-base `b13386b` 2026-07-30) | `83c8499` 2026-07-31 | 0.1 | 1.3 | 1 |
+
+### forge/piri → ucantone (7 events in total, 5 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `610ae5c` | deps: bump ucantone (v1 DID context) and libforge… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-21 | `320f815` | feat: add `did:plc` resolver and directory server… | `ef993e165c8e` | 2026-07-17 | yes | `ef993e1` 2026-07-17 | 0.0 | 0.0 | 0 |
+| 2026-07-22 | `34d2fc0` | pdp: integrate Curio's PDP pipeline (harmonydb); … | `a8f24fe31eb6` | 2026-06-30 | yes | `ef993e1` 2026-07-17 | 17.3 | 17.3 | 2 |
+| 2026-07-27 | `f896394` | deps: update latest ucantone; did verification fix | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+| 2026-07-30 | `4d9b3be` | [subtree import] chore: import piri | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+
+### forge/smelt → libforge (6 events in total, 5 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-10 | `bc95fe4` | feat: Attested Signatures + UCAN Principal Clarif… | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-22 | `58f5990` | feat: integrate Hilt (#14) | `a3aa293b990c` | 2026-07-13 | yes | `aba2bd2` 2026-07-20 | 7.0 | 7.0 | 2 |
+| 2026-07-30 | `776f986` | [subtree import] chore: import smelt | `a3aa293b990c` | 2026-07-13 | yes | `b13386b` 2026-07-30 | 17.1 | 17.1 | 5 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `5e299c46f62f` | 2026-07-27 | yes | `b13386b` 2026-07-30 | 2.6 | 2.6 | 1 |
+| 2026-07-31 | `8d55284` | Refactor/drop replaces (#3) | `928cf2a21b7e` | 2026-07-31 | NO (merge-base `b13386b` 2026-07-30) | `83c8499` 2026-07-31 | 0.1 | 1.3 | 1 |
+
+### forge/smelt → ucantone (4 events in total, 3 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-10 | `bc95fe4` | feat: Attested Signatures + UCAN Principal Clarif… | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+| 2026-07-30 | `776f986` | [subtree import] chore: import smelt | `79141c5cc52e` | 2026-07-06 | yes | `ccb7705` 2026-07-27 | 21.4 | 21.4 | 4 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+
+### forge/sprue → libforge (9 events in total, 6 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-01 | `d8dca21` | deps: update libforge with auth fix (#29) | `2b55dbcf944f` | 2026-06-30 | yes | `2b55dbc` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-09 | `0a8100d` | feat: implement customer add handler (#25) | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-24 | `f69d5e0` | chore: bump libforge to latest (#36) | `7fc3b2cec1ef` | 2026-07-24 | yes | `7fc3b2c` 2026-07-24 | 0.0 | 0.0 | 0 |
+| 2026-07-27 | `2a66898` | feat: blob removal — serve /blob/remove, /uploa… | `5e299c46f62f` | 2026-07-27 | yes | `5e299c4` 2026-07-27 | 0.0 | 0.0 | 0 |
+| 2026-07-30 | `be588c4` | [subtree import] chore: import sprue | `5e299c46f62f` | 2026-07-27 | yes | `b13386b` 2026-07-30 | 2.6 | 2.6 | 1 |
+| 2026-07-31 | `8d55284` | Refactor/drop replaces (#3) | `928cf2a21b7e` | 2026-07-31 | NO (merge-base `b13386b` 2026-07-30) | `83c8499` 2026-07-31 | 0.1 | 1.3 | 1 |
+
+### forge/sprue → ucantone (5 events in total, 3 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-17 | `20fcc14` | feat: allow did:plc accounts to provision spaces … | `2662bddc02ab` | 2026-07-13 | NO (merge-base `79141c5` 2026-07-06) | `79141c5` 2026-07-06 | -7.0 | 0.0 | 0 |
+| 2026-07-30 | `be588c4` | [subtree import] chore: import sprue | `2662bddc02ab` | 2026-07-13 | NO (merge-base `79141c5` 2026-07-06) | `ccb7705` 2026-07-27 | 14.3 | 21.4 | 4 |
+| 2026-07-31 | `96a672e` | Build/containers (#2) | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+
+### live/piri → libforge (7 events in total, 4 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `6bf7299` | deps: bump ucantone (v1 DID context) and libforge… | `2b55dbcf944f` | 2026-06-30 | yes | `f0706e1` 2026-07-01 | 0.8 | 0.8 | 1 |
+| 2026-07-30 | `c19a7b2` | implement blob/release and blob/reject; migrate j… | `3e5e6ba95711` | 2026-07-23 | NO (merge-base `aba2bd2` 2026-07-20) | `b13386b` 2026-07-30 | 6.6 | 10.1 | 3 |
+| 2026-08-06 | `8509dfa` | feat: validate release cause (#68) | `b13386bc395a` | 2026-07-30 | yes | `f54066c` 2026-08-03 | 4.2 | 4.2 | 9 |
+| 2026-08-20 | `b3b91be` | chore: upgrade forge deps and fix builds on darwi… | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+
+### live/piri → ucantone (8 events in total, 6 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `6bf7299` | deps: bump ucantone (v1 DID context) and libforge… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-21 | `1688014` | feat: add `did:plc` resolver and directory server… | `ef993e165c8e` | 2026-07-17 | yes | `ef993e1` 2026-07-17 | 0.0 | 0.0 | 0 |
+| 2026-07-22 | `939de00` | pdp: integrate Curio's PDP pipeline (harmonydb); … | `a8f24fe31eb6` | 2026-06-30 | yes | `ef993e1` 2026-07-17 | 17.3 | 17.3 | 2 |
+| 2026-07-27 | `c917fb6` | deps: update latest ucantone; did verification fix | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+| 2026-08-20 | `b3b91be` | chore: upgrade forge deps and fix builds on darwi… | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+| 2026-08-27 | `b9ed572` | chore: upgrade deps (#96) | `25cf8340b9a1` | 2026-08-27 | yes | `25cf834` 2026-08-27 | 0.0 | 0.0 | 0 |
+
+### live/hilt → libforge (5 events in total, 5 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `479c0cd` | feat: initial management API implementation (#1) … | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-13 | `c3e8ad4` | fix: bucket DID optional in auth return | `a3aa293b990c` | 2026-07-13 | yes | `a3aa293` 2026-07-13 | 0.0 | 0.0 | 0 |
+| 2026-07-24 | `ba71f84` | Upgrade libforge dependency to latest commit (#34) | `7fc3b2cec1ef` | 2026-07-24 | yes | `7fc3b2c` 2026-07-24 | 0.0 | 0.0 | 0 |
+| 2026-08-20 | `80f80f3` | chore: upgrade forge deps (#42) | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+| 2026-08-28 | `cb1bc0b` | feat: add tenant DID to authorize response (#50) | `c9252ac89b0e` | 2026-08-27 | NO (merge-base `7ceb1bf` 2026-08-21) | `7ceb1bf` 2026-08-21 | -5.7 | 0.0 | 0 |
+
+### live/hilt → ucantone (4 events in total, 4 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `479c0cd` | feat: initial management API implementation (#1) … | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-09 | `082decf` | refactor: add service layer (#24) (#25) (#26) (#2… | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+| 2026-08-20 | `80f80f3` | chore: upgrade forge deps (#42) | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+| 2026-08-27 | `059df06` | feat: per-tenant X25519 wrap-key registry (#14) | `25cf8340b9a1` | 2026-08-27 | yes | `25cf834` 2026-08-27 | 0.0 | 0.0 | 0 |
+
+### live/sprue → libforge (9 events in total, 6 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-01 | `41a47b0` | deps: update libforge with auth fix (#29) | `2b55dbcf944f` | 2026-06-30 | yes | `2b55dbc` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-09 | `1f27110` | feat: implement customer add handler (#25) | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-24 | `50cd990` | chore: bump libforge to latest (#36) | `7fc3b2cec1ef` | 2026-07-24 | yes | `7fc3b2c` 2026-07-24 | 0.0 | 0.0 | 0 |
+| 2026-07-27 | `922f744` | feat: blob removal — serve /blob/remove, /uploa… | `5e299c46f62f` | 2026-07-27 | yes | `5e299c4` 2026-07-27 | 0.0 | 0.0 | 0 |
+| 2026-08-06 | `0fa0743` | fix: blob release cause (#50) | `850148f3084e` | 2026-08-01 | yes | `f54066c` 2026-08-03 | 2.3 | 2.3 | 1 |
+| 2026-08-20 | `b403a68` | chore: upgrade forge deps (#70) | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+
+### live/sprue → ucantone (5 events in total, 3 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-17 | `e7d28a6` | feat: allow did:plc accounts to provision spaces … | `2662bddc02ab` | 2026-07-13 | NO (merge-base `79141c5` 2026-07-06) | `79141c5` 2026-07-06 | -7.0 | 0.0 | 0 |
+| 2026-08-20 | `b403a68` | chore: upgrade forge deps (#70) | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+| 2026-08-27 | `f99dda9` | chore: upgrade deps (#78) | `25cf8340b9a1` | 2026-08-27 | yes | `25cf834` 2026-08-27 | 0.0 | 0.0 | 0 |
+
+### live/ingot → libforge (7 events in total, 6 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `e6bdc45` | Merge pull request #31 from fil-forge/claude/ucan… | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-21 | `02af9fc` | feat: add Hilt client and wire with FX (#35) | `a3aa293b990c` | 2026-07-13 | yes | `aba2bd2` 2026-07-20 | 7.0 | 7.0 | 2 |
+| 2026-07-28 | `a7684d7` | fix(read): resolve retention-retired catalog bloc… | `7fc3b2cec1ef` | 2026-07-24 | yes | `5e299c4` 2026-07-27 | 3.4 | 3.4 | 1 |
+| 2026-08-06 | `a0250c3` | feat: deferred-accept multipart (FIL-520) + netwo… | `5e299c46f62f` | 2026-07-27 | yes | `f54066c` 2026-08-03 | 6.7 | 6.7 | 10 |
+| 2026-08-21 | `de3ca05` | feat: revocations clear delegation and key caches… | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+| 2026-08-28 | `1365193` | feat: add tenant key to encryption envelope (#112) | `c9252ac89b0e` | 2026-08-27 | NO (merge-base `7ceb1bf` 2026-08-21) | `2585ed1` 2026-08-28 | 0.8 | 6.6 | 1 |
+
+### live/ingot → ucantone (6 events in total, 5 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `e6bdc45` | Merge pull request #31 from fil-forge/claude/ucan… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-07-14 | `1c3c2dd` | test: forge-only integration tests — curated ve… | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+| 2026-07-28 | `a7684d7` | fix(read): resolve retention-retired catalog bloc… | `ccb77059de44` | 2026-07-27 | yes | `ccb7705` 2026-07-27 | 0.0 | 0.0 | 0 |
+| 2026-08-21 | `de3ca05` | feat: revocations clear delegation and key caches… | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+| 2026-08-28 | `0ed4bd8` | feat: implement encrypted write (#107) | `25cf8340b9a1` | 2026-08-27 | yes | `25cf834` 2026-08-27 | 0.0 | 0.0 | 0 |
+
+### live/smelt → libforge (4 events in total, 3 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-10 | `072976a` | feat: Attested Signatures + UCAN Principal Clarif… | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-22 | `45063e5` | feat: integrate Hilt (#14) | `a3aa293b990c` | 2026-07-13 | yes | `aba2bd2` 2026-07-20 | 7.0 | 7.0 | 2 |
+| 2026-08-05 | `f0b69e6` | feat(stack): delegate blob/release + blob/reject … | `5e299c46f62f` | 2026-07-27 | yes | `f54066c` 2026-08-03 | 6.7 | 6.7 | 10 |
+
+### live/smelt → ucantone (2 events in total, 1 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-10 | `072976a` | feat: Attested Signatures + UCAN Principal Clarif… | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+
+### live/delegator → libforge (3 events in total, 2 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-10 | `1775d58` | chore: upgrade ucantone (#6) | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+| 2026-07-28 | `93a1bd6` | chore: bump libforge dependency (#8) | `7fc3b2cec1ef` | 2026-07-24 | yes | `5e299c4` 2026-07-27 | 3.4 | 3.4 | 1 |
+
+### live/delegator → ucantone (3 events in total, 2 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-10 | `1775d58` | chore: upgrade ucantone (#6) | `79141c5cc52e` | 2026-07-06 | yes | `79141c5` 2026-07-06 | 0.0 | 0.0 | 0 |
+| 2026-08-27 | `b5552f1` | chore: upgrade deps (#33) | `25cf8340b9a1` | 2026-08-27 | yes | `25cf834` 2026-08-27 | 0.0 | 0.0 | 0 |
+
+### live/piri-signing-service → libforge (2 events in total, 1 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-08-20 | `bacd87b` | Merge pull request #18 from fil-forge/ash/chore/u… | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+
+### live/piri-signing-service → ucantone (2 events in total, 1 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-08-20 | `bacd87b` | Merge pull request #18 from fil-forge/ash/chore/u… | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+
+### guppy → libforge (4 events in total, 2 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-01 | `547c636` | deps: update libforge w/ login fix | `2b55dbcf944f` | 2026-06-30 | yes | `2b55dbc` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-08-21 | `d74fd06` | chore: update deps (#47) | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+
+### guppy → ucantone (3 events in total, 1 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-08-21 | `d74fd06` | chore: update deps (#47) | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+
+### indexing-service → libforge (4 events in total, 2 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `1d9167b` | deps: bump ucantone (v1 DID context) and libforge… | `2b55dbcf944f` | 2026-06-30 | yes | `f0706e1` 2026-07-01 | 0.8 | 0.8 | 1 |
+| 2026-08-20 | `9eb6204` | chore: update dependencies (#51) | `3e6895b41be5` | 2026-08-07 | yes | `3e6895b` 2026-08-07 | 0.0 | 0.0 | 0 |
+
+### indexing-service → ucantone (4 events in total, 2 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `1d9167b` | deps: bump ucantone (v1 DID context) and libforge… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+| 2026-08-20 | `9eb6204` | chore: update dependencies (#51) | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
+
+### Lag today (2026-09-03)
+
+`lag` = library tip − pin date; `base lag` from the merge-base for pins off main; `behind` = first-parent main commits after the pin/merge-base; `pin age` = today − pin date. `tree=` names a main commit whose tree is identical to an off-main pin (a PR head merged unchanged).
+
+#### libforge
+
+| consumer | pin | pin date | pin on main | main tip | lag d | base lag d | behind | pin age d |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| forge/hilt | `928cf2a21b7e` | 2026-07-31 | NO, merge-base `b13386b` 2026-07-30 | `2585ed1` 2026-08-28 | 27.8 | 29.0 | 12 | 34.3 |
+| forge/ingot | `928cf2a21b7e` | 2026-07-31 | NO, merge-base `b13386b` 2026-07-30 | `2585ed1` 2026-08-28 | 27.8 | 29.0 | 12 | 34.3 |
+| forge/piri | `928cf2a21b7e` | 2026-07-31 | NO, merge-base `b13386b` 2026-07-30 | `2585ed1` 2026-08-28 | 27.8 | 29.0 | 12 | 34.3 |
+| forge/smelt | `928cf2a21b7e` | 2026-07-31 | NO, merge-base `b13386b` 2026-07-30 | `2585ed1` 2026-08-28 | 27.8 | 29.0 | 12 | 34.3 |
+| forge/sprue | `928cf2a21b7e` | 2026-07-31 | NO, merge-base `b13386b` 2026-07-30 | `2585ed1` 2026-08-28 | 27.8 | 29.0 | 12 | 34.3 |
+| live/piri | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
+| live/hilt | `c9252ac89b0e` | 2026-08-27 | NO, merge-base `7ceb1bf` 2026-08-21, tree=`2585ed1` | `2585ed1` 2026-08-28 | 0.8 | 6.6 | 1 | 7.2 |
+| live/sprue | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
+| live/ingot | `c9252ac89b0e` | 2026-08-27 | NO, merge-base `7ceb1bf` 2026-08-21, tree=`2585ed1` | `2585ed1` 2026-08-28 | 0.8 | 6.6 | 1 | 7.2 |
+| live/smelt | `5e299c46f62f` | 2026-07-27 | yes | `2585ed1` 2026-08-28 | 31.6 | 31.6 | 13 | 38.1 |
+| live/delegator | `7fc3b2cec1ef` | 2026-07-24 | yes | `2585ed1` 2026-08-28 | 35.0 | 35.0 | 14 | 41.5 |
+| live/piri-signing-service | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
+| guppy | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
+| indexing-service | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
+
+#### ucantone
+
+| consumer | pin | pin date | pin on main | main tip | lag d | base lag d | behind | pin age d |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| forge/hilt | `ccb77059de44` | 2026-07-27 | yes | `8d7eb73` 2026-08-28 | 31.8 | 31.8 | 14 | 38.1 |
+| forge/ingot | `ccb77059de44` | 2026-07-27 | yes | `8d7eb73` 2026-08-28 | 31.8 | 31.8 | 14 | 38.1 |
+| forge/piri | `ccb77059de44` | 2026-07-27 | yes | `8d7eb73` 2026-08-28 | 31.8 | 31.8 | 14 | 38.1 |
+| forge/smelt | `ccb77059de44` | 2026-07-27 | yes | `8d7eb73` 2026-08-28 | 31.8 | 31.8 | 14 | 38.1 |
+| forge/sprue | `ccb77059de44` | 2026-07-27 | yes | `8d7eb73` 2026-08-28 | 31.8 | 31.8 | 14 | 38.1 |
+| live/piri | `25cf8340b9a1` | 2026-08-27 | yes | `8d7eb73` 2026-08-28 | 1.1 | 1.1 | 1 | 7.4 |
+| live/hilt | `25cf8340b9a1` | 2026-08-27 | yes | `8d7eb73` 2026-08-28 | 1.1 | 1.1 | 1 | 7.4 |
+| live/sprue | `25cf8340b9a1` | 2026-08-27 | yes | `8d7eb73` 2026-08-28 | 1.1 | 1.1 | 1 | 7.4 |
+| live/ingot | `25cf8340b9a1` | 2026-08-27 | yes | `8d7eb73` 2026-08-28 | 1.1 | 1.1 | 1 | 7.4 |
+| live/smelt | `79141c5cc52e` | 2026-07-06 | yes | `8d7eb73` 2026-08-28 | 53.2 | 53.2 | 18 | 59.6 |
+| live/delegator | `25cf8340b9a1` | 2026-08-27 | yes | `8d7eb73` 2026-08-28 | 1.1 | 1.1 | 1 | 7.4 |
+| live/piri-signing-service | `3a20cd59fabc` | 2026-08-17 | yes | `8d7eb73` 2026-08-28 | 10.9 | 10.9 | 6 | 17.3 |
+| guppy | `3a20cd59fabc` | 2026-08-17 | yes | `8d7eb73` 2026-08-28 | 10.9 | 10.9 | 6 | 17.3 |
+| indexing-service | `3a20cd59fabc` | 2026-08-17 | yes | `8d7eb73` 2026-08-28 | 10.9 | 10.9 | 6 | 17.3 |
+
+## e. How far apart the fleet actually was
+
+The fleet here is every consumer except the frozen forge modules (9 consumers). For each library, one row per Monday plus today: how many distinct pins were in force, the spread in days between the oldest and newest pin, and the largest and median lag behind the library main head of that day.
+
+### libforge pin spread
+
+| day | distinct pins | spread d | oldest pin | newest pin | max lag d (who) | median lag d |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-06 | 4 | 34.9 | live/smelt | live/hilt | 34.9 (live/smelt) | 0.8 |
+| 2026-07-13 | 4 | 24.1 | live/piri-signing-service | live/hilt | 24.1 (live/piri-signing-service) | 11.7 |
+| 2026-07-20 | 4 | 24.1 | live/piri-signing-service | live/hilt | 31.1 (live/piri-signing-service) | 18.7 |
+| 2026-07-27 | 6 | 38.6 | live/piri-signing-service | live/sprue | 38.6 (live/piri-signing-service) | 26.2 |
+| 2026-08-03 | 6 | 38.6 | live/piri-signing-service | live/sprue | 45.3 (live/piri-signing-service) | 10.8 |
+| 2026-08-10 | 6 | 43.0 | live/piri-signing-service | live/sprue | 49.6 (live/piri-signing-service) | 14.5 |
+| 2026-08-17 | 6 | 43.0 | live/piri-signing-service | live/sprue | 49.6 (live/piri-signing-service) | 14.5 |
+| 2026-08-24 | 3 | 14.5 | live/delegator | live/piri | 28.5 (live/delegator) | 14.0 |
+| 2026-08-31 | 4 | 34.3 | live/delegator | live/hilt | 35.0 (live/delegator) | 20.6 |
+| 2026-09-03 (today) | 4 | 34.3 | live/delegator | live/hilt | 35.0 (live/delegator) | 20.6 |
+
+In the window (31 days): days on which the whole fleet shared one libforge pin: **0**; most distinct pins on one day: **6**; widest spread between oldest and newest pin: **43.0 days**.
+
+### ucantone pin spread
+
+| day | distinct pins | spread d | oldest pin | newest pin | max lag d (who) | median lag d |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-06 | 4 | 38.8 | live/delegator | live/piri | 44.8 (live/delegator) | 17.4 |
+| 2026-07-13 | 3 | 17.4 | live/sprue | live/hilt | 17.4 (live/sprue) | 6.0 |
+| 2026-07-20 | 4 | 24.5 | live/piri-signing-service | live/sprue | 28.6 (live/piri-signing-service) | 11.3 |
+| 2026-07-27 | 5 | 38.8 | live/piri-signing-service | live/piri | 38.8 (live/piri-signing-service) | 21.4 |
+| 2026-08-03 | 5 | 38.8 | live/piri-signing-service | live/piri | 43.2 (live/piri-signing-service) | 25.8 |
+| 2026-08-10 | 5 | 38.8 | live/piri-signing-service | live/piri | 43.2 (live/piri-signing-service) | 25.8 |
+| 2026-08-17 | 5 | 38.8 | live/piri-signing-service | live/piri | 59.6 (live/piri-signing-service) | 42.3 |
+| 2026-08-24 | 2 | 42.3 | live/smelt | live/piri | 49.2 (live/smelt) | 6.9 |
+| 2026-08-31 | 3 | 52.1 | live/smelt | live/piri | 53.2 (live/smelt) | 1.1 |
+| 2026-09-03 (today) | 3 | 52.1 | live/smelt | live/piri | 53.2 (live/smelt) | 1.1 |
+
+In the window (31 days): days on which the whole fleet shared one ucantone pin: **0**; most distinct pins on one day: **5**; widest spread between oldest and newest pin: **59.6 days**.
+
+### Straddles of breaking / additive-required changes
+
+Days on which at least one consumer that imports a package the commit changed already contained the change while another such consumer did not — the periods during which two live components were on incompatible library states. Only classified `breaking` and `additive-required` commits are considered; consumers that do not import a changed package are not peers for that commit and are left out.
+
+| lib | commit | subject | class | period | days | ahead at start | behind at start | behind at end |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| libforge | `a3aa293` | fix: make bucket optional | breaking | 2026-07-13 → 2026-07-21 | 9 | hilt | ingot, smelt | smelt |
+| libforge | `aac837a` | add space to blob remove, abort, and reject, | breaking | 2026-07-24 → 2026-08-20 | 28 | hilt, sprue | piri, ingot, smelt, delegator, guppy | guppy |
+| libforge | `5e299c4` | feat!: align removal capabilities with the blob-remova… | breaking | 2026-07-27 → 2026-09-03 (still open) | 39 | sprue | piri, hilt, ingot, smelt, delegator, guppy | delegator |
+| libforge | `b13386b` | feat!: add cause to blob release arguments (#50) | additive-required | 2026-08-06 → 2026-09-03 (still open) | 29 | piri, sprue | hilt, ingot, smelt, delegator, guppy | smelt, delegator |
+| libforge | `2585ed1` | feat: add tenant DID to authorization response (#64) | additive-required | 2026-08-28 → 2026-09-03 (still open) | 7 | hilt, ingot | smelt | smelt |
+| ucantone | `ef993e1` | feat: add did:plc parse method (#38) | additive-required | 2026-07-21 → 2026-07-21 | 1 | piri | hilt, sprue, ingot, piri-signing-service, indexing-service | hilt, sprue, ingot, piri-signing-service, indexing-service |
+| ucantone | `ef993e1` | feat: add did:plc parse method (#38) | additive-required | 2026-07-27 → 2026-08-19 | 24 | piri | hilt, sprue, ingot, piri-signing-service, indexing-service | hilt, sprue, piri-signing-service, indexing-service |
+| ucantone | `ccb7705` | fix: verification relationships default to all methods… | additive-required | 2026-07-27 → 2026-09-03 (still open) | 39 | piri | hilt, sprue, ingot, smelt, delegator, piri-signing-service, guppy, indexing-service | smelt |
+| ucantone | `bfc05d9` | fix: align receipts with the updated receipt spec (#49) | breaking | 2026-08-20 → 2026-09-03 (still open) | 15 | piri, hilt, sprue, piri-signing-service, indexing-service | ingot, smelt, delegator, guppy | smelt |
+| ucantone | `3a20cd5` | fix: explicit empty `capabilityInvocation` or `capabil… | breaking | 2026-08-20 → 2026-09-03 (still open) | 15 | piri, hilt, sprue, piri-signing-service, indexing-service | ingot, smelt, delegator, guppy | smelt |
+| ucantone | `dacea7a` | fix(validator): skip unsupported verifications methods… | additive-required | 2026-08-27 → 2026-09-03 (still open) | 8 | piri, hilt, sprue | piri-signing-service, indexing-service | piri-signing-service, indexing-service |
+
+### Import sets used
+
+| consumer | go directive | libforge pkgs | ucantone pkgs | libforge packages imported (non-test) |
+| --- | --- | --- | --- | --- |
+| forge/hilt | 1.26.5 | 14 | 20 | client/hilt commands commands/blob commands/customer commands/provider commands/s3 commands/s3/bucket commands/s3/request identity s3perm sigv4 testutil ucan ucan/zapucan |
+| forge/ingot | 1.26.5 | 22 | 17 | blobindex client/hilt commands commands/access commands/assert commands/blob commands/content commands/http commands/index commands/provider commands/s3 commands/s3/bucket commands/s3/request command… |
+| forge/piri | 1.26.5 | 13 | 24 | commands commands/access commands/assert commands/blob commands/blob/replica commands/claim commands/content commands/pdp commands/pdp/sign digestutil identity piece ucan/retrieval |
+| forge/smelt | 1.26.5 | 9 | 5 | commands/blob commands/blob/replica commands/claim commands/customer commands/pdp commands/s3/bucket commands/s3/request commands/space/egress identity |
+| forge/sprue | 1.26.5 | 23 | 25 | attestation attestation/didmailto bytemap commands commands/access commands/assert commands/blob commands/blob/replica commands/content commands/customer commands/http commands/index commands/pdp com… |
+| live/piri | 1.27.0 | 13 | 24 | commands commands/access commands/assert commands/blob commands/blob/replica commands/claim commands/content commands/pdp commands/pdp/sign digestutil identity piece ucan/retrieval |
+| live/hilt | 1.27.0 | 13 | 20 | commands commands/blob commands/content commands/customer commands/index commands/provider commands/s3 commands/s3/bucket commands/s3/request commands/upload identity testutil ucan |
+| live/sprue | 1.27.0 | 22 | 25 | attestation attestation/didmailto bytemap commands commands/access commands/assert commands/blob commands/blob/replica commands/content commands/customer commands/http commands/index commands/pdp com… |
+| live/ingot | 1.27.0 | 19 | 20 | blobindex commands commands/access commands/assert commands/blob commands/content commands/http commands/index commands/provider commands/s3 commands/s3/bucket commands/s3/request commands/ucan comma… |
+| live/smelt | 1.25.9 | 9 | 5 | commands/blob commands/blob/replica commands/claim commands/customer commands/pdp commands/s3/bucket commands/s3/request commands/space/egress identity |
+| live/delegator | 1.27.0 | 7 | 6 | commands/blob commands/blob/replica commands/claim commands/pdp commands/space/egress identity ucan |
+| live/piri-signing-service | 1.25.3 | 3 | 14 | commands/access commands/pdp/sign identity |
+| guppy | 1.26.1 | 24 | 20 | attestation/didmailto blobindex bytemap commands commands/access commands/assert commands/blob commands/content commands/http commands/index commands/pdp commands/provider commands/space commands/uca… |
+| indexing-service | 1.25.7 | 12 | 18 | blobindex bytemap commands commands/assert commands/claim commands/content digestutil identity jobqueue testutil ucan ucan/retrieval |
+
+## Caveats
+
+- `live/piri` is a shallow clone: history starts 2026-05-07; pin events and commit counts before that date are invisible.
+- `live/sprue` is a shallow clone: history starts 2026-05-07; pin events and commit counts before that date are invisible.
+- `live/smelt` is a shallow clone: history starts 2026-05-29; pin events and commit counts before that date are invisible.
+- `live/delegator` is a shallow clone: history starts 2026-05-07; pin events and commit counts before that date are invisible.
+- `live/piri-signing-service` is a shallow clone: history starts 2026-06-19; pin events and commit counts before that date are invisible.
+- Squash merges collapse a PR into one commit: "merged PRs" counts merge commits plus commits whose subject ends in `(#N)`; PRs merged with other subjects, and direct pushes to main, are counted as commits only.
+- Dependabot is identified by author name. Its commits are counted separately everywhere and are excluded from the change classification.
+- Dates are committer dates in UTC; a squash commit's date is the merge time, not the authoring time. Pin dates come from the pseudo-version timestamp, which is the pinned commit's committer time.
+- "Lag" is the days between the pinned library commit and the library's newest first-parent main commit at the moment of the consumer commit (or at the library tip for "today"). For a pin that is not on main, the base lag measures from its merge-base with main instead; a PR-branch head can be tree-identical to the squash commit that merged it.
+- The forge monorepo froze at its last push; its per-module go.mod histories before the import commits are the services' own pre-monorepo histories (paths rewritten), so forge/<svc> and live/<svc> share every event before 2026-07-30.
+- Import sets are a static scan of the consumers' Go files at the analysed ref with `go/parser` (non-test files; test-only imports listed separately); import paths that only appear in comments or strings are not counted, so a plain grep gives larger sets. A library commit "changed an imported package" when a hand-written, non-test .go file in a package a consumer imports changed; codegen `gen/` directories fold into their parent package and packages where only `*_gen*.go` files changed are listed as regenerated-only and not counted.
+- Whether a pin "includes" a library change is decided by ancestry; for pins that are PR-branch heads not on main, by per-file content identity with the change; for SHAs absent from the local library clone, by timestamp only (marked).
+
+
+<!-- divergence: hand-written analysis below this line is preserved by tools/divergence -->
+
+## Reading the numbers
+
+_(hand-written analysis goes here; the generator keeps everything below the marker)_
