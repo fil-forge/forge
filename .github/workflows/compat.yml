@@ -7,11 +7,52 @@ name: Compatibility
 #
 # Nightly rather than per-PR, because it needs PUBLISHED images — a PR's code
 # has not been released yet, so there is nothing to pin it against. Also runs
-# before a release and on demand.
+# on demand, and is meant to run before a release.
 #
-# The supported window is derived from each service's own tags. Per-service
-# semver means there is no single fleet version, so there is no single baseline
-# either: the baseline is a SET, one release per service.
+# Two ways to choose what HEAD is tested against:
+#
+#   tags mode      The schedule, or a dispatch that leaves every image input
+#                  empty. The supported window is derived from each service's
+#                  own `<svc>/vX.Y.Z` git tags. Per-service semver means there
+#                  is no single fleet version, so there is no single baseline
+#                  either: the baseline is a SET, one release per service.
+#                  With no tags there is nothing to test: `Version skew` is
+#                  skipped and the run says so (see below).
+#
+#   override mode  A dispatch with any of the six image inputs set. The inputs
+#                  are LITERAL image tags under ghcr.io/fil-forge/forge/<svc> —
+#                  e.g. `sha-96a672e`, which publish-ghcr.yml pushes for every
+#                  commit on main — and are used verbatim: no tag resolution,
+#                  no ready gate. This is how the suite is exercised before the
+#                  first release is cut, and how one specific pair of commits
+#                  is re-tested after a failure. An input left empty stays
+#                  empty and the tests that need it skip; a run in which every
+#                  test skipped FAILS (see below).
+#
+# Status, 2026-09-03: this workflow has run nightly since 2026-08-01, every
+# run concluded "success", and not one of them executed a test. No `<svc>/v*`
+# tag exists, so `ready` was always false, `Version skew` was always skipped,
+# and GitHub reports a run whose only test job was skipped as a success. The
+# suite in smelt/tests/compat had never executed anywhere. Two guards now make
+# that impossible to miss:
+#
+#   - A run with nothing to test against is visibly a no-op: the skipped job
+#     is named "skipped: no releases", the window job raises a notice
+#     annotation and the run summary says why. It is still green, not grey.
+#     GitHub Actions cannot express "neutral" here: a job concludes success,
+#     failure, cancelled or skipped; skipping needs a job-level `if` evaluated
+#     BEFORE the job runs, so a job cannot look at the repository and then
+#     skip itself; the neutral exit code (78) was removed in 2019; and a grey
+#     run needs every job skipped, but deciding takes a job. The alternative —
+#     fail the window job — is a permanently red nightly until the first
+#     release; that was rejected when this workflow was written and is not
+#     reinstated here. Details: docs/consolidation/compat-validation.md.
+#   - A `Version skew` job that ran the suite but exercised nothing (every
+#     test skipped because its COMPAT_* value was empty) FAILS. Each test logs
+#     one `compat: exercised …` line only after it has booted a stack, proved
+#     from `docker inspect` that the pinned service runs its pinned image and
+#     the rest run HEAD, and driven an upload/retrieve through it. Zero such
+#     lines is a failure, not a pass.
 
 on:
   schedule:
@@ -20,10 +61,61 @@ on:
   workflow_dispatch:
     inputs:
       window:
-        description: 'How many recent releases per service to test against'
+        description: 'tags mode: how many recent releases per service to test against'
         required: false
         default: '2'
         type: string
+      piri_versions:
+        description: 'override: comma-separated piri image tags for TestPinnedPeer, e.g. sha-96a672e'
+        required: false
+        default: ''
+        type: string
+      ingot_versions:
+        description: 'override: comma-separated ingot image tags for TestPinnedPeer, e.g. sha-96a672e'
+        required: false
+        default: ''
+        type: string
+      baseline_piri:
+        description: 'override: piri image tag for the TestRollingUpgrade baseline set, e.g. sha-f60dd59'
+        required: false
+        default: ''
+        type: string
+      baseline_ingot:
+        description: 'override: ingot image tag for the TestRollingUpgrade baseline set'
+        required: false
+        default: ''
+        type: string
+      baseline_sprue:
+        description: 'override: sprue image tag for the TestRollingUpgrade baseline set'
+        required: false
+        default: ''
+        type: string
+      baseline_hilt:
+        description: 'override: hilt image tag for the TestRollingUpgrade baseline set'
+        required: false
+        default: ''
+        type: string
+      guppy_image:
+        description: 'optional: full image ref for the guppy client, e.g. ghcr.io/fil-forge/guppy:sha-<short>-dev (default: the compose default ghcr.io/fil-forge/guppy:main-dev, which floats). Does not by itself select override mode.'
+        required: false
+        default: ''
+        type: string
+      expect_pin_mismatch:
+        description: 'optional: also run TestProvenanceGuardFires (needs piri_versions), which boots a deliberately mislabelled stack and proves the suite can fail'
+        required: false
+        default: false
+        type: boolean
+
+# The run title names the mode and, in override mode, the pins — so the runs
+# list can be read without opening a run. It is evaluated when the run is
+# created, before any job, so it cannot know whether tags mode found anything;
+# the `Version skew` job's name carries that. (A folded scalar: every line is
+# indented alike, so YAML joins them into one expression.)
+run-name: >-
+  ${{ github.event_name == 'schedule' && 'Compatibility · nightly (tags mode)'
+  || (inputs.piri_versions != '' || inputs.ingot_versions != '' || inputs.baseline_piri != '' || inputs.baseline_ingot != '' || inputs.baseline_sprue != '' || inputs.baseline_hilt != '')
+  && format('Compatibility · override piri=[{0}] ingot=[{1}] baseline piri={2} ingot={3} sprue={4} hilt={5}', inputs.piri_versions, inputs.ingot_versions, inputs.baseline_piri, inputs.baseline_ingot, inputs.baseline_sprue, inputs.baseline_hilt)
+  || format('Compatibility · dispatch (tags mode, window={0})', inputs.window) }}
 
 permissions:
   contents: read
@@ -38,54 +130,149 @@ jobs:
     name: Resolve supported window
     runs-on: ubuntu-latest
     outputs:
+      mode: ${{ steps.resolve.outputs.mode }}
       piri: ${{ steps.resolve.outputs.piri }}
       ingot: ${{ steps.resolve.outputs.ingot }}
       base_piri: ${{ steps.resolve.outputs.base_piri }}
       base_ingot: ${{ steps.resolve.outputs.base_ingot }}
       base_sprue: ${{ steps.resolve.outputs.base_sprue }}
       base_hilt: ${{ steps.resolve.outputs.base_hilt }}
+      guppy_image: ${{ steps.resolve.outputs.guppy_image }}
       ready: ${{ steps.resolve.outputs.ready }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Resolve versions from tags
+      - name: Resolve versions (override inputs, else tags)
         id: resolve
+        # Inputs are strings; on a schedule event the inputs context is empty,
+        # so every IN_* below is '' then. They reach the script through env
+        # rather than being spliced into it, so a value can only ever be data.
         env:
           N: ${{ inputs.window || '2' }}
+          IN_PIRI_VERSIONS: ${{ inputs.piri_versions }}
+          IN_INGOT_VERSIONS: ${{ inputs.ingot_versions }}
+          IN_BASE_PIRI: ${{ inputs.baseline_piri }}
+          IN_BASE_INGOT: ${{ inputs.baseline_ingot }}
+          IN_BASE_SPRUE: ${{ inputs.baseline_sprue }}
+          IN_BASE_HILT: ${{ inputs.baseline_hilt }}
+          IN_GUPPY_IMAGE: ${{ inputs.guppy_image }}
         run: |
           set -euo pipefail
-          ready=true
-          # Latest N tags for a service, newest first, as a comma-separated list.
-          window_for() {
-            git tag --list "$1/v*" --sort=-v:refname | head -n "$N" | sed "s|^$1/||" | paste -sd, -
-          }
-          latest_for() {
-            git tag --list "$1/v*" --sort=-v:refname | head -n 1 | sed "s|^$1/||"
-          }
-          for svc in piri ingot sprue hilt; do
-            latest=$(latest_for "$svc")
-            if [ -z "$latest" ]; then
-              echo "::warning::$svc has no release tags; compat cannot run until it does"
-              ready=false
-            fi
-            echo "base_$svc=$latest" >> "$GITHUB_OUTPUT"
-          done
-          for svc in piri ingot; do
-            echo "$svc=$(window_for "$svc")" >> "$GITHUB_OUTPUT"
-          done
-          echo "ready=$ready" >> "$GITHUB_OUTPUT"
-          echo "resolved window (N=$N):"; cat "$GITHUB_OUTPUT"
+          # Image tags contain no whitespace, so stripping all of it is safe
+          # and turns "a, b" into the "a,b" the tests split on.
+          trim() { printf '%s' "$1" | tr -d '[:space:]'; }
+          piri=$(trim "$IN_PIRI_VERSIONS")
+          ingot=$(trim "$IN_INGOT_VERSIONS")
+          base_piri=$(trim "$IN_BASE_PIRI")
+          base_ingot=$(trim "$IN_BASE_INGOT")
+          base_sprue=$(trim "$IN_BASE_SPRUE")
+          base_hilt=$(trim "$IN_BASE_HILT")
+          guppy_image=$(trim "$IN_GUPPY_IMAGE")
+
+          if [ -n "${piri}${ingot}${base_piri}${base_ingot}${base_sprue}${base_hilt}" ]; then
+            # Override mode: the inputs ARE the window, verbatim. Nothing is
+            # looked up and nothing is filled in — an input left empty stays
+            # empty and the tests that need it skip (visibly: see the
+            # vacuous-pass guard in the compat job).
+            mode=override
+            ready=true
+          else
+            # Tags mode: the nightly's behaviour, unchanged. Latest N tags per
+            # service, newest first, as a comma-separated list.
+            mode=tags
+            ready=true
+            window_for() {
+              git tag --list "$1/v*" --sort=-v:refname | head -n "$N" | sed "s|^$1/||" | paste -sd, -
+            }
+            latest_for() {
+              git tag --list "$1/v*" --sort=-v:refname | head -n 1 | sed "s|^$1/||"
+            }
+            for svc in piri ingot sprue hilt; do
+              latest=$(latest_for "$svc")
+              if [ -z "$latest" ]; then
+                echo "::warning::$svc has no release tags; compat cannot run until it does"
+                ready=false
+              fi
+              printf -v "base_$svc" '%s' "$latest"
+            done
+            piri=$(window_for piri)
+            ingot=$(window_for ingot)
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "ready=$ready"
+            echo "piri=$piri"
+            echo "ingot=$ingot"
+            echo "base_piri=$base_piri"
+            echo "base_ingot=$base_ingot"
+            echo "base_sprue=$base_sprue"
+            echo "base_hilt=$base_hilt"
+            echo "guppy_image=$guppy_image"
+          } >> "$GITHUB_OUTPUT"
+          echo "resolved window (mode=$mode, N=$N):"; cat "$GITHUB_OUTPUT"
+
+      # The resolved window on the run's overview page, whatever happens next.
+      # When there is nothing to test this is where the run says so — a notice
+      # annotation plus a summary line — because the conclusion will still
+      # read "success" (see the header).
+      - name: Report the resolved window
+        env:
+          MODE: ${{ steps.resolve.outputs.mode }}
+          READY: ${{ steps.resolve.outputs.ready }}
+          PIRI: ${{ steps.resolve.outputs.piri }}
+          INGOT: ${{ steps.resolve.outputs.ingot }}
+          BASE_PIRI: ${{ steps.resolve.outputs.base_piri }}
+          BASE_INGOT: ${{ steps.resolve.outputs.base_ingot }}
+          BASE_SPRUE: ${{ steps.resolve.outputs.base_sprue }}
+          BASE_HILT: ${{ steps.resolve.outputs.base_hilt }}
+          GUPPY_IMAGE: ${{ steps.resolve.outputs.guppy_image }}
+        run: |
+          set -euo pipefail
+          show() { if [ -n "$1" ]; then printf '`%s`' "$1"; else printf '_(empty; tests needing it skip)_'; fi; }
+          {
+            echo "## Compatibility: resolved window"
+            echo
+            echo "mode \`$MODE\` (\`override\` = literal image tags from the dispatch inputs; \`tags\` = derived from \`<svc>/v*\` git tags) · ready \`$READY\` · event \`$GITHUB_EVENT_NAME\` · HEAD \`$GITHUB_SHA\`"
+            echo
+            echo "| test | role | service | image tag(s) |"
+            echo "|---|---|---|---|"
+            echo "| TestPinnedPeer | pinned peer window | piri | $(show "$PIRI") |"
+            echo "| TestPinnedPeer | pinned peer window | ingot | $(show "$INGOT") |"
+            echo "| TestRollingUpgrade | baseline set | piri | $(show "$BASE_PIRI") |"
+            echo "| TestRollingUpgrade | baseline set | ingot | $(show "$BASE_INGOT") |"
+            echo "| TestRollingUpgrade | baseline set | sprue | $(show "$BASE_SPRUE") |"
+            echo "| TestRollingUpgrade | baseline set | hilt | $(show "$BASE_HILT") |"
+            echo "| both | guppy client image | guppy | $(show "$GUPPY_IMAGE") |"
+            echo
+            echo "Pinned refs are \`ghcr.io/fil-forge/forge/<service>:<tag>\`. Whatever is not pinned is built from HEAD by \`smelt/pkg/workspace\` and bind-mounted over its image."
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$READY" != "true" ]; then
+            echo "::notice title=Compatibility skipped: no releases::No <svc>/v* release tag exists, so there is nothing to pin against. The Version skew job is skipped and this run tested NOTHING; its green conclusion is GitHub's, not the suite's. Dispatch with image-tag inputs (e.g. piri_versions=sha-<short>) to exercise the suite before the first release."
+            {
+              echo
+              echo "**skipped: no releases.** No \`<svc>/v*\` tag exists, so \`Version skew\` did not run and no test executed. Dispatch this workflow with image-tag inputs to exercise the suite."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   compat:
-    name: Version skew
+    # The job name doubles as the verdict in the jobs list: a skipped job that
+    # says WHY it was skipped is the difference between "green" and "green
+    # because nothing ran".
+    name: "${{ needs.window.outputs.ready == 'true' && 'Version skew' || 'Version skew — skipped: no releases to test against' }}"
     needs: window
     # Not a failure when there is nothing to test against — a repo that has not
-    # cut releases yet should not have a permanently red nightly.
+    # cut releases yet should not have a permanently red nightly. It IS made
+    # visible: by the window job's notice and summary, and by this job's name.
     if: needs.window.outputs.ready == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    env:
+      # Where publish-ghcr.yml puts the service images. Mirrors imageRepo in
+      # smelt/tests/compat/compat_test.go; used here only to pre-pull.
+      IMAGE_REPO: ghcr.io/fil-forge/forge
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
@@ -105,10 +292,57 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Pull every pinned ref up front. A missing tag or a registry auth
+      # problem then fails HERE, with the ref in the error, instead of as a
+      # stack-startup timeout deep inside compose.Up — and the stack's
+      # five-minute startup budget is not spent on cold pulls.
+      - name: Pre-pull pinned images
+        shell: bash
+        env:
+          PIRI: ${{ needs.window.outputs.piri }}
+          INGOT: ${{ needs.window.outputs.ingot }}
+          BASE_PIRI: ${{ needs.window.outputs.base_piri }}
+          BASE_INGOT: ${{ needs.window.outputs.base_ingot }}
+          BASE_SPRUE: ${{ needs.window.outputs.base_sprue }}
+          BASE_HILT: ${{ needs.window.outputs.base_hilt }}
+          GUPPY_IMAGE: ${{ needs.window.outputs.guppy_image }}
+        run: |
+          set -euo pipefail
+          refs=()
+          add() {
+            local svc=$1 list=$2 tag tags
+            if [ -z "$list" ]; then return 0; fi
+            IFS=, read -ra tags <<< "$list"
+            for tag in "${tags[@]}"; do
+              if [ -n "$tag" ]; then refs+=("$IMAGE_REPO/$svc:$tag"); fi
+            done
+          }
+          add piri "$PIRI"
+          add ingot "$INGOT"
+          add piri "$BASE_PIRI"
+          add ingot "$BASE_INGOT"
+          add sprue "$BASE_SPRUE"
+          add hilt "$BASE_HILT"
+          if [ -n "$GUPPY_IMAGE" ]; then refs+=("$GUPPY_IMAGE"); fi
+          if [ "${#refs[@]}" -eq 0 ]; then
+            echo "nothing pinned; nothing to pre-pull"
+            exit 0
+          fi
+          mapfile -t refs < <(printf '%s\n' "${refs[@]}" | awk '!seen[$0]++')
+          for ref in "${refs[@]}"; do
+            echo "::group::docker pull $ref"
+            docker pull "$ref"
+            echo "::endgroup::"
+          done
+
       # GOWORK stays on: the services NOT pinned to a released image are built
       # from HEAD by pkg/workspace, which is the whole point of the comparison.
+      # The raw log is kept for the vacuous-pass guard and the summary below;
+      # `shell: bash` is what turns on pipefail, so a failing go test cannot
+      # hide behind the tee/awk pipe.
       - name: Run compatibility suite
         working-directory: smelt
+        shell: bash
         env:
           COMPAT_PIRI_VERSIONS: ${{ needs.window.outputs.piri }}
           COMPAT_INGOT_VERSIONS: ${{ needs.window.outputs.ingot }}
@@ -116,7 +350,60 @@ jobs:
           COMPAT_BASELINE_INGOT: ${{ needs.window.outputs.base_ingot }}
           COMPAT_BASELINE_SPRUE: ${{ needs.window.outputs.base_sprue }}
           COMPAT_BASELINE_HILT: ${{ needs.window.outputs.base_hilt }}
-        run: go test -tags compat -v -timeout 55m -parallel 1 ./tests/compat/...
+          COMPAT_GUPPY_IMAGE: ${{ needs.window.outputs.guppy_image }}
+          COMPAT_EXPECT_PIN_MISMATCH: ${{ inputs.expect_pin_mismatch == true && '1' || '' }}
+        run: go test -tags compat -v -timeout 55m -parallel 1 ./tests/compat/... 2>&1 | tee /tmp/suite-compat.log | awk -f "$GITHUB_WORKSPACE/.github/scripts/group-go-tests.awk"
+
+      # `go test` exits 0 when every test skipped. Here that means no stack was
+      # booted and nothing was compared, so it is not a pass.
+      - name: Refuse a vacuous pass
+        shell: bash
+        run: |
+          set -euo pipefail
+          exercised=$(grep -c 'compat: exercised ' /tmp/suite-compat.log || true)
+          if [ "${exercised:-0}" -eq 0 ]; then
+            echo "::error title=Compatibility suite exercised nothing::go test exited 0 but no stack was booted, proven and driven — every test skipped. A test skips when its COMPAT_* value is empty; see the resolved window in the job summary. A pass with zero exercised configurations is not a pass."
+            exit 1
+          fi
+          echo "exercised configurations: $exercised"
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Version skew"
+            echo
+            echo "HEAD (\`$GITHUB_SHA\`) is built from the working tree by \`smelt/pkg/workspace\` and bind-mounted over the published images; pinned services run their released image as pulled. Before asserting anything else each test proves that from \`docker inspect\`: the pinned service's container was created from the pinned ref with no binary mounted over it, and every other in-repo service has a HEAD binary mounted."
+            echo
+            if [ -f /tmp/suite-compat.log ]; then
+              p=$(grep -cE '^[[:space:]]*--- PASS:' /tmp/suite-compat.log || true)
+              f=$(grep -cE '^[[:space:]]*--- FAIL:' /tmp/suite-compat.log || true)
+              k=$(grep -cE '^[[:space:]]*--- SKIP:' /tmp/suite-compat.log || true)
+              x=$(grep -c 'compat: exercised ' /tmp/suite-compat.log || true)
+              echo "| passed | failed | skipped | stacks exercised |"
+              echo "|---|---|---|---|"
+              echo "| $p | $f | $k | $x |"
+              echo
+              echo "### exercised configurations"
+              echo
+              if [ "${x:-0}" -eq 0 ]; then
+                echo "_none — nothing was compared in this run_"
+              else
+                grep 'compat: exercised ' /tmp/suite-compat.log | sed 's/.*compat: exercised /- /'
+              fi
+              echo
+              echo "### skipped"
+              echo
+              if [ "${k:-0}" -eq 0 ]; then
+                echo "_none_"
+              else
+                grep -E '^[[:space:]]*--- SKIP:' /tmp/suite-compat.log | sed -E 's/^[[:space:]]*--- SKIP: /- /'
+              fi
+            else
+              echo "_the suite did not run (an earlier step failed)_"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Dump container state on failure
         if: failure()
