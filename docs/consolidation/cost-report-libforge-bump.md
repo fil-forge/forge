@@ -43,9 +43,15 @@ dependabot/CI).
 To a building tree: **under four minutes.** To locally green vet/tidy/test:
 **under eight minutes.** Compile errors encountered: **zero**, in every module.
 
-CI-side figures (the `unit` and `stack` jobs on GitHub Actions, dispatched on
-the branch) are recorded in `findings.md` under "Costs measured" once the runs
-complete; the stack job's own budget is 50 minutes.
+CI-side figures, GitHub Actions on the bumped head `a7b6449`
+([run 33813866714](https://github.com/fil-forge/forge/actions/runs/33813866714),
+dispatched 22:36:32 UTC on the pointer branch `claude/forge-monorepo-poc-p9w0yr-expA`):
+all five `unit` jobs and the `stack` job (four images, e2e smoke suite, S3
+system suite) **green**, completed 22:55:00 — **18 min 28 s** from dispatch to
+green, of which `stack` is about 12 min. Two earlier attempts on the same
+commits are part of the honest cost: the first dispatch failed in 76 s on the
+`go work sync` go.sum gap (`findings.md` S8) and the second lost `unit sprue`
+to a `TestWireApp/aws` flake that passed on every other run.
 
 ## Files and modules touched
 

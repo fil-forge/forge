@@ -255,7 +255,10 @@ documents for the raw logs.
   passed locally and passed on the Experiment C head that contains the same
   commits ([33797489822](https://github.com/fil-forge/forge/actions/runs/33797489822)),
   so it is treated as a flake, not a bump regression; `stack` was skipped as a
-  consequence and re-dispatched. The first dispatch
+  consequence. The re-dispatch
+  ([33813866714](https://github.com/fil-forge/forge/actions/runs/33813866714))
+  was **green end to end: 18 min 28 s** from dispatch to a green `stack`. The
+  first dispatch
   ([33795942498](https://github.com/fil-forge/forge/actions/runs/33795942498))
   failed in 76 s on the `go work sync` go.sum gap (S8).
 - **C — `commands/**` (+ the four PR #52 packages) into the repo as modules:**
