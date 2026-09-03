@@ -1,7 +1,10 @@
-# The workspace is a developer convenience only — `replace` directives in each
-# service's go.mod are the source of truth, so builds are correct with GOWORK=off
-# (which is what CI and the container builds use). Keeping the sum file out of
-# git avoids churn that would otherwise land on every dependency bump.
+# The workspace is a developer convenience only — the `require` lines in each
+# service's go.mod are the source of truth (there are no `replace` directives
+# for the fil-forge libraries), so builds are correct with GOWORK=off (which is
+# what CI and the container builds use). Keeping the sum file out of git avoids
+# churn that would otherwise land on every dependency bump — but it also means
+# `go work sync` can leave a module's go.sum incomplete for GOWORK=off builds;
+# run `go mod tidy` in each module after syncing.
 go.work.sum
 
 # goreleaser output, per service
