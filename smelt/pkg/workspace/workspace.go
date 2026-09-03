@@ -63,6 +63,15 @@ var Services = map[string]serviceBuild{
 // use-list forces a rebuild of every service (see package doc).
 const libforgeDir = "libforge"
 
+// sharedDirs are the in-repo modules every service consumes through a replace
+// directive (commands: the wire contract; internal: repo-private helpers). Like
+// libforge, a change to either can alter any service, so their presence in the
+// use-list also forces a rebuild of every service. They are always listed in
+// the monorepo's go.work, so in practice workspace mode rebuilds everything —
+// which is the monorepo's HEAD-vs-HEAD contract; WithWorkspaceBinariesExcept
+// still holds back the services it names.
+var sharedDirs = []string{libforgeDir, "commands", "internal"}
+
 // Detect inspects the active go.work and returns the workspace root directory
 // (the dir containing go.work) and the sorted set of smelt services to build
 // from local source. Returns an error when no workspace is active.
@@ -86,7 +95,11 @@ func Detect() (root string, services []string, err error) {
 	}
 
 	selected := map[string]bool{}
-	if inWorkspace[libforgeDir] {
+	shared := false
+	for _, d := range sharedDirs {
+		shared = shared || inWorkspace[d]
+	}
+	if shared {
 		for name := range Services {
 			selected[name] = true
 		}
