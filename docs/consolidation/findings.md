@@ -361,6 +361,16 @@ From the plan, with what this POC adds:
   `attestation` importing a package that now has two homes.
 - Rebuilding the Docker build contexts and caches (S4) properly, not just
   enough for the stack job to pass.
+- Migrating the four first-party modules that compile against
+  `libforge/commands` (S7) — `go-ipni-tools`, `piri-signing-service`,
+  `indexing-service`, `delegator` — to whatever the canonical wire module
+  becomes, and versioning that module for them. The branch leaves two seams
+  in piri on libforge's types instead.
+- Deciding the fate of `identity`, `digestutil`, `bytemap`, `blobindex`,
+  `receipt` and `testutil`, which the inventory shows have consumers outside
+  forge (S12); the branch copies three of them into `forge/internal` as the
+  plan's control group, which is only reversible because libforge still
+  carries the originals.
 - Tag scheme, release workflow and compat wiring changes (consolidation plan
   Phases 1 and 6).
 
