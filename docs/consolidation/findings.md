@@ -232,8 +232,16 @@ documents for the raw logs.
   under 4 min to a building tree, under 8 min to local vet/tidy/test green,
   zero source changes; see `cost-report-libforge-bump.md`. On GitHub Actions
   (run [33796693902](https://github.com/fil-forge/forge/actions/runs/33796693902),
-  head `a7b6449`): all five `unit` jobs green within 5 min of dispatch; `stack`
-  result recorded below when the run finishes. The first dispatch
+  head `a7b6449`): all five `unit` jobs green within 5 min of dispatch; its
+  `stack` job was cancelled by the next dispatch on the same branch (latent
+  bug 8). Re-run on a pointer branch
+  ([33797690917](https://github.com/fil-forge/forge/actions/runs/33797690917)):
+  four `unit` jobs green, `unit sprue` failed in `sprue/internal/fx`
+  `TestWireApp/aws` (an fx wiring test against AWS-backed stores, 17 s), which
+  passed locally and passed on the Experiment C head that contains the same
+  commits ([33797489822](https://github.com/fil-forge/forge/actions/runs/33797489822)),
+  so it is treated as a flake, not a bump regression; `stack` was skipped as a
+  consequence and re-dispatched. The first dispatch
   ([33795942498](https://github.com/fil-forge/forge/actions/runs/33795942498))
   failed in 76 s on the `go work sync` go.sum gap (S8).
 - **C — `commands/**` (+ the four PR #52 packages) into the repo as modules:**
