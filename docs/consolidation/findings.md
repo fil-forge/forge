@@ -250,8 +250,13 @@ documents for the raw logs.
 1. **Path-filter silent-green (planning trap 1, confirmed).** `ci.yml` and
    `publish-ghcr.yml` filter on `<svc>/**`, `docker/**` and the workflow file
    only. A change touching only a new top-level directory selects no service;
-   `unit` and `stack` are skipped and the run is green. Fix on this branch
-   (isolated commit, cherry-pickable to `main`).
+   `unit` and `stack` are skipped and the run is green. The instance that
+   exists on `main` today is `.github/scripts/**` (consumed by the stack job,
+   in no filter). Fixed on this branch in commit `d59179d`, which cherry-picks
+   cleanly onto `main` `f60dd59` (verified with `cherry-pick -n` in a clean
+   worktree), as does `d5e8040` (the `.gitignore` comment correction). Those
+   two are "the one thing worth merging to `main`"; everything else on the
+   branch is a demonstration.
 2. **Vacuous-green nightly (S3).** `compat.yml`'s skipped test job reports
    success. 34 green nightlies, zero tests.
 3. **`otherThan` naming seam (plan, confirmed in code).**
@@ -272,6 +277,12 @@ documents for the raw logs.
 7. **`compat.yml` skips on `workflow_dispatch` too.** The dispatch input is
    only `window`; there is no way to run the suite without tags. Fixed on this
    branch (Experiment D).
+8. **Two `workflow_dispatch` runs on one branch cancel each other.** `ci.yml`'s
+   concurrency group keys dispatches by ref with `cancel-in-progress: true`, so
+   dispatching the branch again to test a later commit cancelled the earlier
+   run mid-stack (run 33796693902). Correct for PRs; for dispatch it means one
+   measurement per branch at a time. Worked around with a pointer branch at the
+   earlier commit (`claude/forge-monorepo-poc-p9w0yr-expA`, no new commits).
 
 ## Decisions needed from humans
 
