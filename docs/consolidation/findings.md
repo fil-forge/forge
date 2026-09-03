@@ -117,6 +117,22 @@ the anticipated cycle. Nothing in code prevents ingot importing
 `pkg/client` from the single guppy module drags ~100 modules into ingot's
 build list) is the real one and is measured by the inventory tool.
 
+### S5b. `refactor/drop-replaces` (forge PR #3) is where the two-step rollout began
+
+Planning trap 7 asked what that branch was doing. At forge `96a672e` (before
+PR #3) ingot's `go.mod` had `replace github.com/fil-forge/forge/hilt =>
+../hilt` and `replace github.com/fil-forge/forge/smelt => ../smelt`: the
+monorepo's first week already contained in-repo module dependencies through
+`replace`, exactly the mechanism Experiment C uses. PR #3 ("Refactor/drop
+replaces", merged 2026-07-31) removed them by moving hilt's S3 client, wire
+contract, `sigv4`, `s3perm` and `zapucan` into libforge (PR #52) and splitting
+ingot's itest into a nested module, then pinned the unmerged PR commit
+everywhere. In other words the repo chose the library route over the in-repo
+module route, hit the two-step rollout on the same day, and has been stuck at
+step one since. The per-service Docker build context ("BUILD CONTEXT IS THE
+SERVICE DIRECTORY") was made possible by that choice and is undone by
+reversing it (S4).
+
 ### S6. A `forge/internal` module is compiler-enforced across sibling modules
 
 Verified with a throwaway module set: a module at
@@ -172,7 +188,13 @@ Filled in from Experiments A, C and E as they complete; see the linked
 documents for the raw logs.
 
 - **A — deferred library bump (5 weeks, 12 libforge + 15 ucantone commits):**
-  see `cost-report-libforge-bump.md`.
+  under 4 min to a building tree, under 8 min to local vet/tidy/test green,
+  zero source changes; see `cost-report-libforge-bump.md`. On GitHub Actions
+  (run [33796693902](https://github.com/fil-forge/forge/actions/runs/33796693902),
+  head `a7b6449`): all five `unit` jobs green within 5 min of dispatch; `stack`
+  result recorded below when the run finishes. The first dispatch
+  ([33795942498](https://github.com/fil-forge/forge/actions/runs/33795942498))
+  failed in 76 s on the `go work sync` go.sum gap (S8).
 - **C — `commands/**` (+ the four PR #52 packages) into the repo as modules:**
   see `commands-move.md`.
 - **E — August divergence:** see `divergence-august-2026.md`.
@@ -218,8 +240,12 @@ From the plan, with what this POC adds:
    4). piri pins `delegator` as a Go dependency. Scoping question stands.
 3. **guppy's status** — see `inv-guppy-status` results in the findings
    appendix once available.
-4. **fil-one RFC 7** — `/home/user/RFC` (`fil-one/RFC`) is now in scope; not
-   yet checked for RFC 7. TODO in the appendix.
+4. **fil-one RFC 7** — checked `fil-one/RFC` (`59438b5`, 2026-09-01): it holds
+   two documents (`rfcs/2026-05-filone-forge-deployment-proposal.md`,
+   `rfcs/2026-07-review-time-and-stacked-prs.md`) and nothing numbered 7,
+   nothing mentioning varsig or `0x300001`. The citation in
+   `libforge/attestation/varsig.go` points at a document not in that repo.
+   Still open where it lives (Notion is the likely place; not checked).
 5. **Varsig `0x300001`** — unchanged; independent of layout.
 6. **Who owns a red nightly** — sharpened by S3: today nobody can own it
    because it cannot go red.
