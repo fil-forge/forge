@@ -1,11 +1,11 @@
 # Divergence of libforge/ucantone consumers, 2026-08-01..2026-08-31
 
-Generated 2026-09-03 23:07 UTC by `tools/divergence` from local git history only (no network). Context period shown alongside: 2026-07-01..2026-07-31. "Today" for current-lag figures: 2026-09-03.
+Generated 2026-09-03 23:12 UTC by `tools/divergence` from local git history only (no network). Context period shown alongside: 2026-07-01..2026-07-31. "Today" for current-lag figures: 2026-09-03.
 
 Reproduce from the forge repository root:
 
 ```
-cd tools/divergence && GOWORK=off go run . -from 2026-08-01 -to 2026-08-31 -context-from 2026-07-01 -today 2026-09-03
+cd tools/divergence && GOWORK=off go run . -from 2026-08-01 -to 2026-08-31 -context-from 2026-07-01 -today 2026-09-03 -forge-ref f60dd59
 ```
 
 The tables below are regenerated on every run; the hand-written section **Reading the numbers** at the end is preserved.
@@ -16,7 +16,7 @@ The tables below are regenerated on every run; the hand-written section **Readin
 | --- | --- | --- | --- | --- | --- |
 | libforge | `origin/main` | `2585ed1e5e50` | 2026-08-28 | full |  |
 | ucantone | `origin/main` | `8d7eb73066ce` | 2026-08-28 | full |  |
-| forge | `HEAD` | `f60dd5969c28` | 2026-07-31 | full | modules with libforge/ucantone requires: hilt, ingot, piri, smelt, sprue |
+| forge | `f60dd59` | `f60dd5969c28` | 2026-07-31 | full | modules with libforge/ucantone requires: hilt, ingot, piri, smelt, sprue |
 | live/piri | `HEAD` | `e54658e20e48` | 2026-08-28 | shallow, oldest 2026-05-07 |  |
 | live/hilt | `HEAD` | `cb1bc0b84e7b` | 2026-08-28 | full |  |
 | live/sprue | `HEAD` | `5954487929dd` | 2026-08-28 | shallow, oldest 2026-05-07 |  |
@@ -1108,4 +1108,41 @@ Days on which at least one consumer that imports a package the commit changed al
 
 ## Reading the numbers
 
-_(hand-written analysis goes here; the generator keeps everything below the marker)_
+Hand-written on 2026-09-03 from the tables above (the generator leaves everything below the marker alone). Every number here is in the tables or in `divergence-august-2026.json`; where a number from the planning brief is quoted it is labelled as such.
+
+### What August actually contained
+
+- **The libraries were quiet; the services were not.** libforge main took 11 commits in August, 7 of them dependabot; the 4 human commits are two CI changes, `f54066c` (attestation idempotency, internal) and `2585ed1` (tenant DID in the S3 authorize response). Between `3e6895b` (2026-08-07) and `2585ed1` (2026-08-28) the only libforge main commit was a dependabot bump. ucantone took 13 commits, 3 dependabot; 8 human commits touched non-test Go code. The live services meanwhile took 215 commits (piri 57, ingot 56, sprue 36, delegator 23, hilt 18, smelt 15, piri-signing-service 10), 108 of them dependabot (50%); guppy and indexing-service took 76 commits of which 71 were dependabot. forge main took none.
+- **Wire-visible library changes in the window: 1 in libforge, 6 in ucantone.** July, for context, had 6 wire-visible libforge commits (the blob-removal RFC landing in three steps, the S3 commands and their bucket fix, and `/ucan/revoke`) and 3 in ucantone. So the answer to the RFC's question "how often do wire-visible library changes happen" is: in libforge they cluster around feature work (six in one July fortnight, one in the whole of August); in ucantone they arrived at a steadier one to two a week once the spec-alignment work started on 2026-08-17.
+- **Changes that needed a coordinated service-side move: 4 of the 10 human code commits in August (libforge 1 of 2, ucantone 3 of 8), 6 of 12 in July.** The August four are `2585ed1` (a required `tenant` field the S3 gateway depends on), `bfc05d9` (receipts lose `aud` and the decoder rejects receipts that carry one), `3a20cd5` (a declared-empty capability relationship now endorses nothing) and `dacea7a` (validation must skip a verification method it cannot use, which the X25519 wrap keys hilt started publishing that day require). Of the two classified `breaking` in August, `bfc05d9` is the real one: a component on it cannot decode a receipt issued by a component before it. `3a20cd5` is breaking by rule, not by observed impact — no fil-forge DID document declares an empty relationship.
+
+### How the two-step rollout was actually exercised
+
+- **Consumers pin unmerged branches to avoid the two-step.** Four of the fourteen pin series contain SHAs that are not on the library's main: forge → libforge `928cf2a` (PR #52, never merged), piri → libforge `3e5e6ba` (an earlier head of PR #49, pinned 2026-07-30, three days after the squash merge, still lacking #48's identity fix), sprue → ucantone `2662bdd` (a PR branch carrying the relationship fallback, pinned 2026-07-17 eight minutes *before* `ef993e1`, the main commit that carried the same fix), and hilt and ingot → libforge `c9252ac` (the PR #64 branch head, tree-identical to `2585ed1`, pinned by hilt 26 minutes before the merge). When the same person changes the library and the service, the "explicit, tested PR in the consuming repo" the RFC counts on tends to be a pin to the library branch, merged in either order.
+- **When a sweep happens it is fast; when it does not, the gap is weeks.** The ucantone receipt change `bfc05d9` (2026-08-17) reached seven consumers within 3.0–3.9 days in one "upgrade forge deps" sweep on 2026-08-20/21 (hilt `80f80f3`, sprue `b403a68`, piri `b3b91be`, ingot `de3ca05`, guppy `d74fd06`, indexing-service `9eb6204`, piri-signing-service `bacd87b`), delegator on day 10; `dacea7a` reached four consumers the same day. The libforge `/blob/release` cause (`b13386b`, 2026-07-30) took 7 days to reach the two components that exchange it (piri and sprue) and 21–22 days to reach hilt, ingot and guppy; the July removal-RFC break `5e299c4` took 0.1 days for sprue, 9 for ingot and smelt, 23.5 for hilt, 24.4 for guppy, and has still not reached delegator.
+- **Four of the twelve human code commits in July were pushed to main without a PR** (libforge `a3aa293`, `aac837a`; ucantone `79141c5`, `ccb7705`), two of them breaking wire changes; in August none were.
+
+### Pin lag
+
+- **At the moment a consumer bumps, its lag is almost always 0.0**: it bumps to the library tip. The non-zero entries are subtree imports (the forge import commits inherited hilt at 6.0 days and smelt at 17.1 days behind), commits that moved a dependency as a side effect of feature work (ingot at 7.0 and 3.4 days), and one regression — piri's ucantone pin went *backwards* from `ef993e1` to `a8f24fe` on 2026-07-22 when the Curio PDP branch merged (`939de00`), and was re-fixed on 07-27. Lag is created between bumps, not at them, and a "0.0" during 2026-08-07..08-21 says only that libforge main was idle.
+- **Today's lag (2026-09-03).** forge's five modules are flat at libforge `928cf2a` — a commit that is not on libforge main; against main they are 27.8 days behind the tip by timestamp, 29.0 days and 12 first-parent commits behind by merge-base (`b13386b`) — and 31.8 days / 14 commits behind ucantone main. In the live fleet, hilt and ingot are on a libforge tree identical to the tip (0.8 days by timestamp only); piri, sprue, piri-signing-service, guppy and indexing-service are 20.6 days / 2 commits behind (one dependabot bump and `2585ed1`); smelt is 31.6 days / 13 commits behind and delegator 35.0 days / 14 commits. On ucantone, five services are 1.1 days / 1 commit behind, three consumers 10.9 days / 6 commits, and smelt 53.2 days / 18 commits (its pin predates the receipt change).
+
+### How far apart the fleet was
+
+- **On no day in August did the nine non-forge consumers share a libforge pin, nor a ucantone pin.** libforge: up to 6 distinct pins on one day and a widest spread of 43.0 days (2026-08-10..08-17: piri-signing-service on `eb26d87` from 06-19 while sprue was on `850148f` from 08-01); after the 08-20 sweep, 3 pins and 14.5 days; today 4 pins spanning 34.3 days (delegator `7fc3b2c` 07-24 to hilt `c9252ac` 08-27). ucantone: up to 5 distinct pins, widest spread 59.6 days (08-17..08-19), today 3 pins spanning 52.1 days because of smelt. The planning brief (F17) quoted a 34-day spread between smelt's and hilt's libforge pins; measured, smelt–hilt is 31 days and the 34.3-day spread is delegator–hilt.
+- **Straddles.** Counting only consumers that import a package the commit changed, breaking or additive-required changes were straddled (one peer contained the change, another did not) for 39 days by `5e299c4`, 29 days by `b13386b`, 28 days by `aac837a` and 9 days by `a3aa293` in libforge, and 39 days by `ccb7705`, 25 days over two intervals by `ef993e1`, 15 days each by `bfc05d9` and `3a20cd5` and 8 days by `dacea7a` in ucantone. Most of the open straddles today are held open by smelt (a test harness) and delegator; the one that mattered for the running fleet was `bfc05d9` on 2026-08-20/21, when piri, hilt, sprue, piri-signing-service and indexing-service produced receipts without `aud` while ingot, guppy and delegator still decoded receipts with the old library — a one-to-two-day window in which a fresh ingot build would have rejected piri's receipts had the two been deployed together. Whether it was hit in a running deployment cannot be read from git.
+- **Beyond libforge and ucantone.** The live fleet grew module edges the forge snapshot does not have: hilt and ingot depend on `github.com/fil-forge/swarf` (since 2026-08-18/19), hilt and ingot depend on `github.com/fil-forge/smelt` as a Go module (hilt since 08-21 for integration tests), and ingot depends on `github.com/fil-forge/hilt` (since 07-21; brief F3). Both libraries' `go.mod` now say `go 1.27.0` (ucantone `6ad0099` 08-24, libforge `2585ed1` 08-28); the five services that took them moved to `go 1.27.0`, while forge's modules say `go 1.26.5` — reconciling forge with current libraries is also a toolchain bump.
+
+### What this says for the in/out decision
+
+- A libforge that changes its wire surface once in August and six times in July is not a library whose consumers can be kept aligned by *frequency* of bumps; it is one where a burst of protocol work has to land in several repos within days, and the history shows that when that happens the authors either pin the unmerged branch or push straight to main. Under the RFC's Option 3 (libraries out, two-step rollout) the July removal-RFC work was three library commits (`aac837a`, `5e299c4`, `b13386b`) each followed by a bump in every one of the twelve consumers importing `commands/blob`; under a monorepo it is three atomic commits — but only for the five services in forge, and the widest straddles today are held by delegator and piri-signing-service, which are not in forge.
+- ucantone is different in kind: its August changes are spec alignment (receipts, `iat`, verification relationships) that every UCAN participant, including guppy and indexing-service, must absorb, and they were absorbed by a fleet-wide sweep in three days. That is the two-step working, and it argues for leaving ucantone where it is.
+- The forge snapshot itself is the outlier in every table: 12 and 14 commits behind, pinned to a never-merged branch, and the only consumer with zero August commits.
+
+### Caveats specific to this reading
+
+- The commit counts here differ from the planning brief's F8 (piri 45, ingot 46, sprue 24, hilt 18, delegator 15, smelt 12, piri-signing-service 4 commits after 2026-07-31). This tool counts every commit reachable from the head with a committer date on or after 2026-08-01 UTC, dependabot included; I could not reproduce F8's figures with first-parent-only, author-date or non-dependabot counting either, so treat the two as different methods rather than one of them being wrong. hilt agrees (18).
+- Squash merges hide PR structure: "merged PRs" are merge commits plus `(#N)` subjects, so a PR merged with a rewritten subject is invisible, and direct pushes to main are counted as commits only. Dependabot's share of a consumer's August commits runs from 0% (hilt) to 94% (indexing-service); it is noise for this question and is separated everywhere.
+- The live clones were shallow (deepened to 2026-05-07/05-29 for this run; piri-signing-service refused to deepen and starts 2026-06-19); nothing in the July–August window is affected, but earlier pin events are invisible.
+- The forge modules' pre-2026-07-30 histories are the services' own histories with paths rewritten, so `forge/<svc>` and `live/<svc>` share every event before the import; forge's own series is the last three rows of each `forge/<svc>` table.
+- Classification is a reading of diffs, not a compatibility test. `3a20cd5` and `a3aa293` are breaking by the stated rule but no observed breakage is claimed for them; `e926fd5` changes the bytes of every emitted invocation (no `iat`) and is still classified additive-optional because nothing reads `IssuedAt()` in any consumer's non-test code.
