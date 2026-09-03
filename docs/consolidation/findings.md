@@ -237,7 +237,13 @@ documents for the raw logs.
   ([33795942498](https://github.com/fil-forge/forge/actions/runs/33795942498))
   failed in 76 s on the `go work sync` go.sum gap (S8).
 - **C — `commands/**` (+ the four PR #52 packages) into the repo as modules:**
-  see `commands-move.md`.
+  53 s of scripted mechanics, about 25 min including the two type-identity
+  seams and the Docker/CI/workspace consequences; 154 service files with
+  rewritten imports, five `go.mod` +7 −1, eight files for the Docker context.
+  On GitHub Actions ([run 33797489822](https://github.com/fil-forge/forge/actions/runs/33797489822),
+  head `1647cc2`): every `unit` job including the new `commands` and
+  `internal` ones, and the full `stack` job (root-context images, e2e, S3
+  suite) **green**, 17 min 40 s end to end. See `commands-move.md`.
 - **E — August divergence:** the case study (`polyrepo-august-casestudy.md`)
   counts 2 wire-visible libforge changes, 3 wire-visible ucantone changes and
   about 3 service-to-service contract changes in August, 22 human pin-bump
