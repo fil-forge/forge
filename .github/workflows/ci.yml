@@ -28,8 +28,13 @@ concurrency:
 
 jobs:
   # Which services does this diff actually touch? No service module imports
-  # another (shared surface lives in libforge), so each filter is just the
-  # service's own subtree.
+  # another (shared surface lives in libforge), so each filter is the service's
+  # own subtree plus the paths outside every subtree that still change what the
+  # services build or how they are tested. Those shared paths are repeated in
+  # every filter on purpose: a path missing from ALL filters is a change that
+  # merges with no CI at all — dorny/paths-filter reports "no changes", `any`
+  # is false and both tiers skip, green. Keep the shared list identical across
+  # filters and mirrored in publish-ghcr.yml.
   changes:
     name: detect changed services
     runs-on: ubuntu-latest
@@ -46,22 +51,27 @@ jobs:
               - 'piri/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
             hilt:
               - 'hilt/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
             sprue:
               - 'sprue/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
             ingot:
               - 'ingot/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
             smelt:
               - 'smelt/**'
               - 'docker/**'
               - '.github/workflows/ci.yml'
+              - '.github/scripts/**'
 
   unit:
     # The check name spells out the gate order so a red X is legible from the
