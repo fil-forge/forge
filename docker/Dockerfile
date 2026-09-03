@@ -4,12 +4,19 @@
 # on ports the compose files map), so their images are one parameterized build:
 #
 #     docker build -f docker/Dockerfile --build-arg SERVICE=<svc> \
-#         --target {prod|dev} <svc>/
+#         --target {prod|dev} .
 #
-# BUILD CONTEXT IS THE SERVICE DIRECTORY — each service stays a self-contained
-# context (scoped by its own .dockerignore), and a change to one service can
-# never invalidate another's layer cache. The repo-root go.work is outside
-# every context, keeping builds hermetic on each service's go.mod.
+# BUILD CONTEXT IS THE REPOSITORY ROOT. It used to be the service directory,
+# which kept each service a self-contained context. That stopped being possible
+# when the wire contract (commands/) and the repo-private helpers (internal/)
+# became in-repo modules that every service reaches through a `replace
+# ../commands` / `replace ../internal` in its go.mod: a sibling directory is
+# outside a per-service context, so the image build could not see it. The root
+# .dockerignore keeps the context small; layer caching is preserved because the
+# COPY steps below hash only the paths they copy — a change to piri/ does not
+# invalidate hilt's layers, but a change to commands/ or internal/ invalidates
+# every service's, which is the correct dependency. go.work stays out of the
+# image (ignored), so the build is still hermetic on each module's go.mod.
 #
 # Targets:
 #   build       deps + source, native toolchain cross-compiling to TARGETARCH
@@ -35,14 +42,25 @@
 # entrypoint to exec through.
 
 FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
+ARG SERVICE
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
-# Manifests first, for layer caching.
-COPY go.mod go.sum* ./
+# Manifests first, for layer caching: the service's own, plus those of the
+# in-repo modules its go.mod replaces to (go mod download resolves the replace
+# targets and needs their go.mod files present).
+COPY commands/go.mod commands/go.sum ./commands/
+COPY internal/go.mod internal/go.sum ./internal/
+COPY ${SERVICE}/go.mod ${SERVICE}/go.sum* ./${SERVICE}/
+WORKDIR /src/${SERVICE}
 RUN --mount=type=cache,target=/go/pkg/mod \
     go mod download
-COPY . .
+WORKDIR /src
+COPY commands ./commands
+COPY internal ./internal
+COPY ${SERVICE} ./${SERVICE}
+# Every later stage builds from inside the service module.
+WORKDIR /src/${SERVICE}
 
 # ---- production binary: stripped + static ----
 FROM build AS build-prod

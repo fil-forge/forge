@@ -16,7 +16,8 @@ GO ?= go
 # direct exec of a bare 'docker'.
 DOCKER := $(shell command -v docker)
 
-# Container image via the monorepo-shared docker/Dockerfile (context = this dir).
+# Container image via the monorepo-shared docker/Dockerfile (context = repo root, so the
+# in-repo commands/ and internal/ modules are visible to the build).
 IMAGE_BUILD_ARGS := --build-arg SERVICE=ingot --build-arg MAIN_PKG=./cmd/ingot
 
 .PHONY: build test vet itest image image-dev gen clean help
@@ -35,11 +36,11 @@ vet:
 
 ## image: build the prod container via the shared docker/Dockerfile
 image:
-	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/ingot:local .
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/ingot:local ..
 
 ## image-dev: build the dev container (debug toolset + dlv)
 image-dev:
-	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/ingot:local-dev .
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/ingot:local-dev ..
 
 ## itest: run ingot's system suite (boots the Forge stack in Docker; ~6 min)
 # The suite lives in smelt/tests/s3 — it validates the whole stack through

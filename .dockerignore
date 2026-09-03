@@ -1,0 +1,24 @@
+# Root build context for docker/Dockerfile (see its header). Keep the context
+# to what the image builds need: the service modules, commands/ and internal/.
+# Anything a per-service .dockerignore used to exclude is excluded here with a
+# ** prefix.
+.git
+.github
+.claude
+docs
+tools
+smelt
+go.work
+go.work.sum
+Makefile
+**/dist
+**/.env*
+**/*.md
+**/.goreleaser.yaml
+**/docker-compose*.yml
+**/compose*.yml
+**/LICENSE
+**/config.example.yaml
+**/version.json
+**/.idea
+**/.dockerignore
