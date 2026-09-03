@@ -3,11 +3,11 @@ package handlers
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation"
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	"github.com/fil-forge/libforge/commands/access"
+	"github.com/fil-forge/forge/commands/access"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	dlgmemory "github.com/fil-forge/forge/sprue/pkg/store/delegation/memory"
+	"github.com/fil-forge/libforge/attestation"
+	"github.com/fil-forge/libforge/attestation/didmailto"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/key"
 	"github.com/fil-forge/ucantone/did/resolver"

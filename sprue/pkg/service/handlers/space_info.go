@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	spacecmds "github.com/fil-forge/libforge/commands/space"
+	spacecmds "github.com/fil-forge/forge/commands/space"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/errors"

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fil-forge/libforge/commands/content"
+	"github.com/fil-forge/forge/commands/content"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"
 	logging "github.com/ipfs/go-log/v2"

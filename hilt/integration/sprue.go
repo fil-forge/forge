@@ -4,9 +4,9 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
+	blobcmds "github.com/fil-forge/forge/commands/blob"
+	customercmds "github.com/fil-forge/forge/commands/customer"
+	providercmds "github.com/fil-forge/forge/commands/provider"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/server"

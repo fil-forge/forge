@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-datastore"

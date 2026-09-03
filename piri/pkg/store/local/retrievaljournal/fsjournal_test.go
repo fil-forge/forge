@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/content"
+	"github.com/fil-forge/forge/commands/content"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/receipt"

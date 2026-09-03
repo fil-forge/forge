@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/forge/sprue/pkg/store/replica"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"

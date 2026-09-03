@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/access"
+	"github.com/fil-forge/forge/commands/access"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

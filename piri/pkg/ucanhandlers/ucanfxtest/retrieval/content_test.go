@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	contentcap "github.com/fil-forge/libforge/commands/content"
+	"github.com/fil-forge/forge/commands/blob"
+	contentcap "github.com/fil-forge/forge/commands/content"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/libforge/ucan/retrieval"
 	"github.com/fil-forge/ucantone/errors/datamodel"

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"net/url"
 
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan/delegation"

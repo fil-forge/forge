@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
 	storageprovider "github.com/fil-forge/forge/sprue/pkg/store/storage_provider"

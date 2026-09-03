@@ -3,9 +3,9 @@ package rpc
 import (
 	"errors"
 
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
+	s3bkt "github.com/fil-forge/forge/commands/s3/bucket"
 
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	s3req "github.com/fil-forge/forge/commands/s3/request"
 )
 
 // failer is the subset of *binding.Response[OK] used to record a receipt failure.

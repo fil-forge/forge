@@ -10,8 +10,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fil-forge/filecoin-services/go/eip712"
-	"github.com/fil-forge/libforge/commands/access"
-	libforgesign "github.com/fil-forge/libforge/commands/pdp/sign"
+	"github.com/fil-forge/forge/commands/access"
+	libforgesign "github.com/fil-forge/forge/commands/pdp/sign"
 	signerclient "github.com/fil-forge/piri-signing-service/pkg/client"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/client"

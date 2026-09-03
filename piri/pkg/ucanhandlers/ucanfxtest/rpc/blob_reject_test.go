@@ -1,7 +1,7 @@
 package rpc_test
 
 import (
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/errors/datamodel"
 	"github.com/fil-forge/ucantone/ucan/delegation"

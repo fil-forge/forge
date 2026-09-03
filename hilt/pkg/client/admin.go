@@ -6,7 +6,7 @@ import (
 	"net/url"
 
 	adminprovider "github.com/fil-forge/forge/hilt/pkg/commands/admin/provider"
-	"github.com/fil-forge/libforge/ucan/zapucan"
+	"github.com/fil-forge/forge/internal/ucan/zapucan"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

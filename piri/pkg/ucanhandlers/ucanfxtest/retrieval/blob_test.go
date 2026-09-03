@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/libforge/ucan/retrieval"
 	"github.com/fil-forge/ucantone/execution"

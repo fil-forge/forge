@@ -5,7 +5,7 @@ import (
 	// for go:embed
 	_ "embed"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-cid"

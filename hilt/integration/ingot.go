@@ -10,12 +10,12 @@ import (
 	"strings"
 	"sync"
 
-	hiltclient "github.com/fil-forge/libforge/client/hilt"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	"github.com/fil-forge/libforge/sigv4"
+	blobcmds "github.com/fil-forge/forge/commands/blob"
+	s3 "github.com/fil-forge/forge/commands/s3"
+	s3req "github.com/fil-forge/forge/commands/s3/request"
+	"github.com/fil-forge/forge/internal/sigv4"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

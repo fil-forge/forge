@@ -6,9 +6,9 @@ import (
 	"github.com/ipfs/go-cid"
 	"go.uber.org/zap"
 
+	"github.com/fil-forge/forge/commands/access"
 	"github.com/fil-forge/libforge/attestation"
 	"github.com/fil-forge/libforge/attestation/didmailto"
-	"github.com/fil-forge/libforge/commands/access"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"

@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
-	contentcmds "github.com/fil-forge/libforge/commands/content"
-	indexcmds "github.com/fil-forge/libforge/commands/index"
+	contentcmds "github.com/fil-forge/forge/commands/content"
+	indexcmds "github.com/fil-forge/forge/commands/index"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

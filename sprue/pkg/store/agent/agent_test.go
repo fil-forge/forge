@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	ucancap "github.com/fil-forge/libforge/commands/ucan"
+	ucancap "github.com/fil-forge/forge/commands/ucan"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
 	agentaws "github.com/fil-forge/forge/sprue/pkg/store/agent/aws"

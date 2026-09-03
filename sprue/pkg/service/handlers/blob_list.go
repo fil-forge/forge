@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
+	blobcmds "github.com/fil-forge/forge/commands/blob"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"

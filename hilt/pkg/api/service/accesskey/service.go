@@ -19,7 +19,7 @@ import (
 	delegationstore "github.com/fil-forge/forge/hilt/pkg/store/delegation"
 	"github.com/fil-forge/forge/hilt/pkg/store/tenant"
 	"github.com/fil-forge/forge/hilt/pkg/vault"
-	"github.com/fil-forge/libforge/s3perm"
+	"github.com/fil-forge/forge/internal/s3perm"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/fil-forge/ucantone/multikey/ed25519"

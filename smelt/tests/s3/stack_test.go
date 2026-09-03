@@ -25,11 +25,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/fil-forge/versitygw/tests/integration"
 
+	s3cmd "github.com/fil-forge/forge/commands/s3"
+	"github.com/fil-forge/forge/internal/s3perm"
 	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"github.com/fil-forge/forge/smelt/pkg/workspace"
-	s3cmd "github.com/fil-forge/libforge/commands/s3"
-	"github.com/fil-forge/libforge/s3perm"
 )
 
 // This file is the shared harness for the integration tests: they boot the

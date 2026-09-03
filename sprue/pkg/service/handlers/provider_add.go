@@ -3,12 +3,12 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
+	providercmds "github.com/fil-forge/forge/commands/provider"
 	"github.com/fil-forge/forge/sprue/internal/config"
 	"github.com/fil-forge/forge/sprue/pkg/billing"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	"github.com/fil-forge/forge/sprue/pkg/store/consumer"
+	"github.com/fil-forge/libforge/attestation/didmailto"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did/plc"
 	"github.com/fil-forge/ucantone/errors"

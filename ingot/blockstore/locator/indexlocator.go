@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/internal/digestutil"
 	indexclient "github.com/fil-forge/indexing-service/pkg/client"
 	"github.com/fil-forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"

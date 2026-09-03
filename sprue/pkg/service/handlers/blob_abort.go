@@ -3,12 +3,12 @@ package handlers
 import (
 	"fmt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	blobcmds "github.com/fil-forge/forge/commands/blob"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
+	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/server"

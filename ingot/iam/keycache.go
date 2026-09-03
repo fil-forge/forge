@@ -4,7 +4,7 @@ import (
 	"path"
 	"time"
 
-	s3 "github.com/fil-forge/libforge/commands/s3"
+	s3 "github.com/fil-forge/forge/commands/s3"
 	gocache "github.com/patrickmn/go-cache"
 )
 

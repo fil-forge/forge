@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	assertcmds "github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/digestutil"
+	assertcmds "github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap"

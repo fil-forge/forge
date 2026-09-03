@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/access"
+	"github.com/fil-forge/forge/commands/access"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/server"

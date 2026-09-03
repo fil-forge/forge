@@ -5,10 +5,10 @@ package rpc_test
 // decode the receipt) lives in helpers_test.go.
 
 import (
-	"github.com/fil-forge/libforge/commands/access"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/commands/blob/replica"
+	"github.com/fil-forge/forge/commands/access"
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob/replica"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"

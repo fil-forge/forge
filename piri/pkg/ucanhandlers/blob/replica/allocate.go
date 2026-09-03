@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/commands/blob/replica"
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob/replica"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/multikey"

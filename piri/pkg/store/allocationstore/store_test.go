@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-datastore"

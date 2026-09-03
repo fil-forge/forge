@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/fil-forge/forge/commands"
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/libforge/blobindex"
-	"github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	mh "github.com/multiformats/go-multihash"
 )

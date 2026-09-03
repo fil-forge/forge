@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/fil-forge/forge/commands"
 	"github.com/fil-forge/libforge/blobindex"
-	"github.com/fil-forge/libforge/commands"
 	"github.com/fil-forge/ucantone/did"
 	mh "github.com/multiformats/go-multihash"
 

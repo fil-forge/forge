@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fil-forge/libforge/commands"
+	"github.com/fil-forge/forge/commands"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"
@@ -17,10 +17,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/commands/pdp"
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/commands/blob"
+	"github.com/fil-forge/forge/commands/pdp"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"

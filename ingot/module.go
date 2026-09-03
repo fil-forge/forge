@@ -64,7 +64,7 @@ import (
 	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/forge/ingot/tokenstore"
 	"github.com/fil-forge/forge/ingot/uploader"
-	hiltclient "github.com/fil-forge/libforge/client/hilt"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
 )
 
 // ServiceIdentity carries the host's upload-service agent into the module. It

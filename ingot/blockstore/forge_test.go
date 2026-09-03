@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	commands "github.com/fil-forge/forge/commands"
 	"github.com/fil-forge/libforge/blobindex"
-	commands "github.com/fil-forge/libforge/commands"
 	"github.com/fil-forge/libforge/testutil"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"

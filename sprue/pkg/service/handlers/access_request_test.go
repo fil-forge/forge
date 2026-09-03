@@ -6,11 +6,11 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	"github.com/fil-forge/libforge/commands/access"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/commands/access"
 	"github.com/fil-forge/forge/sprue/internal/config"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
+	"github.com/fil-forge/libforge/attestation/didmailto"
+	"github.com/fil-forge/libforge/identity"
 
 	"github.com/fil-forge/ucantone/errors/datamodel"
 	"github.com/fil-forge/ucantone/execution"

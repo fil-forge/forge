@@ -11,8 +11,10 @@ require (
 	github.com/ethereum/go-ethereum v1.17.2
 	github.com/fil-forge/delegator v0.0.0-20260619085531-c96197bec34c
 	github.com/fil-forge/filecoin-services/go v0.0.0-20260507172456-36ebe4467390
+	github.com/fil-forge/forge/commands v0.0.0
+	github.com/fil-forge/forge/internal v0.0.0
 	github.com/fil-forge/go-ipni-tools v0.0.0-20260519194815-545b9421aec0
-	github.com/fil-forge/libforge v0.0.0-20260903190243-f4b13f7e32f6
+	github.com/fil-forge/libforge v0.0.0-20260828121550-2585ed1e5e50
 	github.com/fil-forge/piri-signing-service v0.0.0-20260619151844-6c3d40a4bf54
 	github.com/fil-forge/ucantone v0.0.0-20260828153820-8d7eb73066ce
 	github.com/filecoin-project/curio v1.28.3-0.20260717015646-38ca280c43a2
@@ -336,3 +338,7 @@ require (
 )
 
 replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20240617180043-68d350f18fd4
+
+replace github.com/fil-forge/forge/commands => ../commands
+
+replace github.com/fil-forge/forge/internal => ../internal

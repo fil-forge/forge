@@ -5,8 +5,10 @@ go 1.27.0
 require (
 	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.1
+	github.com/fil-forge/forge/commands v0.0.0
+	github.com/fil-forge/forge/internal v0.0.0
 	github.com/fil-forge/indexing-service v1.13.5-0.20260619142411-efe3f5fab717
-	github.com/fil-forge/libforge v0.0.0-20260903190243-f4b13f7e32f6
+	github.com/fil-forge/libforge v0.0.0-20260828121550-2585ed1e5e50
 	github.com/fil-forge/ucantone v0.0.0-20260828153820-8d7eb73066ce
 	github.com/fil-forge/versitygw v0.0.0-20260716095011-7a65883d595a
 	github.com/fxamacker/cbor/v2 v2.9.2
@@ -138,3 +140,7 @@ require (
 	lukechampine.com/blake3 v1.4.1 // indirect
 	pitr.ca/jsontokenizer v0.3.2 // indirect
 )
+
+replace github.com/fil-forge/forge/commands => ../commands
+
+replace github.com/fil-forge/forge/internal => ../internal

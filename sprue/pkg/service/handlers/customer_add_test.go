@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	"github.com/fil-forge/libforge/identity"
+	customercmds "github.com/fil-forge/forge/commands/customer"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	customerstore "github.com/fil-forge/forge/sprue/pkg/store/customer"
 	customer_store "github.com/fil-forge/forge/sprue/pkg/store/customer/memory"
+	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan/invocation"

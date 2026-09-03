@@ -22,12 +22,13 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multihash"
 
+	"github.com/fil-forge/forge/commands/assert"
+	"github.com/fil-forge/forge/commands/claim"
 	"github.com/fil-forge/go-ipni-tools/pkg/advertisement"
 	"github.com/fil-forge/go-ipni-tools/pkg/metadata"
 	ipnipub "github.com/fil-forge/go-ipni-tools/pkg/publisher"
 	"github.com/fil-forge/go-ipni-tools/pkg/store"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/claim"
+	libassert "github.com/fil-forge/libforge/commands/assert"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
 	"github.com/fil-forge/forge/piri/lib"
@@ -81,7 +82,10 @@ func PublishLocationCommitment(
 	// ArgumentsBytes returns the raw CBOR map for the invocation args;
 	// Bytes() returns the whole signed envelope, which can't be decoded
 	// as LocationArguments directly.
-	var lc assert.LocationArguments
+	// Decoded into libforge's copy of the type: go-ipni-tools' ShardCID is
+	// declared against github.com/fil-forge/libforge/commands/assert, so the
+	// in-repo commands module cannot be used at this seam without a conversion.
+	var lc libassert.LocationArguments
 	if err := lc.UnmarshalCBOR(bytes.NewReader(locationCommitment.ArgumentsBytes())); err != nil {
 		return fmt.Errorf("unmarshalling location commitment: %w", err)
 	}

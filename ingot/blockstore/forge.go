@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"net/url"
 
+	contentcmds "github.com/fil-forge/forge/commands/content"
 	indexclient "github.com/fil-forge/indexing-service/pkg/client"
-	contentcmds "github.com/fil-forge/libforge/commands/content"
 	"github.com/fil-forge/libforge/ucan/retrieval"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

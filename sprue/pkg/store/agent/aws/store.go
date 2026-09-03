@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/fil-forge/libforge/jobqueue"
+	"github.com/fil-forge/forge/internal/jobqueue"
 	"github.com/fil-forge/forge/sprue/pkg/store"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
 	"github.com/fil-forge/ucantone/ipld/codec/dagcbor"

@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	s3 "github.com/fil-forge/forge/commands/s3"
+	s3bkt "github.com/fil-forge/forge/commands/s3/bucket"
+	s3req "github.com/fil-forge/forge/commands/s3/request"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"
@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/fil-forge/forge/ingot/iam"
-	hiltclient "github.com/fil-forge/libforge/client/hilt"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
 )
 
 // fakeAuthorizer records the request it authorized and returns canned

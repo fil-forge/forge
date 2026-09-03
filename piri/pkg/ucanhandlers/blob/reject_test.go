@@ -3,7 +3,7 @@ package blob
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/libforge/testutil"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan/promise"

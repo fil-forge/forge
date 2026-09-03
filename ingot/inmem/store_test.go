@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"testing"
 
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	"github.com/fil-forge/libforge/commands/s3/bucket"
+	s3 "github.com/fil-forge/forge/commands/s3"
+	"github.com/fil-forge/forge/commands/s3/bucket"
 	"github.com/fil-forge/libforge/testutil"
 )
 

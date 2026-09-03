@@ -13,7 +13,7 @@ package reqscope
 import (
 	"context"
 
-	"github.com/fil-forge/libforge/commands/s3"
+	"github.com/fil-forge/forge/commands/s3"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 )
 

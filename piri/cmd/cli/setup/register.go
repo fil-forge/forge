@@ -14,9 +14,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/fil-forge/libforge/commands/blob"
-	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
-	"github.com/fil-forge/libforge/commands/pdp"
+	"github.com/fil-forge/forge/commands/blob"
+	replicacmds "github.com/fil-forge/forge/commands/blob/replica"
+	"github.com/fil-forge/forge/commands/pdp"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"

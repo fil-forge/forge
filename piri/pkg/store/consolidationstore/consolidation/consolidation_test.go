@@ -3,8 +3,8 @@ package consolidation_test
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/commands/space/egress"
+	"github.com/fil-forge/forge/commands"
+	"github.com/fil-forge/forge/commands/space/egress"
 	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 

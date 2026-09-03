@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"testing"
 
+	blobcmds "github.com/fil-forge/forge/commands/blob"
+	customercmds "github.com/fil-forge/forge/commands/customer"
+	providercmds "github.com/fil-forge/forge/commands/provider"
 	"github.com/fil-forge/forge/hilt/pkg/client"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
 	"github.com/fil-forge/libforge/testutil"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/binding"

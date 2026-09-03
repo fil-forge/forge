@@ -3,8 +3,8 @@ package metrics
 import (
 	"context"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/commands/upload"
+	"github.com/fil-forge/forge/commands/blob"
+	"github.com/fil-forge/forge/commands/upload"
 	"github.com/fil-forge/ucantone/did"
 )
 

@@ -44,15 +44,15 @@ import (
 
 	"time"
 
+	s3 "github.com/fil-forge/forge/commands/s3"
+	s3bkt "github.com/fil-forge/forge/commands/s3/bucket"
+	hiltauth "github.com/fil-forge/forge/commands/s3/request"
+	s3req "github.com/fil-forge/forge/commands/s3/request"
 	"github.com/fil-forge/forge/ingot/internal/fasthttputil"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
 	"github.com/fil-forge/forge/ingot/registry"
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	hiltauth "github.com/fil-forge/libforge/commands/s3/request"
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	"github.com/fil-forge/libforge/s3perm"
-	"github.com/fil-forge/libforge/sigv4"
+	"github.com/fil-forge/forge/internal/s3perm"
+	"github.com/fil-forge/forge/internal/sigv4"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
@@ -63,7 +63,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
-	hiltclient "github.com/fil-forge/libforge/client/hilt"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
 )
 
 // Authorizer is the slice of [hiltclient.Client] the service uses:

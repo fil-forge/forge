@@ -9,8 +9,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/commands/blob"
+	"github.com/fil-forge/forge/internal/digestutil"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"

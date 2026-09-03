@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	customercmds "github.com/fil-forge/forge/commands/customer"
 	"github.com/fil-forge/forge/hilt/internal/testutil"
 	"github.com/fil-forge/forge/hilt/pkg/api"
 	tenantsvc "github.com/fil-forge/forge/hilt/pkg/api/service/tenant"
@@ -25,7 +26,6 @@ import (
 	tenantmemory "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	"github.com/fil-forge/forge/hilt/pkg/vault"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
-	customercmds "github.com/fil-forge/libforge/commands/customer"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"

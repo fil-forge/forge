@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/store"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"

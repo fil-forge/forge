@@ -1,7 +1,7 @@
 package fasthttputil
 
 import (
-	"github.com/fil-forge/libforge/commands/s3"
+	"github.com/fil-forge/forge/commands/s3"
 	"github.com/valyala/fasthttp"
 )
 

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"testing"
 
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
+	s3bkt "github.com/fil-forge/forge/commands/s3/bucket"
 
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	s3req "github.com/fil-forge/forge/commands/s3/request"
 
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/stretchr/testify/require"

@@ -11,7 +11,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.57.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.1
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/fil-forge/libforge v0.0.0-20260903190243-f4b13f7e32f6
+	github.com/fil-forge/forge/commands v0.0.0
+	github.com/fil-forge/forge/internal v0.0.0
+	github.com/fil-forge/libforge v0.0.0-20260828121550-2585ed1e5e50
 	github.com/fil-forge/ucantone v0.0.0-20260828153820-8d7eb73066ce
 	github.com/google/uuid v1.6.0
 	github.com/ipfs/go-cid v0.6.2
@@ -152,3 +154,7 @@ require (
 	lukechampine.com/blake3 v1.4.1 // indirect
 	pitr.ca/jsontokenizer v0.3.2 // indirect
 )
+
+replace github.com/fil-forge/forge/commands => ../commands
+
+replace github.com/fil-forge/forge/internal => ../internal

@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	providercmds "github.com/fil-forge/libforge/commands/provider"
+	providercmds "github.com/fil-forge/forge/commands/provider"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan/invocation"
