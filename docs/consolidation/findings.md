@@ -288,6 +288,35 @@ by pinning the library branch before it merges, and four of July's twelve
 human library code commits were pushed straight to `main`, two of them wire
 breaking.
 
+### S15. The compat suite's first two runs caught a wire break the Go API hid
+
+`compat.yml` runs [35](https://github.com/fil-forge/forge/actions/runs/33834794514)
+and [36](https://github.com/fil-forge/forge/actions/runs/33834923448) on the
+branch (HEAD vs the `sha-96a672e` and `sha-f60dd59` images the network ran;
+full account in `compat-validation.md`): seven of eight real stacks failed,
+every one on ucantone `bfc05d9` (#49) — a post-#49 component cannot read a
+receipt issued by a pre-#49 executor, while old readers accept new receipts.
+The break showed through four component pairs (HEAD sprue ↔ old piri,
+today's guppy ↔ old sprue, July's guppy ↔ HEAD sprue, today's indexer ↔ old
+piri); the two stacks that passed are the two in which every reader was at
+least as new as its writer. Experiment A had bumped that library with zero
+compile errors and green unit tests (the cost report flagged wire
+compatibility as the open question); nothing short of booting the old images
+against HEAD showed it. The provenance guard passed in all eight stacks and
+fired in the negative test, so none of this was vacuous. Each job took under
+nine minutes.
+
+Two things the runs add beyond confirming the suite's purpose. First, the
+suite is not hermetic: `guppy:main-dev`, `indexing-service:main`,
+`delegator:main` and `piri-signing-service:main` float, the two runs differ
+by one of them and disagree on two of four stacks — the polyrepo's floating
+images sit inside the monorepo's own test harness (latent bug 14). Second,
+the failure never names its cause: clients report `missing receipt for task`
+against servers that logged a 200, because ucantone's container decoder
+discards the `audience must be omitted` error (latent bug 15). Experiment E's
+reading of the 08-20/21 straddle had the risk on the wrong side and is
+corrected in `divergence-august-2026.md`.
+
 ## Costs measured
 
 Filled in from Experiments A, C and E as they complete; see the linked
@@ -328,6 +357,13 @@ documents for the raw logs.
   builds in 6–10 s each from the BuildKit cache, the e2e smoke suite in
   2 min 37 s, the S3 system suite in 5 min 19 s. The 18-minute figures above
   were cold caches; this is what a warm rerun costs.
+- **D — `compat.yml` made runnable, then run twice:** run 35 (HEAD vs old
+  images, today's guppy, guard enabled) 8 min 27 s for the job, 411 s for the
+  suite, five stacks; run 36 (guppy pinned to its 2026-07-31 build) 7 min
+  30 s, 358 s, four stacks. Time to a ready stack 40–120 s depending on how
+  many HEAD services had to be built; the six or seven pinned images
+  pre-pulled in 11–13 s. Against the D agent's 20–40 min estimate. Both runs
+  red for real reasons (S15). See `compat-validation.md`.
 - **B — inventory:** 64 libforge packages, 70 guppy, 82 ucantone; tool runs
   in 7 s warm (1 min 23 s cold, network for `go list`); see
   `package-inventory.md` and the notes.
@@ -404,11 +440,12 @@ documents for the raw logs.
     Fixed in `d57234a` with `awk 'NR <= n'`. Not reachable today (zero tags),
     so a real defect that could only ever have appeared after the release
     process started working.
-11. **The bind-mount path `compat.yml` depends on has never run in CI.**
-    `ci.yml`'s stack job runs prebuilt images with `SMELT_STACK_PREBUILT=1`;
-    e2e mounts binaries only when `SMELT_WORKSPACE` is set locally; the nightly
-    boots nothing (S3). Run 33834794514 on this branch is the first execution
-    of `pkg/workspace` build + mount on a GitHub runner (`compat-validation.md`).
+11. **The bind-mount path `compat.yml` depends on had never run in CI** until
+    runs 35 and 36 on this branch. `ci.yml`'s stack job runs prebuilt images
+    with `SMELT_STACK_PREBUILT=1`; e2e mounts binaries only when
+    `SMELT_WORKSPACE` is set locally; the nightly boots nothing (S3). On the
+    runner it worked first time: nine stacks built and mounted, provenance
+    verified in all of them (`compat-validation.md`).
 12. **`workspace.BuildBinary` hardcodes `GOARCH=amd64`** while
     `smelt/tests/s3` uses `runtime.GOARCH`; correct on GitHub's amd64 runners,
     wrong on an arm64 laptop (D's latent bug 10; not fixed).
@@ -418,6 +455,20 @@ documents for the raw logs.
     never removes a blob, so the one `feat!` between the two available pins
     (libforge `b13386b`, `/blob/release` cause) is off the tested path (D's
     latent bugs 6–8; plan question 7).
+14. **Four components of every compat and e2e stack float** (`guppy:main-dev`,
+    `indexing-service:main`, `delegator:main`, `piri-signing-service:main`,
+    the compose defaults in `smelt/systems/*/compose.yml`). A compat verdict
+    therefore depends on the day's builds of three repositories outside
+    forge; runs 35 and 36 disagree on two stacks for this reason alone. Pin
+    them by `sha-*` tag or digest (only guppy has an input today).
+15. **ucantone's container decoder hides why a token was not a receipt.**
+    `container.decodeTokens` discards the `receipt.Decode` error, so every
+    failure in S15 surfaced as `missing receipt for task` or `conclusion
+    receipt not found` against a server that logged a 200. Cross-repo; worth
+    an issue on ucantone whatever the layout decision.
+16. **The suite's log timestamps are flush times.** `group-go-tests.awk`
+    writes through a 4 KiB buffer (also in `ci.yml`); per-step durations
+    cannot be read from the log. `fflush()` per line fixes it.
 
 ## Decisions needed from humans
 
@@ -443,7 +494,10 @@ From the plan, with what this POC adds:
 6. **Who owns a red nightly** — sharpened by S3: today nobody can own it
    because it cannot go red. After Experiment D it can: a run with no tags is
    a visible no-op, a run in which every test skipped fails, and a pinned
-   service that turns out to run HEAD fails. Someone now has to own that.
+   service that turns out to run HEAD fails. And it would be red tonight:
+   against the images the network runs, HEAD fails seven of eight stacks on
+   the receipt rule (S15). Someone has to own that before `compat.yml` is
+   pointed at real pins on `main`.
 7. **Suite depth** — sharpened by D (latent bug 13): the suite proves
    provenance and the smoke path, and would not have caught the one `feat!`
    between the two image pins. Deepening it is independent of layout.
