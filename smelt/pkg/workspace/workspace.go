@@ -5,11 +5,13 @@
 // It is the mechanism behind SMELT_WORKSPACE=1 (the make flow) and
 // stack.WithWorkspaceBinaries() (the Go test stack). The active Go workspace
 // (go.work) is the single source of truth for "what am I editing": every
-// service whose module appears in the use-list is rebuilt from local source.
-// Because the shared libforge library is resolved purely through the workspace
-// (the siblings carry no replace directives), libforge appearing in the
-// use-list forces every service to be rebuilt — otherwise a published binary
-// would still link the published libforge pseudo-version.
+// service whose module appears in the use-list is rebuilt from local source,
+// and only those. Shared modules in the use-list (libforge, or the monorepo's
+// commands and internal) are compiled into every service that is rebuilt,
+// because the workspace resolves them; they do not widen the set of services
+// to rebuild, since `go build` refuses to build a module that is not in the
+// workspace, so a service whose module is absent from the use-list can only
+// run its published image whatever the shared modules say.
 //
 // Binaries are compiled on the host, where go.work resolves local cross-module
 // edits, then bind-mounted into otherwise-published containers. This needs no
@@ -82,22 +84,17 @@ func ServiceNames() []string {
 	return names
 }
 
-// libforgeDir is the workspace dir of the shared library. Its presence in the
-// use-list forces a rebuild of every service (see package doc).
-const libforgeDir = "libforge"
-
-// sharedDirs are the in-repo modules every service consumes through a replace
-// directive (commands: the wire contract; internal: repo-private helpers). Like
-// libforge, a change to either can alter any service, so their presence in the
-// use-list also forces a rebuild of every service. They are always listed in
-// the monorepo's go.work, so in practice workspace mode rebuilds everything —
-// which is the monorepo's HEAD-vs-HEAD contract; WithWorkspaceBinariesExcept
-// still holds back the services it names.
-var sharedDirs = []string{libforgeDir, "commands", "internal"}
-
 // Detect inspects the active go.work and returns the workspace root directory
 // (the dir containing go.work) and the sorted set of smelt services to build
-// from local source. Returns an error when no workspace is active.
+// from local source: those whose module dir is in the use-list. Returns an
+// error when no workspace is active.
+//
+// Earlier versions selected every service in Services whenever libforge was in
+// the use-list. In a workspace that does not also list every service module
+// (the monorepo lists five of the eight; its go.work always lists the shared
+// commands and internal modules) that made BuildBinary fail on a module dir
+// that does not exist, so workspace mode could not start at all. See
+// TestDetectSelectsOnlyWorkspaceModules.
 func Detect() (root string, services []string, err error) {
 	gowork, err := goEnv("GOWORK")
 	if err != nil {
@@ -117,24 +114,10 @@ func Detect() (root string, services []string, err error) {
 		inWorkspace[filepath.Base(d)] = true
 	}
 
-	selected := map[string]bool{}
-	shared := false
-	for _, d := range sharedDirs {
-		shared = shared || inWorkspace[d]
-	}
-	if shared {
-		for name := range Services {
-			selected[name] = true
+	for name, spec := range Services {
+		if inWorkspace[spec.moduleDir] {
+			services = append(services, name)
 		}
-	} else {
-		for name, spec := range Services {
-			if inWorkspace[spec.moduleDir] {
-				selected[name] = true
-			}
-		}
-	}
-	for name := range selected {
-		services = append(services, name)
 	}
 	sort.Strings(services)
 	return root, services, nil

@@ -1,6 +1,8 @@
 package workspace
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -62,5 +64,31 @@ func TestPiriCarriesSkiffTag(t *testing.T) {
 	}
 	if !strings.Contains(spec.buildTags, "skiff") {
 		t.Fatalf("piri must build with the skiff tag, got buildTags=%q", spec.buildTags)
+	}
+}
+
+// TestDetectSelectsOnlyWorkspaceModules pins the rule that Detect rebuilds
+// exactly the services whose module is in the use-list. Shared modules
+// (libforge, commands, internal) must not widen the set: a workspace listing
+// them plus a subset of the services — the monorepo's go.work — used to select
+// all eight services and fail BuildBinary on module dirs that do not exist.
+func TestDetectSelectsOnlyWorkspaceModules(t *testing.T) {
+	dir := t.TempDir()
+	gowork := filepath.Join(dir, "go.work")
+	content := "go 1.27.0\n\nuse (\n\t./commands\n\t./hilt\n\t./internal\n\t./libforge\n\t./smelt\n\t./smelt/systems/stress-tester\n\t./sprue\n)\n"
+	if err := os.WriteFile(gowork, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GOWORK", gowork)
+
+	root, services, err := Detect()
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if root != dir {
+		t.Errorf("root = %q, want %q", root, dir)
+	}
+	if got, want := strings.Join(services, ","), "hilt,upload"; got != want {
+		t.Errorf("services = %q, want %q (sprue's compose name is upload; shared modules must not add services)", got, want)
 	}
 }

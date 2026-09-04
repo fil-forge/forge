@@ -90,11 +90,23 @@ filter) is fixed in a separate, main-cherry-pickable commit `d59179d`.
 
 ### 4. Workspace detection
 
-`smelt/pkg/workspace.Detect` rebuilt all services only when `libforge` was in
-`go.work`'s use-list. `commands` and `internal` are the same kind of
-dependency; they now count as shared dirs. Consequence: workspace mode always
-rebuilds every service (they are always listed), which is the monorepo's
-HEAD-vs-HEAD contract.
+`smelt/pkg/workspace.Detect` rebuilt *all eight* services in its table
+whenever `libforge` was in `go.work`'s use-list. The first version of this
+experiment (`24ae12e`) treated `commands` and `internal` the same way, and
+since the monorepo's `go.work` always lists them, that selected `indexer`,
+`delegator`, `guppy` and `signing-service` too — modules that do not exist in
+forge, so `BuildBinary` fails before any stack starts. Experiment D's
+`TestServiceTable` caught it the moment the two branches met (measured: `the
+workspace would build [delegator guppy hilt indexer ingot piri signing-service
+upload] from HEAD; the compat table covers [hilt ingot piri upload]`). The
+same failure was latent at `f60dd59` for any workspace that listed `libforge`
+without every service module (`compat-validation.md`, latent bug 5).
+
+The rule is now: rebuild exactly the services whose module is in the
+use-list. Shared modules are compiled into those builds because the workspace
+resolves them; they cannot widen the set, because `go build` refuses to build
+a module that is not in the workspace. `TestDetectSelectsOnlyWorkspaceModules`
+pins this with a `go.work` shaped like the monorepo's.
 
 ## The plan's checklist
 
