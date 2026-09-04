@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
@@ -29,6 +28,8 @@ import (
 var piriCommands = []ucan.Command{
 	blobcmds.Allocate.Command,
 	blobcmds.Accept.Command,
+	blobcmds.Release.Command,
+	blobcmds.Reject.Command,
 	replicacmds.Allocate.Command,
 	pdpcmds.Info.Command,
 }
@@ -46,7 +47,7 @@ type delegateFn func(issuer ucan.Issuer, audience, subject did.DID, opts ...dele
 // As of ucan1.0 these are: indexer → delegator (/claim/cache), etracker →
 // delegator (/space/egress/track), upload → hilt (/customer/add) and hilt →
 // ingot (/s3/*), plus one piri-N → upload proof per node — upload's
-// post_start.sh still passes each node's proof file to
+// register-providers.sh still passes each node's proof file to
 // `sprue client admin provider register`.
 func generateProofs(tempDir string, nodes []manifest.ResolvedPiriNode) error {
 	keysDir := filepath.Join(tempDir, "generated", "keys")
@@ -77,14 +78,11 @@ func generateProofs(tempDir string, nodes []manifest.ResolvedPiriNode) error {
 	}
 
 	// hilt → ingot (/s3/*): ingot presents these when invoking hilt's UCAN
-	// RPC API. Audience is ingot's did:key, read from the ingot.did file
-	// emitted by key generation (which always runs before proofs).
-	ingotDID, err := os.ReadFile(filepath.Join(keysDir, "ingot.did"))
-	if err != nil {
-		return fmt.Errorf("read ingot DID: %w", err)
-	}
+	// RPC API. The audience is ingot's did:web service identity
+	// (systems/ingot/config/config.yaml identity.service_id), which hilt
+	// resolves to ingot's key via http://ingot/.well-known/did.json.
 	if err := writeProofs(keysDir, proofsDir,
-		"hilt", "did:web:hilt", strings.TrimSpace(string(ingotDID)),
+		"hilt", "did:web:hilt", "did:web:ingot",
 		"hilt-ingot-s3-proof.txt",
 		[]ucan.Command{
 			s3req.Authorize.Command,

@@ -74,6 +74,13 @@ func Save(ctx context.Context, opts SaveOpts) error {
 	if err != nil {
 		return err
 	}
+	// Read the manifest bytes now: during a snapshot session manifestPath
+	// lives inside the scratch dir, which is cleared below before the stack
+	// stops, so the file must be captured (and later restored) up front.
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return fmt.Errorf("read manifest: %w", err)
+	}
 	vols, err := resolveVolumes(m)
 	if err != nil {
 		return err
@@ -122,12 +129,28 @@ func Save(ctx context.Context, opts SaveOpts) error {
 		return fmt.Errorf("capture images: %w", err)
 	}
 
+	// The blockchain container only includes deployed-addresses.json in its
+	// shutdown dump when this boot deployed the contracts itself (init mode).
+	// A boot seeded from the committed baseline loads chain state instead, so
+	// the file never exists inside the container — stash the seeded copy
+	// before clearing scratch and fall back to it after the dump.
+	scratchDir := filepath.Join(projectDir, projScratchDir)
+	addressesFile := filepath.Join(scratchDir, "deployed-addresses.json")
+	addressesSeed, _ := os.ReadFile(addressesFile)
+
 	// Clear the scratch dir so we know any files that appear came from THIS
 	// stop, not a prior run. The blockchain container's trap writes atomically
 	// (.tmp + mv) so a crash mid-write can't confuse us either way.
-	scratchDir := filepath.Join(projectDir, projScratchDir)
 	if err := clearDir(scratchDir); err != nil {
 		return fmt.Errorf("clear scratch dir: %w", err)
+	}
+	// Put the session manifest back if clearing scratch removed it, so the
+	// session survives the save and `make up` resumes on the same topology.
+	sessionManifest := filepath.Join(projectDir, manifest.SessionManifestPath)
+	if manifestPath == sessionManifest {
+		if err := os.WriteFile(sessionManifest, manifestBytes, 0644); err != nil {
+			return fmt.Errorf("restore session manifest: %w", err)
+		}
 	}
 
 	fmt.Printf("Stopping stack (triggers blockchain state dump)...\n")
@@ -139,6 +162,14 @@ func Save(ctx context.Context, opts SaveOpts) error {
 	// containers have exited, but the trap's `mv` may trail by a few ms.
 	if err := waitForFile(filepath.Join(scratchDir, "anvil-state.json"), 5*time.Second); err != nil {
 		return fmt.Errorf("blockchain did not produce an anvil-state.json on shutdown: %w", err)
+	}
+	if _, err := os.Stat(addressesFile); os.IsNotExist(err) {
+		if addressesSeed == nil {
+			return fmt.Errorf("no deployed-addresses.json in the shutdown dump and none was seeded in %s", scratchDir)
+		}
+		if err := os.WriteFile(addressesFile, addressesSeed, 0644); err != nil {
+			return fmt.Errorf("restore seeded deployed-addresses.json: %w", err)
+		}
 	}
 
 	fmt.Printf("Archiving blockchain state...\n")
@@ -184,11 +215,8 @@ func Save(ctx context.Context, opts SaveOpts) error {
 	}
 
 	fmt.Printf("Copying %s (provenance)...\n", filepath.Base(manifestPath))
-	if err := copyFile(
-		manifestPath,
-		filepath.Join(stagingDir, manifestCopy),
-	); err != nil {
-		return err
+	if err := os.WriteFile(filepath.Join(stagingDir, manifestCopy), manifestBytes, 0644); err != nil {
+		return fmt.Errorf("copy manifest: %w", err)
 	}
 
 	if err := writeDescriptor(stagingDir, &Descriptor{

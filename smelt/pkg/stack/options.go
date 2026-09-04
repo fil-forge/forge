@@ -26,6 +26,7 @@ type config struct {
 	blockchainImage string
 	ipniImage       string
 	ingotImage      string
+	swarfImage      string
 
 	// Binary injection: bind-mount host-built binaries over the published
 	// images instead of rebuilding the image. serviceBinaries holds explicit
@@ -96,6 +97,9 @@ func (c *config) buildEnv() map[string]string {
 	}
 	if c.ingotImage != "" {
 		env["INGOT_IMAGE"] = c.ingotImage
+	}
+	if c.swarfImage != "" {
+		env["SWARF_IMAGE"] = c.swarfImage
 	}
 
 	return env
@@ -287,6 +291,13 @@ func WithIngotImage(image string) Option {
 	}
 }
 
+// WithSwarfImage sets the swarf (UCAN revocation) container image.
+func WithSwarfImage(image string) Option {
+	return func(c *config) {
+		c.swarfImage = image
+	}
+}
+
 // WithTimeout sets the maximum time to wait for the stack to start.
 func WithTimeout(d time.Duration) Option {
 	return func(c *config) {
@@ -345,7 +356,7 @@ func WithPiriNodes(nodes ...PiriNodeConfig) Option {
 //
 //	var opts []stack.Option
 //	if os.Getenv("SMELT_TEST_NO_SNAPSHOT") == "" {
-//	    opts = append(opts, stack.WithSnapshot("../../snapshots/3-piri-filesystem-sqlite"))
+//	    opts = append(opts, stack.WithSnapshot("../../snapshots/3-piri-postgres-s3"))
 //	}
 //	s := stack.MustNewStack(t, opts...)
 func WithSnapshot(path string) Option {
@@ -360,7 +371,7 @@ func WithSnapshot(path string) Option {
 // paths to reason about:
 //
 //	s := stack.MustNewStack(t,
-//	    stack.WithEmbeddedSnapshot("3-piri-filesystem-sqlite"),
+//	    stack.WithEmbeddedSnapshot("3-piri-postgres-s3"),
 //	)
 //
 // Discover available names at runtime via stack.ListEmbeddedSnapshots().

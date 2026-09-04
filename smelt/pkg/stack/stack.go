@@ -252,8 +252,9 @@ func NewStack(ctx context.Context, t *testing.T, opts ...Option) (*Stack, error)
 		WaitForService("delegator", wait.ForHTTP("/healthcheck").WithPort("80/tcp").WithStartupTimeout(2*time.Minute)).
 		WaitForService("email", wait.ForHTTP("/api/server").WithPort("80/tcp").WithStartupTimeout(2*time.Minute)).
 		WaitForService("plc", wait.ForHTTP("/_health").WithPort("3000/tcp").WithStartupTimeout(2*time.Minute)).
+		WaitForService("swarf", wait.ForHTTP("/health").WithPort("80/tcp").WithStartupTimeout(2*time.Minute)).
 		WaitForService("hilt", wait.ForHTTP("/health").WithPort("80/tcp").WithStartupTimeout(2*time.Minute)).
-		WaitForService("ingot", wait.ForHTTP("/health").WithPort("9000/tcp").WithStartupTimeout(2*time.Minute))
+		WaitForService("ingot", wait.ForHTTP("/health").WithPort("80/tcp").WithStartupTimeout(2*time.Minute))
 
 	// Wait for all piri nodes
 	for _, node := range resolvedNodes {
@@ -418,7 +419,8 @@ func (s *Stack) EmailEndpoint() string {
 }
 
 // IngotEndpoint returns the host S3 endpoint for the ingot gateway
-// (container port 9000). The host is normalized to 127.0.0.1 rather than
+// (container port 80, the did:web convention). The host is normalized to
+// 127.0.0.1 rather than
 // "localhost": the AWS SDK uses virtual-host-style addressing
 // (bucket.host) for a hostname endpoint but path-style for an IP, and
 // ingot's versitygw front end is path-style — a hostname endpoint yields
@@ -435,11 +437,62 @@ func (s *Stack) IngotEndpoint() string {
 	if host == "localhost" {
 		host = "127.0.0.1"
 	}
-	port, err := container.MappedPort(context.Background(), "9000/tcp")
+	port, err := container.MappedPort(context.Background(), "80/tcp")
 	if err != nil {
 		s.t.Fatalf("getting ingot port: %v", err)
 	}
 	return fmt.Sprintf("http://%s:%s", host, port.Port())
+}
+
+// SwarfEndpoint returns the HTTP endpoint for the swarf revocation service.
+func (s *Stack) SwarfEndpoint() string {
+	container, err := s.compose.ServiceContainer(context.Background(), "swarf")
+	if err != nil {
+		s.t.Fatalf("getting swarf container: %v", err)
+	}
+	host, err := container.Host(context.Background())
+	if err != nil {
+		s.t.Fatalf("getting swarf host: %v", err)
+	}
+	port, err := container.MappedPort(context.Background(), "80/tcp")
+	if err != nil {
+		s.t.Fatalf("getting swarf port: %v", err)
+	}
+	return fmt.Sprintf("http://%s:%s", host, port.Port())
+}
+
+// HiltEndpoint returns the HTTP endpoint for the hilt tenant-management
+// service — both its partner REST API and its UCAN RPC listener share
+// container port 80.
+func (s *Stack) HiltEndpoint() string {
+	container, err := s.compose.ServiceContainer(context.Background(), "hilt")
+	if err != nil {
+		s.t.Fatalf("getting hilt container: %v", err)
+	}
+	host, err := container.Host(context.Background())
+	if err != nil {
+		s.t.Fatalf("getting hilt host: %v", err)
+	}
+	port, err := container.MappedPort(context.Background(), "80/tcp")
+	if err != nil {
+		s.t.Fatalf("getting hilt port: %v", err)
+	}
+	return fmt.Sprintf("http://%s:%s", host, port.Port())
+}
+
+// defaultHiltPartnerKey mirrors the compose default in
+// systems/hilt/compose.yml: HILT_AUTH_PARTNER_KEY=${HILT_PARTNER_KEY:-dev-partner-key}.
+const defaultHiltPartnerKey = "dev-partner-key"
+
+// HiltPartnerKey returns the pre-shared bearer key hilt's Tenant API
+// expects on partner requests. It resolves the same way the compose file
+// does: the HILT_PARTNER_KEY env var when set, otherwise the local-dev
+// default. This is a local-dev fixture value, not a production secret.
+func (s *Stack) HiltPartnerKey() string {
+	if key := os.Getenv("HILT_PARTNER_KEY"); key != "" {
+		return key
+	}
+	return defaultHiltPartnerKey
 }
 
 // maybeBinaryOverride builds workspace-selected service binaries (when enabled)
