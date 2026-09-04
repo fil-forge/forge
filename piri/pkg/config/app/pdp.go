@@ -9,6 +9,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	signerclient "github.com/fil-forge/piri-signing-service/pkg/client"
+
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
 )
 
 type ContractAddresses struct {
@@ -25,6 +27,9 @@ type PDPServiceConfig struct {
 	OwnerAddress common.Address
 	// The URL endpoint of a lotus node used for interaction with chain state.
 	LotusEndpoint *url.URL
+	// Bearer token sent in the Authorization header on requests to
+	// LotusEndpoint. Empty means no Authorization header.
+	LotusAuthToken string
 	// Signing service configuration used to sign PDP operations
 	SigningService SigningServiceConfig
 	// Smart contract addresses
@@ -33,10 +38,20 @@ type PDPServiceConfig struct {
 	ChainID *big.Int
 	// PayerAddress is the Storacha Owned address that pays SPs
 	PayerAddress common.Address
+	// Piece bounds the size of a single piece this node will accept
+	Piece PieceConfig
 	// Aggregation contains aggregation manager configuration
 	Aggregation AggregationConfig
 	// Gas contains gas fee limit configuration
 	Gas GasConfig
+}
+
+// PieceConfig bounds the size of a single piece this node will accept.
+type PieceConfig struct {
+	// MaxPaddedSize is the largest padded (FR32 merkle tree) size a single
+	// piece may occupy, in bytes; always a power of two. Zero means the
+	// default, so the zero value is usable.
+	MaxPaddedSize uint64
 }
 
 // GasConfig configures per-message-type gas fee limits.
@@ -84,7 +99,10 @@ type CommpConfig struct {
 }
 
 type AggregatorConfig struct {
-	JobQueue JobQueueConfig
+	// MinAggregateSize is the padded size at which buffered pieces are
+	// folded into an aggregate; a power of two. Zero means the default.
+	MinAggregateSize uint64
+	JobQueue         JobQueueConfig
 }
 
 type AggregateManagerConfig struct {
@@ -128,8 +146,11 @@ func DefaultAggregateManagerConfig() AggregateManagerConfig {
 // DefaultAggregationConfig returns an AggregationConfig with sensible defaults.
 func DefaultAggregationConfig() AggregationConfig {
 	return AggregationConfig{
-		CommP:      CommpConfig{JobQueue: DefaultJobQueueConfig()},
-		Aggregator: AggregatorConfig{JobQueue: DefaultJobQueueConfig()},
-		Manager:    DefaultAggregateManagerConfig(),
+		CommP: CommpConfig{JobQueue: DefaultJobQueueConfig()},
+		Aggregator: AggregatorConfig{
+			MinAggregateSize: aggregator.DefaultMinAggregateSize,
+			JobQueue:         DefaultJobQueueConfig(),
+		},
+		Manager: DefaultAggregateManagerConfig(),
 	}
 }
