@@ -512,6 +512,24 @@ Found while reading; none fixed beyond what the commits above describe.
     141 — the nightly would go red for a plumbing reason. Measured on temp
     repos: 300 tags exit 0, 600 and 1000 tags exit 141, for both scripts. The
     `awk 'NR <= n'` form reads everything and exits 0 at every size.
+18. **Log timestamps in the suite step are flush times, not event times.**
+    `.github/scripts/group-go-tests.awk` writes through a 4 KiB stdout buffer,
+    so the GitHub timestamp of every line falls on a buffer boundary (every
+    jump in run 35 sits at a cumulative offset of 4013–4067 bytes mod 4096);
+    a stack's four `smeltery: built …` lines carry one timestamp. Per-build
+    durations cannot be read from the log. `fflush()` per line in the awk
+    script (or `stdbuf -oL`) fixes it; also affects `ci.yml`, which uses the
+    same script.
+19. **ucantone's container decoder hides why a receipt was not a receipt.**
+    `container.decodeTokens` discards the `receipt.Decode` error, so a
+    post-#49 client facing a pre-#49 executor reports `missing receipt for
+    task` and the server logs a 200 — nothing in either log names the
+    audience rule. Cross-repo (ucantone); worth an issue there regardless of
+    layout.
+20. **`Refuse a vacuous pass` does not run when the suite fails.** Harmless —
+    a red suite is not a vacuous pass — but the exercised-configuration count
+    only gates green runs. `if: always()` plus a check on the suite's outcome
+    would make the summary complete on red runs too.
 
 ## First real runs — what was dispatched, and pre-registered predictions
 
@@ -567,14 +585,77 @@ waiting for health), the bind-mount path (latent bug 11) or the compose
 contract with old images (latent bug 9) is the cause, not the wire; the
 results section below says which happened.
 
+## Results
+
+### Run 35 — HEAD vs the old images, guppy `main-dev`, guard enabled
+
+[33834794514](https://github.com/fil-forge/forge/actions/runs/33834794514):
+dispatched 03:52:54, `Version skew` job 03:53:06 → 04:01:33 (**8 min 27 s**;
+the suite itself 411 s), conclusion **failure**. Every number and quote below
+is from the job log (saved in the session scratch as `run35-job.log`).
+
+| test | predicted | actual | time | what the log shows |
+|---|---|---|---|---|
+| `TestPinnedPeer/piri/sha-96a672e` | FAIL | **FAIL** | 121.6 s | `provenance verified: pinned=piri@…sha-96a672e head=hilt,ingot,upload`; login succeeded; `upload: command failed with exit code 1` — guppy's `/blob/add` got a readable receipt from HEAD sprue with `{"name": "CandidateUnavailable", "message": "no storage providers available"}`; HEAD sprue's log: `/blob/allocate` to `http://piri-0:3000` → `executing request: missing receipt for task: bafyreie7zcd…`, `failed to allocate blob`, `no candidates available after filters applied`; the pinned piri-0 logged `/blob/allocate space: …`, `allocated piece`, `request completed {"status": 200 …}` — it answered, and HEAD sprue could not read the answer |
+| `TestPinnedPeer/ingot/sha-96a672e` | PASS | **PASS** | 133.1 s | `compat: exercised shape=pinned-peer pinned=ingot@…sha-96a672e head=hilt,piri,upload` — the run's only exercised configuration |
+| `TestRollingUpgrade/upgrade_piri` | FAIL | **FAIL** | 51.7 s | `provenance verified: pinned=hilt@…sha-f60dd59,ingot@…sha-f60dd59,upload@…sha-f60dd59 head=piri`; `login: command failed` — guppy (`user_agent: guppy/main-unknown`) `/access/request` → old sprue logged `requesting access` and `request completed {"status": 200 … "response_size": 413}`; guppy: `missing receipt for task: bafyreig5yvq7…`. HEAD piri was never contacted |
+| `TestRollingUpgrade/upgrade_ingot` | FAIL | **FAIL** | 50.1 s | identical shape, `missing receipt for task: bafyreidrd234…` at login |
+| `upgrade_sprue`, `upgrade_hilt` | FAIL (predicted) | **not run** | — | prediction-table error: `TestRollingUpgrade` upgrades only the operator-run services (`piri`, `ingot`); sprue and hilt are pinned peers, never the upgraded one |
+| `TestProvenanceGuardFires` | PASS | **PASS** | 54.9 s | fired on the bind-mount branch: `piri-0: pinned to ghcr.io/fil-forge/forge/piri:sha-96a672e but a binary is bind-mounted over /usr/bin/piri (from /tmp/TestProvenanceGuardFires…/piri) — the pin is a label and HEAD is what runs` |
+| `TestCheckProvenance` (12), `TestDescribe`, `TestBindMountAt`, `TestServiceTable` | PASS | **PASS** | 0.00 s | |
+| `Refuse a vacuous pass` | passes | **skipped** | | the step runs only after a successful suite step; a failing suite is not a vacuous pass, so nothing was lost, but the gate was never evaluated (latent bug 20) |
+| job conclusion | failure | **failure** | | |
+
+Six of six predictions that named a configuration the suite runs were right,
+including the two passes; the two wrong rows named configurations that do not
+exist. The D agent's earlier "What to expect" table — written for `f60dd59`'s
+dependencies — had `TestPinnedPeer/piri` as *expected: pass*; on this branch it
+fails for the reason given under "Why the predictions above no longer apply".
+
+**What failed, mechanically.** Every failure is a HEAD-built UCAN client
+(HEAD sprue talking to the `sha-96a672e` piri; today's guppy talking to the
+`sha-f60dd59` sprue) receiving an HTTP 200 whose receipt it cannot see. The
+message is two layers away from the cause: ucantone's
+`container.decodeTokens` tries `receipt.Decode` on each token, and post-#49
+that returns `invalid receipt, audience must be omitted` for a receipt issued
+by a pre-#49 executor; the error is discarded, the token is not counted as a
+receipt, and `client.Execute` reports `missing receipt for task`. The string
+`audience must be omitted` appears nowhere in the log. Servers logged nothing
+wrong (latent bug 19).
+
+**What the run validated about the mechanics** — all of it for the first
+time on a runner: override inputs reach the suite (`COMPAT_PIRI_VERSIONS`,
+`COMPAT_BASELINE_*`, `COMPAT_EXPECT_PIN_MISMATCH=1` in the step env); the
+pre-pull fetched all six refs (`Status: Downloaded newer image` each) in 11 s;
+`pkg/workspace` built hilt, ingot, upload and piri from the working tree on
+the runner and bind-mounted them; every stack came up healthy (`healthcheck`
+hits all `200`; no compose, pull, CLI or `serve serve` error anywhere); the
+provenance guard found the right containers, passed in all four real stacks
+and fired in the negative test; teardown was clean. Time to a ready stack:
+about 108 s for the first (including the first HEAD builds of three
+services), about 119 s for the second (the first piri build), about 40 s for
+the two baseline stacks whose only HEAD build was cached — versus the 20–40
+minute estimate above. Old images under HEAD's compose ran fine (latent bug
+9's `serve serve` was tolerated, as predicted).
+
+**Reading.** On its first real execution the suite caught a one-directional
+wire break between HEAD and the images the network was running, on a Go API
+that had "held" (Experiment A: zero compile errors, all unit tests green).
+It is the same break Experiment E classifies as August's one real breaking
+library change (`bfc05d9`) and dates to the 08-20/21 straddle in the live
+fleet; here it is reproduced in a lab, attributed to a component pair, and
+would have been red on the nightly every day since the bump — had the nightly
+been able to run.
+
 ## Not done, and reversibility
 
-- No workflow was dispatched, no tag created, nothing pushed (brief rules 1,
-  2, 5). The suite has still never executed; the predictions above are the
-  hypotheses the coordinator's dispatch tests.
-- No Docker daemon here, so `TestPinnedPeer`, `TestRollingUpgrade` and
-  `TestProvenanceGuardFires` were compiled but not run; the `TestBuild*`
-  tests in `pkg/stack` could not be run for the same reason.
+- The D agent dispatched nothing (brief rule 5); the coordinator dispatched
+  runs 35 and 36 on the POC branch, recorded above. No tag was created; no
+  push to `main`.
+- No Docker daemon in the build environment, so `TestPinnedPeer`,
+  `TestRollingUpgrade` and `TestProvenanceGuardFires` ran for the first time
+  on the GitHub runner; the `TestBuild*` tests in `pkg/stack` still have not
+  run in this session.
 - `pkg/stack` gained two exported methods and one new error path; `pkg/workspace`
   two exported functions. Additive; downstream users of the smelt SDK are
   unaffected unless they were passing an unknown exclusion name.
