@@ -461,7 +461,7 @@ Available variables: `PIRI_IMAGE`, `GUPPY_IMAGE`, `DELEGATOR_IMAGE`, `INDEXER_IM
 
 ## Developing Against Sibling Service Repos
 
-To work on a feature/bugfix spanning the service repos (and the shared `libforge` library)
+To work on a feature/bugfix spanning the service repos (and the shared `protocol`, `internal` and `attestation` modules)
 and validate it in smelt, use a **Go workspace** (`go.work`) plus `SMELT_WORKSPACE=1`: smelt
 compiles the services you're editing from local source and bind-mounts the binaries over the
 otherwise-published images — no Dockerfiles, no image rebuilds. **Full walkthrough:
@@ -470,9 +470,9 @@ otherwise-published images — no Dockerfiles, no image rebuilds. **Full walkthr
 - `go.work` lives at the `fil-forge/` parent (above every repo, gitignored) and lists `smelt`
   plus the repos you're editing — `go work init ./smelt ./piri`. The `use`-list is the
   single source of truth for what gets rebuilt.
-- **libforge rule:** a service is rebuilt when its module is in the use-list; listing
-  `libforge` forces **all** services to rebuild (a published binary would still link the
-  published libforge).
+- **shared-module rule:** a service is rebuilt when its module is in the use-list; listing
+  `protocol`, `internal` or `attestation` forces **all** services to rebuild (a published binary would still link the
+  published copy).
 - Run `SMELT_WORKSPACE=1 make up` / `make fresh`, or `SMELT_WORKSPACE=1 go test -tags e2e ./tests/e2e`. The
   flag runs `smelt workspace build` → binaries in `generated/bin/` + mounts in
   `generated/compose/workspace.override.yml` (chained into `$(COMPOSE)`); a plain `make up`

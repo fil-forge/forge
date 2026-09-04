@@ -1,7 +1,7 @@
 # Developing Against Sibling Service Repos
 
 Smelt normally runs **published** images for every service. When you're changing the code
-of a service — or the shared `libforge` library — and want to validate it in the full stack,
+of a service — or the shared `protocol`/`internal`/`attestation` modules — and want to validate it in the full stack,
 use a **Go workspace** (`go.work`) plus the `SMELT_WORKSPACE=1` flag.
 
 ## What this gives you
@@ -10,7 +10,7 @@ With the flag set, smelt:
 
 1. reads the active `go.work` to decide which services you're editing,
 2. compiles each from your local checkout into a static `linux/amd64` binary (the workspace
-   bakes in your cross-module edits, including a local `libforge`), and
+   bakes in your cross-module edits, including local edits to the shared modules), and
 3. bind-mounts each binary over the binary in the otherwise-**published** image.
 
 So the published image still provides the runtime (base OS, certs, side tools like guppy's
@@ -28,7 +28,7 @@ it from any of them. It must list `smelt` plus the repos you're editing:
 ~/workspace/src/github.com/fil-forge/
 ├── go.work                 # the workspace file (local-only; see below)
 ├── smelt/                  # this repo
-├── libforge/               # shared library
+├── protocol/, internal/, attestation/   # shared modules
 ├── piri/               # piri storage node
 ├── sprue/                  # upload service
 ├── indexing-service/       # indexer
@@ -80,17 +80,17 @@ siblings (piri-pdp, sprue, …) don't need it.
 > replace above) only when you want `SMELT_WORKSPACE=1` smelt runs to rebuild ingot from local
 > source.
 
-### Selection and the `libforge` rule
+### Selection and the shared-module rule
 
 A service is rebuilt from local source when its module dir is in the `use`-list. Because the
-siblings resolve `libforge` *only* through the workspace, **listing `libforge` forces all six
-services to rebuild** — a published binary would otherwise still link the published `libforge`.
+every service compiles the shared modules in, **listing any of `protocol`, `internal` or `attestation` forces all
+services to rebuild** — a published binary would otherwise still link the published copy.
 
 | Editing… | put in `go.work` | smelt rebuilds |
 |---|---|---|
 | just piri | `./smelt ./piri` | piri |
 | upload + indexer | `./smelt ./sprue ./indexing-service` | upload, indexer |
-| the shared lib | `./smelt ./libforge` | **all six services** |
+| a shared module | `./smelt ./protocol` | **all six services** |
 
 Module → service → container binary (defined in `pkg/workspace`):
 

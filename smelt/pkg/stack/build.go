@@ -51,10 +51,11 @@ func BuildImage(t *testing.T, repoPath string, imageName string) string {
 }
 
 // buildForgeImage builds an in-repo forge service via the shared
-// docker/Dockerfile (the monorepo has no per-service Dockerfiles): the build
-// context is the service directory and the Dockerfile lives at its sibling
-// ../docker/Dockerfile, parameterized by the SERVICE build arg (plus any
-// extra --build-arg pairs, e.g. piri's BUILD_TAGS=skiff).
+// docker/Dockerfile (the monorepo has no per-service Dockerfiles). The build
+// context is the repository root — the services reach the shared modules
+// through replace directives, which a per-service context could not see — and
+// the Dockerfile is parameterized by the SERVICE build arg (plus any extra
+// --build-arg pairs, e.g. piri's BUILD_TAGS=skiff).
 func buildForgeImage(t *testing.T, serviceDir, service, imageName string, extraArgs ...string) string {
 	t.Helper()
 
@@ -68,7 +69,7 @@ func buildForgeImage(t *testing.T, serviceDir, service, imageName string, extraA
 	for _, a := range extraArgs {
 		args = append(args, "--build-arg", a)
 	}
-	args = append(args, serviceDir)
+	args = append(args, filepath.Join(serviceDir, ".."))
 
 	t.Logf("Building Docker image %s for %s from %s...", tag, service, serviceDir)
 	cmd := exec.Command("docker", args...)

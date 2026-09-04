@@ -404,7 +404,7 @@ docker push ghcr.io/yourorg/upload:dev
 
 ### Using Local Builds of Service Repositories
 
-To develop a service (or the shared `libforge` library) against the full stack, use a Go
+To develop a service (or the shared `protocol`/`internal`/`attestation` modules) against the full stack, use a Go
 workspace plus `SMELT_WORKSPACE=1`. Smelt compiles your local checkouts into static binaries
 and bind-mounts them over the published images — no image rebuilds, no per-repo Dockerfiles.
 

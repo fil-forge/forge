@@ -187,12 +187,20 @@ func TestRollingUpgrade(t *testing.T) {
 }
 
 // otherThan returns every in-repo service except the named one, for use as the
-// exclusion list — i.e. "build only `service` from HEAD".
+// exclusion list — i.e. "build only `service` from HEAD". It takes the repo
+// name the baseline map uses and returns smelt service names, which is what
+// the workspace builder keys on: the two differ for sprue, whose smelt service
+// is "upload". Comparing the two vocabularies directly would silently exclude
+// nothing for sprue and run that case entirely on baseline images.
 func otherThan(service string) []string {
-	all := []string{"piri", "ingot", "upload", "hilt"}
+	smeltName := map[string]string{"piri": "piri", "ingot": "ingot", "sprue": "upload", "hilt": "hilt"}
+	excluded, ok := smeltName[service]
+	if !ok {
+		panic(fmt.Sprintf("otherThan: unknown service %q", service))
+	}
 	var out []string
-	for _, s := range all {
-		if s != service {
+	for _, repo := range []string{"piri", "ingot", "sprue", "hilt"} {
+		if s := smeltName[repo]; s != excluded {
 			out = append(out, s)
 		}
 	}

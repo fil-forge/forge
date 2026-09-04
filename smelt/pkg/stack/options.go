@@ -186,8 +186,8 @@ func WithServiceConfig(service, path string) Option {
 // WithWorkspaceBinaries builds every service selected by the active Go
 // workspace (go.work) from local sibling source and mounts the resulting
 // binaries over the published images. Selection follows the use-list: a service
-// is built when its module is listed; if libforge is listed, all services are
-// rebuilt. Requires an active go.work (see pkg/workspace).
+// is built when its module is listed; if a shared module (protocol, internal,
+// attestation) is listed, all services are rebuilt. Requires an active go.work (see pkg/workspace).
 //
 // Example:
 //

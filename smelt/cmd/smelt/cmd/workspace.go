@@ -23,8 +23,9 @@ var workspaceBuildCmd = &cobra.Command{
 	Short: "Compile workspace-selected service binaries and write the mount override",
 	Long: `Reads the active go.work use-list, compiles each selected service from its
 sibling checkout into generated/bin/, and writes generated/compose/workspace.override.yml
-mounting each binary over the published image. If libforge is in the workspace,
-every service is rebuilt (a published binary would still link published libforge).`,
+mounting each binary over the published image. If a shared module (protocol, internal,
+attestation) is in the workspace, every service is rebuilt (a published binary would
+still link the published copy).`,
 	RunE: runWorkspaceBuild,
 }
 
