@@ -1,9 +1,15 @@
 go 1.27.0
 
 use (
+	./attestation
+	./delegator
 	./hilt
+	./indexing-service
 	./ingot
+	./internal
 	./piri
+	./piri-signing-service
+	./protocol
 	./smelt
 	./smelt/systems/stress-tester
 	./sprue

@@ -1,17 +1,23 @@
 name: CI
 
-# Two tiers, mirroring the old per-repo split but now over one commit:
+# Two tiers over one commit:
 #
-#   unit   per-module, path-filtered, GOWORK=off — each service is still an
-#          independent module and is tested as one, in seconds.
+#   unit   per-module, GOWORK=off — every module in the repo is built, vetted,
+#          tidy-checked and tested as the standalone module it is, in minutes.
 #   stack  ONE full-stack run per PR, at the commit under test, with every
-#          in-repo service built from the working tree and mounted over the
-#          published images.
+#          in-repo service image built from the working tree and handed to the
+#          suites through the runner's Docker daemon — never pushed.
 #
-# The stack tier is the whole point of the monorepo. It resolves no binary for
-# an in-repo service from a registry image, so there is no floating `:main`
-# baseline to go stale and no lockfile to promote — "the stack" is just this
-# commit.
+# Every module runs on every change. The unit tier used to be path-filtered
+# per service, which was sound while no service module imported another and
+# the shared surface lived in an external library. It stopped being sound
+# when the shared modules (protocol/, internal/, attestation/) and the
+# service-to-service dependencies (ingot -> the indexer's query types,
+# hilt -> smelt's stack harness) moved
+# in-repo: a service's behaviour now depends on directories outside its own
+# subtree, and a path filter that misses one skips CI silently and reports
+# green. The whole matrix costs minutes of runner time; a silent skip costs a
+# broken main.
 
 on:
   pull_request:
@@ -27,75 +33,66 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Which services does this diff actually touch? No service module imports
-  # another (shared surface lives in libforge), so each filter is just the
-  # service's own subtree.
-  changes:
-    name: detect changed services
+  # Every in-repo module resolves its siblings through replace directives in
+  # its own go.mod — the workspace is a developer convenience that CI never
+  # uses. A require without a replace resolves through the module proxy to
+  # whatever lives at that path, which for github.com/fil-forge/forge/... is
+  # the repository root: not a module, and the error is either confusing or
+  # absent. This job makes that state impossible to merge.
+  replaces:
+    name: replace directives · every in-repo require has one
     runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.filter.outputs.changes }}
-      any: ${{ steps.filter.outputs.changes != '[]' }}
     steps:
       - uses: actions/checkout@v5
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - uses: actions/setup-go@v6
         with:
-          filters: |
-            piri:
-              - 'piri/**'
-              - 'docker/**'
-              - '.github/workflows/ci.yml'
-            hilt:
-              - 'hilt/**'
-              - 'docker/**'
-              - '.github/workflows/ci.yml'
-            sprue:
-              - 'sprue/**'
-              - 'docker/**'
-              - '.github/workflows/ci.yml'
-            ingot:
-              - 'ingot/**'
-              - 'docker/**'
-              - '.github/workflows/ci.yml'
-            smelt:
-              - 'smelt/**'
-              - 'docker/**'
-              - '.github/workflows/ci.yml'
+          go-version-file: protocol/go.mod
+          cache: false
+      - run: .github/scripts/check-replaces.sh
 
   unit:
     # The check name spells out the gate order so a red X is legible from the
     # PR checks list without clicking through.
-    name: unit ${{ matrix.service }} · build,vet,tidy,test
-    needs: changes
-    if: needs.changes.outputs.any == 'true'
+    name: unit ${{ matrix.module }} · build,vet,tidy,test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJSON(needs.changes.outputs.services) }}
+        module:
+          - protocol
+          - internal
+          - attestation
+          - piri
+          - hilt
+          - sprue
+          - ingot
+          - smelt
+          - smelt/systems/stress-tester
+          - delegator
+          - piri-signing-service
+          - indexing-service
     defaults:
       run:
-        working-directory: ${{ matrix.service }}
+        working-directory: ${{ matrix.module }}
     env:
-      # Each service is a standalone module and is tested as one. The
-      # workspace is a developer convenience; go.mod is the source of truth,
-      # and this proves it is sufficient.
+      # Each module is standalone and is tested as one. The workspace is a
+      # developer convenience; go.mod (with its replace directives) is the
+      # source of truth, and this proves it is sufficient.
       GOWORK: off
       CGO_ENABLED: 0
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
         with:
-          go-version-file: ${{ matrix.service }}/go.mod
-          cache-dependency-path: ${{ matrix.service }}/go.sum
+          go-version-file: ${{ matrix.module }}/go.mod
+          cache-dependency-path: ${{ matrix.module }}/go.sum
 
       # piri builds CGO-free only with `skiff`, which selects Curio's FFI-free
       # variants; without it the build fails on undefined ffi.* symbols.
       - name: Set build flags
         run: |
-          if [ "${{ matrix.service }}" = "piri" ]; then
+          if [ "${{ matrix.module }}" = "piri" ]; then
             echo "GOFLAGS=-tags=skiff" >> "$GITHUB_ENV"
           fi
 
@@ -104,33 +101,39 @@ jobs:
       - name: go vet
         run: go vet ./...
 
+      # The wire contract's codecs are generated (cbor-gen + dag-json-gen). A
+      # type edited without regenerating is a silent wire change; a generator
+      # that no longer compiles goes unnoticed until someone runs go generate.
+      - name: codegen gate
+        if: matrix.module == 'protocol' || matrix.module == 'attestation'
+        run: make codegen-build gen-check
+
       # Placeholder gate: no repo-wide linter rules are adopted yet. When they
-      # are, they live in ONE root-level config shared by every service — do
-      # not add per-service lint configs.
+      # are, they live in ONE root-level config shared by every module — do
+      # not add per-module lint configs.
       - name: lint
         run: echo "lint | no repo-wide linter rules adopted yet"
 
       # A module's go.mod/go.sum must be exactly what tidy produces — drift
-      # here is how version skew between the services creeps back in.
+      # here is how version skew between the modules creeps back in.
       - name: go.mod tidy check
         run: go mod tidy && git diff --exit-code go.mod go.sum
 
       - name: go test
         run: go test ./...
 
-  # One stack run for the whole PR, not one per service. The four in-repo
-  # service images are built HERE, from this commit, and handed to the suites
-  # through the runner's Docker daemon — never pushed to a registry. The
-  # artifact under test is the artifact that ships, packaging included; there
-  # is no binary-mounting layer in CI (that stays a local-dev fast path).
+  # One stack run for the whole PR, not one per service. Every in-repo service
+  # image is built HERE, from this commit, and handed to the suites through
+  # the runner's Docker daemon — never pushed to a registry. The artifact
+  # under test is the artifact that ships, packaging included; there is no
+  # binary-mounting layer in CI (that stays a local-dev fast path).
   stack:
     name: stack · images,e2e,s3-suite
-    needs: [changes, unit]
-    if: needs.changes.outputs.any == 'true'
+    needs: [replaces, unit]
     # Pinned rather than -latest so the Docker version doesn't drift from under
     # us. The runner's preinstalled Docker is 28.x, well past smelt's 25+ floor.
     runs-on: ubuntu-24.04
-    timeout-minutes: 50
+    timeout-minutes: 60
     env:
       GOWORK: off
       # The images built below, resolved by smelt's compose env plumbing.
@@ -138,6 +141,9 @@ jobs:
       HILT_IMAGE: forge-ci/hilt:${{ github.sha }}
       INGOT_IMAGE: forge-ci/ingot:${{ github.sha }}
       UPLOAD_IMAGE: forge-ci/sprue:${{ github.sha }}
+      DELEGATOR_IMAGE: forge-ci/delegator:${{ github.sha }}
+      SIGNER_IMAGE: forge-ci/piri-signing-service:${{ github.sha }}
+      INDEXER_IMAGE: forge-ci/indexing-service:${{ github.sha }}
       # Tells the S3 suite the images above ARE this commit — run them as
       # built, no binary mounts (see forgeStack in smelt/tests/s3).
       SMELT_STACK_PREBUILT: '1'
@@ -155,13 +161,16 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      # All four images at this commit, loaded into the local daemon. The
-      # cache scopes are shared with publish-ghcr.yml, so merges to main keep
-      # these warm and an unchanged service's build is a near no-op.
+      # Every service image at this commit, loaded into the local daemon. The
+      # build context is the repository root (the services reach the shared
+      # modules through replace directives, so a per-service context cannot
+      # see them). The cache scopes are shared with publish-ghcr.yml, so
+      # merges to main keep these warm and an unchanged service's build is a
+      # near no-op.
       - name: Build piri image
         uses: docker/build-push-action@v6
         with:
-          context: piri
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -175,7 +184,7 @@ jobs:
       - name: Build hilt image
         uses: docker/build-push-action@v6
         with:
-          context: hilt
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -188,7 +197,7 @@ jobs:
       - name: Build sprue image
         uses: docker/build-push-action@v6
         with:
-          context: sprue
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -201,7 +210,7 @@ jobs:
       - name: Build ingot image
         uses: docker/build-push-action@v6
         with:
-          context: ingot
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -212,6 +221,52 @@ jobs:
           tags: forge-ci/ingot:${{ github.sha }}
           cache-from: type=gha,scope=ingot
           cache-to: type=gha,mode=max,scope=ingot
+      # The satellites keep the binary names their compose files and smelt's
+      # workspace table expect (BIN), which differ from their directory names.
+      - name: Build delegator image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=delegator
+            MAIN_PKG=.
+            BIN=registrar
+          load: true
+          push: false
+          tags: forge-ci/delegator:${{ github.sha }}
+          cache-from: type=gha,scope=delegator
+          cache-to: type=gha,mode=max,scope=delegator
+      - name: Build piri-signing-service image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=piri-signing-service
+            MAIN_PKG=.
+            BIN=signer
+          load: true
+          push: false
+          tags: forge-ci/piri-signing-service:${{ github.sha }}
+          cache-from: type=gha,scope=piri-signing-service
+          cache-to: type=gha,mode=max,scope=piri-signing-service
+      - name: Build indexing-service image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: prod
+          build-args: |
+            SERVICE=indexing-service
+            BIN=indexer
+          load: true
+          push: false
+          tags: forge-ci/indexing-service:${{ github.sha }}
+          cache-from: type=gha,scope=indexing-service
+          cache-to: type=gha,mode=max,scope=indexing-service
 
       # The suites run sequentially in this one job: each sweeps smeltery-*
       # containers, so two stacks must never share a Docker host.
@@ -238,11 +293,11 @@ jobs:
           {
             echo "## Stack tier"
             echo
-            echo "All four service images are built from **this commit** (\`docker/Dockerfile\`), loaded into the runner's daemon — never pushed — and the suites boot the stack on them as-built."
+            echo "Every service image is built from **this commit** (\`docker/Dockerfile\`), loaded into the runner's daemon — never pushed — and the suites boot the stack on them as-built."
             echo
             echo "| image | target | tag |"
             echo "|---|---|---|"
-            for s in piri hilt sprue ingot; do
+            for s in piri hilt sprue ingot delegator piri-signing-service indexing-service; do
               echo "| $s | prod | \`forge-ci/$s:${GITHUB_SHA}\` |"
             done
             echo
