@@ -354,10 +354,21 @@ against `ci.yml`'s own stated invariant.
 New, concrete decisions this recon surfaced, none blocking a start but each
 worth resolving before or during the actual module moves:
 
-1. Keep `piri`'s import of `delegator/client` pointed at the external,
-   published `github.com/fil-forge/delegator` module, or carve `client/` out
-   as a third shared module (next to `commands/`, `internal/`) that both
-   `piri` and `forge/delegator` import without importing each other.
+1. **Team to confirm; proceeding with a default so this doesn't block a full
+   attempt.** Two options: keep `piri`'s import of `delegator/client` pointed
+   at the external, published `github.com/fil-forge/delegator` module, or
+   carve the client out as its own piece both `piri` and `forge/delegator`
+   can import without importing each other. Within the second option, two
+   further shapes: add `internal/client/delegator` next to the already-proven
+   `internal/client/hilt` (same fix ingot/hilt already uses, and for a
+   heavier case — ingot uses `client/hilt` continuously, piri only touches
+   delegator's client once, at operator setup), or give `delegator/client`
+   its own nested `go.mod` one directory under the service, replaced in by
+   `piri`, keeping it physically inside `delegator/`'s own tree — unproven in
+   this repo, `commands`/`internal` are siblings of the services, not nested
+   inside one. **Default for the full attempt: `internal/client/delegator`**,
+   for the "reuse what's already proven" reason. Revisit with the team once
+   the branch is far enough along to look at together.
 2. Diff `piri-signing-service`'s two months of undiffed upstream change
    before merging it as source, separately from the seam fix.
 3. Decide whether either service's storoku Terraform deploy pipeline comes
