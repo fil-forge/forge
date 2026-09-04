@@ -1,6 +1,6 @@
 // Command divergence measures, from git history alone, how far the consumers of
 // libforge and ucantone (the forge monorepo modules, the live per-service repos,
-// guppy and indexing-service) drifted from the libraries' main branches over a
+// guppy, indexing-service, and go-ipni-tools) drifted from the libraries' main branches over a
 // window of time, and what kind of library changes they had to absorb.
 //
 // It shells out to git and reads every repository read-only. Standard library
@@ -51,6 +51,7 @@ type options struct {
 	libforge, ucantone    string
 	libRef                string
 	guppy, indexing       string
+	goIpniTools           string
 	consumerRef           string
 	liveDir               string
 	liveRepos             []string
@@ -87,7 +88,8 @@ func parseOptions() (*options, error) {
 	flag.StringVar(&o.libRef, "lib-ref", "origin/main", "the libraries' main ref (falls back to main, then HEAD)")
 	flag.StringVar(&o.guppy, "guppy", "/home/user/guppy", "path of a guppy clone ('' to skip)")
 	flag.StringVar(&o.indexing, "indexing-service", "/home/user/indexing-service", "path of an indexing-service clone ('' to skip)")
-	flag.StringVar(&o.consumerRef, "consumer-ref", "origin/main", "ref of guppy/indexing-service to read (falls back to main, then HEAD)")
+	flag.StringVar(&o.goIpniTools, "go-ipni-tools", "/home/user/fil-forge/go-ipni-tools", "path of a go-ipni-tools clone ('' to skip); a library consumer outside the service fleet, like guppy/indexing-service, not a live-repo")
+	flag.StringVar(&o.consumerRef, "consumer-ref", "origin/main", "ref of guppy/indexing-service/go-ipni-tools to read (falls back to main, then HEAD)")
 	flag.StringVar(&o.liveDir, "live-dir", "/home/user/fil-forge", "directory holding the live per-service clones")
 	flag.StringVar(&live, "live-repos", "piri,hilt,sprue,ingot,smelt,delegator,piri-signing-service", "comma-separated live repo names under -live-dir")
 	flag.StringVar(&o.liveRef, "live-ref", "HEAD", "ref of the live repos to read")
@@ -1263,7 +1265,7 @@ func run(o *options) (*Result, error) {
 		}
 		res.Repos = append(res.Repos, ri)
 	}
-	for _, x := range []struct{ name, dir string }{{"guppy", o.guppy}, {"indexing-service", o.indexing}} {
+	for _, x := range []struct{ name, dir string }{{"guppy", o.guppy}, {"indexing-service", o.indexing}, {"go-ipni-tools", o.goIpniTools}} {
 		if x.dir == "" {
 			continue
 		}

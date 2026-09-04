@@ -26,6 +26,7 @@ The tables below are regenerated on every run; the hand-written section **Readin
 | live/piri-signing-service | `HEAD` | `8472ad9e9c8b` | 2026-08-22 | shallow, oldest 2026-06-19 |  |
 | guppy | `origin/main` | `e87812b9c6cd` | 2026-08-28 | full |  |
 | indexing-service | `origin/main` | `ba731057e79c` | 2026-08-28 | full |  |
+| go-ipni-tools | `origin/main` | `5f11c9557fcb` | 2026-09-04 | full |  |
 
 ## a. Commits and merged PRs per repo per ISO week
 
@@ -33,33 +34,33 @@ Cells are `total (dependabot)`. Commits are all commits reachable on the ref (fo
 
 ### Commits per week
 
-| week | libforge | ucantone | live/piri | live/hilt | live/sprue | live/ingot | live/smelt | live/delegator | live/piri-signing-service | guppy | indexing-service | forge (first-parent) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-W27 (06-29) (partial: from 07-01) | 1 | 0 | 14 | 13 | 2 | 12 | 0 | 0 | 0 | 1 | 1 | 0 |
-| 2026-W28 (07-06) | 0 | 1 | 0 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
-| 2026-W29 (07-13) | 2 | 1 | 2 | 4 | 2 | 3 | 5 | 2 | 2 | 2 | 2 | 0 |
-| 2026-W30 (07-20) | 3 | 2 | 8 | 4 | 3 | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
-| 2026-W31 (07-27) * | 10 (5) | 6 (2) | 15 (10) | 1 | 16 (10) | 34 (7) | 4 (1) | 10 (6) | 6 (3) | 11 (8) | 11 (8) | 11 |
-| 2026-W32 (08-03) * | 2 (1) | 0 | 6 (4) | 2 | 8 (6) | 6 (3) | 3 (1) | 2 (2) | 0 | 10 (10) | 13 (13) | 0 |
-| 2026-W33 (08-10) * | 0 | 0 | 7 (7) | 0 | 5 (5) | 10 (3) | 0 | 2 (2) | 0 | 2 (2) | 13 (13) | 0 |
-| 2026-W34 (08-17) * | 1 (1) | 4 (1) | 22 (8) | 11 | 7 (3) | 11 (6) | 4 | 6 (4) | 4 (1) | 3 (2) | 9 (8) | 0 |
-| 2026-W35 (08-24) * | 1 | 6 | 10 (5) | 5 | 4 (3) | 19 (4) | 5 | 5 (4) | 0 | 1 (1) | 6 (6) | 0 |
-| 2026-W36 (08-31) * (partial: to 08-31) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| week | libforge | ucantone | live/piri | live/hilt | live/sprue | live/ingot | live/smelt | live/delegator | live/piri-signing-service | guppy | indexing-service | go-ipni-tools | forge (first-parent) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-W27 (06-29) (partial: from 07-01) | 1 | 0 | 14 | 13 | 2 | 12 | 0 | 0 | 0 | 1 | 1 | 2 | 0 |
+| 2026-W28 (07-06) | 0 | 1 | 0 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 2026-W29 (07-13) | 2 | 1 | 2 | 4 | 2 | 3 | 5 | 2 | 2 | 2 | 2 | 0 | 0 |
+| 2026-W30 (07-20) | 3 | 2 | 8 | 4 | 3 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 2026-W31 (07-27) * | 10 (5) | 6 (2) | 15 (10) | 1 | 16 (10) | 34 (7) | 4 (1) | 10 (6) | 6 (3) | 11 (8) | 11 (8) | 8 (5) | 11 |
+| 2026-W32 (08-03) * | 2 (1) | 0 | 6 (4) | 2 | 8 (6) | 6 (3) | 3 (1) | 2 (2) | 0 | 10 (10) | 13 (13) | 2 (2) | 0 |
+| 2026-W33 (08-10) * | 0 | 0 | 7 (7) | 0 | 5 (5) | 10 (3) | 0 | 2 (2) | 0 | 2 (2) | 13 (13) | 0 | 0 |
+| 2026-W34 (08-17) * | 1 (1) | 4 (1) | 22 (8) | 11 | 7 (3) | 11 (6) | 4 | 6 (4) | 4 (1) | 3 (2) | 9 (8) | 4 (1) | 0 |
+| 2026-W35 (08-24) * | 1 | 6 | 10 (5) | 5 | 4 (3) | 19 (4) | 5 | 5 (4) | 0 | 1 (1) | 6 (6) | 0 | 0 |
+| 2026-W36 (08-31) * (partial: to 08-31) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ### Merged PRs per week
 
-| week | libforge | ucantone | live/piri | live/hilt | live/sprue | live/ingot | live/smelt | live/delegator | live/piri-signing-service | guppy | indexing-service | forge (first-parent) |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-W27 (06-29) (partial: from 07-01) | 1 | 0 | 3 | 4 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 2026-W28 (07-06) | 0 | 0 | 0 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 0 |
-| 2026-W29 (07-13) | 0 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | 0 |
-| 2026-W30 (07-20) | 2 | 2 | 4 | 2 | 2 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
-| 2026-W31 (07-27) * | 9 (5) | 4 (2) | 14 (10) | 1 | 16 (10) | 16 (7) | 3 (1) | 9 (6) | 4 (3) | 10 (8) | 10 (8) | 3 |
-| 2026-W32 (08-03) * | 2 (1) | 0 | 6 (4) | 1 | 8 (6) | 6 (3) | 2 (1) | 2 (2) | 0 | 10 (10) | 13 (13) | 0 |
-| 2026-W33 (08-10) * | 0 | 0 | 7 (7) | 0 | 5 (5) | 6 (3) | 0 | 2 (2) | 0 | 2 (2) | 13 (13) | 0 |
-| 2026-W34 (08-17) * | 1 (1) | 4 (1) | 16 (8) | 7 | 6 (3) | 11 (6) | 4 | 5 (4) | 3 (1) | 3 (2) | 9 (8) | 0 |
-| 2026-W35 (08-24) * | 1 | 5 | 8 (5) | 5 | 4 (3) | 19 (4) | 5 | 5 (4) | 0 | 1 (1) | 6 (6) | 0 |
-| 2026-W36 (08-31) * (partial: to 08-31) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| week | libforge | ucantone | live/piri | live/hilt | live/sprue | live/ingot | live/smelt | live/delegator | live/piri-signing-service | guppy | indexing-service | go-ipni-tools | forge (first-parent) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-W27 (06-29) (partial: from 07-01) | 1 | 0 | 3 | 4 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
+| 2026-W28 (07-06) | 0 | 0 | 0 | 4 | 2 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| 2026-W29 (07-13) | 0 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 1 | 0 | 0 |
+| 2026-W30 (07-20) | 2 | 2 | 4 | 2 | 2 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 2026-W31 (07-27) * | 9 (5) | 4 (2) | 14 (10) | 1 | 16 (10) | 16 (7) | 3 (1) | 9 (6) | 4 (3) | 10 (8) | 10 (8) | 7 (5) | 3 |
+| 2026-W32 (08-03) * | 2 (1) | 0 | 6 (4) | 1 | 8 (6) | 6 (3) | 2 (1) | 2 (2) | 0 | 10 (10) | 13 (13) | 2 (2) | 0 |
+| 2026-W33 (08-10) * | 0 | 0 | 7 (7) | 0 | 5 (5) | 6 (3) | 0 | 2 (2) | 0 | 2 (2) | 13 (13) | 0 | 0 |
+| 2026-W34 (08-17) * | 1 (1) | 4 (1) | 16 (8) | 7 | 6 (3) | 11 (6) | 4 | 5 (4) | 3 (1) | 3 (2) | 9 (8) | 4 (1) | 0 |
+| 2026-W35 (08-24) * | 1 | 5 | 8 (5) | 5 | 4 (3) | 19 (4) | 5 | 5 (4) | 0 | 1 (1) | 6 (6) | 0 | 0 |
+| 2026-W36 (08-31) * (partial: to 08-31) | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 ### Monthly totals
 
@@ -76,6 +77,7 @@ Cells are `total (dependabot)`. Commits are all commits reachable on the ref (fo
 | live/piri-signing-service | 2 | 1 | 10 (4) | 7 (4) | 6 | 3 |
 | guppy | 5 | 3 | 25 (23) | 24 (23) | 2 | 1 |
 | indexing-service | 4 | 2 | 51 (48) | 50 (48) | 3 | 2 |
+| go-ipni-tools | 3 | 2 | 13 (8) | 12 (8) | 5 | 4 |
 | forge (first-parent) | 11 | 3 | 0 | 0 | 0 | 0 |
 
 Monthly totals count every commit reachable on the ref within the month (forge: first-parent only), the same way as the weekly tables. Section b counts the libraries' *first-parent* commits, so where a library PR was merged rather than squashed, its month here is larger than section b's by the commits the merge carried.
@@ -152,7 +154,7 @@ Wire-visible rule: a change under `ucan/`, `validator/`, `execution/`, `varsig/`
 | 2026-07-17 | `ef993e1` | ash | #38 | feat: add did:plc parse method (#38) | `did/plc`, `validator` | 9: forge/hilt, forge/piri, forge/sprue, indexing-service, hilt, ingot, piri, piri-signing-service, sprue | yes | additive-required |
 | 2026-07-23 | `639fffe` | ash | #40 | feat: add `did:plc` resolver cache (#40) | `did/plc` | 7: forge/hilt, forge/piri, forge/sprue, hilt, ingot, piri, sprue | no | additive-optional |
 | 2026-07-23 | `30be293` | ash | #41 | feat: whitespace prefix/suffix tolerance for string encodings (#41) | `ucan/container` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | additive-optional |
-| 2026-07-27 | `ccb7705` | frrist | direct push | fix: verification relationships default to all methods when undeclared | `did` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | additive-required |
+| 2026-07-27 | `ccb7705` | frrist | direct push | fix: verification relationships default to all methods when undeclared | `did` | 15: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, go-ipni-tools, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | additive-required |
 | 2026-07-31 | `de9c6eb` | Petra Jaros | #34 | ci: add Dependabot (go modules + GitHub Actions) (#34) | (no Go code) | 0 | no | non-code |
 | 2026-08-01* | `5f00b99` | Hannah Howard | #46 | ci: migrate to Unified CI test/check (pinned) (#46) | `multikey` | 13: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, smelt, sprue | no | internal |
 | 2026-08-01* | `db4f8c0` | hannahhoward |  | ci: auto-approve and auto-merge Dependabot patch/minor updates | (no Go code) | 0 | no | non-code |
@@ -160,7 +162,7 @@ Wire-visible rule: a change under `ucan/`, `validator/`, `execution/`, `varsig/`
 | 2026-08-01* | `525b7ed` | dependabot[bot] | #47 | chore(deps): bump the github-actions group across 1 directory with 2 … | (no Go code) | 0 | no | dependabot |
 | 2026-08-17* | `bfc05d9` | ash | #49 | fix: align receipts with the updated receipt spec (#49) | `execution`, `execution/dispatcher`, `ucan`, `ucan/receipt` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | breaking |
 | 2026-08-17* | `e926fd5` | ash | #50 | fix: invocation issued at time and receipt timestamps option (#50) | `execution`, `ucan/invocation` | 11: forge/hilt, forge/ingot, forge/piri, forge/sprue, guppy, indexing-service, hilt, ingot, piri, piri-signing-service, sprue | yes | additive-optional |
-| 2026-08-17* | `3a20cd5` | ash | #43 | fix: explicit empty `capabilityInvocation` or `capabilityDelegation` … | `did`, `validator` | 14: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | breaking |
+| 2026-08-17* | `3a20cd5` | ash | #43 | fix: explicit empty `capabilityInvocation` or `capabilityDelegation` … | `did`, `validator` | 15: forge/hilt, forge/ingot, forge/piri, forge/smelt, forge/sprue, go-ipni-tools, guppy, indexing-service, delegator, hilt, ingot, piri, piri-signing-service, smelt, sprue | yes | breaking |
 | 2026-08-21* | `cfc49f8` | dependabot[bot] | #51 | chore(deps): bump github.com/stretchr/testify from 1.11.1 to 1.12.1 (… | (no Go code) | 0 | no | dependabot |
 | 2026-08-24* | `9bb30b7` | ash | #52 | refactor: adopt CBOR/JSON codegen method from libforge (#52) | `did/plc`, `errors/datamodel`, `examples/types`, `result/datamodel`, `testutil/datamodel`, `ucan/container/datamodel`, `ucan/delegation/datamodel`, `ucan/delegation/policy`, `ucan/delegation/policy/datamodel`, `ucan/delegation/policy/internal/fixtures/datamodel`, `ucan/delegation/policy/selector/datamodel`, `ucan/delegation/policy/selector/internal/fixtures/datamodel`, `ucan/envelope/datamodel`, `ucan/invocation/datamodel`, `ucan/promise`, `ucan/promise/datamodel`, `ucan/receipt/datamodel`, `validator/internal/fixtures/datamodel` | 10: forge/hilt, forge/ingot, forge/piri, forge/sprue, guppy, indexing-service, hilt, ingot, piri, sprue | no | internal |
 | 2026-08-24* | `6ad0099` | Petra Jaros | #37 | feat: add post-quantum ML-DSA-44 signer, verifier and varsig algorith… | `multikey/mldsa44`, `multikey/mldsa44/verifier`, `varsig/algorithm/mldsa`; regenerated codecs only in 10 pkgs | 0 | yes | additive-optional |
@@ -198,6 +200,7 @@ Note: Merged 2026-07-01 16:23 UTC, so it opens the context period. New commands 
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 49.9 | `3e6895b41be5` | ancestry |
 | guppy | no | 2026-08-21 `d74fd06` | 50.6 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 50.0 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | 2026-07-02 `efa0d95` | 1.1 | `f0706e1641a3` | ancestry |
 
 #### `a3aa293` 2026-07-13 — fix: make bucket optional
 
@@ -223,6 +226,7 @@ Note: Direct push to main without a PR. Go-level break for every reader of `Auth
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 38.2 | `3e6895b41be5` | ancestry |
 | guppy | no | 2026-08-21 `d74fd06` | 38.9 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 38.2 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `aac837a` 2026-07-17 — add space to blob remove, abort, and reject,
 
@@ -248,6 +252,7 @@ Note: Direct push to main without a PR. A /blob/remove client without `space` is
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 33.8 | `3e6895b41be5` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 34.5 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 33.9 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `aba2bd2` 2026-07-20 — feat: add `/ucan/revoke` command (#47)
 
@@ -273,6 +278,7 @@ Note: A new command nobody has to serve until they choose to; hilt started issui
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 31.1 | `3e6895b41be5` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 31.8 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 31.2 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `7fc3b2c` 2026-07-24 — Fix DID verification method ID encoding and add controller (#48)
 
@@ -298,6 +304,7 @@ Note: Outside commands/blobindex, so internal by the libforge rule, but it chang
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 27.1 | `3e6895b41be5` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 27.8 | `3e6895b41be5` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 27.2 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `5e299c4` 2026-07-27 — feat!: align removal capabilities with the blob-removal RFC (#49)
 
@@ -323,6 +330,7 @@ Note: Author marked it `feat!`. sprue (the upload service, which serves /blob/re
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 23.6 | `3e6895b41be5` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 24.4 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 23.7 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `b13386b` 2026-07-30 — feat!: add cause to blob release arguments (#50)
 
@@ -348,6 +356,7 @@ Note: Author marked it `feat!`. The encoding only gains a key, but the node-side
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 21.1 | `3e6895b41be5` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 21.8 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 21.2 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `f54066c` 2026-08-03 — fix: attestation idempotency (#51) (in window)
 
@@ -373,6 +382,7 @@ Note: Changes the bytes of every attested signature (the embedded /ucan/attest/p
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 16.9 | `3e6895b41be5` | ancestry |
 | guppy | no | 2026-08-21 `d74fd06` | 17.6 | `3e6895b41be5` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 17.0 | `3e6895b41be5` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 #### `2585ed1` 2026-08-28 — feat: add tenant DID to authorization response (#64) (in window)
 
@@ -398,6 +408,7 @@ Note: The commit body says ingot needs the tenant DID to encrypt to the tenant's
 | live/piri-signing-service | no | not as of its head | - | `3e6895b41be5` | - |
 | guppy | no | not as of its head | - | `3e6895b41be5` | - |
 | indexing-service | no | not as of its head | - | `3e6895b41be5` | - |
+| go-ipni-tools | no | not as of its head | - | `f0706e1641a3` | - |
 
 ### ucantone
 
@@ -425,6 +436,7 @@ Note: Wrapped Named errors now surface their stable name in receipts instead of 
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 45.1 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 45.8 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 45.2 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `ef993e1` 2026-07-17 — feat: add did:plc parse method (#38)
 
@@ -450,6 +462,7 @@ Note: Validation rule relaxed so that did:plc documents (which carry only verifi
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 33.9 | `3a20cd59fabc` | ancestry |
 | guppy | no | 2026-08-21 `d74fd06` | 34.6 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 33.9 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `639fffe` 2026-07-23 — feat: add `did:plc` resolver cache (#40)
 
@@ -475,6 +488,7 @@ Note: New options only; no encoding or validation change.
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 28.2 | `3a20cd59fabc` | ancestry |
 | guppy | no | 2026-08-21 `d74fd06` | 28.9 | `3a20cd59fabc` | ancestry |
 | indexing-service | no | 2026-08-20 `9eb6204` | 28.3 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `30be293` 2026-07-23 — feat: whitespace prefix/suffix tolerance for string encodings (#41)
 
@@ -500,6 +514,7 @@ Note: Decoding accepts strictly more inputs; nothing a peer has to do.
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 28.2 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 28.9 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 28.2 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `ccb7705` 2026-07-27 — fix: verification relationships default to all methods when undeclared
 
@@ -525,6 +540,7 @@ Note: Forge's ucantone pin. Direct push to main. piri took it the same day (c917
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 23.7 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 24.4 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 23.8 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | yes | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `5f00b99` 2026-08-01 — ci: migrate to Unified CI test/check (pinned) (#46) (in window)
 
@@ -550,6 +566,7 @@ Note: No API change.
 | live/piri-signing-service | no | 2026-08-20 `bacd87b` | 19.3 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 20.1 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 19.4 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `bfc05d9` 2026-08-17 — fix: align receipts with the updated receipt spec (#49) (in window)
 
@@ -575,6 +592,7 @@ Note: A consumer on this commit cannot decode receipts issued by a peer that is 
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 3.1 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 3.9 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 3.2 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `e926fd5` 2026-08-17 — fix: invocation issued at time and receipt timestamps option (#50) (in window)
 
@@ -600,6 +618,7 @@ Note: The encoding of emitted invocations changes (no `iat` by default), but `ia
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 2.9 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 3.6 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 3.0 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `3a20cd5` 2026-08-17 — fix: explicit empty `capabilityInvocation` or `capabilityDelegation` endorse nothing (#43) (in window)
 
@@ -625,6 +644,7 @@ Note: Validation rule tightened: a DID document with `"capabilityInvocation": []
 | live/piri-signing-service | yes | 2026-08-20 `bacd87b` | 2.9 | `3a20cd59fabc` | ancestry |
 | guppy | yes | 2026-08-21 `d74fd06` | 3.6 | `3a20cd59fabc` | ancestry |
 | indexing-service | yes | 2026-08-20 `9eb6204` | 2.9 | `3a20cd59fabc` | ancestry |
+| go-ipni-tools | yes | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `9bb30b7` 2026-08-24 — refactor: adopt CBOR/JSON codegen method from libforge (#52) (in window)
 
@@ -650,6 +670,7 @@ Note: 1920 insertions / 1537 deletions with no exported API or encoding change -
 | live/piri-signing-service | no | not as of its head | - | `3a20cd59fabc` | - |
 | guppy | yes | not as of its head | - | `3a20cd59fabc` | - |
 | indexing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `6ad0099` 2026-08-24 — feat: add post-quantum ML-DSA-44 signer, verifier and varsig algorithm (#37) (in window)
 
@@ -675,6 +696,7 @@ Note: A new signature algorithm; peers without it cannot verify ML-DSA-signed to
 | live/piri-signing-service | no | not as of its head | - | `3a20cd59fabc` | - |
 | guppy | no | not as of its head | - | `3a20cd59fabc` | - |
 | indexing-service | no | not as of its head | - | `3a20cd59fabc` | - |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `dacea7a` 2026-08-27 — fix(validator): skip unsupported verifications methods do not fail validation entirely (#53) (in window)
 
@@ -700,6 +722,7 @@ Note: A relaxation, but one a peer needs as soon as any principal's DID document
 | live/piri-signing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
 | guppy | no | not as of its head | - | `3a20cd59fabc` | - |
 | indexing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 #### `8d7eb73` 2026-08-28 — Export the container transport decode (#55) (in window)
 
@@ -725,6 +748,7 @@ Note: Additive; for tools that inspect containers.
 | live/piri-signing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
 | guppy | yes | not as of its head | - | `3a20cd59fabc` | - |
 | indexing-service | yes | not as of its head | - | `3a20cd59fabc` | - |
+| go-ipni-tools | no | not as of its head | - | `a8f24fe31eb6` | - |
 
 ## d. Pin lag
 
@@ -973,6 +997,18 @@ For every consumer, each commit that changed its libforge or ucantone pin. `pin 
 | 2026-07-02 | `1d9167b` | deps: bump ucantone (v1 DID context) and libforge… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
 | 2026-08-20 | `9eb6204` | chore: update dependencies (#51) | `3a20cd59fabc` | 2026-08-17 | yes | `3a20cd5` 2026-08-17 | 0.0 | 0.0 | 0 |
 
+### go-ipni-tools → libforge (3 events in total, 1 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `efa0d95` | Merge pull request #5 from fil-forge/claude/ucant… | `f0706e1641a3` | 2026-07-01 | yes | `f0706e1` 2026-07-01 | 0.0 | 0.0 | 0 |
+
+### go-ipni-tools → ucantone (4 events in total, 1 shown)
+
+| consumer commit | sha | subject | new pin | pin date | pin on main | main head then | lag d | base lag d | behind |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-07-02 | `efa0d95` | Merge pull request #5 from fil-forge/claude/ucant… | `a8f24fe31eb6` | 2026-06-30 | yes | `a8f24fe` 2026-06-30 | 0.0 | 0.0 | 0 |
+
 ### Lag today (2026-09-03)
 
 `lag` = library tip − pin date; `base lag` from the merge-base for pins off main; `behind` = first-parent main commits after the pin/merge-base; `pin age` = today − pin date. `tree=` names a main commit whose tree is identical to an off-main pin (a PR head merged unchanged).
@@ -995,6 +1031,7 @@ For every consumer, each commit that changed its libforge or ucantone pin. `pin 
 | live/piri-signing-service | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
 | guppy | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
 | indexing-service | `3e6895b41be5` | 2026-08-07 | yes | `2585ed1` 2026-08-28 | 20.6 | 20.6 | 2 | 27.0 |
+| go-ipni-tools | `f0706e1641a3` | 2026-07-01 | yes | `2585ed1` 2026-08-28 | 57.8 | 57.8 | 18 | 64.3 |
 
 #### ucantone
 
@@ -1014,10 +1051,11 @@ For every consumer, each commit that changed its libforge or ucantone pin. `pin 
 | live/piri-signing-service | `3a20cd59fabc` | 2026-08-17 | yes | `8d7eb73` 2026-08-28 | 10.9 | 10.9 | 6 | 17.3 |
 | guppy | `3a20cd59fabc` | 2026-08-17 | yes | `8d7eb73` 2026-08-28 | 10.9 | 10.9 | 6 | 17.3 |
 | indexing-service | `3a20cd59fabc` | 2026-08-17 | yes | `8d7eb73` 2026-08-28 | 10.9 | 10.9 | 6 | 17.3 |
+| go-ipni-tools | `a8f24fe31eb6` | 2026-06-30 | yes | `8d7eb73` 2026-08-28 | 59.2 | 59.2 | 19 | 65.6 |
 
 ## e. How far apart the fleet actually was
 
-The fleet here is every consumer except the frozen forge modules (9 consumers). For each library, one row per Monday plus today: how many distinct pins were in force, the spread in days between the oldest and newest pin, and the largest and median lag behind the library main head of that day.
+The fleet here is every consumer except the frozen forge modules (10 consumers). For each library, one row per Monday plus today: how many distinct pins were in force, the spread in days between the oldest and newest pin, and the largest and median lag behind the library main head of that day.
 
 ### libforge pin spread
 
@@ -1027,14 +1065,14 @@ The fleet here is every consumer except the frozen forge modules (9 consumers). 
 | 2026-07-13 | 4 | 24.1 | live/piri-signing-service | live/hilt | 24.1 (live/piri-signing-service) | 11.7 |
 | 2026-07-20 | 4 | 24.1 | live/piri-signing-service | live/hilt | 31.1 (live/piri-signing-service) | 18.7 |
 | 2026-07-27 | 6 | 38.6 | live/piri-signing-service | live/sprue | 38.6 (live/piri-signing-service) | 26.2 |
-| 2026-08-03 | 6 | 38.6 | live/piri-signing-service | live/sprue | 45.3 (live/piri-signing-service) | 10.8 |
-| 2026-08-10 | 6 | 43.0 | live/piri-signing-service | live/sprue | 49.6 (live/piri-signing-service) | 14.5 |
-| 2026-08-17 | 6 | 43.0 | live/piri-signing-service | live/sprue | 49.6 (live/piri-signing-service) | 14.5 |
-| 2026-08-24 | 3 | 14.5 | live/delegator | live/piri | 28.5 (live/delegator) | 14.0 |
-| 2026-08-31 | 4 | 34.3 | live/delegator | live/hilt | 35.0 (live/delegator) | 20.6 |
-| 2026-09-03 (today) | 4 | 34.3 | live/delegator | live/hilt | 35.0 (live/delegator) | 20.6 |
+| 2026-08-03 | 7 | 38.6 | live/piri-signing-service | live/sprue | 45.3 (live/piri-signing-service) | 21.2 |
+| 2026-08-10 | 7 | 43.0 | live/piri-signing-service | live/sprue | 49.6 (live/piri-signing-service) | 14.5 |
+| 2026-08-17 | 7 | 43.0 | live/piri-signing-service | live/sprue | 49.6 (live/piri-signing-service) | 14.5 |
+| 2026-08-24 | 4 | 37.3 | go-ipni-tools | live/piri | 51.3 (go-ipni-tools) | 14.0 |
+| 2026-08-31 | 5 | 57.1 | go-ipni-tools | live/hilt | 57.8 (go-ipni-tools) | 20.6 |
+| 2026-09-03 (today) | 5 | 57.1 | go-ipni-tools | live/hilt | 57.8 (go-ipni-tools) | 20.6 |
 
-In the window (31 days): days on which the whole fleet shared one libforge pin: **0**; most distinct pins on one day: **6**; widest spread between oldest and newest pin: **43.0 days**.
+In the window (31 days): days on which the whole fleet shared one libforge pin: **0**; most distinct pins on one day: **7**; widest spread between oldest and newest pin: **57.1 days**.
 
 ### ucantone pin spread
 
@@ -1042,14 +1080,14 @@ In the window (31 days): days on which the whole fleet shared one libforge pin: 
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-07-06 | 4 | 38.8 | live/delegator | live/piri | 44.8 (live/delegator) | 17.4 |
 | 2026-07-13 | 3 | 17.4 | live/sprue | live/hilt | 17.4 (live/sprue) | 6.0 |
-| 2026-07-20 | 4 | 24.5 | live/piri-signing-service | live/sprue | 28.6 (live/piri-signing-service) | 11.3 |
+| 2026-07-20 | 4 | 24.5 | live/piri-signing-service | live/sprue | 28.6 (live/piri-signing-service) | 17.3 |
 | 2026-07-27 | 5 | 38.8 | live/piri-signing-service | live/piri | 38.8 (live/piri-signing-service) | 21.4 |
 | 2026-08-03 | 5 | 38.8 | live/piri-signing-service | live/piri | 43.2 (live/piri-signing-service) | 25.8 |
 | 2026-08-10 | 5 | 38.8 | live/piri-signing-service | live/piri | 43.2 (live/piri-signing-service) | 25.8 |
 | 2026-08-17 | 5 | 38.8 | live/piri-signing-service | live/piri | 59.6 (live/piri-signing-service) | 42.3 |
-| 2026-08-24 | 2 | 42.3 | live/smelt | live/piri | 49.2 (live/smelt) | 6.9 |
-| 2026-08-31 | 3 | 52.1 | live/smelt | live/piri | 53.2 (live/smelt) | 1.1 |
-| 2026-09-03 (today) | 3 | 52.1 | live/smelt | live/piri | 53.2 (live/smelt) | 1.1 |
+| 2026-08-24 | 3 | 48.3 | go-ipni-tools | live/piri | 55.2 (go-ipni-tools) | 6.9 |
+| 2026-08-31 | 4 | 58.1 | go-ipni-tools | live/piri | 59.2 (go-ipni-tools) | 10.9 |
+| 2026-09-03 (today) | 4 | 58.1 | go-ipni-tools | live/piri | 59.2 (go-ipni-tools) | 10.9 |
 
 In the window (31 days): days on which the whole fleet shared one ucantone pin: **0**; most distinct pins on one day: **5**; widest spread between oldest and newest pin: **59.6 days**.
 
@@ -1066,9 +1104,9 @@ Days on which at least one consumer that imports a package the commit changed al
 | libforge | `2585ed1` | feat: add tenant DID to authorization response (#64) | additive-required | 2026-08-28 → 2026-09-03 (still open) | 7 | hilt, ingot | smelt | smelt |
 | ucantone | `ef993e1` | feat: add did:plc parse method (#38) | additive-required | 2026-07-21 → 2026-07-21 | 1 | piri | hilt, sprue, ingot, piri-signing-service, indexing-service | hilt, sprue, ingot, piri-signing-service, indexing-service |
 | ucantone | `ef993e1` | feat: add did:plc parse method (#38) | additive-required | 2026-07-27 → 2026-08-19 | 24 | piri | hilt, sprue, ingot, piri-signing-service, indexing-service | hilt, sprue, piri-signing-service, indexing-service |
-| ucantone | `ccb7705` | fix: verification relationships default to all methods… | additive-required | 2026-07-27 → 2026-09-03 (still open) | 39 | piri | hilt, sprue, ingot, smelt, delegator, piri-signing-service, guppy, indexing-service | smelt |
+| ucantone | `ccb7705` | fix: verification relationships default to all methods… | additive-required | 2026-07-27 → 2026-09-03 (still open) | 39 | piri | hilt, sprue, ingot, smelt, delegator, piri-signing-service, guppy, indexing-service, go-ipni-tools | smelt, go-ipni-tools |
 | ucantone | `bfc05d9` | fix: align receipts with the updated receipt spec (#49) | breaking | 2026-08-20 → 2026-09-03 (still open) | 15 | piri, hilt, sprue, piri-signing-service, indexing-service | ingot, smelt, delegator, guppy | smelt |
-| ucantone | `3a20cd5` | fix: explicit empty `capabilityInvocation` or `capabil… | breaking | 2026-08-20 → 2026-09-03 (still open) | 15 | piri, hilt, sprue, piri-signing-service, indexing-service | ingot, smelt, delegator, guppy | smelt |
+| ucantone | `3a20cd5` | fix: explicit empty `capabilityInvocation` or `capabil… | breaking | 2026-08-20 → 2026-09-03 (still open) | 15 | piri, hilt, sprue, piri-signing-service, indexing-service | ingot, smelt, delegator, guppy, go-ipni-tools | smelt, go-ipni-tools |
 | ucantone | `dacea7a` | fix(validator): skip unsupported verifications methods… | additive-required | 2026-08-27 → 2026-09-03 (still open) | 8 | piri, hilt, sprue | piri-signing-service, indexing-service | piri-signing-service, indexing-service |
 
 ### Import sets used
@@ -1089,6 +1127,7 @@ Days on which at least one consumer that imports a package the commit changed al
 | live/piri-signing-service | 1.25.3 | 3 | 14 | commands/access commands/pdp/sign identity |
 | guppy | 1.26.1 | 24 | 20 | attestation/didmailto blobindex bytemap commands commands/access commands/assert commands/blob commands/content commands/http commands/index commands/pdp commands/provider commands/space commands/uca… |
 | indexing-service | 1.25.7 | 12 | 18 | blobindex bytemap commands commands/assert commands/claim commands/content digestutil identity jobqueue testutil ucan ucan/retrieval |
+| go-ipni-tools | 1.25.7 | 4 | 1 | commands/assert digestutil jobqueue testutil |
 
 ## Caveats
 
@@ -1114,32 +1153,33 @@ Hand-written on 2026-09-03 from the tables above (the generator leaves everythin
 
 ### What August actually contained
 
-- **The libraries were quiet; the services were not.** libforge main took 11 commits in August, 7 of them dependabot; the 4 human commits are two CI changes, `f54066c` (attestation idempotency, internal) and `2585ed1` (tenant DID in the S3 authorize response). Between `3e6895b` (2026-08-07) and `2585ed1` (2026-08-28) the only libforge main commit was a dependabot bump. ucantone took 13 commits, 3 dependabot; 8 human commits touched non-test Go code. The live services meanwhile took 215 commits (piri 57, ingot 56, sprue 36, delegator 23, hilt 18, smelt 15, piri-signing-service 10), 108 of them dependabot (50%); guppy and indexing-service took 76 commits of which 71 were dependabot. forge main took none.
+- **The libraries were quiet; the services were not.** libforge main took 11 commits in August, 7 of them dependabot; the 4 human commits are two CI changes, `f54066c` (attestation idempotency, internal) and `2585ed1` (tenant DID in the S3 authorize response). Between `3e6895b` (2026-08-07) and `2585ed1` (2026-08-28) the only libforge main commit was a dependabot bump. ucantone took 13 commits, 3 dependabot; 8 human commits touched non-test Go code. The live services meanwhile took 215 commits (piri 57, ingot 56, sprue 36, delegator 23, hilt 18, smelt 15, piri-signing-service 10), 108 of them dependabot (50%); guppy, indexing-service and go-ipni-tools together took 89 commits of which 79 were dependabot (go-ipni-tools alone: 13, 8 dependabot). forge main took none.
 - **Wire-visible library changes in the window: 1 in libforge, 6 in ucantone.** July, for context, had 6 wire-visible libforge commits (the blob-removal RFC landing in three steps, the S3 commands and their bucket fix, and `/ucan/revoke`) and 3 in ucantone. So the answer to the RFC's question "how often do wire-visible library changes happen" is: in libforge they cluster around feature work (six in one July fortnight, one in the whole of August); in ucantone they arrived at a steadier one to two a week once the spec-alignment work started on 2026-08-17.
 - **Changes that needed a coordinated service-side move: 4 of the 10 human code commits in August (libforge 1 of 2, ucantone 3 of 8), 6 of 12 in July.** The August four are `2585ed1` (a required `tenant` field the S3 gateway depends on), `bfc05d9` (receipts lose `aud` and the decoder rejects receipts that carry one), `3a20cd5` (a declared-empty capability relationship now endorses nothing) and `dacea7a` (validation must skip a verification method it cannot use, which the X25519 wrap keys hilt started publishing that day require). Of the two classified `breaking` in August, `bfc05d9` is the real one: a component on it cannot decode a receipt issued by a component before it. `3a20cd5` is breaking by rule, not by observed impact — no fil-forge DID document declares an empty relationship.
 
 ### How the two-step rollout was actually exercised
 
 - **Consumers pin unmerged branches to avoid the two-step.** Four of the fourteen pin series contain SHAs that are not on the library's main: forge → libforge `928cf2a` (PR #52, never merged), piri → libforge `3e5e6ba` (an earlier head of PR #49, pinned 2026-07-30, three days after the squash merge, still lacking #48's identity fix), sprue → ucantone `2662bdd` (a PR branch carrying the relationship fallback, pinned 2026-07-17 22 minutes *before* `ef993e1`, the main commit that carried the same fix), and hilt and ingot → libforge `c9252ac` (the PR #64 branch head, tree-identical to `2585ed1`, pinned by hilt 26 minutes before the merge). When the same person changes the library and the service, the "explicit, tested PR in the consuming repo" the RFC counts on tends to be a pin to the library branch, merged in either order.
-- **When a sweep happens it is fast; when it does not, the gap is weeks.** The ucantone receipt change `bfc05d9` (2026-08-17) reached seven consumers within 3.0–3.9 days in one "upgrade forge deps" sweep on 2026-08-20/21 (hilt `80f80f3`, sprue `b403a68`, piri `b3b91be`, ingot `de3ca05`, guppy `d74fd06`, indexing-service `9eb6204`, piri-signing-service `bacd87b`), delegator on day 10; `dacea7a` reached four consumers the same day. The libforge `/blob/release` cause (`b13386b`, 2026-07-30) took 7 days to reach the two components that exchange it (piri and sprue) and 21–22 days to reach hilt, ingot and guppy; the July removal-RFC break `5e299c4` took 0.1 days for sprue, 9 for ingot and smelt, 23.5 for hilt, 24.4 for guppy, and has still not reached delegator.
+- **When a sweep happens it is fast; when it does not, the gap is weeks.** The ucantone receipt change `bfc05d9` (2026-08-17) reached seven consumers within 3.0–3.9 days in one "upgrade forge deps" sweep on 2026-08-20/21 (hilt `80f80f3`, sprue `b403a68`, piri `b3b91be`, ingot `de3ca05`, guppy `d74fd06`, indexing-service `9eb6204`, piri-signing-service `bacd87b`), delegator on day 10; `dacea7a` reached four consumers the same day. The libforge `/blob/release` cause (`b13386b`, 2026-07-30) took 7 days to reach the two components that exchange it (piri and sprue) and 21–22 days to reach hilt, ingot and guppy; the July removal-RFC break `5e299c4` took 0.1 days for sprue, 9 for ingot and smelt, 23.5 for hilt, 24.4 for guppy, and has still not reached delegator. go-ipni-tools is the extreme case of "the gap is weeks": it bumped both libraries exactly once, on 2026-07-02, straight to each one's tip (`efa0d95`, lag 0.0 at the time), and has not bumped either since — the gap today is 57.8 days (libforge) and 59.2 days (ucantone), still open.
 - **Four of the twelve human code commits in July were pushed to main without a PR** (libforge `a3aa293`, `aac837a`; ucantone `79141c5`, `ccb7705`), two of them breaking wire changes; in August none were.
 
 ### Pin lag
 
-- **Most bumps land on the library tip, but a third do not.** Of the 103 bump events since 2026-07-01 in the JSON (`consumers[].pins[]`, `|lag_days| ≥ 0.05`), 64 have lag 0.0; outside forge — whose modules duplicate the live histories before 07-30 — it is 41 of 56. The 39 non-zero entries are: the subtree imports (the forge import commits inherited hilt 6.0 days and smelt 17.1 days behind); feature or merge commits that carried a pin already behind main — smelt 7.0 d (`45063e5`, 07-22) and 6.7 d (`f0b69e6`, 08-05, ten first-parent commits behind), ingot 7.0 / 3.4 / 6.7 d (`02af9fc`, `a7684d7`, `a0250c3` 08-06, ten behind), piri 6.6 d (`c19a7b2`, 07-30; 10.1 by merge-base) and 4.2 d (`8509dfa`, 08-06, nine behind), sprue 2.3 d (`0fa0743`, 08-06), delegator 3.4 d (`93a1bd6`), and the 08-05/06 group is exactly the set of bumps that absorbed the July blob-removal work; two pins of unmerged PR heads that were *ahead* of main (hilt `cb1bc0b` −5.7 d, sprue `e7d28a6` −7.0 d, base lag 0); and one regression — piri's ucantone pin went *backwards* from `ef993e1` to `a8f24fe` on 2026-07-22 when the Curio PDP branch merged (`939de00`, 17.3 d), and was re-fixed on 07-27. Lag is created between bumps more than at them, and a "0.0" during 2026-08-07..08-21 says only that libforge main was idle.
-- **Today's lag (2026-09-03).** forge's five modules are flat at libforge `928cf2a` — a commit that is not on libforge main; against main they are 27.8 days behind the tip by timestamp, 29.0 days and 12 first-parent commits behind by merge-base (`b13386b`) — and 31.8 days / 14 commits behind ucantone main. In the live fleet, hilt and ingot are on a libforge tree identical to the tip (0.8 days by timestamp only); piri, sprue, piri-signing-service, guppy and indexing-service are 20.6 days / 2 commits behind (one dependabot bump and `2585ed1`); smelt is 31.6 days / 13 commits behind and delegator 35.0 days / 14 commits. On ucantone, five services are 1.1 days / 1 commit behind, three consumers 10.9 days / 6 commits, and smelt 53.2 days / 18 commits (its pin predates the receipt change).
+- **Most bumps land on the library tip, but a third do not.** Of the 105 bump events since 2026-07-01 in the JSON (`consumers[].pins[]`, `|lag_days| ≥ 0.05`), 66 have lag 0.0; outside forge — whose modules duplicate the live histories before 07-30 — it is 43 of 58. The 39 non-zero entries are: the subtree imports (the forge import commits inherited hilt 6.0 days and smelt 17.1 days behind); feature or merge commits that carried a pin already behind main — smelt 7.0 d (`45063e5`, 07-22) and 6.7 d (`f0b69e6`, 08-05, ten first-parent commits behind), ingot 7.0 / 3.4 / 6.7 d (`02af9fc`, `a7684d7`, `a0250c3` 08-06, ten behind), piri 6.6 d (`c19a7b2`, 07-30; 10.1 by merge-base) and 4.2 d (`8509dfa`, 08-06, nine behind), sprue 2.3 d (`0fa0743`, 08-06), delegator 3.4 d (`93a1bd6`), and the 08-05/06 group is exactly the set of bumps that absorbed the July blob-removal work; two pins of unmerged PR heads that were *ahead* of main (hilt `cb1bc0b` −5.7 d, sprue `e7d28a6` −7.0 d, base lag 0); and one regression — piri's ucantone pin went *backwards* from `ef993e1` to `a8f24fe` on 2026-07-22 when the Curio PDP branch merged (`939de00`, 17.3 d), and was re-fixed on 07-27. Lag is created between bumps more than at them, and a "0.0" during 2026-08-07..08-21 says only that libforge main was idle.
+- **Today's lag (2026-09-03).** forge's five modules are flat at libforge `928cf2a` — a commit that is not on libforge main; against main they are 27.8 days behind the tip by timestamp, 29.0 days and 12 first-parent commits behind by merge-base (`b13386b`) — and 31.8 days / 14 commits behind ucantone main. In the live fleet, hilt and ingot are on a libforge tree identical to the tip (0.8 days by timestamp only); piri, sprue, piri-signing-service, guppy and indexing-service are 20.6 days / 2 commits behind (one dependabot bump and `2585ed1`); smelt is 31.6 days / 13 commits behind and delegator 35.0 days / 14 commits; go-ipni-tools is furthest at 57.8 days / 18 commits, on the single pin it set on 2026-07-02 and never touched again. On ucantone, five services are 1.1 days / 1 commit behind, three consumers 10.9 days / 6 commits, smelt 53.2 days / 18 commits (its pin predates the receipt change), and go-ipni-tools furthest at 59.2 days / 19 commits, same story as its libforge pin.
 
 ### How far apart the fleet was
 
-- **On no day in August did the nine non-forge consumers share a libforge pin, nor a ucantone pin.** libforge: up to 6 distinct pins on one day and a widest spread of 43.0 days (2026-08-10..08-17: piri-signing-service on `eb26d87` from 06-19 while sprue was on `850148f` from 08-01); after the 08-20 sweep, 3 pins and 14.5 days; today 4 pins spanning 34.3 days (delegator `7fc3b2c` 07-24 to hilt `c9252ac` 08-27). ucantone: up to 5 distinct pins, widest spread 59.6 days (08-17..08-19), today 3 pins spanning 52.1 days because of smelt. Two of today's libforge spreads are easy to conflate: smelt–hilt is 30.8 days (smelt `5e299c4` 07-27 to hilt `c9252ac` 08-27); the 34.3-day figure is delegator–hilt.
-- **Straddles.** Counting only consumers that import a package the commit changed, breaking or additive-required changes were straddled (one peer contained the change, another did not) for 39 days by `5e299c4`, 29 days by `b13386b`, 28 days by `aac837a` and 9 days by `a3aa293` in libforge, and 39 days by `ccb7705`, 25 days over two intervals by `ef993e1`, 15 days each by `bfc05d9` and `3a20cd5` and 8 days by `dacea7a` in ucantone. Most of the open straddles today are held open by smelt (a test harness) and delegator; the one that mattered for the running fleet was `bfc05d9` on 2026-08-20/21, when piri, hilt, sprue, piri-signing-service and indexing-service moved to the new library while ingot, guppy and delegator stayed on the old one. The direction of the break was measured afterwards by the compat runs on the POC branch (`compat-validation.md`): a component on the new library cannot read a receipt issued by an executor still on the old one, while old readers accept new receipts. So ingot, guppy and delegator staying old was the safe side; the risk in that window was any freshly bumped reader (sprue, hilt, indexing-service) deployed before the executor it reads from (piri) was — the opposite of what an earlier draft of this sentence said. Whether it was hit in a running deployment cannot be read from git.
+- **On no day in August did the ten non-forge consumers share a libforge pin, nor a ucantone pin.** libforge: up to 7 distinct pins on one day and a widest spread in the window of 57.1 days (2026-08-31: go-ipni-tools's frozen `f0706e16` from 07-01 against live/hilt's tree-identical-to-tip pin); before go-ipni-tools is counted the same window's max was 43.0 days (2026-08-10..08-17: piri-signing-service on `eb26d87` from 06-19 while sprue was on `850148f` from 08-01). Today: 5 pins spanning 57.1 days (go-ipni-tools to live/hilt). ucantone: up to 5 distinct pins, widest spread 59.6 days (08-17..08-19), today 4 pins spanning 58.1 days (go-ipni-tools to live/piri). Two of today's libforge spreads among the services proper (excluding go-ipni-tools) are easy to conflate: smelt–hilt is 30.8 days (smelt `5e299c4` 07-27 to hilt `c9252ac` 08-27); delegator–hilt is 34.3 days.
+- **Straddles.** Counting only consumers that import a package the commit changed, breaking or additive-required changes were straddled (one peer contained the change, another did not) for 39 days by `5e299c4`, 29 days by `b13386b`, 28 days by `aac837a` and 9 days by `a3aa293` in libforge, and 39 days by `ccb7705`, 25 days over two intervals by `ef993e1`, 15 days each by `bfc05d9` and `3a20cd5` and 8 days by `dacea7a` in ucantone. Most of the open straddles today are held open by smelt (a test harness), delegator and go-ipni-tools (which holds `ccb7705` and `3a20cd5` open simply by never having bumped ucantone since 06-30); the one that mattered for the running fleet was `bfc05d9` on 2026-08-20/21, when piri, hilt, sprue, piri-signing-service and indexing-service moved to the new library while ingot, guppy and delegator stayed on the old one. The direction of the break was measured afterwards by the compat runs on the POC branch (`compat-validation.md`): a component on the new library cannot read a receipt issued by an executor still on the old one, while old readers accept new receipts. So ingot, guppy and delegator staying old was the safe side; the risk in that window was any freshly bumped reader (sprue, hilt, indexing-service) deployed before the executor it reads from (piri) was — the opposite of what an earlier draft of this sentence said. Whether it was hit in a running deployment cannot be read from git.
 - **Beyond libforge and ucantone.** The live fleet grew module edges the forge snapshot does not have: hilt and ingot depend on `github.com/fil-forge/swarf` (since 2026-08-18/19), hilt and ingot depend on `github.com/fil-forge/smelt` as a Go module (hilt since 08-21 for integration tests), and ingot depends on `github.com/fil-forge/hilt` (since 07-21; brief F3). Both libraries' `go.mod` now say `go 1.27.0` (ucantone `6ad0099` 08-24, libforge `2585ed1` 08-28); the five services that took them moved to `go 1.27.0`, while forge's modules say `go 1.26.5` — reconciling forge with current libraries is also a toolchain bump.
 
 ### What this says for the in/out decision
 
-- A libforge that changes its wire surface once in August and six times in July is not a library whose consumers can be kept aligned by *frequency* of bumps; it is one where a burst of protocol work has to land in several repos within days, and the history shows that when that happens the authors either pin the unmerged branch or push straight to main. Under the RFC's Option 3 (libraries out, two-step rollout) the July removal-RFC work was three library commits (`aac837a`, `5e299c4`, `b13386b`) each followed by a bump in every one of the twelve consumers importing `commands/blob`; under a monorepo it is three atomic commits — but only for the five services in forge. The straddles still open today are held by smelt (in forge, but pinned at libforge 07-27 and ucantone 07-06: `ccb7705`, `b13386b`, `bfc05d9`/`3a20cd5`, `2585ed1`), delegator (`5e299c4`, `b13386b`) and piri-signing-service with indexing-service (`dacea7a`), the last three outside forge; a monorepo closes smelt's by construction and leaves the others where they are.
+- A libforge that changes its wire surface once in August and six times in July is not a library whose consumers can be kept aligned by *frequency* of bumps; it is one where a burst of protocol work has to land in several repos within days, and the history shows that when that happens the authors either pin the unmerged branch or push straight to main. Under the RFC's Option 3 (libraries out, two-step rollout) the July removal-RFC work was three library commits (`aac837a`, `5e299c4`, `b13386b`) each followed by a bump in every one of the twelve consumers importing `commands/blob`; under a monorepo it is three atomic commits — but only for the five services in forge. The straddles still open today are held by smelt (in forge, but pinned at libforge 07-27 and ucantone 07-06: `ccb7705`, `b13386b`, `bfc05d9`/`3a20cd5`, `2585ed1`), delegator (`5e299c4`, `b13386b`), go-ipni-tools (`ccb7705`, `3a20cd5`) and piri-signing-service with indexing-service (`dacea7a`) — all outside forge except smelt; a monorepo closes smelt's by construction and leaves the others where they are, go-ipni-tools included, since it is the plan's clearest "stays out" case (see the note below) yet still shows up as an open straddle today.
 - ucantone is different in kind: its August changes are spec alignment (receipts, `iat`, verification relationships) that every UCAN participant, including guppy and indexing-service, must absorb, and they were absorbed by a fleet-wide sweep in three days. That is the two-step working, and it argues for leaving ucantone where it is.
 - The forge snapshot itself is the outlier in every table: 12 and 14 commits behind, pinned to a never-merged branch, and the only consumer with zero August commits.
+- **`go-ipni-tools` is the plan's clearest "stays out" case, and it is also the fleet's worst-lagging consumer today.** It implements an externally-specified protocol (IPNI) for an unbounded third-party audience, is shaped as a library (a narrow-interface hierarchy, `AGENTS.md` describes it as "building blocks... consumers wire the packages together"), and only one first-party service (`piri`) imports it — the textbook case for an ordinary versioned dependency, not a monorepo module. But one of its own packages, `pkg/advertisement` (109 LOC), is not generic IPNI code: it imports `libforge/commands/assert.LocationArguments` and `digestutil.Parse` to translate Forge/Storacha location claims into IPNI shard CIDs, and nothing else in the library imports it — a leaf. So the right unit of the in/out decision here is the package, not the repo: `pkg/advertisement` belongs with `commands`, the rest of `go-ipni-tools` (~2,250 LOC) does not. Detail and the resulting seam in `commands-move.md`. Separately: `go-ipni-tools` bumped both libraries once, on 2026-07-02, straight to their tips, and has not touched either pin since — 57.8 (libforge) and 59.2 (ucantone) days ago. Nothing here says the fleet fails to absorb `go-ipni-tools` changes, though: piri's *live* repo (not this forge snapshot, which is still on a `go-ipni-tools` commit from 2026-05-19) bumped its own `go-ipni-tools` pin twice in the last two weeks of August, picking up a dag-cbor wire-format change (`8990e1c`) within about 21 hours of it landing. The staleness is `go-ipni-tools`'s own libforge/ucantone pins, not the fleet's tracking of `go-ipni-tools` — a distinction the sibling conversation that first raised this collapsed, by reading forge's frozen snapshot as if it were live piri.
 
 ### Caveats specific to this reading
 
@@ -1148,3 +1188,4 @@ Hand-written on 2026-09-03 from the tables above (the generator leaves everythin
 - The live clones were shallow (deepened to 2026-05-07/05-29 for this run; piri-signing-service refused to deepen and starts 2026-06-19); nothing in the July–August window is affected, but earlier pin events are invisible.
 - The forge modules' pre-2026-07-30 histories are the services' own histories with paths rewritten, so `forge/<svc>` and `live/<svc>` share every event before the import; forge's own series is the last three rows of each `forge/<svc>` table.
 - Classification is a reading of diffs, not a compatibility test. `3a20cd5` and `a3aa293` are breaking by the stated rule but no observed breakage is claimed for them; `e926fd5` changes the bytes of every emitted invocation (no `iat`) and is still classified additive-optional because nothing reads `IssuedAt()` in any consumer's non-test code.
+- `go-ipni-tools` was added as a fourth "library consumer outside the fleet" (alongside guppy and indexing-service) after this document's first version, in response to a finding from a sibling conversation (see the in/out bullet above); the numbers in this run supersede that version's — re-running with `-go-ipni-tools ''` reproduces the earlier set if needed. `piri`'s own `go-ipni-tools` pin history (its live repo bumped twice in August, tracking the library within about a day) came from `git log -- go.mod` on `/home/user/fil-forge/piri` directly, not from this tool, since the tool measures libforge/ucantone pins only.

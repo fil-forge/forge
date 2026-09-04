@@ -142,6 +142,17 @@
       "shallow": false,
       "oldest_commit": "2024-09-03T01:16:49Z",
       "remote": "https://github.com/fil-forge/indexing-service"
+    },
+    {
+      "name": "go-ipni-tools",
+      "path": "/home/user/fil-forge/go-ipni-tools",
+      "ref": "origin/main",
+      "head": "5f11c9557fcb3919088ed1a2f85ce3bcbfb067a1",
+      "head_short": "5f11c95",
+      "head_time": "2026-09-04T01:46:04Z",
+      "shallow": false,
+      "oldest_commit": "2026-05-14T18:50:30Z",
+      "remote": "https://github.com/fil-forge/go-ipni-tools"
     }
   ],
   "weekly": {
@@ -157,6 +168,56 @@
         "merge_commits": 5,
         "squash_prs": 3,
         "other_merges": 5
+      }
+    ],
+    "go-ipni-tools": [
+      {
+        "week": "2026-W27",
+        "commits": 2,
+        "human_commits": 2,
+        "dependabot_commits": 0,
+        "merged_prs": 1,
+        "human_prs": 1,
+        "dependabot_prs": 0,
+        "merge_commits": 1,
+        "squash_prs": 0,
+        "other_merges": 0
+      },
+      {
+        "week": "2026-W31",
+        "commits": 8,
+        "human_commits": 3,
+        "dependabot_commits": 5,
+        "merged_prs": 7,
+        "human_prs": 2,
+        "dependabot_prs": 5,
+        "merge_commits": 0,
+        "squash_prs": 7,
+        "other_merges": 0
+      },
+      {
+        "week": "2026-W32",
+        "commits": 2,
+        "human_commits": 0,
+        "dependabot_commits": 2,
+        "merged_prs": 2,
+        "human_prs": 0,
+        "dependabot_prs": 2,
+        "merge_commits": 0,
+        "squash_prs": 2,
+        "other_merges": 0
+      },
+      {
+        "week": "2026-W34",
+        "commits": 4,
+        "human_commits": 3,
+        "dependabot_commits": 1,
+        "merged_prs": 4,
+        "human_prs": 3,
+        "dependabot_prs": 1,
+        "merge_commits": 0,
+        "squash_prs": 4,
+        "other_merges": 0
       }
     ],
     "guppy": [
@@ -1130,6 +1191,7 @@
     "live/piri-signing-service",
     "guppy",
     "indexing-service",
+    "go-ipni-tools",
     "forge (first-parent)"
   ],
   "weeks": [
@@ -1157,6 +1219,32 @@
         "merge_commits": 5,
         "squash_prs": 3,
         "other_merges": 5
+      }
+    },
+    "go-ipni-tools": {
+      "2026-07": {
+        "week": "2026-07",
+        "commits": 3,
+        "human_commits": 3,
+        "dependabot_commits": 0,
+        "merged_prs": 2,
+        "human_prs": 2,
+        "dependabot_prs": 0,
+        "merge_commits": 1,
+        "squash_prs": 1,
+        "other_merges": 0
+      },
+      "2026-08": {
+        "week": "2026-08",
+        "commits": 13,
+        "human_commits": 5,
+        "dependabot_commits": 8,
+        "merged_prs": 12,
+        "human_prs": 4,
+        "dependabot_prs": 8,
+        "merge_commits": 0,
+        "squash_prs": 12,
+        "other_merges": 0
       }
     },
     "guppy": {
@@ -1696,6 +1784,16 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "consumer_sha": "efa0d95",
+              "date": "2026-07-02T19:58:54Z",
+              "days": 1.1,
+              "pin_sha": "f0706e1641a3",
+              "method": "ancestry",
+              "not_yet": false,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -1887,6 +1985,15 @@
               "pin_sha": "3e6895b41be5",
               "method": "ancestry",
               "not_yet": false,
+              "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
               "imports_changed_package": false
             }
           ],
@@ -2108,6 +2215,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -2298,6 +2414,15 @@
               "pin_sha": "3e6895b41be5",
               "method": "ancestry",
               "not_yet": false,
+              "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
               "imports_changed_package": false
             }
           ],
@@ -2515,6 +2640,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -2730,6 +2864,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -2939,6 +3082,15 @@
               "pin_sha": "3e6895b41be5",
               "method": "ancestry",
               "not_yet": false,
+              "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
               "imports_changed_package": false
             }
           ],
@@ -3324,6 +3476,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -3591,6 +3752,15 @@
               "method": "",
               "not_yet": true,
               "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "f0706e1641a3",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -3848,6 +4018,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -4056,6 +4235,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -4248,6 +4436,15 @@
               "pin_sha": "3a20cd59fabc",
               "method": "ancestry",
               "not_yet": false,
+              "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
               "imports_changed_package": false
             }
           ],
@@ -4463,6 +4660,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": false
@@ -4502,6 +4708,9 @@
               "did"
             ],
             "forge/sprue": [
+              "did"
+            ],
+            "go-ipni-tools": [
               "did"
             ],
             "guppy": [
@@ -4675,6 +4884,15 @@
               "pin_sha": "3a20cd59fabc",
               "method": "ancestry",
               "not_yet": false,
+              "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
               "imports_changed_package": true
             }
           ],
@@ -4927,6 +5145,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -5242,6 +5469,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -5457,6 +5693,15 @@
               "method": "ancestry",
               "not_yet": false,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -5504,6 +5749,9 @@
             "forge/sprue": [
               "did",
               "validator"
+            ],
+            "go-ipni-tools": [
+              "did"
             ],
             "guppy": [
               "did"
@@ -5676,6 +5924,15 @@
               "pin_sha": "3a20cd59fabc",
               "method": "ancestry",
               "not_yet": false,
+              "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
               "imports_changed_package": true
             }
           ],
@@ -5981,6 +6238,15 @@
               "method": "",
               "not_yet": true,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -6174,6 +6440,15 @@
               "method": "",
               "not_yet": true,
               "imports_changed_package": false
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -6363,6 +6638,15 @@
               "method": "",
               "not_yet": true,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -6592,6 +6876,15 @@
               "method": "",
               "not_yet": true,
               "imports_changed_package": true
+            },
+            {
+              "consumer": "go-ipni-tools",
+              "date": "0001-01-01T00:00:00Z",
+              "days": 0,
+              "pin_sha": "a8f24fe31eb6",
+              "method": "",
+              "not_yet": true,
+              "imports_changed_package": false
             }
           ],
           "in_window": true
@@ -10482,6 +10775,196 @@
       "scan": {
         "go_files_scanned": 114
       }
+    },
+    {
+      "name": "go-ipni-tools",
+      "kind": "library-consumer",
+      "repo": "/home/user/fil-forge/go-ipni-tools",
+      "ref": "origin/main",
+      "head": "5f11c9557fcb3919088ed1a2f85ce3bcbfb067a1",
+      "gomod": "go.mod",
+      "go_directive": "1.25.7",
+      "imports": {
+        "libforge": [
+          "commands/assert",
+          "digestutil",
+          "jobqueue",
+          "testutil"
+        ],
+        "ucantone": [
+          "did"
+        ]
+      },
+      "test_only_imports": {
+        "libforge": [
+          "commands"
+        ],
+        "ucantone": null
+      },
+      "pins": {
+        "libforge": [
+          {
+            "consumer_sha": "b81a792",
+            "consumer_time": "2026-05-14T19:48:58Z",
+            "subject": "port: migrated from https://github.com/storacha/go-libstoracha",
+            "version": "v0.0.0-20260514144223-d4e04b850082",
+            "pin_sha": "d4e04b850082",
+            "pin_full": "d4e04b85008290880cce8b78dd8eb79742204dfe",
+            "pin_time": "2026-05-14T14:42:23Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "d4e04b8",
+            "main_head_then_time": "2026-05-14T14:42:23Z",
+            "lag_days": 0,
+            "base_lag_days": 0,
+            "main_commits_behind_then": 0
+          },
+          {
+            "consumer_sha": "545b942",
+            "consumer_time": "2026-05-19T19:48:15Z",
+            "subject": "chore: upgrade libforge (#2)",
+            "version": "v0.0.0-20260519193938-fc442aef7e5c",
+            "pin_sha": "fc442aef7e5c",
+            "pin_full": "fc442aef7e5cca4a65d5e51c5697a9fded1f69dd",
+            "pin_time": "2026-05-19T19:39:38Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "fc442ae",
+            "main_head_then_time": "2026-05-19T19:39:38Z",
+            "lag_days": 0,
+            "base_lag_days": 0,
+            "main_commits_behind_then": 0
+          },
+          {
+            "consumer_sha": "efa0d95",
+            "consumer_time": "2026-07-02T19:58:54Z",
+            "subject": "Merge pull request #5 from fil-forge/claude/ucantone-pr-rollout-hdbgac",
+            "version": "v0.0.0-20260701162346-f0706e1641a3",
+            "pin_sha": "f0706e1641a3",
+            "pin_full": "f0706e1641a37ed787b1f0f11c3b72844e7a7d98",
+            "pin_time": "2026-07-01T16:23:46Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "f0706e1",
+            "main_head_then_time": "2026-07-01T16:23:46Z",
+            "lag_days": 0,
+            "base_lag_days": 0,
+            "main_commits_behind_then": 0
+          }
+        ],
+        "ucantone": [
+          {
+            "consumer_sha": "b81a792",
+            "consumer_time": "2026-05-14T19:48:58Z",
+            "subject": "port: migrated from https://github.com/storacha/go-libstoracha",
+            "version": "v0.0.0-20260512173820-ea7128569686",
+            "pin_sha": "ea7128569686",
+            "pin_full": "ea712856968672894a5bde63e50beca090d7a99e",
+            "pin_time": "2026-05-12T17:38:20Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "8bebe15",
+            "main_head_then_time": "2026-05-14T18:49:15Z",
+            "lag_days": 2,
+            "base_lag_days": 2,
+            "main_commits_behind_then": 6
+          },
+          {
+            "consumer_sha": "bb1334f",
+            "consumer_time": "2026-05-14T20:27:13Z",
+            "subject": "fix: advertisement package uses ucantone did pkg",
+            "version": "v0.0.0-20260514184915-8bebe15b0096",
+            "pin_sha": "8bebe15b0096",
+            "pin_full": "8bebe15b0096a3af1b1ca025fd656ff7ae722f27",
+            "pin_time": "2026-05-14T18:49:15Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "8bebe15",
+            "main_head_then_time": "2026-05-14T18:49:15Z",
+            "lag_days": 0,
+            "base_lag_days": 0,
+            "main_commits_behind_then": 0
+          },
+          {
+            "consumer_sha": "545b942",
+            "consumer_time": "2026-05-19T19:48:15Z",
+            "subject": "chore: upgrade libforge (#2)",
+            "version": "v0.0.0-20260519193222-ad31490eaa10",
+            "pin_sha": "ad31490eaa10",
+            "pin_full": "ad31490eaa10252c12ea5178720e20aa26a7ff00",
+            "pin_time": "2026-05-19T19:32:22Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "ad31490",
+            "main_head_then_time": "2026-05-19T19:32:22Z",
+            "lag_days": 0,
+            "base_lag_days": 0,
+            "main_commits_behind_then": 0
+          },
+          {
+            "consumer_sha": "efa0d95",
+            "consumer_time": "2026-07-02T19:58:54Z",
+            "subject": "Merge pull request #5 from fil-forge/claude/ucantone-pr-rollout-hdbgac",
+            "version": "v0.0.0-20260630103048-a8f24fe31eb6",
+            "pin_sha": "a8f24fe31eb6",
+            "pin_full": "a8f24fe31eb622603125db31c9d6b43c8824f1e1",
+            "pin_time": "2026-06-30T10:30:48Z",
+            "pin_in_local_clone": true,
+            "pin_on_main": true,
+            "merge_base_time": "0001-01-01T00:00:00Z",
+            "main_head_then": "a8f24fe",
+            "main_head_then_time": "2026-06-30T10:30:48Z",
+            "lag_days": 0,
+            "base_lag_days": 0,
+            "main_commits_behind_then": 0
+          }
+        ]
+      },
+      "current": {
+        "libforge": {
+          "consumer_sha": "efa0d95",
+          "consumer_time": "2026-07-02T19:58:54Z",
+          "subject": "Merge pull request #5 from fil-forge/claude/ucantone-pr-rollout-hdbgac",
+          "version": "v0.0.0-20260701162346-f0706e1641a3",
+          "pin_sha": "f0706e1641a3",
+          "pin_full": "f0706e1641a37ed787b1f0f11c3b72844e7a7d98",
+          "pin_time": "2026-07-01T16:23:46Z",
+          "pin_in_local_clone": true,
+          "pin_on_main": true,
+          "merge_base_time": "0001-01-01T00:00:00Z",
+          "main_head_then": "f0706e1",
+          "main_head_then_time": "2026-07-01T16:23:46Z",
+          "lag_days": 0,
+          "base_lag_days": 0,
+          "main_commits_behind_then": 0
+        },
+        "ucantone": {
+          "consumer_sha": "efa0d95",
+          "consumer_time": "2026-07-02T19:58:54Z",
+          "subject": "Merge pull request #5 from fil-forge/claude/ucantone-pr-rollout-hdbgac",
+          "version": "v0.0.0-20260630103048-a8f24fe31eb6",
+          "pin_sha": "a8f24fe31eb6",
+          "pin_full": "a8f24fe31eb622603125db31c9d6b43c8824f1e1",
+          "pin_time": "2026-06-30T10:30:48Z",
+          "pin_in_local_clone": true,
+          "pin_on_main": true,
+          "merge_base_time": "0001-01-01T00:00:00Z",
+          "main_head_then": "a8f24fe",
+          "main_head_then_time": "2026-06-30T10:30:48Z",
+          "lag_days": 0,
+          "base_lag_days": 0,
+          "main_commits_behind_then": 0
+        }
+      },
+      "scan": {
+        "go_files_scanned": 24
+      }
     }
   ],
   "today_lags": [
@@ -10913,6 +11396,36 @@
       "base_lag_days": 10.9,
       "main_commits_behind": 6,
       "pin_age_days": 17.3
+    },
+    {
+      "consumer": "go-ipni-tools",
+      "lib": "libforge",
+      "pin_sha": "f0706e1641a3",
+      "pin_time": "2026-07-01T16:23:46Z",
+      "pin_on_main": true,
+      "pin_in_local_clone": true,
+      "merge_base_time": "0001-01-01T00:00:00Z",
+      "main_tip": "2585ed1",
+      "main_tip_time": "2026-08-28T12:15:50Z",
+      "lag_days": 57.8,
+      "base_lag_days": 57.8,
+      "main_commits_behind": 18,
+      "pin_age_days": 64.3
+    },
+    {
+      "consumer": "go-ipni-tools",
+      "lib": "ucantone",
+      "pin_sha": "a8f24fe31eb6",
+      "pin_time": "2026-06-30T10:30:48Z",
+      "pin_on_main": true,
+      "pin_in_local_clone": true,
+      "merge_base_time": "0001-01-01T00:00:00Z",
+      "main_tip": "8d7eb73",
+      "main_tip_time": "2026-08-28T15:38:20Z",
+      "lag_days": 59.2,
+      "base_lag_days": 59.2,
+      "main_commits_behind": 19,
+      "pin_age_days": 65.6
     }
   ],
   "snapshots": {
@@ -10920,6 +11433,7 @@
       {
         "day": "2026-07-01",
         "pins": {
+          "go-ipni-tools": "fc442aef7e5c",
           "guppy": "2b55dbcf944f",
           "indexing-service": "eb26d871cda1",
           "live/delegator": "ebb22552c348",
@@ -10929,17 +11443,18 @@
           "live/smelt": "ebb22552c348",
           "live/sprue": "2b55dbcf944f"
         },
-        "distinct_pins": 3,
-        "spread_days": 34.1,
-        "oldest_pin_consumer": "live/ingot",
+        "distinct_pins": 4,
+        "spread_days": 42.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/sprue",
-        "max_lag_vs_main_days": 34.9,
-        "max_lag_consumer": "live/ingot",
+        "max_lag_vs_main_days": 42.9,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 12.3
       },
       {
         "day": "2026-07-02",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -10961,6 +11476,7 @@
       {
         "day": "2026-07-03",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -10982,6 +11498,7 @@
       {
         "day": "2026-07-04",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -11003,6 +11520,7 @@
       {
         "day": "2026-07-05",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -11024,6 +11542,7 @@
       {
         "day": "2026-07-06",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -11045,6 +11564,7 @@
       {
         "day": "2026-07-07",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -11066,6 +11586,7 @@
       {
         "day": "2026-07-08",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -11087,6 +11608,7 @@
       {
         "day": "2026-07-09",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "ebb22552c348",
@@ -11108,6 +11630,7 @@
       {
         "day": "2026-07-10",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11129,6 +11652,7 @@
       {
         "day": "2026-07-11",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11150,6 +11674,7 @@
       {
         "day": "2026-07-12",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11171,6 +11696,7 @@
       {
         "day": "2026-07-13",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11192,6 +11718,7 @@
       {
         "day": "2026-07-14",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11213,6 +11740,7 @@
       {
         "day": "2026-07-15",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11234,6 +11762,7 @@
       {
         "day": "2026-07-16",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11255,6 +11784,7 @@
       {
         "day": "2026-07-17",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11276,6 +11806,7 @@
       {
         "day": "2026-07-18",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11297,6 +11828,7 @@
       {
         "day": "2026-07-19",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11318,6 +11850,7 @@
       {
         "day": "2026-07-20",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11339,6 +11872,7 @@
       {
         "day": "2026-07-21",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11360,6 +11894,7 @@
       {
         "day": "2026-07-22",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11381,6 +11916,7 @@
       {
         "day": "2026-07-23",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11402,6 +11938,7 @@
       {
         "day": "2026-07-24",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11423,6 +11960,7 @@
       {
         "day": "2026-07-25",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11444,6 +11982,7 @@
       {
         "day": "2026-07-26",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11465,6 +12004,7 @@
       {
         "day": "2026-07-27",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "f0706e1641a3",
@@ -11486,6 +12026,7 @@
       {
         "day": "2026-07-28",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11496,17 +12037,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 5,
+        "distinct_pins": 6,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 38.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 14.5
+        "median_lag_vs_main_days": 26.2
       },
       {
         "day": "2026-07-29",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11517,17 +12059,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 5,
+        "distinct_pins": 6,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 38.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 14.5
+        "median_lag_vs_main_days": 26.2
       },
       {
         "day": "2026-07-30",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11538,17 +12081,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 41.1,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 6.6
+        "median_lag_vs_main_days": 17.1
       },
       {
         "day": "2026-07-31",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11559,17 +12103,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 42.4,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 7.9
+        "median_lag_vs_main_days": 18.4
       },
       {
         "day": "2026-08-01",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11580,17 +12125,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 43,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 8.4
+        "median_lag_vs_main_days": 18.9
       },
       {
         "day": "2026-08-02",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11601,17 +12147,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 43,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 8.4
+        "median_lag_vs_main_days": 18.9
       },
       {
         "day": "2026-08-03",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11622,17 +12169,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 45.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 10.8
+        "median_lag_vs_main_days": 21.2
       },
       {
         "day": "2026-08-04",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11643,17 +12191,18 @@
           "live/smelt": "a3aa293b990c",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 45.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 10.8
+        "median_lag_vs_main_days": 21.2
       },
       {
         "day": "2026-08-05",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11664,17 +12213,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "5e299c46f62f"
         },
-        "distinct_pins": 5,
+        "distinct_pins": 6,
         "spread_days": 38.6,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 45.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 10.2
+        "median_lag_vs_main_days": 10.8
       },
       {
         "day": "2026-08-06",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11685,7 +12235,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11696,6 +12246,7 @@
       {
         "day": "2026-08-07",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11706,7 +12257,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11717,6 +12268,7 @@
       {
         "day": "2026-08-08",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11727,7 +12279,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11738,6 +12290,7 @@
       {
         "day": "2026-08-09",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11748,7 +12301,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11759,6 +12312,7 @@
       {
         "day": "2026-08-10",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11769,7 +12323,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11780,6 +12334,7 @@
       {
         "day": "2026-08-11",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11790,7 +12345,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11801,6 +12356,7 @@
       {
         "day": "2026-08-12",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11811,7 +12367,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11822,6 +12378,7 @@
       {
         "day": "2026-08-13",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11832,7 +12389,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11843,6 +12400,7 @@
       {
         "day": "2026-08-14",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11853,7 +12411,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11864,6 +12422,7 @@
       {
         "day": "2026-08-15",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11874,7 +12433,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11885,6 +12444,7 @@
       {
         "day": "2026-08-16",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11895,7 +12455,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11906,6 +12466,7 @@
       {
         "day": "2026-08-17",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11916,7 +12477,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11927,6 +12488,7 @@
       {
         "day": "2026-08-18",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11937,7 +12499,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11948,6 +12510,7 @@
       {
         "day": "2026-08-19",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "2b55dbcf944f",
           "live/delegator": "7fc3b2cec1ef",
@@ -11958,7 +12521,7 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "850148f3084e"
         },
-        "distinct_pins": 6,
+        "distinct_pins": 7,
         "spread_days": 43,
         "oldest_pin_consumer": "live/piri-signing-service",
         "newest_pin_consumer": "live/sprue",
@@ -11969,6 +12532,7 @@
       {
         "day": "2026-08-20",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "2b55dbcf944f",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -11979,17 +12543,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
+        "distinct_pins": 5,
         "spread_days": 38.1,
         "oldest_pin_consumer": "guppy",
         "newest_pin_consumer": "live/piri",
         "max_lag_vs_main_days": 38.1,
         "max_lag_consumer": "guppy",
-        "median_lag_vs_main_days": 0
+        "median_lag_vs_main_days": 11
       },
       {
         "day": "2026-08-21",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12000,17 +12565,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-22",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12021,17 +12587,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-23",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12042,17 +12609,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-24",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12063,17 +12631,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-25",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12084,17 +12653,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-26",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12105,17 +12675,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-27",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12126,17 +12697,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 3,
-        "spread_days": 14.5,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 4,
+        "spread_days": 37.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 28.5,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 51.3,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 14
       },
       {
         "day": "2026-08-28",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12147,17 +12719,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       },
       {
         "day": "2026-08-29",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12168,17 +12741,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       },
       {
         "day": "2026-08-30",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12189,17 +12763,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       },
       {
         "day": "2026-08-31",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12210,17 +12785,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       },
       {
         "day": "2026-09-01",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12231,17 +12807,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       },
       {
         "day": "2026-09-02",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12252,17 +12829,18 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       },
       {
         "day": "2026-09-03",
         "pins": {
+          "go-ipni-tools": "f0706e1641a3",
           "guppy": "3e6895b41be5",
           "indexing-service": "3e6895b41be5",
           "live/delegator": "7fc3b2cec1ef",
@@ -12273,12 +12851,12 @@
           "live/smelt": "5e299c46f62f",
           "live/sprue": "3e6895b41be5"
         },
-        "distinct_pins": 4,
-        "spread_days": 34.3,
-        "oldest_pin_consumer": "live/delegator",
+        "distinct_pins": 5,
+        "spread_days": 57.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/hilt",
-        "max_lag_vs_main_days": 35,
-        "max_lag_consumer": "live/delegator",
+        "max_lag_vs_main_days": 57.8,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 20.6
       }
     ],
@@ -12286,6 +12864,7 @@
       {
         "day": "2026-07-01",
         "pins": {
+          "go-ipni-tools": "ad31490eaa10",
           "guppy": "7985ec010b88",
           "indexing-service": "7985ec010b88",
           "live/delegator": "eda937bc2684",
@@ -12295,17 +12874,18 @@
           "live/smelt": "517b03bc3c72",
           "live/sprue": "7985ec010b88"
         },
-        "distinct_pins": 3,
-        "spread_days": 27.4,
-        "oldest_pin_consumer": "live/ingot",
+        "distinct_pins": 4,
+        "spread_days": 30.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 38.8,
-        "max_lag_consumer": "live/ingot",
+        "max_lag_vs_main_days": 41.6,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 11.4
       },
       {
         "day": "2026-07-02",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12327,6 +12907,7 @@
       {
         "day": "2026-07-03",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12348,6 +12929,7 @@
       {
         "day": "2026-07-04",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12369,6 +12951,7 @@
       {
         "day": "2026-07-05",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12390,6 +12973,7 @@
       {
         "day": "2026-07-06",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12411,6 +12995,7 @@
       {
         "day": "2026-07-07",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12432,6 +13017,7 @@
       {
         "day": "2026-07-08",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12453,6 +13039,7 @@
       {
         "day": "2026-07-09",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "eda937bc2684",
@@ -12474,6 +13061,7 @@
       {
         "day": "2026-07-10",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12495,6 +13083,7 @@
       {
         "day": "2026-07-11",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12516,6 +13105,7 @@
       {
         "day": "2026-07-12",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12537,6 +13127,7 @@
       {
         "day": "2026-07-13",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12558,6 +13149,7 @@
       {
         "day": "2026-07-14",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12579,6 +13171,7 @@
       {
         "day": "2026-07-15",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12600,6 +13193,7 @@
       {
         "day": "2026-07-16",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12621,6 +13215,7 @@
       {
         "day": "2026-07-17",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12637,11 +13232,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 28.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 11.3
+        "median_lag_vs_main_days": 17.3
       },
       {
         "day": "2026-07-18",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12658,11 +13254,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 28.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 11.3
+        "median_lag_vs_main_days": 17.3
       },
       {
         "day": "2026-07-19",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12679,11 +13276,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 28.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 11.3
+        "median_lag_vs_main_days": 17.3
       },
       {
         "day": "2026-07-20",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12700,11 +13298,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 28.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 11.3
+        "median_lag_vs_main_days": 17.3
       },
       {
         "day": "2026-07-21",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12726,6 +13325,7 @@
       {
         "day": "2026-07-22",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12742,11 +13342,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 28.6,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 11.3
+        "median_lag_vs_main_days": 17.3
       },
       {
         "day": "2026-07-23",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12763,11 +13364,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 34.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 17
+        "median_lag_vs_main_days": 23
       },
       {
         "day": "2026-07-24",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12784,11 +13386,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 34.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 17
+        "median_lag_vs_main_days": 23
       },
       {
         "day": "2026-07-25",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12805,11 +13408,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 34.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 17
+        "median_lag_vs_main_days": 23
       },
       {
         "day": "2026-07-26",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12826,11 +13430,12 @@
         "newest_pin_consumer": "live/sprue",
         "max_lag_vs_main_days": 34.3,
         "max_lag_consumer": "live/piri-signing-service",
-        "median_lag_vs_main_days": 17
+        "median_lag_vs_main_days": 23
       },
       {
         "day": "2026-07-27",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12852,6 +13457,7 @@
       {
         "day": "2026-07-28",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12873,6 +13479,7 @@
       {
         "day": "2026-07-29",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12894,6 +13501,7 @@
       {
         "day": "2026-07-30",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12915,6 +13523,7 @@
       {
         "day": "2026-07-31",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12936,6 +13545,7 @@
       {
         "day": "2026-08-01",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12957,6 +13567,7 @@
       {
         "day": "2026-08-02",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12978,6 +13589,7 @@
       {
         "day": "2026-08-03",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -12999,6 +13611,7 @@
       {
         "day": "2026-08-04",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13020,6 +13633,7 @@
       {
         "day": "2026-08-05",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13041,6 +13655,7 @@
       {
         "day": "2026-08-06",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13062,6 +13677,7 @@
       {
         "day": "2026-08-07",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13083,6 +13699,7 @@
       {
         "day": "2026-08-08",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13104,6 +13721,7 @@
       {
         "day": "2026-08-09",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13125,6 +13743,7 @@
       {
         "day": "2026-08-10",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13146,6 +13765,7 @@
       {
         "day": "2026-08-11",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13167,6 +13787,7 @@
       {
         "day": "2026-08-12",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13188,6 +13809,7 @@
       {
         "day": "2026-08-13",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13209,6 +13831,7 @@
       {
         "day": "2026-08-14",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13230,6 +13853,7 @@
       {
         "day": "2026-08-15",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13251,6 +13875,7 @@
       {
         "day": "2026-08-16",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13272,6 +13897,7 @@
       {
         "day": "2026-08-17",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13293,6 +13919,7 @@
       {
         "day": "2026-08-18",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13314,6 +13941,7 @@
       {
         "day": "2026-08-19",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "a8f24fe31eb6",
           "live/delegator": "79141c5cc52e",
@@ -13335,6 +13963,7 @@
       {
         "day": "2026-08-20",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "7985ec010b88",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13345,17 +13974,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 4,
+        "distinct_pins": 5,
         "spread_days": 59.6,
         "oldest_pin_consumer": "guppy",
         "newest_pin_consumer": "live/piri",
         "max_lag_vs_main_days": 59.6,
         "max_lag_consumer": "guppy",
-        "median_lag_vs_main_days": 0
+        "median_lag_vs_main_days": 20.9
       },
       {
         "day": "2026-08-21",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13366,17 +13996,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 2,
-        "spread_days": 42.3,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 3,
+        "spread_days": 48.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 46.5,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 52.5,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 4.2
       },
       {
         "day": "2026-08-22",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13387,17 +14018,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 2,
-        "spread_days": 42.3,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 3,
+        "spread_days": 48.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 46.5,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 52.5,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 4.2
       },
       {
         "day": "2026-08-23",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13408,17 +14040,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 2,
-        "spread_days": 42.3,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 3,
+        "spread_days": 48.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 46.5,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 52.5,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 4.2
       },
       {
         "day": "2026-08-24",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13429,17 +14062,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 2,
-        "spread_days": 42.3,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 3,
+        "spread_days": 48.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 49.2,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 55.2,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 6.9
       },
       {
         "day": "2026-08-25",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13450,17 +14084,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 2,
-        "spread_days": 42.3,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 3,
+        "spread_days": 48.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 49.2,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 55.2,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 6.9
       },
       {
         "day": "2026-08-26",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "79141c5cc52e",
@@ -13471,17 +14106,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "3a20cd59fabc"
         },
-        "distinct_pins": 2,
-        "spread_days": 42.3,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 3,
+        "spread_days": 48.3,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 49.2,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 55.2,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 6.9
       },
       {
         "day": "2026-08-27",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13492,17 +14128,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 52.1,
-        "max_lag_consumer": "live/smelt",
+        "max_lag_vs_main_days": 58.1,
+        "max_lag_consumer": "go-ipni-tools",
         "median_lag_vs_main_days": 9.9
       },
       {
         "day": "2026-08-28",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13513,17 +14150,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       },
       {
         "day": "2026-08-29",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13534,17 +14172,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       },
       {
         "day": "2026-08-30",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13555,17 +14194,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       },
       {
         "day": "2026-08-31",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13576,17 +14216,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       },
       {
         "day": "2026-09-01",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13597,17 +14238,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       },
       {
         "day": "2026-09-02",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13618,17 +14260,18 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       },
       {
         "day": "2026-09-03",
         "pins": {
+          "go-ipni-tools": "a8f24fe31eb6",
           "guppy": "3a20cd59fabc",
           "indexing-service": "3a20cd59fabc",
           "live/delegator": "25cf8340b9a1",
@@ -13639,13 +14282,13 @@
           "live/smelt": "79141c5cc52e",
           "live/sprue": "25cf8340b9a1"
         },
-        "distinct_pins": 3,
-        "spread_days": 52.1,
-        "oldest_pin_consumer": "live/smelt",
+        "distinct_pins": 4,
+        "spread_days": 58.1,
+        "oldest_pin_consumer": "go-ipni-tools",
         "newest_pin_consumer": "live/piri",
-        "max_lag_vs_main_days": 53.2,
-        "max_lag_consumer": "live/smelt",
-        "median_lag_vs_main_days": 1.1
+        "max_lag_vs_main_days": 59.2,
+        "max_lag_consumer": "go-ipni-tools",
+        "median_lag_vs_main_days": 10.9
       }
     ]
   },
@@ -13835,10 +14478,12 @@
         "live/delegator",
         "live/piri-signing-service",
         "guppy",
-        "indexing-service"
+        "indexing-service",
+        "go-ipni-tools"
       ],
       "behind_at_end": [
-        "live/smelt"
+        "live/smelt",
+        "go-ipni-tools"
       ],
       "still_open_today": true
     },
@@ -13887,10 +14532,12 @@
         "live/ingot",
         "live/smelt",
         "live/delegator",
-        "guppy"
+        "guppy",
+        "go-ipni-tools"
       ],
       "behind_at_end": [
-        "live/smelt"
+        "live/smelt",
+        "go-ipni-tools"
       ],
       "still_open_today": true
     },

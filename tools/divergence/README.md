@@ -30,7 +30,7 @@ match this machine's layout; every path and ref is a flag (`-h`).
 | `-forge`, `-forge-ref` | the checkout holding the tool, `HEAD` | monorepo; its `go.work` modules with a libforge/ucantone `require` become the `forge/<svc>` consumers |
 | `-libforge`, `-ucantone`, `-lib-ref` | `/home/user/libforge`, `/home/user/ucantone`, `origin/main` | the libraries; `-lib-ref` falls back to `main`, then `HEAD` |
 | `-live-dir`, `-live-repos`, `-live-ref` | `/home/user/fil-forge`, the seven service repos, `HEAD` | the live per-service clones |
-| `-guppy`, `-indexing-service`, `-consumer-ref` | `/home/user/guppy`, `/home/user/indexing-service`, `origin/main` | the two library consumers outside the service fleet |
+| `-guppy`, `-indexing-service`, `-go-ipni-tools`, `-consumer-ref` | `/home/user/guppy`, `/home/user/indexing-service`, `/home/user/fil-forge/go-ipni-tools`, `origin/main` | the library consumers outside the service fleet (empty path skips one) |
 | `-from`, `-to`, `-context-from` | `2026-08-01`, `2026-08-31`, one month before `-from` | measurement window and the context period shown next to it (UTC days) |
 | `-today` | now | date used for the "lag today" figures |
 | `-out` | `docs/consolidation/divergence-august-2026` | output base name, relative to `-forge` |
