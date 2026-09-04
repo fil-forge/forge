@@ -108,6 +108,80 @@ resolves them; they cannot widen the set, because `go build` refuses to build
 a module that is not in the workspace. `TestDetectSelectsOnlyWorkspaceModules`
 pins this with a `go.work` shaped like the monorepo's.
 
+### 5. The `go-ipni-tools` seam is a package, not a whole module
+
+Section 1's third compile error — `pkg/service/publisher/publisher.go:89:
+cannot use lc (forge/commands/assert.LocationArguments) as
+libforge/commands/assert.LocationArguments in argument to
+advertisement.ShardCID` — is `github.com/fil-forge/go-ipni-tools`, the IPNI
+advertisement library `piri` depends on. This branch resolved it the same way
+as the `piri-signing-service` seam: keep libforge's type at the boundary.
+That is the right call for *this* branch, but it understates what the seam
+actually is, and a sibling conversation examining `go-ipni-tools` on its own
+found the sharper version:
+
+`go-ipni-tools` is nine packages (~3,300 LOC). Eight of them — `pkg/store`,
+`pkg/publisher`, `pkg/metadata`, `pkg/notifier`, `pkg/server`, `pkg/client`,
+`pkg/queue`, `internal/testutil` — are generic IPNI plumbing with no Forge
+import (`pkg/queue`'s `jobqueue` and `internal/testutil`'s `libforge/testutil`
+are borrowed infrastructure, not protocol coupling; both now show up as
+`go-ipni-tools` importers in `package-inventory.md` after this session added
+it as a tracked consumer). The ninth, `pkg/advertisement` (109 LOC), is not
+generic: it imports `libforge/commands/assert` and `libforge/digestutil`, and
+its two functions are a Forge→IPNI adapter —
+
+```go
+func EncodeContextID(space did.DID, digest mh.Multihash) ([]byte, error)
+func ShardCID(provider peer.AddrInfo, caveats assert.LocationArguments) (*cid.Cid, error)
+```
+
+`ShardCID` converts a provider's multiaddrs to URLs, matches `{blob}`/
+`{blobCID}` placeholders in them against each `location.URL()` in a Forge
+location-claim's caveats, and recovers a shard CID. `space` and the location
+claim are Forge/Storacha concepts end to end; nothing else in `go-ipni-tools`
+imports `pkg/advertisement`, so it is a leaf — it can be lifted out without
+touching the other eight packages, and `piri/pkg/service/publisher/publisher.go`
+is its only consumer.
+
+That makes this seam different in kind from `piri-signing-service`'s: there is
+a smaller, correct fix than "keep libforge's copy at the boundary" forever.
+Moving `pkg/advertisement` (not `go-ipni-tools`) into `forge/commands` (or
+next to it) removes the seam rather than papering over it, and it removes the
+only reason `libforge/commands/assert` has an external-ish Go consumer today
+(`package-inventory.md`'s `commands/assert` row now lists `go-ipni-tools:1`
+as an importer, confirming §1's "`commands/**` is a published Go API today"
+with a name attached).
+
+**The package-deal consequence.** This branch's copy of `commands/**` sits
+*alongside* `libforge/commands`, which still exists, so nothing outside forge
+is broken today. A real migration that deletes `commands/**` from `libforge`
+— the end state Section "The end state that matters" describes — would break
+`go-ipni-tools`'s build for everyone who depends on it, not just inside this
+branch's `piri`, unless `pkg/advertisement` moves in the same change. Moving
+`commands/**` and moving `go-ipni-tools/pkg/advertisement` are not independent
+decisions; the second is a precondition of finishing the first, not an
+optional follow-up.
+
+**What doesn't move.** The other eight packages are, on their own reasoning,
+the plan's clearest "stays out" case: `go-ipni-tools` implements IPNI, an
+ecosystem standard with an unbounded third-party audience — a different
+compatibility regime from `commands`, whose peers are Forge's own services.
+Once `pkg/advertisement` is gone, it is a genuine IPNI toolkit with no Forge
+content in it. `jobqueue`'s presence in both `go-ipni-tools` (via `pkg/queue`)
+and forge/`internal` (Experiment C's control group, S12) means it needs a
+neutral home reachable from both sides once `pkg/advertisement` moves in:
+either `internal/` (unimportable by a module outside forge, so wrong once
+`go-ipni-tools` is a consumer) or a small queue interface in `go-ipni-tools`
+that forge's copy satisfies, or `jobqueue` gets its own tiny module.
+
+**Methodological note.** This is the first case in the whole POC where
+applying the in/out question at repo granularity gives a different answer
+than applying it at package granularity — `go-ipni-tools` the repo says
+"stays out" cleanly; `go-ipni-tools/pkg/advertisement` the package says "move
+it, alongside `commands`." It sharpens the same point `package-inventory-notes.md`
+made about `libforge` not being monolithic (S12): "true libraries stay out" is
+a line to draw inside repos, not only between them.
+
 ## The plan's checklist
 
 | question | answer |
@@ -141,4 +215,7 @@ parties; the image build's per-service hermeticity was incompatible with any
 in-repo shared module; and CI's path filters would have merged a wire-contract
 change with no tests. None of those are arguments for or against the move —
 they are the bill for it, and the first item is the one that decides whether
-`forge/commands` is an internal directory or a library with a version.
+`forge/commands` is an internal directory or a library with a version. Section
+5 sharpens that first item once more: the bill is not paid by moving
+`commands/**` alone. `go-ipni-tools/pkg/advertisement` has to move with it, or
+the move is incomplete for the one external consumer it has today.
