@@ -18,7 +18,7 @@ in [`CLAUDE.md`](./CLAUDE.md).
 
 - **Library.** A host imports the fx `Module(cfg)` (or `ServerModule` plus
   the non-fx `New(ctx, ServerConfig, ServerDeps)`) and supplies a logger, a
-  Postgres pool, and the **agent** identity (libforge `identity.Identity`); config names
+  Postgres pool, and the **agent** identity (`internal/identity`'s `Identity`); config names
   the sprue endpoint (`upload_service_url`/`_did`) and the hilt endpoint
   (`auth_service_url`/`_did`, with the `auth_service_proofs` delegation
   chains hilt issues to this agent).
@@ -147,7 +147,7 @@ HEAD never decrypts. See `s3frontend/decrypt.go`.
 
 ## Identity & auth
 
-- **agent**: the libforge `identity.Identity` the host provides (daemon: the `identity.key_file` PEM
+- **agent**: the `internal/identity`'s `Identity` the host provides (daemon: the `identity.key_file` PEM
   key, wrapped as the `identity.service_id` did:web when set), the issuer of
   every outbound invocation to sprue, hilt, and piri. The agent's DID
   document is served at `/.well-known/did.json` on the S3 listener; peers

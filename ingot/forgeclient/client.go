@@ -18,7 +18,7 @@ import (
 
 	"github.com/fil-forge/forge/ingot/internal/ucanexec"
 	"github.com/fil-forge/forge/ingot/tokenstore"
-	"github.com/fil-forge/libforge/receipt"
+	"github.com/fil-forge/forge/protocol/receipt"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

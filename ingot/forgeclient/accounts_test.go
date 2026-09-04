@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/fil-forge/forge/attestation/didmailto"
 	"github.com/fil-forge/forge/ingot/tokenstore"
-	"github.com/fil-forge/libforge/attestation/didmailto"
 	"github.com/fil-forge/ucantone/absentee"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"

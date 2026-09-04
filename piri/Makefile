@@ -28,7 +28,7 @@ export GOWORK := off
 # direct exec of a bare 'docker'.
 DOCKER := $(shell command -v docker)
 
-# Container image via the monorepo-shared docker/Dockerfile (context = this dir).
+# Container image via the monorepo-shared docker/Dockerfile (context = the repo root).
 IMAGE_BUILD_ARGS := --build-arg SERVICE=piri --build-arg BUILD_TAGS=skiff
 
 .PHONY: all build test vet image image-dev clean
@@ -54,10 +54,10 @@ vet:
 	CGO_ENABLED=0 go vet $(TAGS) ./...
 
 image:
-	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/piri:local .
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/piri:local ..
 
 image-dev:
-	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/piri:local-dev .
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/piri:local-dev ..
 
 clean:
 	rm -f ./piri

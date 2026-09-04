@@ -25,11 +25,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/fil-forge/versitygw/tests/integration"
 
+	"github.com/fil-forge/forge/internal/s3perm"
+	s3cmd "github.com/fil-forge/forge/protocol/commands/s3"
 	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"github.com/fil-forge/forge/smelt/pkg/workspace"
-	s3cmd "github.com/fil-forge/libforge/commands/s3"
-	"github.com/fil-forge/libforge/s3perm"
 )
 
 // This file is the shared harness for the integration tests: they boot the
@@ -201,8 +201,8 @@ func waitHTTPOK(t *testing.T, url string, timeout time.Duration) {
 	t.Fatalf("%s not healthy after %s", url, timeout)
 }
 
-// hiltAllPermissions is every S3 permission hilt recognizes (libforge's
-// s3perm map). The conformance cases exercise the whole S3 surface, so the
+// hiltAllPermissions is every S3 permission hilt recognizes (internal/s3perm's
+// map). The conformance cases exercise the whole S3 surface, so the
 // test tenant's access key carries them all.
 //
 // KEEP IN LOCKSTEP with s3perm's permission map: a permission added there but

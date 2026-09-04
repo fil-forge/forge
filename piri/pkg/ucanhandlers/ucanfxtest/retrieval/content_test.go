@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	contentcap "github.com/fil-forge/libforge/commands/content"
-	"github.com/fil-forge/libforge/testutil"
-	"github.com/fil-forge/libforge/ucan/retrieval"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	contentcap "github.com/fil-forge/forge/protocol/commands/content"
+	"github.com/fil-forge/forge/protocol/retrieval"
 	"github.com/fil-forge/ucantone/errors/datamodel"
 	"github.com/fil-forge/ucantone/execution"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/ipfs/go-cid"
@@ -87,7 +87,7 @@ func (s *RetrievalSuite) TestContentRetrieve_NotAllocated() {
 	t := s.T()
 
 	space := testutil.RandomIssuer(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	// intentionally no allocation in s.Allocations and no bytes in s.Pieces
 
 	inv, err := contentcap.Retrieve.Invoke(

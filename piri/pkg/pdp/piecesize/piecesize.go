@@ -46,7 +46,7 @@ import (
 	"github.com/filecoin-project/curio/lib/proof"
 	"github.com/filecoin-project/go-state-types/abi"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 )
 
 const (
@@ -57,7 +57,7 @@ const (
 
 	// MinPaddedSize is the smallest configurable maximum, equal to
 	// DefaultMaxPaddedSize. The limit is raise-only: network clients shard
-	// uploads against a network-wide constant (libforge blob.MaxBlobSize), so
+	// uploads against a network-wide constant (protocol blob.MaxBlobSize), so
 	// a node configured below it would reject blobs every other node accepts.
 	// An operator may accept more than the network default, never less.
 	MinPaddedSize uint64 = 1 << 28

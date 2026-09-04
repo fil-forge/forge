@@ -3,8 +3,8 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	providercmds "github.com/fil-forge/forge/protocol/commands/provider"
 	"github.com/fil-forge/forge/sprue/internal/config"
 	"github.com/fil-forge/forge/sprue/pkg/billing"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"

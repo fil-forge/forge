@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	accesscmds "github.com/fil-forge/libforge/commands/access"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	accesscmds "github.com/fil-forge/forge/protocol/commands/access"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	consumermemory "github.com/fil-forge/forge/sprue/pkg/store/consumer/memory"

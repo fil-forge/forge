@@ -5,15 +5,15 @@ import (
 	"os"
 	"path/filepath"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
-	"github.com/fil-forge/libforge/commands/claim"
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	pdpcmds "github.com/fil-forge/libforge/commands/pdp"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	"github.com/fil-forge/libforge/commands/space/egress"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	replicacmds "github.com/fil-forge/forge/protocol/commands/blob/replica"
+	"github.com/fil-forge/forge/protocol/commands/claim"
+	customercmds "github.com/fil-forge/forge/protocol/commands/customer"
+	pdpcmds "github.com/fil-forge/forge/protocol/commands/pdp"
+	s3bkt "github.com/fil-forge/forge/protocol/commands/s3/bucket"
+	s3req "github.com/fil-forge/forge/protocol/commands/s3/request"
+	"github.com/fil-forge/forge/protocol/commands/space/egress"
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
@@ -34,13 +34,13 @@ var piriCommands = []ucan.Command{
 	pdpcmds.Info.Command,
 }
 
-// delegateFn matches the method value of a libforge bound command's Delegate
+// delegateFn matches the method value of a protocol bound command's Delegate
 // (e.g. claim.Cache.Delegate, egress.Track.Delegate).
 type delegateFn func(issuer ucan.Issuer, audience, subject did.DID, opts ...delegation.Option) (ucan.Delegation, error)
 
 // generateProofs writes the UCAN delegation proofs the delegator consumes at
 // startup. It mirrors delegator/cmd/gen.go — the same generator the compose
-// stack invokes via generate-proofs.sh — using libforge command primitives and
+// stack invokes via generate-proofs.sh — using protocol command primitives and
 // ucantone envelope encoding, so the proofs parse with the delegator's
 // ucantone delegation.Decode.
 //
@@ -159,7 +159,7 @@ func writeProofs(keysDir, proofsDir, issuerKeyName, issuerDidWeb, audienceDID, o
 }
 
 // writeDelegation creates one delegation from issuerKeyName's key (optionally
-// wrapped as issuerDidWeb) to audienceDID, using the given libforge command,
+// wrapped as issuerDidWeb) to audienceDID, using the given protocol command,
 // and writes the ucantone-encoded envelope to proofsDir/outputFile.
 func writeDelegation(keysDir, proofsDir, issuerKeyName, issuerDidWeb, audienceDID, outputFile string, delegate delegateFn) error {
 	pemData, err := os.ReadFile(filepath.Join(keysDir, issuerKeyName+".pem"))

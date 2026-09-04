@@ -10,7 +10,7 @@ export GOWORK := off
 # direct exec of a bare 'docker'.
 DOCKER := $(shell command -v docker)
 
-# Container image via the monorepo-shared docker/Dockerfile (context = this dir).
+# Container image via the monorepo-shared docker/Dockerfile (context = the repo root).
 IMAGE_BUILD_ARGS := --build-arg SERVICE=sprue
 
 .PHONY: all build test vet lint image image-dev clean gen
@@ -48,10 +48,10 @@ clean:
 	rm -f ./sprue
 
 image:
-	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/sprue:local .
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target prod -t forge/sprue:local ..
 
 image-dev:
-	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/sprue:local-dev .
+	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/sprue:local-dev ..
 
 gen:
 	go generate ./...

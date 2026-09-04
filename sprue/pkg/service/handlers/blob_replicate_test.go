@@ -7,7 +7,7 @@ package handlers_test
 // 	"testing"
 // 	"time"
 
-// 	"github.com/fil-forge/libforge/attestation/didmailto"
+// 	"github.com/fil-forge/forge/attestation/didmailto"
 // 	"github.com/fil-forge/ucantone/did"
 // 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
 // 	"github.com/storacha/go-libstoracha/capabilities/assert"
@@ -64,7 +64,7 @@ package handlers_test
 // 			router, blobReg, replicaStore, agentStore, nodeProvider, logger,
 // 		)
 
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 
@@ -103,7 +103,7 @@ package handlers_test
 // 		)
 
 // 		space := testutil.RandomSigner(t)
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 
@@ -141,7 +141,7 @@ package handlers_test
 // 		)
 
 // 		space := testutil.RandomSigner(t)
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 
@@ -184,7 +184,7 @@ package handlers_test
 // 		err := consumerStore.Add(ctx, uploadService.DID(), space.DID(), aliceAccount, "", testutil.RandomCID(t))
 // 		require.NoError(t, err)
 
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		// random CID is not a valid location commitment delegation
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
@@ -294,7 +294,7 @@ package handlers_test
 // 		err = consumerStore.Add(ctx, uploadService.DID(), space.DID(), aliceAccount, "", testutil.RandomCID(t))
 // 		require.NoError(t, err)
 
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 
 // 		// register the blob in the space
@@ -396,7 +396,7 @@ package handlers_test
 // 		err = consumerStore.Add(ctx, uploadService.DID(), space.DID(), aliceAccount, "", testutil.RandomCID(t))
 // 		require.NoError(t, err)
 
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 

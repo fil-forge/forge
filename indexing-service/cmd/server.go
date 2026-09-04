@@ -1,0 +1,348 @@
+package main
+
+import (
+	crypto_ed25519 "crypto/ed25519"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
+	"io"
+	"net/url"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/did/key"
+	"github.com/fil-forge/ucantone/did/resolver"
+	"github.com/fil-forge/ucantone/did/web"
+	"github.com/fil-forge/ucantone/multikey"
+	"github.com/fil-forge/ucantone/multikey/ed25519"
+	userver "github.com/fil-forge/ucantone/server"
+	"github.com/fil-forge/ucantone/validator"
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/ipni/go-libipni/maurl"
+	"github.com/ipni/go-libipni/metadata"
+	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/peer"
+	"github.com/multiformats/go-multiaddr"
+	goredis "github.com/redis/go-redis/v9"
+	"github.com/urfave/cli/v2"
+
+	"github.com/fil-forge/forge/indexing-service/pkg/aws"
+	"github.com/fil-forge/forge/indexing-service/pkg/construct"
+	"github.com/fil-forge/forge/indexing-service/pkg/presets"
+	"github.com/fil-forge/forge/indexing-service/pkg/redis"
+	"github.com/fil-forge/forge/indexing-service/pkg/server"
+)
+
+var serverCmd = &cli.Command{
+	Name:  "server",
+	Usage: "HTTP server interface to the indexing service",
+	Subcommands: []*cli.Command{
+		{
+			Name:  "start",
+			Usage: "start an indexing service HTTP server",
+			Flags: []cli.Flag{
+				&cli.IntFlag{
+					Name:    "port",
+					Aliases: []string{"p"},
+					Value:   9000,
+					Usage:   "port to bind the server to",
+				},
+				&cli.StringFlag{
+					Name:    "private-key",
+					Aliases: []string{"pk"},
+					Usage:   "base64 encoded private key identity for the server",
+				},
+				&cli.StringFlag{
+					Name:    "key-file",
+					Aliases: []string{"kf"},
+					Usage:   "path to PEM-encoded Ed25519 private key file",
+				},
+				&cli.StringFlag{
+					Name:  "did",
+					Usage: "DID of the server (only needs to be set if different from what is derived from the private key i.e. a did:web DID)",
+				},
+				&cli.StringFlag{
+					Name:    "redis-url",
+					Aliases: []string{"redis"},
+					EnvVars: []string{"REDIS_URL"},
+					Usage:   "url for a running redis database",
+				},
+				&cli.StringFlag{
+					Name:    "redis-passwd",
+					Aliases: []string{"rp"},
+					EnvVars: []string{"REDIS_PASSWD"},
+					Usage:   "passwd for redis",
+				},
+				&cli.StringFlag{
+					Name:        "ipni-endpoint",
+					Aliases:     []string{"ipni"},
+					DefaultText: "Defaults to https://cid.contact",
+					Value:       "https://cid.contact",
+					Usage:       "HTTP endpoint of the IPNI instance used to discover providers.",
+				},
+				&cli.StringFlag{
+					Name:  "ipni-fallback-endpoints",
+					Value: `["https://cid2.contact"]`,
+					Usage: "JSON array of IPNI node URLs to use as fallback endpoints.",
+				},
+				&cli.StringFlag{
+					Name:  "ipni-announce-urls",
+					Value: `["https://cid.contact/announce"]`,
+					Usage: "JSON array of IPNI node URLs to announce chain updates to.",
+				},
+				&cli.StringFlag{
+					Name:  "ipni-format-peer-id",
+					Usage: "Peer ID of the IPNI node to use for format announcements (enables endpoint mimicking IPNI).",
+				},
+				&cli.StringFlag{
+					Name:  "ipni-format-endpoint",
+					Usage: "HTTP endpoint of the IPNI node to use for format announcements (enables endpoint mimicking IPNI).",
+				},
+				&cli.StringSliceFlag{
+					Name:    "public-url",
+					EnvVars: []string{"PUBLIC_URL"},
+					Usage:   "Public URL(s) where the indexing service can be reached (for claim fetching). Can be specified multiple times or comma-separated in env var.",
+				},
+				&cli.StringSliceFlag{
+					Name:    "resolve-did-web",
+					EnvVars: []string{"RESOLVE_DID_WEB"},
+					Usage:   "Patterns for restricting DID resolution via HTTP (fetches /.well-known/did.json). Can be specified multiple times or comma-separated in env var.",
+				},
+				&cli.BoolFlag{
+					Name:    "insecure-did-resolution",
+					EnvVars: []string{"INSECURE_DID_RESOLUTION"},
+					Usage:   "Use HTTP instead of HTTPS for did:web resolution (for local development), used with --resolve-did-web",
+				},
+			},
+			Action: func(cCtx *cli.Context) error {
+				if cCtx.IsSet("private-key") && cCtx.IsSet("key-file") {
+					return fmt.Errorf("private-key and key-file are mutually exclusive")
+				}
+
+				addr := fmt.Sprintf(":%d", cCtx.Int("port"))
+				var idSigner multikey.Signer
+				var err error
+				var opts []server.Option
+
+				if cCtx.IsSet("key-file") {
+					// load from PEM file
+					idSigner, err = signerFromPEMFile(cCtx.String("key-file"))
+					if err != nil {
+						return fmt.Errorf("loading key from PEM file: %w", err)
+					}
+				} else if cCtx.IsSet("private-key") {
+					idSigner, err = ed25519.Parse(cCtx.String("private-key"))
+					if err != nil {
+						return fmt.Errorf("parsing server private key: %w", err)
+					}
+				} else {
+					// generate a new private key if one is not provided
+					idSigner, err = ed25519.Generate()
+					if err != nil {
+						return fmt.Errorf("generating server private key: %w", err)
+					}
+				}
+
+				id := identity.Identity{
+					Issuer: multikey.KeyIssuer(idSigner),
+				}
+				// use custom DID if specified
+				if cCtx.String("did") != "" {
+					customDID, err := did.Parse(cCtx.String("did"))
+					if err != nil {
+						return fmt.Errorf("parsing server DID: %w", err)
+					}
+					id = identity.Identity{
+						Issuer: multikey.NewIssuer(customDID, idSigner),
+					}
+				}
+
+				opts = append(opts, server.WithIdentity(id))
+
+				// Create DID resolver
+				resolveDIDPatterns := cCtx.StringSlice("resolve-did-web")
+				// Use HTTP-based resolution for specified patterns
+				for i, d := range resolveDIDPatterns {
+					// remove "did:web:" prefix if present, since the resolver expects
+					// just the domain/path part
+					resolveDIDPatterns[i] = strings.TrimPrefix(d, "did:web:")
+				}
+				rslvOpts := []web.Option{
+					web.WithPatterns(resolveDIDPatterns...),
+				}
+				if cCtx.Bool("insecure-did-resolution") {
+					rslvOpts = append(rslvOpts, web.WithInsecure(true))
+				}
+
+				wellKnownResolv, err := aws.NewPrincipalMappingResolver(presets.PrincipalMapping)
+				if err != nil {
+					return fmt.Errorf("creating principal mapping resolver: %w", err)
+				}
+
+				doc, err := id.DIDDocument()
+				if err != nil {
+					return fmt.Errorf("creating DID document: %w", err)
+				}
+				wellKnownResolv[id.DID()] = doc
+
+				httpResolv, err := web.NewResolver(rslvOpts...)
+				if err != nil {
+					return fmt.Errorf("creating HTTP resolver: %w", err)
+				}
+
+				opts = append(
+					opts,
+					server.WithContentClaimsOptions(
+						userver.WithValidationOptions(
+							validator.WithDIDResolver(resolver.ByMethod{
+								"key": key.Resolver,
+								"web": resolver.Tiered{
+									wellKnownResolv,
+									resolver.NewCached(httpResolv, time.Hour*3),
+								},
+							}),
+						),
+					),
+				)
+
+				ipniSrvOpts, err := ipniOpts(cCtx.String("ipni-format-peer-id"), cCtx.String("ipni-format-endpoint"))
+				if err != nil {
+					return fmt.Errorf("setting up IPNI options: %w", err)
+				}
+				opts = append(opts, ipniSrvOpts...)
+				var sc construct.ServiceConfig
+				sc.ID = id
+				sc.IPNIFindURL = cCtx.String("ipni-endpoint")
+				sc.PublicURL = cCtx.StringSlice("public-url")
+
+				// Create standalone Redis client for local development
+				redisOpts := &goredis.Options{
+					Addr:     cCtx.String("redis-url"),
+					Password: cCtx.String("redis-passwd"),
+				}
+				redisClient := goredis.NewClient(redisOpts)
+				clientAdapter := redis.NewClientAdapter(redisClient)
+
+				if cCtx.String("ipni-fallback-endpoints") != "" {
+					var urls []string
+					err := json.Unmarshal([]byte(cCtx.String("ipni-fallback-endpoints")), &urls)
+					if err != nil {
+						return fmt.Errorf("parsing IPNI fallback endpoints JSON: %w", err)
+					}
+					sc.IPNIFindFallbackURLs = urls
+				}
+
+				if cCtx.String("ipni-announce-urls") != "" {
+					var urls []string
+					err := json.Unmarshal([]byte(cCtx.String("ipni-announce-urls")), &urls)
+					if err != nil {
+						return fmt.Errorf("parsing IPNI announce URLs JSON: %w", err)
+					}
+					sc.IPNIDirectAnnounceURLs = urls
+				} else {
+					sc.IPNIDirectAnnounceURLs = presets.IPNIAnnounceURLs
+				}
+
+				// id.Raw() returns the 32-byte seed; libp2p's
+				// UnmarshalEd25519PrivateKey wants the 64-byte stdlib form
+				// (seed||pub). Expand via NewKeyFromSeed before handing over.
+				privKey, err := crypto.UnmarshalEd25519PrivateKey(crypto_ed25519.NewKeyFromSeed(idSigner.Raw()))
+				if err != nil {
+					return fmt.Errorf("unmarshaling private key: %w", err)
+				}
+				sc.PrivateKey = privKey
+
+				logging.SetAllLoggers(logging.LevelInfo)
+				indexer, err := construct.Construct(sc,
+					construct.WithProvidersClient(clientAdapter),
+					construct.WithNoProvidersClient(redisClient),
+					construct.WithClaimsClient(redisClient),
+					construct.WithIndexesClient(redisClient),
+				)
+				if err != nil {
+					return err
+				}
+				err = indexer.Startup(cCtx.Context)
+				if err != nil {
+					return err
+				}
+				defer func() {
+					indexer.Shutdown(cCtx.Context)
+				}()
+				return server.ListenAndServe(addr, indexer, opts...)
+			},
+		},
+	},
+}
+
+func ipniOpts(ipniFormatPeerID string, ipniFormatEndpoint string) ([]server.Option, error) {
+	if ipniFormatEndpoint == "" || ipniFormatPeerID == "" {
+		return nil, nil
+	}
+	peerID, err := peer.Decode(ipniFormatPeerID)
+	if err != nil {
+		return nil, fmt.Errorf("decoding IPNI format peer ID: %w", err)
+	}
+	url, err := url.Parse(ipniFormatEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("parsing IPNI format endpoint URL: %w", err)
+	}
+	ma, err := maurl.FromURL(url)
+	if err != nil {
+		return nil, fmt.Errorf("converting IPNI format endpoint URL to multiaddr: %w", err)
+	}
+	return []server.Option{
+		server.WithIPNI(peer.AddrInfo{ID: peerID, Addrs: []multiaddr.Multiaddr{ma}}, metadata.Default.New(metadata.IpfsGatewayHttp{})),
+	}, nil
+}
+
+// signerFromPEMFile loads an Ed25519 private key from a PEM file.
+func signerFromPEMFile(path string) (multikey.Signer, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	pemData, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("reading private key: %w", err)
+	}
+
+	var privateKey *crypto_ed25519.PrivateKey
+	rest := pemData
+
+	for {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+
+		if block.Type == "PRIVATE KEY" {
+			parsedKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse PKCS#8 private key: %w", err)
+			}
+
+			key, ok := parsedKey.(crypto_ed25519.PrivateKey)
+			if !ok {
+				return nil, fmt.Errorf("the parsed key is not an ED25519 private key")
+			}
+			privateKey = &key
+			break
+		}
+	}
+
+	if privateKey == nil {
+		return nil, fmt.Errorf("could not find a PRIVATE KEY block in the PEM file")
+	}
+
+	// ucantone's FromRaw wants the 32-byte seed; crypto/ed25519.PrivateKey is
+	// 64 bytes (seed || pub), so extract the seed before handing it over.
+	return ed25519.FromRaw(privateKey.Seed())
+}

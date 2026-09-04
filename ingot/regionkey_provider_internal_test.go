@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 

@@ -1,8 +1,8 @@
 package rpc_test
 
 import (
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
@@ -19,7 +19,7 @@ import (
 
 func (s *RPCSuite) TestBlobAllocate_Basic() {
 	t := s.T()
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	size := uint64(123)
 	cause := testutil.RandomCID(t)
 	space := testutil.RandomDID(t)
@@ -59,7 +59,7 @@ func (s *RPCSuite) TestBlobAllocate_Basic() {
 // this at the validator. The handler check is the only guard.
 func (s *RPCSuite) TestBlobAllocate_SizeLimitExceeded() {
 	t := s.T()
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	// One byte past the default cap. Costs nothing to run: only the declared

@@ -3,7 +3,7 @@ package forgeclient
 
 import (
 	"github.com/fil-forge/forge/ingot/tokenstore"
-	"github.com/fil-forge/libforge/receipt"
+	"github.com/fil-forge/forge/protocol/receipt"
 	"github.com/fil-forge/ucantone/client"
 	"go.uber.org/zap"
 )

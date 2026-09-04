@@ -14,8 +14,8 @@ import (
 	providerpostgres "github.com/fil-forge/forge/hilt/pkg/store/provider/postgres"
 	"github.com/fil-forge/forge/hilt/pkg/store/tenant"
 	tenantpostgres "github.com/fil-forge/forge/hilt/pkg/store/tenant/postgres"
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 )

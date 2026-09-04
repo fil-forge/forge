@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/store"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
@@ -84,7 +84,7 @@ func createPostgresStores(t *testing.T) storeBundle {
 // randomBlob returns a blob with a random digest and the given size.
 func randomBlob(t *testing.T, size uint64) blob.Blob {
 	t.Helper()
-	return blob.Blob{Digest: testutil.RandomMultihash(t), Size: size}
+	return blob.Blob{Digest: testutil.RandomDigest(t), Size: size}
 }
 
 func TestBlobRegistryStore(t *testing.T) {
@@ -151,7 +151,7 @@ func TestBlobRegistryStore(t *testing.T) {
 				b := makeStores(t, k)
 				space := testutil.RandomDID(t)
 
-				_, err := b.registry.Get(t.Context(), space, testutil.RandomMultihash(t))
+				_, err := b.registry.Get(t.Context(), space, testutil.RandomDigest(t))
 				require.ErrorIs(t, err, blobregistry.ErrEntryNotFound)
 			})
 
@@ -193,7 +193,7 @@ func TestBlobRegistryStore(t *testing.T) {
 				b := makeStores(t, k)
 				space := testutil.RandomDID(t)
 
-				err := b.registry.Deregister(t.Context(), space, testutil.RandomMultihash(t), testutil.RandomCID(t))
+				err := b.registry.Deregister(t.Context(), space, testutil.RandomDigest(t), testutil.RandomCID(t))
 				require.ErrorIs(t, err, blobregistry.ErrEntryNotFound)
 			})
 

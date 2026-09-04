@@ -3,7 +3,7 @@ package base
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/ucan/retrieval"
+	"github.com/fil-forge/forge/protocol/retrieval"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +19,7 @@ func (s *BaseSuite) RPCClient(t *testing.T) *client.HTTPClient {
 	return c
 }
 
-// RetrievalClient returns a libforge retrieval client pointed at the
+// RetrievalClient returns a protocol retrieval client pointed at the
 // suite's byte-streaming endpoint (GET /piece/:cid). Use this for
 // capabilities whose response body is the raw blob bytes:
 // blob/retrieve, content/retrieve.

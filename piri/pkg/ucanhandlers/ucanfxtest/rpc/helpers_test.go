@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/access"
-	"github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/protocol/commands/access"
+	"github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/ucantone/errors/datamodel"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"

@@ -3,8 +3,8 @@ package ucanhandlers
 import (
 	"fmt"
 
-	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/libforge/ucan/retrieval"
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/forge/protocol/retrieval"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/server"
 	"github.com/fil-forge/ucantone/ucan"

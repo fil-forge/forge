@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan/invocation"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"
 )

@@ -3,10 +3,10 @@ package rpc_test
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/assert"
+	"github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/fil-forge/ucantone/ucan/invocation"
@@ -297,7 +297,7 @@ func (s *RPCSuite) TestBlobRelease_InvalidCause_DigestMismatch() {
 	digest := s.seedAcceptedBlob(t, space)
 
 	// The remove names a different digest than the release.
-	remove := s.selfIssuedRemove(t, spaceSigner, testutil.RandomMultihash(t))
+	remove := s.selfIssuedRemove(t, spaceSigner, testutil.RandomDigest(t))
 	rcpt := s.sendRelease(t, space, digest, remove.Task().Link(), []ucan.Invocation{remove})
 	assertReceiptFailure(t, rcpt, blob.InvalidCauseErrorName)
 	s.assertClaimRetained(t, space, digest)

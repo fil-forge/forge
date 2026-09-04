@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	shardcmds "github.com/fil-forge/libforge/commands/upload/shard"
+	shardcmds "github.com/fil-forge/forge/protocol/commands/upload/shard"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"
 	upload_store "github.com/fil-forge/forge/sprue/pkg/store/upload/memory"

@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/commands/admin/provider"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"

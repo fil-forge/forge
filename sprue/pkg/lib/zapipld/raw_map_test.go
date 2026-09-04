@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/ipld/datamodel"
+	"github.com/fil-forge/ucantone/testutil"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )

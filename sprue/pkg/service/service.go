@@ -8,9 +8,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/fil-forge/libforge/attestation"
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/attestation"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/forge/sprue/pkg/lib/ucan_server"
 	"github.com/fil-forge/forge/sprue/pkg/service/ui"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"

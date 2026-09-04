@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/content"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/content"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/receipt"
 	"github.com/ipfs/go-cid"
@@ -29,7 +29,7 @@ func createTestReceipt(t *testing.T) ucan.Receipt {
 		node.DID(),
 		&content.RetrieveArguments{
 			Blob: content.Blob{
-				Digest: testutil.RandomMultihash(t),
+				Digest: testutil.RandomDigest(t),
 			},
 			Range: content.Range{
 				Start: 1024,

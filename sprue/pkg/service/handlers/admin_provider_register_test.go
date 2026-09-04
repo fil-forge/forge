@@ -3,10 +3,10 @@ package handlers_test
 import (
 	"testing"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
-	pdpcmds "github.com/fil-forge/libforge/commands/pdp"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	replicacmds "github.com/fil-forge/forge/protocol/commands/blob/replica"
+	pdpcmds "github.com/fil-forge/forge/protocol/commands/pdp"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/commands/admin/provider"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"

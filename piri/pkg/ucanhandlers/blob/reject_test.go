@@ -3,9 +3,9 @@ package blob
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/blob"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/promise"
 	"github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
@@ -45,7 +45,7 @@ func newRejectWorld(t *testing.T) *rejectWorld {
 
 func TestReject_ParkedBlobDeletesBytes(t *testing.T) {
 	w := newRejectWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	require.NoError(t, w.allocs.Put(t.Context(), allocation.Allocation{
@@ -69,13 +69,13 @@ func TestReject_UnknownBlobIsSuccess(t *testing.T) {
 	w := newRejectWorld(t)
 	require.NoError(t, Reject(t.Context(), w.deps, &RejectRequest{
 		Space:  testutil.RandomDID(t),
-		Digest: testutil.RandomMultihash(t),
+		Digest: testutil.RandomDigest(t),
 	}))
 }
 
 func TestReject_AcceptedBlobRefused(t *testing.T) {
 	w := newRejectWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	require.NoError(t, w.allocs.Put(t.Context(), allocation.Allocation{
@@ -108,7 +108,7 @@ func TestReject_AcceptedBlobRefused(t *testing.T) {
 // strand this space's parked allocation (RFC: multi-tenant liveness).
 func TestReject_OtherSpaceAcceptanceDoesNotBlock(t *testing.T) {
 	w := newRejectWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	rejecting := testutil.RandomDID(t)
 	accepted := testutil.RandomDID(t)
 
@@ -138,7 +138,7 @@ func TestReject_OtherSpaceAcceptanceDoesNotBlock(t *testing.T) {
 
 func TestReject_OtherSpaceAllocationRetainsBytes(t *testing.T) {
 	w := newRejectWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	abandoning := testutil.RandomDID(t)
 	uploading := testutil.RandomDID(t)
 

@@ -1,0 +1,13 @@
+.git
+.env*
+*.md
+LICENSE
+LICENSE-*
+docker-compose*.yml
+.github
+deploy
+.tfworkspace
+build
+docs
+.goreleaser.yaml
+codecov.yml

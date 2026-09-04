@@ -8,7 +8,7 @@ import (
 	adminprovider "github.com/fil-forge/forge/hilt/pkg/commands/admin/provider"
 	"github.com/fil-forge/forge/hilt/pkg/store"
 	providerstore "github.com/fil-forge/forge/hilt/pkg/store/provider"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
 	ucanerrors "github.com/fil-forge/ucantone/errors"

@@ -14,9 +14,9 @@ import (
 	providermemory "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
 	tenantmemory "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
-	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/internal/identity"
 	swarfclient "github.com/fil-forge/swarf/pkg/client"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )

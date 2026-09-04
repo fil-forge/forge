@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/did/web"
 	"github.com/gofiber/fiber/v3"
 )

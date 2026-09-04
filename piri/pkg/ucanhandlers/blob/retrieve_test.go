@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/ipfs/go-datastore"
 	"github.com/ipfs/go-datastore/sync"
 	"github.com/multiformats/go-multihash"
@@ -43,7 +43,7 @@ func newPieceReader(t *testing.T, data ...[]byte) (types.PieceReaderAPI, []multi
 func TestRetrieve_NotFound(t *testing.T) {
 	reader, _ := newPieceReader(t)
 
-	container, err := Retrieve(t.Context(), reader, testutil.RandomMultihash(t), nil)
+	container, err := Retrieve(t.Context(), reader, testutil.RandomDigest(t), nil)
 	require.Error(t, err, "missing blob should surface as a named UCAN error")
 	require.Equal(t, NotFoundErrorName, namedError(t, err))
 

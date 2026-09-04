@@ -1,0 +1,1005 @@
+package test
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/fil-forge/ucantone/multikey"
+	"github.com/fil-forge/ucantone/multikey/ed25519"
+	"github.com/fil-forge/ucantone/ucan/container"
+	"github.com/labstack/echo/v4"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxtest"
+
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	replicacmds "github.com/fil-forge/forge/protocol/commands/blob/replica"
+	"github.com/fil-forge/forge/protocol/commands/claim"
+	pdpcmds "github.com/fil-forge/forge/protocol/commands/pdp"
+	"github.com/fil-forge/forge/protocol/commands/space/egress"
+	forgetypes "github.com/fil-forge/forgectl/pkg/services/types"
+	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/ucan"
+	"github.com/fil-forge/ucantone/ucan/delegation"
+
+	"github.com/fil-forge/forge/delegator/internal/config"
+	"github.com/fil-forge/forge/delegator/internal/handlers"
+	"github.com/fil-forge/forge/delegator/internal/server"
+	"github.com/fil-forge/forge/delegator/internal/services/registrar"
+	"github.com/fil-forge/forge/delegator/internal/store"
+	"github.com/fil-forge/forge/internal/client/delegator"
+)
+
+// mockStore implements the store.Store interface for testing
+type mockStore struct {
+	mu             sync.RWMutex
+	allowedDIDs    map[string]bool
+	registeredDIDs map[string]store.StorageProviderInfo
+}
+
+func (m *mockStore) AddAllowedDID(ctx context.Context, did did.DID) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	m.allowedDIDs[did.String()] = true
+	return nil
+}
+
+func (m *mockStore) RemoveAllowedDID(ctx context.Context, did did.DID) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	delete(m.allowedDIDs, did.String())
+	return nil
+}
+
+func newMockStore() *mockStore {
+	return &mockStore{
+		allowedDIDs:    make(map[string]bool),
+		registeredDIDs: make(map[string]store.StorageProviderInfo),
+	}
+}
+
+func (m *mockStore) IsAllowedDID(ctx context.Context, did did.DID) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.allowedDIDs[did.String()], nil
+}
+
+func (m *mockStore) IsRegisteredDID(ctx context.Context, did did.DID) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	_, exists := m.registeredDIDs[did.String()]
+	return exists, nil
+}
+
+func (m *mockStore) RegisterProvider(ctx context.Context, provider store.StorageProviderInfo) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.registeredDIDs[provider.Provider] = provider
+	return nil
+}
+
+func (m *mockStore) allowDID(did did.DID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.allowedDIDs[did.String()] = true
+}
+
+func (m *mockStore) getProvider(did did.DID) (store.StorageProviderInfo, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	provider, exists := m.registeredDIDs[did.String()]
+	return provider, exists
+}
+
+// Helper functions for test data generation
+func generateTestIssuer(t *testing.T) multikey.Issuer {
+	t.Helper()
+	issuer, err := ed25519.GenerateIssuer()
+	if err != nil {
+		t.Fatalf("failed to create issuer: %v", err)
+	}
+	return issuer
+}
+
+func generateIndexingProof(t *testing.T, indexingIssuer ucan.Issuer, delegatorDID did.DID) ucan.Delegation {
+	dlg, err := claim.Cache.Delegate(
+		indexingIssuer,
+		delegatorDID,
+		indexingIssuer.DID(),
+		delegation.WithNoExpiration(),
+	)
+	if err != nil {
+		t.Fatalf("failed to create indexing proof: %v", err)
+	}
+	return dlg
+}
+
+func generateEgressTrackingProof(t *testing.T, egressTrackingIssuer ucan.Issuer, delegatorDID did.DID) ucan.Delegation {
+	dlg, err := egress.Track.Delegate(
+		egressTrackingIssuer,
+		delegatorDID,
+		egressTrackingIssuer.DID(),
+		delegation.WithNoExpiration(),
+	)
+	if err != nil {
+		t.Fatalf("failed to create indexing proof: %v", err)
+	}
+	return dlg
+}
+
+// providerProofs builds the container a registering provider must supply: the
+// provider delegates the required capabilities to the upload service. It is
+// returned as a container.Base64Gzip-encoded string, as the register request
+// expects.
+func providerProofs(t *testing.T, provider ucan.Issuer, uploadServiceDID did.DID) string {
+	t.Helper()
+	cmds := []ucan.Command{
+		blobcmds.Allocate.Command,
+		blobcmds.Accept.Command,
+		replicacmds.Allocate.Command,
+		pdpcmds.Info.Command,
+	}
+	dlgs := make([]ucan.Delegation, 0, len(cmds))
+	for _, cmd := range cmds {
+		dlg, err := delegation.Delegate(provider, uploadServiceDID, provider.DID(), cmd, delegation.WithNoExpiration())
+		if err != nil {
+			t.Fatalf("failed to create %s delegation: %v", cmd, err)
+		}
+		dlgs = append(dlgs, dlg)
+	}
+	proofs, err := container.Encode(container.Base64Gzip, container.New(container.WithDelegations(dlgs...)))
+	if err != nil {
+		t.Fatalf("failed to encode provider proofs: %v", err)
+	}
+	return string(proofs)
+}
+
+// findDelegationByIssuer returns the first delegation in ct whose issuer matches
+// the given DID. Containers returned by the delegator hold both the upstream
+// proof and the freshly-minted hop; tests use this to pick the hop the
+// delegator just signed.
+func findDelegationByIssuer(t *testing.T, ct *container.Container, issuer did.DID) ucan.Delegation {
+	t.Helper()
+	for _, d := range ct.Delegations() {
+		if d.Issuer() == issuer {
+			return d
+		}
+	}
+	t.Fatalf("no delegation in container issued by %s", issuer)
+	return nil
+}
+
+// mockStorageNode simulates a storage node server
+type mockStorageNode struct {
+	server  *httptest.Server
+	did     did.DID
+	issuer  ucan.Issuer
+	handler *echo.Echo
+}
+
+func newMockStorageNode(t *testing.T) *mockStorageNode {
+	issuer := generateTestIssuer(t)
+	e := echo.New()
+	e.HideBanner = true
+
+	node := &mockStorageNode{
+		did:     issuer.DID(),
+		issuer:  issuer,
+		handler: e,
+	}
+
+	// Mock storage node endpoints
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, fmt.Sprintf("🔥 storage v0.0.3\n- https://github.com/storacha/storage\n- %s", node.did.String()))
+	})
+
+	// Mock blob allocate endpoint
+	e.POST("/allocate", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"url": node.server.URL + "/upload",
+			"headers": map[string]string{
+				"Authorization": "Bearer test-token",
+			},
+		})
+	})
+
+	// Mock blob upload endpoint
+	e.PUT("/upload", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
+
+	// Mock blob accept endpoint
+	e.POST("/accept", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]interface{}{
+			"locationCommitment": map[string]interface{}{
+				"location": []string{node.server.URL + "/download/test"},
+			},
+			"pdpAccept": map[string]interface{}{
+				"piece": map[string]interface{}{
+					"link": "baga6ea4seaqtest",
+				},
+			},
+		})
+	})
+
+	// Mock download endpoint
+	e.GET("/download/:id", func(c echo.Context) error {
+		// Return some test data
+		data := make([]byte, 1024)
+		return c.Blob(http.StatusOK, "application/octet-stream", data)
+	})
+
+	node.server = httptest.NewServer(node.handler)
+	return node
+}
+
+func (n *mockStorageNode) close() {
+	n.server.Close()
+}
+
+func (n *mockStorageNode) url() string {
+	return n.server.URL
+}
+
+// Test server setup
+func setupTestServer(t *testing.T, mockStore *mockStore) (*fxtest.App, string, ucan.Issuer, ucan.Issuer, ucan.Issuer, ucan.Issuer, *mockContractOperator) {
+	// Generate test signers
+	delegatorIssuer := generateTestIssuer(t)
+	indexingIssuer := generateTestIssuer(t)
+	egressTrackingIssuer := generateTestIssuer(t)
+	uploadIssuer := generateTestIssuer(t)
+
+	// Create mock contract operator
+	mockContractOp := newMockContractOperator()
+
+	// Generate indexing proof
+	indexingProof := generateIndexingProof(t, indexingIssuer, delegatorIssuer.DID())
+
+	// Generate egress tracking proof
+	egressTrackingProof := generateEgressTrackingProof(t, egressTrackingIssuer, delegatorIssuer.DID())
+
+	// Get a free port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to get free port: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	// Create test configuration
+	testConfig := &config.Config{
+		Server: config.ServerConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		},
+		Delegator: config.DelegatorServiceConfig{
+			IndexingServiceWebDID:    indexingIssuer.DID().String(),
+			EgressTrackingServiceDID: egressTrackingIssuer.DID().String(),
+			UploadServiceDID:         uploadIssuer.DID().String(),
+		},
+	}
+
+	// Create the test app with fx
+	app := fxtest.New(t,
+		fx.Provide(
+			func() *config.Config { return testConfig },
+			func() store.Store { return mockStore },
+			func() identity.Identity { return identity.Identity{Issuer: delegatorIssuer} },
+			fx.Annotate(
+				func() (did.DID, error) {
+					return did.Parse(indexingIssuer.DID().String())
+				},
+				fx.ResultTags(`name:"indexing_service_web_did"`),
+			),
+			fx.Annotate(
+				func() (did.DID, error) {
+					return did.Parse(egressTrackingIssuer.DID().String())
+				},
+				fx.ResultTags(`name:"egress_tracking_service_did"`),
+			),
+			fx.Annotate(
+				func() did.DID { return uploadIssuer.DID() },
+				fx.ResultTags(`name:"upload_service_did"`),
+			),
+			fx.Annotate(
+				func() ucan.Delegation { return indexingProof },
+				fx.ResultTags(`name:"indexing_service_proof"`),
+			),
+			fx.Annotate(
+				func() ucan.Delegation { return egressTrackingProof },
+				fx.ResultTags(`name:"egress_tracking_service_proof"`),
+			),
+			func() registrar.ContractOperator { return mockContractOp },
+			registrar.New,
+			handlers.NewHandlers,
+			server.NewServer,
+		),
+		fx.Invoke(server.Start),
+	)
+
+	app.RequireStart()
+
+	// Wait for server to be ready
+	serverURL := fmt.Sprintf("http://127.0.0.1:%d", port)
+	for i := 0; i < 50; i++ {
+		resp, err := http.Get(serverURL + "/healthcheck")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return app, serverURL, delegatorIssuer, indexingIssuer, egressTrackingIssuer, uploadIssuer, mockContractOp
+}
+
+func TestSystemHealthCheck(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, _, _, _, _, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	// Test health check
+	ctx := context.Background()
+	err = c.HealthCheck(ctx)
+	if err != nil {
+		t.Fatalf("health check failed: %v", err)
+	}
+}
+
+func TestSystemDIDDocument(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, delegatorSigner, _, _, _, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	// Test DID document endpoint
+	ctx := context.Background()
+	doc, err := c.DIDDocument(ctx)
+	if err != nil {
+		t.Fatalf("get did document failed: %v", err)
+	}
+
+	if doc.ID != delegatorSigner.DID() {
+		t.Fatalf("unexpected id: got %s, want %s", doc.ID, delegatorSigner.DID().String())
+	}
+}
+
+func TestSystemRegistrationFlow(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, _, _, _, uploadSigner, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	// Create a mock storage node
+	storageNode := newMockStorageNode(t)
+	defer storageNode.close()
+
+	// Allow the storage node DID
+	mockStore.allowDID(storageNode.did)
+
+	// Test registration
+	t.Run("successful registration", func(t *testing.T) {
+		err = c.Register(t.Context(), &client.RegisterRequest{
+			Operator:      storageNode.did.String(),
+			OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+			ProofSetID:    1,
+			OperatorEmail: "test@example.com",
+			PublicURL:     storageNode.url(),
+			Proofs:        providerProofs(t, storageNode.issuer, uploadSigner.DID()),
+		})
+		if err != nil {
+			t.Fatalf("registration failed: %v", err)
+		}
+
+		// Verify registration in store
+		provider, exists := mockStore.getProvider(storageNode.did)
+		if !exists {
+			t.Fatal("provider not found in store after registration")
+		}
+		if provider.Provider != storageNode.did.String() {
+			t.Fatalf("unexpected provider DID: got %s, want %s", provider.Provider, storageNode.did.String())
+		}
+		if provider.Proofs == "" {
+			t.Fatal("expected provider proofs to be stored")
+		}
+	})
+
+	t.Run("duplicate registration should fail", func(t *testing.T) {
+		err = c.Register(t.Context(), &client.RegisterRequest{
+			Operator:      storageNode.did.String(),
+			OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+			ProofSetID:    1,
+			OperatorEmail: "test@example.com",
+			PublicURL:     storageNode.url(),
+			Proofs:        providerProofs(t, storageNode.issuer, uploadSigner.DID()),
+		})
+		if err == nil {
+			t.Fatal("expected duplicate registration to fail")
+		}
+	})
+
+	t.Run("unauthorized DID registration should fail", func(t *testing.T) {
+		unauthorizedSigner := generateTestIssuer(t)
+		unauthorizedNode := newMockStorageNode(t)
+		defer unauthorizedNode.close()
+
+		err = c.Register(t.Context(), &client.RegisterRequest{
+			Operator:      unauthorizedSigner.DID().String(),
+			OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+			ProofSetID:    1,
+			OperatorEmail: "test@example.com",
+			PublicURL:     unauthorizedNode.url(),
+			Proofs:        providerProofs(t, unauthorizedSigner, uploadSigner.DID()),
+		})
+		if err == nil {
+			t.Fatal("expected unauthorized registration to fail")
+		}
+	})
+
+	t.Run("missing proofs registration should fail", func(t *testing.T) {
+		missingProofsNode := newMockStorageNode(t)
+		defer missingProofsNode.close()
+		mockStore.allowDID(missingProofsNode.did)
+
+		err = c.Register(t.Context(), &client.RegisterRequest{
+			Operator:      missingProofsNode.did.String(),
+			OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+			ProofSetID:    1,
+			OperatorEmail: "test@example.com",
+			PublicURL:     missingProofsNode.url(),
+			// Proofs intentionally omitted.
+		})
+		if err == nil {
+			t.Fatal("expected registration without proofs to fail")
+		}
+	})
+}
+
+func TestSystemIsRegistered(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, _, _, _, uploadSigner, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Create and register a storage node
+	storageNode := newMockStorageNode(t)
+	defer storageNode.close()
+	mockStore.allowDID(storageNode.did)
+
+	// Register the node
+	err = c.Register(ctx, &client.RegisterRequest{
+		Operator:      storageNode.did.String(),
+		OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+		ProofSetID:    1,
+		OperatorEmail: "test@example.com",
+		PublicURL:     storageNode.url(),
+		Proofs:        providerProofs(t, storageNode.issuer, uploadSigner.DID()),
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	t.Run("check registered DID", func(t *testing.T) {
+		registered, err := c.IsRegistered(ctx, &client.IsRegisteredRequest{
+			DID: storageNode.did.String(),
+		})
+		if err != nil {
+			t.Fatalf("is registered check failed: %v", err)
+		}
+		if !registered {
+			t.Fatal("expected DID to be registered")
+		}
+	})
+
+	t.Run("check unregistered DID", func(t *testing.T) {
+		unregisteredSigner := generateTestIssuer(t)
+		registered, err := c.IsRegistered(ctx, &client.IsRegisteredRequest{
+			DID: unregisteredSigner.DID().String(),
+		})
+		if err != nil {
+			t.Fatalf("is registered check failed: %v", err)
+		}
+		if registered {
+			t.Fatal("expected DID to not be registered")
+		}
+	})
+}
+
+func TestSystemRequestProofs(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, delegatorSigner, indexingSigner, egressTrackingSigner, uploadSigner, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Create and register a storage node
+	storageNode := newMockStorageNode(t)
+	defer storageNode.close()
+	mockStore.allowDID(storageNode.did)
+
+	// Register the node
+	err = c.Register(ctx, &client.RegisterRequest{
+		Operator:      storageNode.did.String(),
+		OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+		ProofSetID:    1,
+		OperatorEmail: "test@example.com",
+		PublicURL:     storageNode.url(),
+		Proofs:        providerProofs(t, storageNode.issuer, uploadSigner.DID()),
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	t.Run("request proofs for registered DID", func(t *testing.T) {
+		resp, err := c.RequestProofs(ctx, storageNode.did.String())
+		if err != nil {
+			t.Fatalf("request proof failed: %v", err)
+		}
+
+		// Verify indexer proof
+		if resp.Proofs.Indexer == nil {
+			t.Fatal("expected indexer proof to be returned")
+		}
+
+		indxrContainer, err := container.Decode(resp.Proofs.Indexer)
+		if err != nil {
+			t.Fatalf("failed to parse returned indexer proof container: %v", err)
+		}
+		indxrDlg := findDelegationByIssuer(t, indxrContainer, delegatorSigner.DID())
+
+		// Verify issuer is the delegator
+		if indxrDlg.Issuer() != delegatorSigner.DID() {
+			t.Fatalf("unexpected indexer proof issuer: got %s, want %s", indxrDlg.Issuer(), delegatorSigner.DID())
+		}
+
+		// Verify audience is the storage node
+		if indxrDlg.Audience() != storageNode.did {
+			t.Fatalf("unexpected indexer proof audience: got %s, want %s", indxrDlg.Audience(), storageNode.did)
+		}
+
+		// Verify capability
+		cmd := indxrDlg.Command()
+		if !cmd.Defined() {
+			t.Fatalf("indxer proof command not defined")
+		}
+		if !cmd.Proves(claim.Cache.Command) {
+			t.Fatalf("unexpected capability in indexer proof, does not prove %s", claim.Cache)
+		}
+		if indxrDlg.Subject() != indexingSigner.DID() {
+			t.Fatalf("unexpected subject in indexer proof: got %s, want %s", indxrDlg.Subject(), indexingSigner.DID())
+		}
+
+		// Verify egress tracker proof
+		if resp.Proofs.EgressTracker == nil {
+			t.Fatal("expected egress tracker proof to be returned")
+		}
+
+		etrackerContainer, err := container.Decode(resp.Proofs.EgressTracker)
+		if err != nil {
+			t.Fatalf("failed to parse returned egress tracker proof container: %v", err)
+		}
+		etrackerDlg := findDelegationByIssuer(t, etrackerContainer, delegatorSigner.DID())
+
+		// Verify issuer is the delegator
+		if etrackerDlg.Issuer() != delegatorSigner.DID() {
+			t.Fatalf("unexpected egress tracker proof issuer: got %s, want %s", etrackerDlg.Issuer(), delegatorSigner.DID())
+		}
+
+		// Verify audience is the storage node
+		if etrackerDlg.Audience() != storageNode.did {
+			t.Fatalf("unexpected egress tracker proof audience: got %s, want %s", etrackerDlg.Audience(), storageNode.did)
+		}
+
+		// Verify capability
+		cmd = etrackerDlg.Command()
+		if !cmd.Defined() {
+			t.Fatalf("etracker proof command not defined")
+		}
+		if !cmd.Proves(egress.Track.Command) {
+			t.Fatalf("unexpected capability in egress tracker proof, does not prove %s", egress.Track)
+		}
+		if etrackerDlg.Subject() != egressTrackingSigner.DID() {
+			t.Fatal("unexpected subject in egress tracker proof")
+		}
+	})
+
+	t.Run("request proof for unregistered DID", func(t *testing.T) {
+		unregisteredSigner := generateTestIssuer(t)
+		mockStore.allowDID(unregisteredSigner.DID()) // Allow but don't register
+
+		_, err := c.RequestProofs(ctx, unregisteredSigner.DID().String())
+		if err == nil {
+			t.Fatal("expected request proof to fail for unregistered DID")
+		}
+	})
+
+	t.Run("request proof for unauthorized DID", func(t *testing.T) {
+		unauthorizedSigner := generateTestIssuer(t)
+		// Don't allow this DID
+
+		_, err := c.RequestProofs(ctx, unauthorizedSigner.DID().String())
+		if err == nil {
+			t.Fatal("expected request proof to fail for unauthorized DID")
+		}
+	})
+}
+
+func TestSystemEndToEndWorkflow(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, delegatorSigner, indexingSigner, egressTrackingSigner, uploadSigner, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Create a mock storage node
+	storageNode := newMockStorageNode(t)
+	defer storageNode.close()
+
+	// Allow the storage node DID
+	mockStore.allowDID(storageNode.did)
+
+	// Step 1: Check that node is not registered
+	registered, err := c.IsRegistered(ctx, &client.IsRegisteredRequest{
+		DID: storageNode.did.String(),
+	})
+	if err != nil {
+		t.Fatalf("is registered check failed: %v", err)
+	}
+	if registered {
+		t.Fatal("expected DID to not be registered initially")
+	}
+
+	// Step 2: Try to request proof before registration (should fail)
+	_, err = c.RequestProofs(ctx, storageNode.did.String())
+	if err == nil {
+		t.Fatal("expected request proof to fail before registration")
+	}
+
+	err = c.Register(ctx, &client.RegisterRequest{
+		Operator:      storageNode.did.String(),
+		OwnerAddress:  common.HexToAddress("0x1234567890123456789012345678901234567890").String(),
+		ProofSetID:    1,
+		OperatorEmail: "test@example.com",
+		PublicURL:     storageNode.url(),
+		Proofs:        providerProofs(t, storageNode.issuer, uploadSigner.DID()),
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	// Step 3: Verify node is now registered
+	registered, err = c.IsRegistered(ctx, &client.IsRegisteredRequest{
+		DID: storageNode.did.String(),
+	})
+	if err != nil {
+		t.Fatalf("is registered check failed: %v", err)
+	}
+	if !registered {
+		t.Fatal("expected DID to be registered after registration")
+	}
+
+	// Step 4: Request proof after registration (should succeed)
+	proofResp, err := c.RequestProofs(ctx, storageNode.did.String())
+	if err != nil {
+		t.Fatalf("request proof failed: %v", err)
+	}
+	if proofResp.Proofs.Indexer == nil {
+		t.Fatal("expected indexer proof to be returned")
+	}
+	if proofResp.Proofs.EgressTracker == nil {
+		t.Fatal("expected egress tracker proof to be returned")
+	}
+
+	// Step 5: Verify the proofs can be parsed and are valid
+	con, err := container.Decode(proofResp.Proofs.Indexer)
+	if err != nil {
+		t.Fatalf("failed to parse indexer proof: %v", err)
+	}
+	dlg := findDelegationByIssuer(t, con, delegatorSigner.DID())
+	if dlg.Audience() != storageNode.did {
+		t.Fatalf("indexer proof audience mismatch: got %s, want %s", dlg.Audience(), storageNode.did)
+	}
+	if dlg.Subject() != indexingSigner.DID() {
+		t.Fatalf("indexer proof subject mismatch: got %s, want %s", dlg.Subject(), indexingSigner.DID())
+	}
+
+	con, err = container.Decode(proofResp.Proofs.EgressTracker)
+	if err != nil {
+		t.Fatalf("failed to parse egress tracker proof: %v", err)
+	}
+	dlg = findDelegationByIssuer(t, con, delegatorSigner.DID())
+	if dlg.Audience() != storageNode.did {
+		t.Fatalf("egress tracker proof audience mismatch: got %s, want %s", dlg.Audience(), storageNode.did)
+	}
+	if dlg.Subject() != egressTrackingSigner.DID() {
+		t.Fatalf("egress tracker proof subject mismatch: got %s, want %s", dlg.Subject(), egressTrackingSigner.DID())
+	}
+}
+
+func TestSystemInvalidRequests(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, _, _, _, _, _ := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		method   string
+		endpoint string
+		body     string
+		wantCode int
+	}{
+		{
+			name:     "malformed JSON in register",
+			method:   "PUT",
+			endpoint: "/registrar/register-node",
+			body:     `{"invalid json`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "invalid DID in register",
+			method:   "PUT",
+			endpoint: "/registrar/register-node",
+			body:     `{"did": "not-a-did", "owner_address": "0x1234567890123456789012345678901234567890", "proof_set_id": 1, "operator_email": "test@example.com", "public_url": "http://example.com", "proof": "test"}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "invalid address in register",
+			method:   "PUT",
+			endpoint: "/registrar/register-node",
+			body:     `{"did": "did:key:z6MksvRCPWoXvMj8sUzuHiQ4pFkSawkKRz2eh1TALNEG6s3e", "owner_address": "not-an-address", "proof_set_id": 1, "operator_email": "test@example.com", "public_url": "http://example.com", "proof": "test"}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "malformed JSON in is-registered",
+			method:   "GET",
+			endpoint: "/registrar/is-registered",
+			body:     `{"invalid json`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "invalid DID in is-registered",
+			method:   "GET",
+			endpoint: "/registrar/is-registered",
+			body:     `{"did": "not-a-did"}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "deprecated method registrar/request-proof returns 410",
+			method:   "GET",
+			endpoint: "/registrar/request-proof",
+			body:     `{"did": "did:key:z6MksvRCPWoXvMj8sUzuHiQ4pFkSawkKRz2eh1TALNEG6s3e"}`,
+			wantCode: http.StatusGone,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequestWithContext(ctx, tt.method, serverURL+tt.endpoint, bytes.NewReader([]byte(tt.body)))
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("request failed: %v", err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != tt.wantCode {
+				t.Errorf("unexpected status code: got %d, want %d", resp.StatusCode, tt.wantCode)
+			}
+		})
+	}
+}
+
+// mockContractOperator implements the registrar.ContractOperator interface for testing
+type mockContractOperator struct {
+	mu                  sync.RWMutex
+	registeredProviders map[string]*forgetypes.ProviderInfo
+	approvedProviders   map[uint64]bool
+	nextProviderID      uint64
+}
+
+func newMockContractOperator() *mockContractOperator {
+	return &mockContractOperator{
+		registeredProviders: make(map[string]*forgetypes.ProviderInfo),
+		approvedProviders:   make(map[uint64]bool),
+		nextProviderID:      1,
+	}
+}
+
+func (m *mockContractOperator) IsRegisteredProvider(ctx context.Context, provider common.Address) (bool, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	_, exists := m.registeredProviders[provider.String()]
+	return exists, nil
+}
+
+func (m *mockContractOperator) GetProviderByAddress(ctx context.Context, provider common.Address) (*forgetypes.ProviderInfo, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	info, exists := m.registeredProviders[provider.String()]
+	if !exists {
+		return nil, fmt.Errorf("provider not found")
+	}
+	return info, nil
+}
+
+func (m *mockContractOperator) ApproveProvider(ctx context.Context, id uint64) (*forgetypes.ApprovalResult, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.approvedProviders[id] = true
+	return &forgetypes.ApprovalResult{
+		ProviderID:      id,
+		TransactionHash: common.HexToHash("0x1234567890abcdef"),
+	}, nil
+}
+
+func (m *mockContractOperator) registerProvider(address common.Address, isApproved bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	id := m.nextProviderID
+	m.nextProviderID++
+	m.registeredProviders[address.String()] = &forgetypes.ProviderInfo{
+		ID:         id,
+		IsApproved: isApproved,
+	}
+}
+
+func TestSystemRequestContractApproval(t *testing.T) {
+	mockStore := newMockStore()
+	app, serverURL, _, _, _, _, mockContractOp := setupTestServer(t, mockStore)
+	defer app.RequireStop()
+
+	// Create client
+	c, err := client.New(serverURL)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Test provider address
+	testAddress := common.HexToAddress("0x1234567890123456789012345678901234567890")
+
+	t.Run("successful contract approval", func(t *testing.T) {
+		// Create a test signer
+		signer := generateTestIssuer(t)
+		mockStore.allowDID(signer.DID())
+		mockContractOp.registerProvider(testAddress, false) // Register but not yet approved
+
+		// Sign the DID with the signer's private key to prove ownership
+		signature := signer.Sign([]byte(signer.DID().String()))
+
+		err = c.RequestApproval(ctx, &client.RequestApprovalRequest{
+			Operator:     signer.DID().String(),
+			OwnerAddress: testAddress.String(),
+			Signature:    signature,
+		})
+		if err != nil {
+			t.Fatalf("contract approval failed: %v", err)
+		}
+	})
+
+	t.Run("DID not in allow list", func(t *testing.T) {
+		// Create a test signer but don't add to allow list
+		signer := generateTestIssuer(t)
+		testAddr := common.HexToAddress("0x2234567890123456789012345678901234567890")
+
+		signature := signer.Sign([]byte(signer.DID().String()))
+
+		err = c.RequestApproval(ctx, &client.RequestApprovalRequest{
+			Operator:     signer.DID().String(),
+			OwnerAddress: testAddr.String(),
+			Signature:    signature,
+		})
+		if err == nil {
+			t.Fatal("expected contract approval to fail for DID not in allow list")
+		}
+	})
+
+	t.Run("invalid signature", func(t *testing.T) {
+		// Create a test signer and add to allow list
+		signer := generateTestIssuer(t)
+		mockStore.allowDID(signer.DID())
+		testAddr := common.HexToAddress("0x3234567890123456789012345678901234567890")
+		mockContractOp.registerProvider(testAddr, false)
+
+		// Use an invalid signature
+		invalidSignature := make([]byte, 64)
+
+		err = c.RequestApproval(ctx, &client.RequestApprovalRequest{
+			Operator:     signer.DID().String(),
+			OwnerAddress: testAddr.String(),
+			Signature:    invalidSignature,
+		})
+		if err == nil {
+			t.Fatal("expected contract approval to fail with invalid signature")
+		}
+	})
+
+	t.Run("provider not registered with contract", func(t *testing.T) {
+		// Create a test signer and add to allow list but don't register with contract
+		signer := generateTestIssuer(t)
+		mockStore.allowDID(signer.DID())
+		testAddr := common.HexToAddress("0x4234567890123456789012345678901234567890")
+		// Do NOT register with contract
+
+		signature := signer.Sign([]byte(signer.DID().String()))
+
+		err = c.RequestApproval(ctx, &client.RequestApprovalRequest{
+			Operator:     signer.DID().String(),
+			OwnerAddress: testAddr.String(),
+			Signature:    signature,
+		})
+		if err == nil {
+			t.Fatal("expected contract approval to fail for provider not registered with contract")
+		}
+	})
+
+	t.Run("already approved provider (idempotent)", func(t *testing.T) {
+		// Create a test signer
+		signer := generateTestIssuer(t)
+		mockStore.allowDID(signer.DID())
+		testAddr := common.HexToAddress("0x5234567890123456789012345678901234567890")
+		mockContractOp.registerProvider(testAddr, true) // Already approved
+
+		signature := signer.Sign([]byte(signer.DID().String()))
+
+		// Should succeed even if already approved (idempotent behavior)
+		err = c.RequestApproval(ctx, &client.RequestApprovalRequest{
+			Operator:     signer.DID().String(),
+			OwnerAddress: testAddr.String(),
+			Signature:    signature,
+		})
+		if err != nil {
+			t.Fatalf("contract approval failed for already approved provider: %v", err)
+		}
+	})
+}

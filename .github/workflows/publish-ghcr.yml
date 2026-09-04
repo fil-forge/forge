@@ -9,13 +9,20 @@ name: Container
 # images from the PR's tree and boots the stack on them, so an unbuildable
 # image fails the PR anyway.
 #
+# Every service publishes on every merge. This used to be path-filtered per
+# service; that stopped being sound once the services shared in-repo modules
+# and depended on one another (see ci.yml). With the gha build cache warm, an
+# unchanged service's build is a near no-op, so the cost of always publishing
+# is small and the cost of a stale image is not.
+#
 # The dev images (:main-dev) are published artifacts for ad-hoc engineer
 # debugging (debug toolset + dlv; smelt's compose.debug.yml / make debug-<svc>
 # flow) — built here on merge, never on PRs.
 #
 # Images are ghcr.io/fil-forge/forge/<service>, following the repo. The old
 # ghcr.io/fil-forge/<service> packages are left in place so existing pulls and
-# already-published snapshots keep resolving.
+# already-published snapshots keep resolving; the satellites' own repositories
+# keep publishing theirs until they are retired.
 
 on:
   push:
@@ -31,45 +38,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  changes:
-    name: Detect changes
-    runs-on: ubuntu-latest
-    outputs:
-      services: ${{ steps.filter.outputs.changes }}
-      any: ${{ steps.filter.outputs.changes != '[]' }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            piri:
-              - 'piri/**'
-              - 'docker/**'
-              - '.github/workflows/publish-ghcr.yml'
-            hilt:
-              - 'hilt/**'
-              - 'docker/**'
-              - '.github/workflows/publish-ghcr.yml'
-            sprue:
-              - 'sprue/**'
-              - 'docker/**'
-              - '.github/workflows/publish-ghcr.yml'
-            ingot:
-              - 'ingot/**'
-              - 'docker/**'
-              - '.github/workflows/publish-ghcr.yml'
-
   build:
     name: publish (${{ matrix.service }})
-    needs: changes
-    if: needs.changes.outputs.any == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        service: ${{ fromJSON(needs.changes.outputs.services) }}
+        service:
+          - piri
+          - hilt
+          - sprue
+          - ingot
+          - delegator
+          - piri-signing-service
+          - indexing-service
     steps:
       - uses: actions/checkout@v5
 
@@ -91,21 +74,29 @@ jobs:
             type=raw,value=main
             type=sha,prefix=sha-,format=short
 
-      # Per-service parameters for the shared Dockerfile.
+      # Per-service parameters for the shared Dockerfile (see its header for
+      # what MAIN_PKG, BIN and BUILD_TAGS mean).
       - name: Service build args
         id: args
         run: |
           extra=""
           case "${{ matrix.service }}" in
-            piri)  extra="BUILD_TAGS=skiff" ;;
-            ingot) extra="MAIN_PKG=./cmd/ingot" ;;
+            piri)                 extra="BUILD_TAGS=skiff" ;;
+            ingot)                extra="MAIN_PKG=./cmd/ingot" ;;
+            delegator)            extra=$'MAIN_PKG=.\nBIN=registrar' ;;
+            piri-signing-service) extra=$'MAIN_PKG=.\nBIN=signer' ;;
+            indexing-service)     extra="BIN=indexer" ;;
           esac
-          echo "extra=$extra" >> "$GITHUB_OUTPUT"
+          {
+            echo "extra<<EOF"
+            echo "$extra"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build and push (prod)
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service }}
+          context: .
           file: docker/Dockerfile
           target: prod
           build-args: |
@@ -121,7 +112,7 @@ jobs:
       - name: Build and push (dev)
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service }}
+          context: .
           file: docker/Dockerfile
           target: dev
           build-args: |

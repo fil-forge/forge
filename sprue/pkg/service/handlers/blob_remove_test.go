@@ -6,10 +6,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	httpcmds "github.com/fil-forge/libforge/commands/http"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	httpcmds "github.com/fil-forge/forge/protocol/commands/http"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
@@ -237,7 +237,7 @@ func TestBlobRemoveHandler(t *testing.T) {
 		deps := newBlobRemoveTestDeps(t, uploadService, logger)
 		space := testutil.RandomIssuer(t)
 
-		rcpt := invokeBlobRemove(t, deps, uploadService, space, testutil.RandomMultihash(t))
+		rcpt := invokeBlobRemove(t, deps, uploadService, space, testutil.RandomDigest(t))
 		_, err := blobcmds.Remove.Unpack(rcpt)
 		require.NoError(t, err)
 	})
@@ -245,7 +245,7 @@ func TestBlobRemoveHandler(t *testing.T) {
 	t.Run("forwards to primary provider and deregisters", func(t *testing.T) {
 		deps := newBlobRemoveTestDeps(t, uploadService, logger)
 		space := testutil.RandomIssuer(t)
-		blob := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024}
+		blob := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024}
 
 		storageProvider := testutil.RandomIssuer(t)
 		piriSrv := newMockPiriReleaseServer(t, storageProvider, identity.Identity{Issuer: uploadService})
@@ -291,7 +291,7 @@ func TestBlobRemoveHandler(t *testing.T) {
 	t.Run("forwards to replicas too", func(t *testing.T) {
 		deps := newBlobRemoveTestDeps(t, uploadService, logger)
 		space := testutil.RandomIssuer(t)
-		blob := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024}
+		blob := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024}
 
 		primary := testutil.RandomIssuer(t)
 		primarySrv := newMockPiriReleaseServer(t, primary, identity.Identity{Issuer: uploadService})
@@ -320,7 +320,7 @@ func TestBlobRemoveHandler(t *testing.T) {
 	t.Run("unreachable provider does not fail the removal", func(t *testing.T) {
 		deps := newBlobRemoveTestDeps(t, uploadService, logger)
 		space := testutil.RandomIssuer(t)
-		blob := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024}
+		blob := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024}
 
 		// The primary provider is registered with an endpoint nothing
 		// listens on.

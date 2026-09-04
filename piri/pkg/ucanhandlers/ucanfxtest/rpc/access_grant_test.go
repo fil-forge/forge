@@ -5,12 +5,12 @@ package rpc_test
 // decode the receipt) lives in helpers_test.go.
 
 import (
-	"github.com/fil-forge/libforge/commands/access"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/commands/blob/replica"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/access"
+	"github.com/fil-forge/forge/protocol/commands/assert"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/forge/protocol/commands/blob/replica"
 	"github.com/fil-forge/ucantone/execution"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/command"
 	"github.com/fil-forge/ucantone/ucan/delegation"
@@ -31,7 +31,7 @@ func (s *RPCSuite) TestAccessGrant_UnknownAbility() {
 		s.UploadServiceIdentity,
 		grantee.DID(),
 		&replica.AllocateArguments{
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 1234},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 1234},
 			Site:  testutil.RandomCID(t),
 			Cause: testutil.RandomCID(t),
 		},
@@ -55,7 +55,7 @@ func (s *RPCSuite) TestAccessGrant_UnknownCauseEnvelope() {
 		s.UploadServiceIdentity,
 		grantee.DID(),
 		&replica.AllocateArguments{
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 1234},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 1234},
 			Site:  testutil.RandomCID(t),
 			Cause: testutil.RandomCID(t),
 		},
@@ -92,7 +92,7 @@ func (s *RPCSuite) TestAccessGrant_UnknownCauseCommand() {
 		s.UploadServiceIdentity,
 		grantee.DID(),
 		&assert.EqualsArguments{
-			Content: testutil.RandomMultihash(t),
+			Content: testutil.RandomDigest(t),
 			Equals:  testutil.RandomCID(t),
 		},
 		invocation.WithAudience(grantee.DID()),
@@ -112,7 +112,7 @@ func (s *RPCSuite) TestAccessGrant_CauseAudienceMismatch() {
 		s.UploadServiceIdentity,
 		grantee.DID(),
 		&replica.AllocateArguments{
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 1234},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 1234},
 			Site:  testutil.RandomCID(t),
 			Cause: testutil.RandomCID(t),
 		},
@@ -133,7 +133,7 @@ func (s *RPCSuite) TestAccessGrant_CauseIssuerMismatch() {
 		grantee,
 		grantee.DID(),
 		&replica.AllocateArguments{
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 1234},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 1234},
 			Site:  testutil.RandomCID(t),
 			Cause: testutil.RandomCID(t),
 		},
@@ -156,7 +156,7 @@ func (s *RPCSuite) TestAccessGrant_UnauthorizedCause() {
 		s.UploadServiceIdentity,
 		grantee.DID(),
 		&replica.AllocateArguments{
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 1234},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 1234},
 			Site:  testutil.RandomCID(t),
 			Cause: testutil.RandomCID(t),
 		},
@@ -187,7 +187,7 @@ func (s *RPCSuite) TestAccessGrant_BlobRetrieve_WithReplicaAllocateCause() {
 		s.UploadServiceIdentity,
 		grantee.DID(),
 		&replica.AllocateArguments{
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 1234},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 1234},
 			Site:  testutil.RandomCID(t),
 			Cause: testutil.RandomCID(t),
 		},

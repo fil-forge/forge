@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	contentcmds "github.com/fil-forge/libforge/commands/content"
-	s3 "github.com/fil-forge/libforge/commands/s3"
+	contentcmds "github.com/fil-forge/forge/protocol/commands/content"
+	s3 "github.com/fil-forge/forge/protocol/commands/s3"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"

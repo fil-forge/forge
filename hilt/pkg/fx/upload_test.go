@@ -7,7 +7,7 @@ import (
 
 	"github.com/fil-forge/forge/hilt/pkg/config"
 	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/command"
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/fil-forge/ucantone/ucan/delegation"

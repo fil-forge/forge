@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/fil-forge/libforge/blobindex"
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/protocol/blobindex"
+	"github.com/fil-forge/forge/protocol/digestutil"
 
-	indexclient "github.com/fil-forge/indexing-service/pkg/client"
-	contentcmds "github.com/fil-forge/libforge/commands/content"
-	"github.com/fil-forge/libforge/ucan/retrieval"
+	indexclient "github.com/fil-forge/forge/indexing-service/pkg/client"
+	contentcmds "github.com/fil-forge/forge/protocol/commands/content"
+	"github.com/fil-forge/forge/protocol/retrieval"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"

@@ -101,7 +101,7 @@ package handlers_test
 // 		)
 
 // 		space := testutil.RandomSigner(t)
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 // 		// cause points to a non-existent allocation invocation
@@ -141,7 +141,7 @@ package handlers_test
 // 		)
 
 // 		space := testutil.RandomSigner(t)
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 // 		replicateCause := cidlink.Link{Cid: testutil.RandomCID(t)}
@@ -206,7 +206,7 @@ package handlers_test
 // 		)
 
 // 		space := testutil.RandomSigner(t)
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 // 		replicateCause := cidlink.Link{Cid: testutil.RandomCID(t)}
@@ -292,7 +292,7 @@ package handlers_test
 // 		)
 
 // 		space := testutil.RandomSigner(t)
-// 		digest := testutil.RandomMultihash(t)
+// 		digest := testutil.RandomDigest(t)
 // 		blob := types.Blob{Digest: digest, Size: 1024}
 // 		site := cidlink.Link{Cid: testutil.RandomCID(t)}
 // 		replicateCause := cidlink.Link{Cid: testutil.RandomCID(t)}

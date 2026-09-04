@@ -3,8 +3,8 @@ package publisher
 import (
 	"fmt"
 
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/go-ipni-tools/pkg/store"
-	"github.com/fil-forge/libforge/identity"
 	"go.uber.org/fx"
 
 	"github.com/fil-forge/forge/piri/pkg/config/app"

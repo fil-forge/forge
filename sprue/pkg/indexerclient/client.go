@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
-	assertcmds "github.com/fil-forge/libforge/commands/assert"
-	contentcmds "github.com/fil-forge/libforge/commands/content"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	assertcmds "github.com/fil-forge/forge/protocol/commands/assert"
+	contentcmds "github.com/fil-forge/forge/protocol/commands/content"
 	"github.com/fil-forge/forge/sprue/pkg/lib/ucan_client"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
@@ -15,6 +14,7 @@ import (
 	"github.com/fil-forge/ucantone/ipld/datamodel"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 	"go.uber.org/zap"
 )

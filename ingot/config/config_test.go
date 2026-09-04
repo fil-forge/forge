@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"

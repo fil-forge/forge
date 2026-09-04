@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
+	"github.com/fil-forge/forge/attestation/didmailto"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	"github.com/fil-forge/forge/sprue/pkg/store/consumer"

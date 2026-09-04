@@ -11,12 +11,12 @@ import (
 	"github.com/multiformats/go-multihash"
 	fxlib "go.uber.org/fx"
 
-	"github.com/fil-forge/libforge/commands/pdp"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/forge/protocol/commands/pdp"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
 	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )

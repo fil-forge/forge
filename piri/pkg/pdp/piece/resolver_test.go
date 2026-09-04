@@ -11,9 +11,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/ucantone/testutil"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 )
 
 // NOTE: the StoreResolver's database path (commP<->blob mapping over

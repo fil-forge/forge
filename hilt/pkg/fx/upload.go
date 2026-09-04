@@ -7,10 +7,10 @@ import (
 
 	"github.com/fil-forge/forge/hilt/pkg/client/upload"
 	"github.com/fil-forge/forge/hilt/pkg/config"
-	"github.com/fil-forge/libforge/identity"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan/container"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"go.uber.org/zap"
 )
 

@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	httpcmds "github.com/fil-forge/libforge/commands/http"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	httpcmds "github.com/fil-forge/forge/protocol/commands/http"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
@@ -66,7 +66,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 	t.Run("allocation invocation not found", func(t *testing.T) {
 		deps := newHTTPPutDeps(t, piriclient.NewProvider(uploadService, logger), logger)
 
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		// Destination.Task points to an invocation that's not in the agent store.
 		nonExistentAllocTask := testutil.RandomCID(t)
 
@@ -99,7 +99,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 
 		storageProvider := testutil.RandomIssuer(t)
 		space := testutil.RandomIssuer(t)
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		blob := blobcmds.Blob{Digest: digest, Size: 1024}
 
 		// Persist a /blob/allocate invocation for the storage provider, but do
@@ -149,7 +149,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 	t.Run("success registers blob in space", func(t *testing.T) {
 		storageProvider := testutil.RandomIssuer(t)
 		space := testutil.RandomIssuer(t)
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		blob := blobcmds.Blob{Digest: digest, Size: 1024}
 		blobAddTaskLink := testutil.RandomCID(t)
 

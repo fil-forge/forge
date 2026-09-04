@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/filecoin-project/go-fee"
 	"github.com/filecoin-project/go-fee/aesstream"
 	"github.com/multiformats/go-multihash"

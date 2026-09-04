@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"testing"
 
-	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fil-forge/forge/ingot/forgeclient"

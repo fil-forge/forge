@@ -7,12 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	"github.com/fil-forge/libforge/commands"
-	accesscmds "github.com/fil-forge/libforge/commands/access"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	httpcmds "github.com/fil-forge/libforge/commands/http"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/forge/protocol/commands"
+	accesscmds "github.com/fil-forge/forge/protocol/commands/access"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	httpcmds "github.com/fil-forge/forge/protocol/commands/http"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
@@ -166,7 +166,7 @@ func TestBlobAddHandler(t *testing.T) {
 
 		space := testutil.RandomIssuer(t)
 		args := blobcmds.AddArguments{
-			Blob: blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024},
+			Blob: blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024},
 		}
 
 		inv, err := blobcmds.Add.Invoke(
@@ -198,7 +198,7 @@ func TestBlobAddHandler(t *testing.T) {
 
 		// No storage providers in spStore — the router will return ErrCandidateUnavailable.
 		args := blobcmds.AddArguments{
-			Blob: blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024},
+			Blob: blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024},
 		}
 
 		inv, err := blobcmds.Add.Invoke(
@@ -233,7 +233,7 @@ func TestBlobAddHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		args := blobcmds.AddArguments{
-			Blob: blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024},
+			Blob: blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024},
 		}
 
 		inv, err := blobcmds.Add.Invoke(
@@ -288,7 +288,7 @@ func TestBlobAddHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		args := blobcmds.AddArguments{
-			Blob: blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024},
+			Blob: blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024},
 		}
 
 		inv, err := blobcmds.Add.Invoke(
@@ -336,7 +336,7 @@ func TestBlobAddHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		args := blobcmds.AddArguments{
-			Blob: blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024},
+			Blob: blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024},
 		}
 
 		inv, err := blobcmds.Add.Invoke(
@@ -370,7 +370,7 @@ func TestBlobAddHandler(t *testing.T) {
 		provisionSpace(t, deps, uploadService, space.DID())
 
 		storageProvider := testutil.RandomIssuer(t)
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		blob := blobcmds.Blob{Digest: digest, Size: 1024}
 
 		// Build the chain that the handler will walk back through:

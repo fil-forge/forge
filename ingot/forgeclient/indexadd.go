@@ -5,15 +5,15 @@ import (
 	"context"
 	"fmt"
 
-	contentcmds "github.com/fil-forge/libforge/commands/content"
-	indexcmds "github.com/fil-forge/libforge/commands/index"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	contentcmds "github.com/fil-forge/forge/protocol/commands/content"
+	indexcmds "github.com/fil-forge/forge/protocol/commands/index"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ipld/datamodel"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/fil-forge/ucantone/ucan/delegation/policy"
 	"github.com/fil-forge/ucantone/ucan/invocation"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 )
 

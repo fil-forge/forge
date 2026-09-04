@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/access"
+	"github.com/fil-forge/forge/protocol/commands/access"
 	"github.com/fil-forge/ucantone/ipld/datamodel"
 	"github.com/fil-forge/ucantone/result"
 	"github.com/fil-forge/ucantone/ucan"

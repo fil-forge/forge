@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fil-forge/libforge/commands/pdp"
+	"github.com/fil-forge/forge/protocol/commands/pdp"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/fil-forge/ucantone/ucan/receipt"

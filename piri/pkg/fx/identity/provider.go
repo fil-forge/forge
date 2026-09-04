@@ -3,7 +3,7 @@ package identity
 import (
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/ucan"
 
 	"github.com/fil-forge/forge/piri/pkg/config/app"

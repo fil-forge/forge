@@ -64,8 +64,8 @@ docs/                 # mkdocs operator documentation (content/ + mkdocs.yml)
 ## UCAN stack
 
 Piri uses `github.com/fil-forge/ucantone` (UCAN server/execution runtime) and
-`github.com/fil-forge/libforge` (shared command/capability definitions under
-`libforge/commands/...`, identity, retrieval protocol). There are two UCAN
+`github.com/fil-forge/forge/protocol` (shared command/capability definitions under
+`protocol/commands/...`, identity, retrieval protocol). There are two UCAN
 servers with distinct response shapes:
 
 - **RPC server** (`server.NewHTTP`, body-CAR): invocations whose response is a
@@ -81,7 +81,7 @@ Handlers register through fx group tags. Each handler package has a
 server options). The group-tag strings live in `pkg/ucanhandlers/handler.go`
 and appear in both the struct tags and helpers — keep them in sync.
 
-To add a capability handler: define/import the command from libforge, write
+To add a capability handler: define/import the command from the in-repo `protocol` module, write
 the handler in the appropriate `pkg/ucanhandlers/<domain>/` package, register
 it in that package's `module.go`, and add coverage via the `ucanfxtest`
 harnesses.
@@ -113,9 +113,9 @@ to cover the new graph shape.
 - `blob/accept` kicks off the whole PDP pipeline — CommP calculation, piece
   aggregation into proof sets, and on-chain interaction. Changes there cascade
   through `pkg/pdp/`.
-- Capability/command schemas come from `libforge`; they must stay
+- Capability/command schemas come from the in-repo `protocol` module; they must stay
   wire-compatible with the other services that speak these protocols. Don't
-  change invocation/receipt shapes unilaterally — coordinate with libforge and
+  change invocation/receipt shapes unilaterally — coordinate with `protocol` and
   the consuming services.
 - Retrieval handler changes affect live client content access.
 - Config changes frequently change the fx graph — see the dependency graph

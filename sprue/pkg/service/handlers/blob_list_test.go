@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"
 	blob_registry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry/memory"
@@ -85,8 +85,8 @@ func TestBlobListHandler(t *testing.T) {
 		space := testutil.RandomIssuer(t)
 		require.NoError(t, consumerStore.Add(ctx, uploadService.DID(), space.DID(), aliceAccount, "sub-1", testutil.RandomCID(t)))
 
-		blob1 := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 100}
-		blob2 := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 200}
+		blob1 := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 100}
+		blob2 := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 200}
 		require.NoError(t, blobReg.Register(ctx, space.DID(), blob1, testutil.RandomCID(t)))
 		require.NoError(t, blobReg.Register(ctx, space.DID(), blob2, testutil.RandomCID(t)))
 
@@ -110,7 +110,7 @@ func TestBlobListHandler(t *testing.T) {
 		for i := range 3 {
 			require.NoError(t, blobReg.Register(
 				ctx, space.DID(),
-				blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: uint64(i + 1)},
+				blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: uint64(i + 1)},
 				testutil.RandomCID(t),
 			))
 		}
@@ -137,7 +137,7 @@ func TestBlobListHandler(t *testing.T) {
 		for i := range 3 {
 			require.NoError(t, blobReg.Register(
 				ctx, space.DID(),
-				blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: uint64(i + 1)},
+				blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: uint64(i + 1)},
 				testutil.RandomCID(t),
 			))
 		}
@@ -172,7 +172,7 @@ func TestBlobListHandler(t *testing.T) {
 
 		require.NoError(t, blobReg.Register(
 			ctx, space1.DID(),
-			blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 100},
+			blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 100},
 			testutil.RandomCID(t),
 		))
 

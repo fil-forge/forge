@@ -6,10 +6,9 @@
 // stack.WithWorkspaceBinaries() (the Go test stack). The active Go workspace
 // (go.work) is the single source of truth for "what am I editing": every
 // service whose module appears in the use-list is rebuilt from local source.
-// Because the shared libforge library is resolved purely through the workspace
-// (the siblings carry no replace directives), libforge appearing in the
-// use-list forces every service to be rebuilt — otherwise a published binary
-// would still link the published libforge pseudo-version.
+// The shared modules (protocol, internal, attestation) are compiled into every
+// service, so any of them appearing in the use-list forces every service to be
+// rebuilt — otherwise a published binary would still link the published copy.
 //
 // Binaries are compiled on the host, where go.work resolves local cross-module
 // edits, then bind-mounted into otherwise-published containers. This needs no
@@ -61,9 +60,10 @@ var Services = map[string]serviceBuild{
 	"swarf":           {moduleDir: "swarf", buildTarget: "./cmd/swarf", binPath: "/usr/bin/swarf", configPath: "/etc/swarf/config.yaml"},
 }
 
-// libforgeDir is the workspace dir of the shared library. Its presence in the
-// use-list forces a rebuild of every service (see package doc).
-const libforgeDir = "libforge"
+// sharedDirs are the workspace dirs of the modules every service compiles in.
+// Any of them in the use-list forces a rebuild of every service (see package
+// doc).
+var sharedDirs = []string{"protocol", "internal", "attestation"}
 
 // Detect inspects the active go.work and returns the workspace root directory
 // (the dir containing go.work) and the sorted set of smelt services to build
@@ -74,7 +74,7 @@ func Detect() (root string, services []string, err error) {
 		return "", nil, err
 	}
 	if gowork == "" || gowork == "off" {
-		return "", nil, fmt.Errorf("no active go.work; create one at the fil-forge parent dir, e.g. `go work init ./smelt ./libforge ./piri` (see CLAUDE.md)")
+		return "", nil, fmt.Errorf("no active go.work; run from inside the forge checkout, whose go.work lists every module (see CLAUDE.md)")
 	}
 	root = filepath.Dir(gowork)
 
@@ -87,8 +87,15 @@ func Detect() (root string, services []string, err error) {
 		inWorkspace[filepath.Base(d)] = true
 	}
 
+	sharedInWorkspace := false
+	for _, d := range sharedDirs {
+		if inWorkspace[d] {
+			sharedInWorkspace = true
+		}
+	}
+
 	selected := map[string]bool{}
-	if inWorkspace[libforgeDir] {
+	if sharedInWorkspace {
 		for name := range Services {
 			selected[name] = true
 		}
@@ -109,7 +116,7 @@ func Detect() (root string, services []string, err error) {
 // BuildBinary compiles one service's binary from its sibling module under root
 // into outDir, returning the absolute output path. It produces a static
 // linux/amd64 binary with the workspace active so local cross-module edits
-// (e.g. a local libforge) are compiled in.
+// (e.g. a local protocol or internal module) are compiled in.
 func BuildBinary(root, service, outDir string) (string, error) {
 	spec, ok := Services[service]
 	if !ok {
