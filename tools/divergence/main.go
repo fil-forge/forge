@@ -298,8 +298,9 @@ type WeekStats struct {
 	PRs          int    `json:"merged_prs"`
 	HumanPRs     int    `json:"human_prs"`
 	BotPRs       int    `json:"dependabot_prs"`
-	MergeCommits int    `json:"merge_commits"`
-	SquashPRs    int    `json:"squash_prs"`
+	MergeCommits int    `json:"merge_commits"` // two-parent commits, whether or not they name a PR
+	SquashPRs    int    `json:"squash_prs"`    // single-parent commits whose subject ends in (#N)
+	OtherMerges  int    `json:"other_merges"`  // two-parent commits naming no PR, e.g. "Merge branch 'main' into …"
 }
 
 type Lib struct {
@@ -428,7 +429,6 @@ type DaySnapshot struct {
 }
 
 type Result struct {
-	GeneratedAt time.Time                        `json:"generated_at"`
 	Command     string                           `json:"reproduce_command"`
 	Window      [2]string                        `json:"window"`
 	Context     [2]string                        `json:"context"`
@@ -1112,9 +1112,15 @@ func addStats(ws *WeekStats, c Commit) {
 	} else {
 		ws.HumanCommits++
 	}
-	isPR := c.IsMerge || c.PR > 0
+	// A commit counts as a merged PR only when its subject names one:
+	// "Merge pull request #N …" or a squash "… (#N)". A plain branch merge
+	// ("Merge branch 'main' into …") is a commit, not a PR.
+	isPR := c.PR > 0
 	if c.IsMerge {
 		ws.MergeCommits++
+		if c.PR == 0 {
+			ws.OtherMerges++
+		}
 	} else if c.PR > 0 {
 		ws.SquashPRs++
 	}
@@ -1189,7 +1195,7 @@ func main() {
 }
 
 func run(o *options) (*Result, error) {
-	res := &Result{GeneratedAt: time.Now().UTC(), Weekly: map[string][]*WeekStats{}, Periods: map[string]map[string]*WeekStats{},
+	res := &Result{Weekly: map[string][]*WeekStats{}, Periods: map[string]map[string]*WeekStats{},
 		Libraries: map[string]*LibSummary{}, Snapshots: map[string][]DaySnapshot{}}
 	res.Window = [2]string{o.from.Format("2006-01-02"), o.to.Format("2006-01-02")}
 	res.Context = [2]string{o.contextFrom.Format("2006-01-02"), o.from.AddDate(0, 0, -1).Format("2006-01-02")}
@@ -1203,7 +1209,8 @@ func run(o *options) (*Result, error) {
 
 	// Libraries.
 	libsByName := map[string]*Lib{}
-	for name, dir := range map[string]string{"libforge": o.libforge, "ucantone": o.ucantone} {
+	for _, lib := range []struct{ name, dir string }{{"libforge", o.libforge}, {"ucantone", o.ucantone}} {
+		name, dir := lib.name, lib.dir // a fixed order: map iteration would reorder the output between runs
 		l, err := loadLib(name, dir, o.libRef, o.verbose)
 		if err != nil {
 			return nil, err
@@ -1529,7 +1536,7 @@ func run(o *options) (*Result, error) {
 		}
 	}
 	res.Caveats = append(res.Caveats,
-		"Squash merges collapse a PR into one commit: \"merged PRs\" counts merge commits plus commits whose subject ends in `(#N)`; PRs merged with other subjects, and direct pushes to main, are counted as commits only.",
+		"Squash merges collapse a PR into one commit: \"merged PRs\" counts commits whose subject ends in `(#N)` or starts with `Merge pull request #N`; other merge commits (`Merge branch 'main' into …`), PRs merged with rewritten subjects, and direct pushes to main are counted as commits only.",
 		"Dependabot is identified by author name. Its commits are counted separately everywhere and are excluded from the change classification.",
 		"Dates are committer dates in UTC; a squash commit's date is the merge time, not the authoring time. Pin dates come from the pseudo-version timestamp, which is the pinned commit's committer time.",
 		"\"Lag\" is the days between the pinned library commit and the library's newest first-parent main commit at the moment of the consumer commit (or at the library tip for \"today\"). For a pin that is not on main, the base lag measures from its merge-base with main instead; a PR-branch head can be tree-identical to the squash commit that merged it.",

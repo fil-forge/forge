@@ -41,8 +41,9 @@ The tool prints the SHA of every repository it read.
 ## What is measured
 
 - **a.** Commits and merged PRs per repo per ISO week (committer date, UTC),
-  dependabot separated by author name. Merged PRs are merge commits plus squash
-  commits whose subject ends in `(#N)`. forge is counted first-parent only,
+  dependabot separated by author name. Merged PRs are commits whose subject
+  ends in `(#N)` (squash merges) or starts with `Merge pull request #N`; other
+  merge commits count as commits only. forge is counted first-parent only,
   because its history embeds the five imported service histories.
 - **b.** For every first-parent commit on each library's main in the period:
   the packages whose non-test `.go` files changed, which consumers import one
