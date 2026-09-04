@@ -10,6 +10,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/fil-forge/libforge v0.0.0-20260731172903-928cf2a21b7e
 	github.com/fil-forge/ucantone v0.0.0-20260727203046-ccb77059de44
+	github.com/filecoin-project/go-fee v0.1.1-0.20260826122013-1c3970b90b0d
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v0.0.0-20150723085316-0dad96c0b94f
 	github.com/spf13/cobra v1.10.2
@@ -36,6 +37,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.43.4 // indirect
 	github.com/aws/smithy-go v1.27.3 // indirect
+	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/gofiber/fiber/v3 v3.3.0 // indirect
 	github.com/gofiber/schema v1.8.0 // indirect
 	github.com/gofiber/utils/v2 v2.1.1 // indirect
@@ -45,6 +47,7 @@ require (
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.72.0 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 )
 
@@ -136,7 +139,7 @@ require (
 	github.com/multiformats/go-base36 v0.2.0 // indirect
 	github.com/multiformats/go-multibase v0.3.0 // indirect
 	github.com/multiformats/go-multicodec v0.10.0 // indirect
-	github.com/multiformats/go-multihash v0.2.3 // indirect
+	github.com/multiformats/go-multihash v0.2.3
 	github.com/multiformats/go-varint v0.1.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect

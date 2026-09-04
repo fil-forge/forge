@@ -1,6 +1,6 @@
 //go:build itest
 
-package itest
+package s3test
 
 import (
 	"github.com/fil-forge/versitygw/tests/integration"

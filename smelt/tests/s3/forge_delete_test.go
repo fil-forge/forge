@@ -1,6 +1,6 @@
 //go:build itest
 
-package itest
+package s3test
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	ingottest "github.com/fil-forge/forge/ingot/testing"
-	"github.com/fil-forge/smelt/pkg/stack"
+	s3glue "github.com/fil-forge/forge/smelt/pkg/s3glue"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 )
 
 // TestForgeDeleteReleasesNetworkBlob is the delete-finality regression gate
@@ -38,10 +38,10 @@ func TestForgeDeleteReleasesNetworkBlob(t *testing.T) {
 		data[i] = byte(i*13 + 11)
 	}
 
-	if err := ingottest.CreateBucket(ctx, cfg, bucket); err != nil {
+	if err := s3glue.CreateBucket(ctx, cfg, bucket); err != nil {
 		t.Fatalf("create bucket: %v", err)
 	}
-	if err := ingottest.PutBytes(ctx, cfg, bucket, key, data); err != nil {
+	if err := s3glue.PutBytes(ctx, cfg, bucket, key, data); err != nil {
 		t.Fatalf("put object: %v", err)
 	}
 
@@ -50,16 +50,16 @@ func TestForgeDeleteReleasesNetworkBlob(t *testing.T) {
 	if out, errOut, err := s.Exec(ctx, "ingot", "sh", "-c", "rm -rf /data/spool"); err != nil {
 		t.Fatalf("evict spool: %v (stdout=%s stderr=%s)", err, out, errOut)
 	}
-	if got, err := ingottest.GetBytes(ctx, cfg, bucket, key); err != nil || len(got) != len(data) {
+	if got, err := s3glue.GetBytes(ctx, cfg, bucket, key); err != nil || len(got) != len(data) {
 		t.Fatalf("read-through from piri before delete: err=%v len=%d", err, len(got))
 	}
 
-	if err := ingottest.DeleteObject(ctx, cfg, bucket, key); err != nil {
+	if err := s3glue.DeleteObject(ctx, cfg, bucket, key); err != nil {
 		t.Fatalf("delete object: %v", err)
 	}
 
 	// The object is gone from the gateway.
-	if _, err := ingottest.GetBytes(ctx, cfg, bucket, key); err == nil {
+	if _, err := s3glue.GetBytes(ctx, cfg, bucket, key); err == nil {
 		t.Fatalf("GET after delete succeeded, want NoSuchKey")
 	}
 

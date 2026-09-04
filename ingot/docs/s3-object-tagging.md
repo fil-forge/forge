@@ -127,7 +127,7 @@ The tagging groups run under the plain conf: their buckets are neither lock-enab
 versioned, so the plain teardown applies. The versioned tagging behaviors are the
 `Versioning_*` rows, which run in the existing versioned Versioning category.
 
-**New categories** (`itest/versity_tagging_test.go`): `TestPutObjectTagging`
+**New categories** (`smelt/tests/s3/versity_tagging_test.go`): `TestPutObjectTagging`
 (non_existing_object, long_tags, duplicate_keys, tag_count_limit, invalid_tags, success),
 `TestGetObjectTagging` (non_existing_object, unset_tags, invalid_parent, success), and
 `TestDeleteObjectTagging` (non_existing_object, success_status, success,
@@ -171,5 +171,5 @@ design's out-of-scope list drops object tagging and points here, as does the loc
 | `s3frontend/object.go`, `copy.go`, `multipart.go` | header parse via `backend.ParseObjectTags` (§4), copy-directive handling, session carry, `TagCount` on Head/Get |
 | `migrations/sql/` (new) | `multipart_sessions.tagging` (the raw header string) |
 | `registry/stores.go`, `stores_postgres.go`, `inmem/store.go` | `MultipartSession.Tagging` |
-| `itest/versity_tagging_test.go` (new), `versity_{object,multipart,versioning}_test.go` | new categories, the versioning rows, promotions (§6) |
+| `smelt/tests/s3/versity_tagging_test.go` (new), `versity_{object,multipart,versioning}_test.go` | new categories, the versioning rows, promotions (§6) |
 | `docs/s3-versioning.md`, `docs/s3-object-lock.md` | out-of-scope lists point here |

@@ -41,9 +41,11 @@ image:
 image-dev:
 	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/ingot:local-dev .
 
-## itest: run the integration test suite (boots the Forge stack in Docker; ~6 min)
+## itest: run ingot's system suite (boots the Forge stack in Docker; ~10 min)
+# The suite lives in smelt/tests/s3 — it validates the whole stack through
+# ingot's S3 API, so it belongs to the harness, not this library module.
 itest:
-	$(GO) test -tags itest -v -timeout 30m ./itest
+	$(MAKE) -C ../smelt test-s3
 
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:

@@ -174,6 +174,16 @@ func forgeS3Conf(endpoint, accessKey, secretKey string) *integration.S3Conf {
 	return s3glue.NewS3Conf(forgeConfig(endpoint, accessKey, secretKey))
 }
 
+// forgeS3ConfVersioned is forgeS3Conf with the upstream suite's versioned
+// mode on: teardown empties buckets via ListObjectVersions + per-version
+// deletes (a plain DeleteObject on a versioned bucket only stacks delete
+// markers). Used by the Versioning conformance categories.
+func forgeS3ConfVersioned(endpoint, accessKey, secretKey string) *integration.S3Conf {
+	cfg := forgeConfig(endpoint, accessKey, secretKey)
+	cfg.VersioningEnabled = true
+	return s3glue.NewS3Conf(cfg)
+}
+
 // waitHTTPOK polls url until it returns 2xx or the timeout elapses.
 func waitHTTPOK(t *testing.T, url string, timeout time.Duration) {
 	t.Helper()
@@ -215,6 +225,9 @@ var hiltAllPermissions = []string{
 	"s3:CreateBucket",
 	"s3:ListAllMyBuckets",
 	"s3:DeleteBucket",
+	// Multipart operations, first-class in hilt since fil-forge/hilt#35:
+	// AbortMultipartUpload carries the blob.Abort + blob.Remove delegations
+	// the abort leg invokes; the two List ops are catalog reads.
 	"s3:AbortMultipartUpload",
 	"s3:ListMultipartUploadParts",
 	"s3:ListBucketMultipartUploads",

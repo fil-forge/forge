@@ -26,7 +26,7 @@ modules in; ingot is a standalone module and must build on its own `go.mod`:
 ```bash
 make build      # GOWORK=off go build ./...
 make test       # unit tests: GOWORK=off go test ./... (fast, no Docker)
-make itest      # integration tests: boots the Forge stack in Docker (~6 min)
+make itest      # system suite in smelt/tests/s3: boots the Forge stack in Docker (~10 min)
 make gen        # regenerate bucket/cbor_gen.go after changing bucket types
 GOWORK=off go vet ./...
 cd ../smelt && GOWORK=off go test -tags itest ./tests/s3/... -run 'TestForgeVersity/PutObject' -v  # one S3 category
@@ -206,7 +206,7 @@ forge-mode daemon. Two tiers:
 - **`make test` — unit** (seconds, no Docker): library/unit tests across the
   packages, plus the thin S3-client glue in `testing/` (`Config`/`NewS3Conf`,
   roundtrip helpers).
-- **`make itest` — integration** (`itest/`, build tag `itest`, Docker):
+- **`make itest` — integration** (`smelt/tests/s3/`, build tag `itest`, Docker):
   boots the smelt Forge stack with THIS working tree's binary mounted over
   the published image.
   - **`versity_{bucket,object,multipart,versioning}_test.go`** — the S3
@@ -327,6 +327,6 @@ lives in `docs/architecture.md`.
 - [`docs/IMPLEMENTATION_PLAN.md`](./docs/IMPLEMENTATION_PLAN.md) — the phase
   tracker for the architecture migration.
 - [`logstore/README.md`](./logstore/README.md) — the catalog log internals.
-- [`itest/README.md`](./itest/README.md) — the integration harness and the
+- [`smelt/tests/s3/README.md`](../smelt/tests/s3/README.md) — the integration harness and the
   conformance ratchet.
 - [`README.md`](./README.md) — orientation / deploy modes.

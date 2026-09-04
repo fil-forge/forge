@@ -405,7 +405,7 @@ Teardown of locked objects works without bypass: upstream's `cleanupLockedObject
 each lock's retention to a few seconds out (same-mode replacement, which the fork allows even
 for `COMPLIANCE`), sleeps past expiry, and deletes.
 
-**New categories** (`itest/versity_lock_test.go`), from the upstream groups
+**New categories** (`smelt/tests/s3/versity_lock_test.go`), from the upstream groups
 `TestPutObjectLockConfiguration`, `TestGetObjectLockConfiguration`, `TestPutObjectRetention`,
 `TestGetObjectRetention`, `TestPutObjectLegalHold`, `TestGetObjectLegalHold`, and
 `TestWORMProtection`:
@@ -428,7 +428,7 @@ for `COMPLIANCE`), sleeps past expiry, and deletes.
   against a locked object fails with `ErrObjectLocked`; a lock bucket in ingot is always
   versioning-Enabled, so those requests succeed by stacking a version or a marker (AWS
   semantics, §1). Those rows are excluded with this reason, the same treatment as the
-  `VersioningDisabled_*` pair (`itest/versity_versioning_test.go:26`). The group's
+  `VersioningDisabled_*` pair (`smelt/tests/s3/versity_versioning_test.go:26`). The group's
   `*governance_bypass*` and `root_bypass` cases install bucket policies: XFail. Versioned
   WORM behavior is covered by the `Versioning_WORM_*` rows instead.
 
@@ -502,7 +502,7 @@ now points here.
 | `s3frontend/version.go` | `commitVersion` in-commit stamping incl. forced leaf (§7); `deleteVersionScoped` + `spliceLeaf` state-tree threading and cleanup (§9) |
 | `s3frontend/bucket.go` | `CreateBucket` lock header (§5), `PutObjectLockConfiguration` (new), `GetObjectLockConfiguration` (real config), `PutBucketVersioning` suspend guard |
 | `s3frontend/object.go`, `copy.go`, `multipart.go` | lock-header validation + stamping via `commitVersion` (§7), Head/Get echo (§8), session carry (§7) |
-| `itest/versity_lock_test.go` (new), `versity_{object,bucket,multipart,versioning}_test.go` | new categories, promotions, exclusions (§11) |
+| `smelt/tests/s3/versity_lock_test.go` (new), `versity_{object,bucket,multipart,versioning}_test.go` | new categories, promotions, exclusions (§11) |
 | `docs/s3-versioning.md` | §10 drops lock from out-of-scope, pointing here |
 
 ---

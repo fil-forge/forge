@@ -127,14 +127,14 @@ standalone client — not inside the central upload-service.
 ```bash
 make build   # GOWORK=off go build ./...
 make test    # unit tests (seconds, no Docker)
-make itest   # integration tests (boots the Forge stack in Docker, ~6 min)
+make itest   # system suite in smelt/tests/s3 (boots the Forge stack in Docker, ~10 min)
 make gen     # regenerate CBOR marshalers after changing bucket types
 ```
 
-The `itest/` package boots the real Forge stack via smelt's Go SDK and runs
+The `smelt/tests/s3` suite boots the real Forge stack via smelt's Go SDK and runs
 this working tree's binary against it — including the curated S3 conformance
 partition (per-group expected-pass and known-fail tables of versitygw cases).
-CI runs it after unit tests pass. See `itest/README.md`.
+CI runs it after unit tests pass. See `smelt/tests/s3/README.md`.
 
 ## Deploying to the dev node
 
