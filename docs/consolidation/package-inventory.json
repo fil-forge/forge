@@ -101,6 +101,11 @@
       "Dir": "/home/user/fil-forge/piri-signing-service",
       "Path": "github.com/fil-forge/piri-signing-service",
       "SHA": "8472ad9"
+    },
+    {
+      "Dir": "/home/user/fil-forge/go-ipni-tools",
+      "Path": "github.com/fil-forge/go-ipni-tools",
+      "SHA": "5f11c95"
     }
   ],
   "packages": [
@@ -625,6 +630,7 @@
         "github.com/fil-forge/forge/ingot": 1,
         "github.com/fil-forge/forge/piri": 5,
         "github.com/fil-forge/forge/sprue": 1,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 4,
         "github.com/fil-forge/indexing-service": 4,
         "github.com/fil-forge/ingot": 1,
@@ -846,6 +852,7 @@
         "github.com/fil-forge/forge/ingot": 4,
         "github.com/fil-forge/forge/piri": 3,
         "github.com/fil-forge/forge/sprue": 1,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 9,
         "github.com/fil-forge/indexing-service": 8,
         "github.com/fil-forge/ingot": 4,
@@ -855,6 +862,7 @@
       "testImporters": {
         "github.com/fil-forge/forge/piri": 4,
         "github.com/fil-forge/forge/sprue": 1,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 3,
         "github.com/fil-forge/indexing-service": 4,
         "github.com/fil-forge/piri": 5,
@@ -3632,6 +3640,7 @@
         "github.com/fil-forge/forge/ingot": 3,
         "github.com/fil-forge/forge/piri": 7,
         "github.com/fil-forge/forge/sprue": 9,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 14,
         "github.com/fil-forge/indexing-service": 4,
         "github.com/fil-forge/ingot": 4,
@@ -3640,6 +3649,7 @@
       },
       "testImporters": {
         "github.com/fil-forge/forge/piri": 1,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 4,
         "github.com/fil-forge/indexing-service": 1,
         "github.com/fil-forge/ingot": 1,
@@ -3807,6 +3817,7 @@
       ],
       "importers": {
         "github.com/fil-forge/forge/sprue": 1,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/indexing-service": 1
       },
       "testImporters": {
@@ -4121,6 +4132,7 @@
       "importers": {
         "github.com/fil-forge/forge/hilt": 2,
         "github.com/fil-forge/forge/sprue": 1,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 7,
         "github.com/fil-forge/hilt": 1,
         "github.com/fil-forge/indexing-service": 1,
@@ -4131,6 +4143,7 @@
         "github.com/fil-forge/forge/ingot": 6,
         "github.com/fil-forge/forge/piri": 25,
         "github.com/fil-forge/forge/sprue": 1,
+        "github.com/fil-forge/go-ipni-tools": 5,
         "github.com/fil-forge/guppy": 31,
         "github.com/fil-forge/hilt": 15,
         "github.com/fil-forge/ingot": 9,
@@ -11447,6 +11460,7 @@
         "github.com/fil-forge/forge/piri": 22,
         "github.com/fil-forge/forge/smelt": 1,
         "github.com/fil-forge/forge/sprue": 60,
+        "github.com/fil-forge/go-ipni-tools": 1,
         "github.com/fil-forge/guppy": 72,
         "github.com/fil-forge/hilt": 34,
         "github.com/fil-forge/indexing-service": 9,

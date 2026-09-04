@@ -14,7 +14,7 @@ GOWORK=off go run . -subject \
   -consumer \
   /home/user/indexing-service \
   -consumer \
-  /home/user/fil-forge/piri,/home/user/fil-forge/hilt,/home/user/fil-forge/sprue,/home/user/fil-forge/ingot,/home/user/fil-forge/smelt,/home/user/fil-forge/delegator,/home/user/fil-forge/piri-signing-service \
+  /home/user/fil-forge/piri,/home/user/fil-forge/hilt,/home/user/fil-forge/sprue,/home/user/fil-forge/ingot,/home/user/fil-forge/smelt,/home/user/fil-forge/delegator,/home/user/fil-forge/piri-signing-service,/home/user/fil-forge/go-ipni-tools \
   -out \
   /home/user/forge/docs/consolidation/package-inventory.md \
   -json \
@@ -42,6 +42,7 @@ Checkouts scanned (module, directory, `git rev-parse --short HEAD`):
 | consumer | `github.com/fil-forge/smelt` | `/home/user/fil-forge/smelt` | `640b11b` |
 | consumer | `github.com/fil-forge/delegator` | `/home/user/fil-forge/delegator` | `314b6d6` |
 | consumer | `github.com/fil-forge/piri-signing-service` | `/home/user/fil-forge/piri-signing-service` | `8472ad9` |
+| consumer | `github.com/fil-forge/go-ipni-tools` | `/home/user/fil-forge/go-ipni-tools` | `5f11c95` |
 
 Columns: **LOC** non-test lines (in parentheses: hand-written, i.e. excluding `*_gen*.go` / generated files); **importers** consumer modules and the number of non-test files in each importing the package (test-only importers in italics); **closure** transitive same-module packages / distinct external modules in the full transitive closure (standard library excluded; source noted per module); **proto** the closure includes `libforge/commands/**` or `blobindex/**`; **init** callees inside `func init()`; **reach** whether a shipped binary (a non-`gen` `package main` in any scanned module) links the package.
 
@@ -78,10 +79,10 @@ Columns: **LOC** non-test lines (in parentheses: hand-written, i.e. excluding `*
 | `blobindex/datamodel/gen` (codegen driver) | 37 (37) | — | 1 / 16 |  | — | unreferenced |
 | `bytemap` | 80 (80) | forge/sprue:1, guppy:4, indexing-service:3, sprue:1, *indexing-service:3*, *libforge:1* | 0 / 0 |  | — | shipped |
 | `client/hilt` | 196 (196) | forge/hilt:2, forge/ingot:3, *forge/ingot:1*, *libforge:1* | 6 / 21 | yes | — | shipped |
-| `commands` | 287 (108) | forge/hilt:1, forge/ingot:2, forge/piri:2, forge/sprue:4, guppy:5, hilt:1, indexing-service:2, ingot:2, piri:2, sprue:4, *forge/ingot:1*, *forge/piri:5*, *forge/sprue:1*, *guppy:4*, *indexing-service:4*, *ingot:1*, *piri:5*, *sprue:1* | 0 / 16 |  | — | shipped |
+| `commands` | 287 (108) | forge/hilt:1, forge/ingot:2, forge/piri:2, forge/sprue:4, guppy:5, hilt:1, indexing-service:2, ingot:2, piri:2, sprue:4, *forge/ingot:1*, *forge/piri:5*, *forge/sprue:1*, *go-ipni-tools:1*, *guppy:4*, *indexing-service:4*, *ingot:1*, *piri:5*, *sprue:1* | 0 / 16 |  | — | shipped |
 | `commands/access` | 2449 (178) | forge/ingot:4, forge/piri:2, forge/sprue:8, guppy:4, ingot:4, piri:2, piri-signing-service:2, sprue:8, *forge/piri:4*, *forge/sprue:7*, *guppy:4*, *piri:4*, *piri-signing-service:1*, *sprue:7* | 1 / 19 |  | — | shipped |
 | `commands/access/gen` (codegen driver) | 47 (47) | — | 2 / 19 |  | — | unreferenced |
-| `commands/assert` | 1684 (78) | forge/ingot:4, forge/piri:3, forge/sprue:1, guppy:9, indexing-service:8, ingot:4, piri:3, sprue:1, *forge/piri:4*, *forge/sprue:1*, *guppy:3*, *indexing-service:4*, *piri:5*, *sprue:1* | 1 / 19 |  | — | shipped |
+| `commands/assert` | 1684 (78) | forge/ingot:4, forge/piri:3, forge/sprue:1, go-ipni-tools:1, guppy:9, indexing-service:8, ingot:4, piri:3, sprue:1, *forge/piri:4*, *forge/sprue:1*, *go-ipni-tools:1*, *guppy:3*, *indexing-service:4*, *piri:5*, *sprue:1* | 1 / 19 |  | — | shipped |
 | `commands/assert/gen` (codegen driver) | 45 (45) | — | 2 / 19 |  | — | unreferenced |
 | `commands/blob` | 5962 (397) | delegator:1, forge/hilt:3, forge/ingot:1, forge/piri:8, forge/smelt:1, forge/sprue:12, guppy:4, hilt:2, ingot:4, piri:8, smelt:1, sprue:11, *delegator:1*, *forge/hilt:1*, *forge/ingot:2*, *forge/piri:14*, *forge/sprue:14*, *guppy:4*, *hilt:1*, *ingot:4*, *libforge:1*, *piri:14*, *sprue:14* | 1 / 19 |  | — | shipped |
 | `commands/blob/gen` (codegen driver) | 60 (60) | — | 2 / 19 |  | — | unreferenced |
@@ -124,14 +125,14 @@ Columns: **LOC** non-test lines (in parentheses: hand-written, i.e. excluding `*
 | `commands/upload/gen` (codegen driver) | 45 (45) | — | 2 / 19 |  | — | unreferenced |
 | `commands/upload/shard` | 922 (25) | forge/sprue:1, guppy:2, sprue:1, *forge/sprue:1*, *guppy:1*, *sprue:1* | 0 / 19 |  | — | shipped |
 | `commands/upload/shard/gen` (codegen driver) | 42 (42) | — | 1 / 19 |  | — | unreferenced |
-| `digestutil` | 25 (25) | forge/ingot:3, forge/piri:7, forge/sprue:9, guppy:14, indexing-service:4, ingot:4, piri:7, sprue:7, *forge/piri:1*, *guppy:4*, *indexing-service:1*, *ingot:1*, *piri:1* | 0 / 11 |  | — | shipped |
+| `digestutil` | 25 (25) | forge/ingot:3, forge/piri:7, forge/sprue:9, go-ipni-tools:1, guppy:14, indexing-service:4, ingot:4, piri:7, sprue:7, *forge/piri:1*, *go-ipni-tools:1*, *guppy:4*, *indexing-service:1*, *ingot:1*, *piri:1* | 0 / 11 |  | — | shipped |
 | `identity` | 191 (191) | delegator:4, forge/hilt:6, forge/ingot:1, forge/piri:13, forge/smelt:2, forge/sprue:19, guppy:4, hilt:5, indexing-service:4, ingot:3, piri:13, piri-signing-service:2, smelt:2, sprue:19, *delegator:1*, *forge/hilt:1*, *forge/ingot:1*, *forge/piri:4*, *forge/sprue:12*, *hilt:1*, *ingot:4*, *libforge:3*, *piri:4*, *sprue:12* | 0 / 18 |  | — | shipped |
-| `jobqueue` | 265 (265) | forge/sprue:1, indexing-service:1, *libforge:1* | 0 / 0 |  | — | shipped |
+| `jobqueue` | 265 (265) | forge/sprue:1, go-ipni-tools:1, indexing-service:1, *libforge:1* | 0 / 0 |  | — | shipped |
 | `piece` | 176 (176) | forge/piri:6, guppy:1, piri:7, *forge/piri:3*, *libforge:1*, *piri:3* | 0 / 13 |  | — | shipped |
 | `receipt` | 229 (229) | forge/ingot:4, guppy:5, ingot:4 | 0 / 23 |  | — | shipped |
 | `s3perm` | 77 (77) | forge/hilt:2, forge/ingot:1, *forge/smelt:1*, *libforge:1* | 5 / 19 | yes | — | shipped |
 | `sigv4` | 848 (848) | forge/hilt:4, forge/ingot:2, *forge/hilt:3*, *forge/ingot:1* | 0 / 0 |  | — | shipped |
-| `testutil` | 83 (83) | forge/hilt:2, forge/sprue:1, guppy:7, hilt:1, indexing-service:1, sprue:1, *forge/hilt:12*, *forge/ingot:6*, *forge/piri:25*, *forge/sprue:1*, *guppy:31*, *hilt:15*, *ingot:9*, *libforge:8*, *piri:25*, *sprue:1* | 0 / 20 |  | — | library-only |
+| `testutil` | 83 (83) | forge/hilt:2, forge/sprue:1, go-ipni-tools:1, guppy:7, hilt:1, indexing-service:1, sprue:1, *forge/hilt:12*, *forge/ingot:6*, *forge/piri:25*, *forge/sprue:1*, *go-ipni-tools:5*, *guppy:31*, *hilt:15*, *ingot:9*, *libforge:8*, *piri:25*, *sprue:1* | 0 / 20 |  | — | library-only |
 | `ucan` | 176 (176) | delegator:1, forge/hilt:5, forge/ingot:9, forge/sprue:8, guppy:2, hilt:4, indexing-service:1, ingot:11, sprue:8, *forge/hilt:3*, *forge/ingot:2*, *hilt:4*, *ingot:2*, *libforge:3* | 0 / 18 |  | — | shipped |
 | `ucan/retrieval` | 358 (358) | forge/ingot:1, forge/piri:3, guppy:5, indexing-service:3, ingot:1, piri:3, *forge/piri:2*, *guppy:1*, *indexing-service:1*, *libforge:2*, *piri:2* | 0 / 19 |  | — | shipped |
 | `ucan/zapucan` | 54 (54) | forge/hilt:2, *libforge:1* | 0 / 20 |  | — | shipped |
@@ -287,7 +288,7 @@ Columns: **LOC** non-test lines (in parentheses: hand-written, i.e. excluding `*
 | `absentee` | 46 (46) | *forge/ingot:1*, *ingot:1*, *ucantone:2* | 12 / 17 |  | — | test-only |
 | `binding` | 432 (432) | forge/hilt:8, forge/piri:8, forge/sprue:25, guppy:2, hilt:8, indexing-service:1, libforge:45, piri:8, piri-signing-service:3, sprue:25, *forge/hilt:3*, *forge/piri:3*, *forge/sprue:4*, *guppy:8*, *hilt:4*, *indexing-service:1*, *libforge:2*, *piri:3*, *piri-signing-service:3*, *sprue:4*, *ucantone:7* | 40 / 18 |  | — | shipped |
 | `client` | 214 (214) | forge/hilt:3, forge/ingot:2, forge/piri:5, forge/sprue:4, guppy:4, hilt:3, indexing-service:1, ingot:2, libforge:2, piri:5, piri-signing-service:1, sprue:4, *forge/piri:3*, *indexing-service:1*, *piri:3*, *piri-signing-service:1*, *ucantone:4* | 32 / 18 |  | — | shipped |
-| `did` | 834 (834) | delegator:8, forge/hilt:32, forge/ingot:39, forge/piri:22, forge/smelt:1, forge/sprue:60, guppy:72, hilt:34, indexing-service:9, ingot:52, libforge:24, piri:22, piri-signing-service:1, smelt:1, sprue:49, *delegator:1*, *forge/hilt:13*, *forge/ingot:16*, *forge/piri:6*, *forge/sprue:20*, *guppy:12*, *hilt:16*, *indexing-service:1*, *ingot:21*, *libforge:6*, *piri:6*, *sprue:20*, *ucantone:27* | 0 / 16 |  | — | shipped |
+| `did` | 834 (834) | delegator:8, forge/hilt:32, forge/ingot:39, forge/piri:22, forge/smelt:1, forge/sprue:60, go-ipni-tools:1, guppy:72, hilt:34, indexing-service:9, ingot:52, libforge:24, piri:22, piri-signing-service:1, smelt:1, sprue:49, *delegator:1*, *forge/hilt:13*, *forge/ingot:16*, *forge/piri:6*, *forge/sprue:20*, *guppy:12*, *hilt:16*, *indexing-service:1*, *ingot:21*, *libforge:6*, *piri:6*, *sprue:20*, *ucantone:27* | 0 / 16 |  | — | shipped |
 | `did/key` | 45 (45) | forge/hilt:2, forge/piri:1, forge/sprue:1, hilt:2, indexing-service:3, piri:1, piri-signing-service:1, sprue:1, *forge/piri:2*, *forge/sprue:5*, *hilt:1*, *libforge:2*, *piri:2*, *sprue:5*, *ucantone:2* | 1 / 16 |  | — | shipped |
 | `did/plc` | 3657 (709) | forge/hilt:3, forge/piri:1, forge/sprue:2, hilt:2, ingot:1, piri:1, sprue:2, *forge/hilt:3*, *forge/sprue:1*, *hilt:3*, *sprue:1*, *ucantone:5* | 1 / 16 |  | — | shipped |
 | `did/plc/gen` (codegen driver) | 45 (45) | — | 2 / 16 |  | — | unreferenced |
