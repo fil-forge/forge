@@ -340,6 +340,44 @@ discards the `audience must be omitted` error (latent bug 15). Experiment E's
 reading of the 08-20/21 straddle had the risk on the wrong side and is
 corrected in `divergence-august-2026.md`.
 
+### S16. Two decisions from the human round collide: archiving guppy breaks the compat suite's own driver
+
+Decision 3 archives the guppy CLI. Decision 6/7 (own the nightly, deepen the
+suite) assume the suite keeps working. Checked directly: `assertUploadRetrieve`
+— the one assertion every compat test runs — goes through
+`smelt/pkg/clients/guppy.ContainerClient`, which execs the CLI *inside the
+running container* (`c.stack.Exec(ctx, "guppy", args...)`; `login`, `upload`,
+`retrieve` subcommands). Not the client library forge is keeping — the binary
+forge is archiving. Nothing about this was flagged anywhere in this POC before
+this pass, because nothing here previously asked "what does the compat driver
+actually depend on."
+
+The plan already designed the fix (Phase 5, unbuilt): make the S3-path
+assertion (`smelt/pkg/s3glue`, already proven by
+`smelt/tests/s3/forge_eviction_test.go`'s force-a-real-retrieve pattern) the
+primary driver, add a protocol-path driver using the new shared client (once
+Phase 4's `forge/forgeclient` exists) for what S3 can't reach. The point of
+this note is sequencing, not novelty: this has to land in the same change as
+archiving guppy's CLI, or the suite this POC spent a day validating goes from
+green to unable to boot a driver.
+
+### S17. This branch's `commands`/`internal` split doesn't match the plan's per-package classification
+
+Experiment C moved `commands/**` wholesale plus a three-package "control
+group" into `internal/`, to demonstrate the mechanics cheaply. The plan has a
+destination per package (`build-readiness.md` has the full table), and this
+branch diverges from it in one concrete way worth fixing before a real
+attempt: `commands/ucan/attest` is inside `forge/commands` today; the plan
+puts it with `attestation` in a new, standalone extension module instead
+(reasoning: it's Forge-independent once `commands.Unit` is redeclared
+locally, and bundling it with `attestation` gives that extension a `go.mod`
+requiring only `ucantone` and multiformats — compiler-enforced independence).
+Six more libforge packages the plan places (`ucan`/`ucanlib` into `ucantone`
+itself, renamed; `attestation`+`attestation/didmailto`; `identity`; `piece`;
+`testutil`; `ucan/retrieval`; `blobindex`) are simply unmoved on this branch —
+still imported from libforge directly. `receipt` is the one package the plan
+itself leaves "open — see questions", not resolved by anything in this round.
+
 ## Costs measured
 
 Filled in from Experiments A, C and E as they complete; see the linked
@@ -498,25 +536,42 @@ documents for the raw logs.
 
 ## Decisions needed from humans
 
-From the plan, with what this POC adds:
+From the plan, with what this POC adds. **All nine now have an answer** (a
+human round on 2026-09-04); each item below keeps the original open question
+for context and adds the resolution. Executing on several of them —
+delegator/signing-service in particular — needs `build-readiness.md`'s recon,
+not just the decision.
 
 1. **Do partners compile against `commands/**`, or only run images?** Still
    unanswerable from code. New evidence: the only cross-module Go consumers of
    libforge's wire packages found in this session are first-party (forge's
    services, the live services, guppy, indexing-service, delegator).
+   → **Resolved: no third-party code compiles against it.** Removes the need
+   for `forge/commands` to ever be a stable, tagged, publishable module — the
+   dilemma `commands-move.md` §1 posed. See S7.
 2. **`delegator` and `signing-service` are live services outside forge**
    (`fil-forge/delegator` 15 commits in August; `fil-forge/piri-signing-service`
    4). piri pins `delegator` as a Go dependency. Scoping question stands.
+   → **Resolved: both join the monorepo as new service modules.** This POC
+   never investigated either repo's own structure; `build-readiness.md` has
+   the recon.
 3. **guppy's status** — answered in `guppy-status.md` and the appendix (Q6):
    functional for the smoke path with a version-pair qualifier; idle, not
    broken. The decision left is whether guppy is a product or a test client.
+   → **Resolved: not a product.** The CLI is archived entirely; only
+   `pkg/client` (+ `pkg/tokenstore`) survives, unpublished, for services in
+   the monorepo. Surfaces a real, urgent dependency: the compat suite's own
+   driver execs the guppy *CLI*, not the client library — `build-readiness.md`
+   Phase 5.
 4. **fil-one RFC 7** — checked `fil-one/RFC` (`59438b5`, 2026-09-01): it holds
    two documents (`rfcs/2026-05-filone-forge-deployment-proposal.md`,
    `rfcs/2026-07-review-time-and-stacked-prs.md`) and nothing numbered 7,
    nothing mentioning varsig or `0x300001`. The citation in
    `libforge/attestation/varsig.go` points at a document not in that repo.
    Still open where it lives (Notion is the likely place; not checked).
+   → **Resolved: it exists, unmerged — `fil-one/RFC#7`.** Should have merged.
 5. **Varsig `0x300001`** — unchanged; independent of layout.
+   → **Not actually a live question** per the human round; nothing to resolve.
 6. **Who owns a red nightly** — sharpened by S3: today nobody can own it
    because it cannot go red. After Experiment D it can: a run with no tags is
    a visible no-op, a run in which every test skipped fails, and a pinned
@@ -524,16 +579,36 @@ From the plan, with what this POC adds:
    against the images the network runs, HEAD fails seven of eight stacks on
    the receipt rule (S15). Someone has to own that before `compat.yml` is
    pointed at real pins on `main`.
+   → **Direction chosen, not built:** gate a release on the full skew suite
+   via a release PR that can sit accumulating commits, merged on demand;
+   `main` keeps only the fast HEAD-only check. Maps onto the plan's own
+   unbuilt Phase 1 item 4 ("wire compat as a pre-release gate") —
+   `build-readiness.md` has the mechanics and two open sub-decisions
+   (per-service vs. fleet scope; fixed snapshot vs. living PR).
 7. **Suite depth** — sharpened by D (latent bug 13): the suite proves
    provenance and the smoke path, and would not have caught the one `feat!`
    between the two image pins. Deepening it is independent of layout.
+   → **Resolved: deferred as tracked follow-up work**, recorded above under
+   "What a real migration would need."
 8. **New: is forge meant to be the source of truth?** Five weeks of divergence
    between forge and the per-service repos (S2) means a real migration starts
    with a re-import, not with this snapshot. Someone has to decide which side
    is canonical before any of this is more than a measurement.
+   → **Resolved: the polyrepo is canonical.** Advance the monorepo's modules
+   to the polyrepo's current versions, or recreate the monorepo from them.
+   No behavioral drift expected in forge's own history beyond infrastructure
+   tweaks (confirmed: PR #3's replace-directive removal is the only thing
+   found, matching that expectation) — but "advance to current" is bigger
+   than a version bump once decision 2 (delegator/signing-service) and F3/S14
+   (new module edges the live fleet grew that forge's `go.work` doesn't have
+   at all: `swarf`, `smelt`-as-a-module, `ingot`→`hilt`) are counted.
 9. **New: libforge PR #52.** Merge it (after addressing the review), or move
    the four packages into forge (Experiment C shows how), or leave forge
    pinned to a draft PR. The third option is the status quo.
+   → **Resolved: obsolete as a libforge merge target.** Its packages land in
+   forge instead (already prototyped by `internal/`/`commands/`); its four
+   review findings are not obsoleted and still need addressing wherever the
+   code lands.
 
 ## What a real migration would need that this POC skipped
 
@@ -543,27 +618,39 @@ From the plan, with what this POC adds:
   presigned-URL host binding, default-port `Presign`) — the POC rebased the
   PR as-is; it only fixed formatting.
 - The protocol gates the consolidation plan puts *before* dissolving
-  libforge (apidiff on `commands/**`, greasing tests, codegen-freshness gate,
-  test vectors). None were built today.
-- A decision on `commands/ucan/attest` vs `attestation` (the only libforge
-  package importing `commands`) — moving `commands` out of libforge leaves
-  `attestation` importing a package that now has two homes.
+  libforge (apidiff on `commands/**`, greasing tests, test vectors, writing
+  the protocol down, a narrowed PR skew job, a published skew window). One
+  exception, previously uncredited here: the codegen-freshness gate exists
+  for `commands` (`ci.yml`'s `codegen gate` step). Full phase-by-phase status
+  in `build-readiness.md`.
+- `commands/ucan/attest` vs `attestation` is not an open decision — the plan
+  already specifies both move together into a new, standalone extension
+  module (S17). This branch has `commands/ucan/attest` inside `forge/commands`
+  instead, the wrong split; fixing it is execution, not a question for a
+  human.
 - Rebuilding the Docker build contexts and caches (S4) properly, not just
   enough for the stack job to pass.
 - Migrating the four first-party modules that compile against
   `libforge/commands` (S7) — `go-ipni-tools`, `piri-signing-service`,
   `indexing-service`, `delegator` — to whatever the canonical wire module
   becomes, and versioning that module for them. The branch leaves two seams
-  in piri on libforge's types instead. For `go-ipni-tools` this is now scoped
-  precisely: move `pkg/advertisement` (109 LOC), not the module
-  (`commands-move.md` §5); for the other three, still open.
+  in piri on libforge's types instead. Now sharper for three of the four:
+  `go-ipni-tools` is scoped to moving `pkg/advertisement` (109 LOC), not the
+  module (`commands-move.md` §5); `delegator` and `piri-signing-service` are
+  joining the monorepo outright (decision 2), which removes their seams
+  entirely rather than just relocating them — recon in `build-readiness.md`.
+  `indexing-service` remains the one case with no scoping answer yet.
 - Deciding the fate of `identity`, `digestutil`, `bytemap`, `blobindex`,
-  `receipt` and `testutil`, which the inventory shows have consumers outside
-  forge (S12); the branch copies three of them into `forge/internal` as the
-  plan's control group, which is only reversible because libforge still
-  carries the originals.
+  `receipt`, `testutil`, `ucan`/`ucanlib` and `ucan/retrieval`, which the
+  inventory shows have consumers outside forge (S12); the branch copies three
+  of the first six into `forge/internal` as the plan's control group, which
+  is only reversible because libforge still carries the originals. The
+  plan's own per-package destinations for all of these are in `build-readiness.md`
+  (Phase 3); `receipt` is the one the plan itself leaves open.
 - Tag scheme, release workflow and compat wiring changes (consolidation plan
-  Phases 1 and 6).
+  Phases 1 and 6) — Phase 1's remaining items (cutting tags, wiring compat as
+  a pre-release gate, the sliding-window tag-eviction bug, rollback-direction
+  testing) are detailed in `build-readiness.md`; Phase 6 unexamined.
 - Deepening the compat suite past its smoke path (decision 7, D's latent bug
   13): `assertUploadRetrieve` — the one assertion every compat test runs —
   logs in, uploads, and retrieves; it never calls `/blob/remove` or
