@@ -187,7 +187,7 @@ func WithServiceConfig(service, path string) Option {
 // workspace (go.work) from local sibling source and mounts the resulting
 // binaries over the published images. Selection follows the use-list: a service
 // is built when its module is listed; if a shared module (protocol, internal,
-// attestation) is listed, all services are rebuilt. Requires an active go.work (see pkg/workspace).
+// attestation, forgeclient) is listed, all services are rebuilt. Requires an active go.work (see pkg/workspace).
 //
 // Example:
 //

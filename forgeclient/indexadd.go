@@ -1,4 +1,3 @@
-// Carried from github.com/fil-forge/guppy/pkg/client/indexadd.go.
 package forgeclient
 
 import (

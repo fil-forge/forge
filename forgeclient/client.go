@@ -1,14 +1,17 @@
-// Package forgeclient is ingot's Forge edge-client: it invokes
-// /blob/add, /ucan/conclude, /index/add, /provider/add, /access/delegate
-// (and the /access login flow) against the upload service (sprue),
-// behaving like a guppy node.
+// Package forgeclient is the Forge protocol client for an agent that writes
+// to the network through the upload service (sprue): it invokes /blob/add
+// (with a deferrable conclude), /ucan/conclude, /blob/abort, /blob/remove,
+// /index/add, /provider/add and /access/delegate, runs the /access login
+// flow, and polls for the receipts those invocations produce. Proof chains
+// come from the client's tokenstore.Store, or per call from any
+// ucanlib.ProofStore (WithProofStore).
 //
-// It is a carried, trimmed copy of github.com/fil-forge/guppy/pkg/client
-// (ingot cannot import guppy: guppy embeds ingot → import cycle). The
-// blob-retrieval path is dropped (ingot reads via blockstore/forge.go),
-// the generic Execute is delegated to internal/ucanexec, and the
-// go-log/otel logging is replaced with an injected *zap.Logger. Keep in
-// sync with upstream; see DESIGN_NOTES.md §B.
+// It descends from github.com/fil-forge/guppy/pkg/client by way of the copy
+// ingot carried while it could not import guppy; ingot is its first
+// consumer. Relative to that ancestor, blob retrieval is not part of this
+// package, the generic Execute is internal/ucanexec's, logging is an
+// injected *zap.Logger (WithLogger), and the accept receipt is not required
+// to carry a PDP accept invocation.
 package forgeclient
 
 import (
@@ -16,8 +19,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/fil-forge/forge/ingot/internal/ucanexec"
-	"github.com/fil-forge/forge/ingot/tokenstore"
+	"github.com/fil-forge/forge/forgeclient/tokenstore"
+	"github.com/fil-forge/forge/internal/ucanexec"
 	"github.com/fil-forge/forge/protocol/receipt"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"

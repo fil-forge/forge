@@ -1,4 +1,3 @@
-// Carried from github.com/fil-forge/guppy/pkg/client/accessdelegate.go.
 package forgeclient
 
 import (

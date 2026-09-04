@@ -1,4 +1,3 @@
-// Carried from github.com/fil-forge/guppy/pkg/client/provideradd.go.
 package forgeclient
 
 import (

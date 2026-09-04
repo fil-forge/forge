@@ -1,3 +1,8 @@
+// Package locator resolves which storage nodes hold a blob. A Locator
+// answers by digest with location commitments — the signed /assert/location
+// claims naming the node, the space and the byte range — and the
+// indexer-backed implementation (IndexLocator) asks the indexing service and
+// reads the sharded DAG indexes it returns.
 package locator
 
 import (

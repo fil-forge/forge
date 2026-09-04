@@ -11,7 +11,7 @@
 #   test    unit tests (fast, no Docker)      image  prod container via
 #   clean   remove build outputs                     docker/Dockerfile
 #
-# The shared library modules (protocol, internal, attestation) implement
+# The shared library modules (protocol, internal, attestation, forgeclient) implement
 # build/vet/test only — they ship no binary and no image. protocol and
 # attestation also carry the codegen gate (`make gen-check`).
 #
@@ -22,7 +22,7 @@
 # Services: independent Go modules that ship a container.
 SERVICES := piri hilt sprue ingot delegator piri-signing-service indexing-service
 # Library modules shared by the services (no binary, no image).
-LIBRARIES := protocol internal attestation
+LIBRARIES := protocol internal attestation forgeclient
 # Everything with Go unit tests (smelt's units join test/vet).
 GO_MODULES := $(LIBRARIES) $(SERVICES) smelt
 

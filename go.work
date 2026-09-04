@@ -3,6 +3,7 @@ go 1.27.0
 use (
 	./attestation
 	./delegator
+	./forgeclient
 	./hilt
 	./indexing-service
 	./ingot

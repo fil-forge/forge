@@ -202,7 +202,3 @@ draws the chains and the stores.
   longer than that cannot ship a newly sealed segment until its next write.
 - **The indexer read path is unwired**: `LocalLocator` serves all reads; the
   network index is still published (best-effort) but never consulted.
-- **Carried Forge-client copies**: `forgeclient/`, `tokenstore/`,
-  `blockstore/locator/`, and `internal/ucanexec/` duplicate guppy/sprue code
-  to stay cycle-free (ingot must never import guppy or sprue). A shared
-  forge-client library would remove them.

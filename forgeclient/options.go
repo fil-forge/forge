@@ -1,8 +1,7 @@
-// Carried/trimmed from github.com/fil-forge/guppy/pkg/client/options.go.
 package forgeclient
 
 import (
-	"github.com/fil-forge/forge/ingot/tokenstore"
+	"github.com/fil-forge/forge/forgeclient/tokenstore"
 	"github.com/fil-forge/forge/protocol/receipt"
 	"github.com/fil-forge/ucantone/client"
 	"go.uber.org/zap"
