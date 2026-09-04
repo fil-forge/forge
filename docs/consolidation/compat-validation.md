@@ -513,6 +513,60 @@ Found while reading; none fixed beyond what the commits above describe.
     repos: 300 tags exit 0, 600 and 1000 tags exit 141, for both scripts. The
     `awk 'NR <= n'` form reads everything and exits 0 at every size.
 
+## First real runs — what was dispatched, and pre-registered predictions
+
+Written on 2026-09-04 at 04:00 UTC, after dispatch and **before any log of
+either run had been read** (the commit that adds this section predates the
+one that records results). Head at dispatch: `cbca261`; suite and workflow as
+of `d57234a`.
+
+| run | dispatched (UTC) | inputs | purpose |
+|---|---|---|---|
+| [35 · 33834794514](https://github.com/fil-forge/forge/actions/runs/33834794514) | 03:52:54 | `piri_versions=sha-96a672e ingot_versions=sha-96a672e baseline_piri/ingot/sprue/hilt=sha-f60dd59 expect_pin_mismatch=true`; guppy at the compose default `ghcr.io/fil-forge/guppy:main-dev` (floating; today guppy `d74fd06`, ucantone `3a20cd5`) | runs A and B above in one dispatch — the guard test boots its own stack, so it cannot confound the others, and `compat.yml` serialises runs (`cancel-in-progress: false`), so two dispatches would only have added a cycle |
+| [36 · 33834923448](https://github.com/fil-forge/forge/actions/runs/33834923448) | 03:55:11 | same pins; `guppy_image=ghcr.io/fil-forge/guppy:sha-c94d43b-dev` (guppy 2026-07-31, ucantone `7985ec0` of 06-19, libforge `2b55dbc` — the guppy generation forge `main`'s last green stack run used, modulo dependabot bumps); no guard | remove the guppy-side skew (S9) so that what fails is HEAD-vs-field-image, not client drift |
+
+Observed before writing this (job step timestamps, not logs): run 35's
+`Resolve supported window` resolved `mode=override ready=true` in 6 s; the
+`Version skew` job pre-pulled all six pinned refs in 11 s and started the
+suite at 03:53:31. So the override plumbing and GHCR access work; everything
+below is prediction.
+
+### Why the predictions above no longer apply as written
+
+They assumed HEAD's services carry `f60dd59`'s dependencies. On this branch
+HEAD carries Experiment A's bump to ucantone `8d7eb73` (post-#49), and
+`bfc05d9` (#49) made `receipt.Decode` reject any receipt that carries `aud`,
+while every executor built against ucantone `ccb7705` — which is what *all*
+`sha-96a672e` and `sha-f60dd59` images run (checked in each service's
+`go.mod` at both commits) — sets `aud` on every receipt. The pre-#49 decoder
+has no audience check at all. The break is therefore one-directional: a
+post-#49 component cannot read a pre-#49 executor's receipts; a pre-#49
+component reads post-#49 receipts fine. The upload path is
+guppy → sprue → piri (`/blob/allocate`, `/blob/accept` receipts); hilt and
+ingot are not on it, so their pinned or upgraded state should not matter to
+`assertUploadRetrieve`.
+
+### Predictions
+
+| test | run 35 (guppy post-#49) | run 36 (guppy pre-#49) | reasoning |
+|---|---|---|---|
+| `TestPinnedPeer/piri/sha-96a672e` | **FAIL** | **FAIL** | HEAD sprue must decode old piri's `aud`-bearing receipts and rejects them — a real wire skew between HEAD and the image the network ran five weeks ago |
+| `TestPinnedPeer/ingot/sha-96a672e` | PASS | PASS | ingot is off the path; HEAD sprue and piri agree; either guppy decodes HEAD's `aud`-less receipts |
+| `TestRollingUpgrade/upgrade_piri` | **FAIL** | PASS | run 35 fails on S9 (new guppy vs old sprue's receipts); in run 36 HEAD piri's `aud`-less receipts decode in old sprue |
+| `TestRollingUpgrade/upgrade_sprue` | **FAIL** | **FAIL** | HEAD sprue vs old piri — the same skew as the first row |
+| `TestRollingUpgrade/upgrade_ingot` | **FAIL** | PASS | run 35: S9; run 36: every component on the path is pre-#49 |
+| `TestRollingUpgrade/upgrade_hilt` | **FAIL** | PASS | as for ingot |
+| `TestProvenanceGuardFires` | PASS (fires on the bind-mount branch) | skipped | pinned piri with HEAD mounted over it |
+| provenance guard in the other tests | passes in every stack | passes | the mechanics were the D agent's prediction and stand |
+| `Refuse a vacuous pass` | passes (exercised lines present) | passes | |
+| job conclusion | **failure** | **failure** | at least one test fails in each |
+
+If instead every stack fails before `assertUploadRetrieve` runs (no
+`compat: exercised` line, provenance errors on every service, or a timeout
+waiting for health), the bind-mount path (latent bug 11) or the compose
+contract with old images (latent bug 9) is the cause, not the wire; the
+results section below says which happened.
+
 ## Not done, and reversibility
 
 - No workflow was dispatched, no tag created, nothing pushed (brief rules 1,
