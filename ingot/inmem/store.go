@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -25,6 +26,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"
 
+	"github.com/fil-forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/ingot/blockstore"
 	"github.com/fil-forge/forge/ingot/bucketauthority"
 	"github.com/fil-forge/forge/ingot/logstore"
@@ -32,7 +34,6 @@ import (
 	"github.com/fil-forge/forge/ingot/uploader"
 	"github.com/fil-forge/libforge/commands/s3"
 	"github.com/fil-forge/libforge/commands/s3/bucket"
-	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 )
@@ -50,6 +51,7 @@ type MemStore struct {
 	buckets  map[string]*registry.State
 	segments map[uint64]*logstore.SegmentMeta
 	nextSeq  uint64
+	verSeqs  map[string]uint64 // per-bucket next_version_seq counter
 
 	// The architecture's relational surface (docs/architecture.md §5–§7),
 	// mirroring the Postgres tables so the in-process suite exercises the
@@ -57,14 +59,18 @@ type MemStore struct {
 	blobRefs   map[claimKey]registry.BlobClaim
 	intents    map[string]registry.UploadIntent          // keyed by string(digest)
 	locations  map[locKey]registry.BlobLocation          // keyed by (space, digest)
+	encParams  map[locKey]registry.BlobEncryptionParams  // keyed by (space, digest)
 	inclusions map[locKey]registry.BlobInclusion         // keyed by (space, digest)
+	parks      map[string]registry.BlobPark              // keyed by string(digest)
 	sessions   map[string]registry.MultipartSession      // keyed by uploadID
 	parts      map[string]map[int]registry.MultipartPart // uploadID -> partNumber -> part
 	gcCands    map[string]struct{}                       // keyed by string(cid)
+	revCursor  *registry.RevocationCursor                // the single revocation_cursor row
 }
 
-// claimKey / locKey are the composite map keys for the blob_refs and
-// blob_locations tables (digest bytes carried as a string for comparability).
+// claimKey / locKey are the composite map keys for the blob_refs and the
+// (space, digest)-keyed tables — blob_locations, blob_encryption_params and
+// shard_inclusions (digest bytes carried as a string for comparability).
 type claimKey struct {
 	digest, bucket, objectKey, versionID string
 }
@@ -79,10 +85,13 @@ func NewMemStore() *MemStore {
 	return &MemStore{
 		buckets:    map[string]*registry.State{},
 		segments:   map[uint64]*logstore.SegmentMeta{},
+		verSeqs:    map[string]uint64{},
 		blobRefs:   map[claimKey]registry.BlobClaim{},
 		intents:    map[string]registry.UploadIntent{},
 		locations:  map[locKey]registry.BlobLocation{},
+		encParams:  map[locKey]registry.BlobEncryptionParams{},
 		inclusions: map[locKey]registry.BlobInclusion{},
+		parks:      map[string]registry.BlobPark{},
 		sessions:   map[string]registry.MultipartSession{},
 		parts:      map[string]map[int]registry.MultipartPart{},
 		gcCands:    map[string]struct{}{},
@@ -158,14 +167,24 @@ func (m *MemStore) ListBuckets(ctx context.Context, req s3.Request) (*bucket.Lis
 
 // Registry methods ===========================================================
 
-func (m *MemStore) Create(_ context.Context, name string, space did.DID) error {
+func (m *MemStore) Create(_ context.Context, name string, space did.DID, init registry.CreateState) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if _, ok := m.buckets[name]; ok {
 		return registry.ErrExists
 	}
+	v := init.Versioning
+	if v == "" {
+		v = registry.VersioningUnversioned
+	}
 	// Stamped here for parity with the buckets.created_at column default.
-	m.buckets[name] = &registry.State{Name: name, Space: space, CreatedAt: time.Now().UTC()}
+	m.buckets[name] = &registry.State{
+		Name:             name,
+		Space:            space,
+		Versioning:       v,
+		ObjectLockConfig: init.ObjectLockConfig,
+		CreatedAt:        time.Now().UTC(),
+	}
 	return nil
 }
 
@@ -187,6 +206,7 @@ func (m *MemStore) Delete(_ context.Context, name string) error {
 		return registry.ErrNotFound
 	}
 	delete(m.buckets, name)
+	delete(m.verSeqs, name)
 	return nil
 }
 
@@ -213,6 +233,41 @@ func (m *MemStore) SetForgeRoot(_ context.Context, name string, root cid.Cid) er
 	}
 	s.ForgeRoot = root
 	return nil
+}
+
+func (m *MemStore) SetVersioning(_ context.Context, name string, v registry.VersioningState) error {
+	if v != registry.VersioningEnabled && v != registry.VersioningSuspended {
+		return fmt.Errorf("registry: set versioning %q: invalid state %q", name, v)
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, ok := m.buckets[name]
+	if !ok {
+		return registry.ErrNotFound
+	}
+	s.Versioning = v
+	return nil
+}
+
+func (m *MemStore) SetObjectLockConfig(_ context.Context, name string, cfg []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, ok := m.buckets[name]
+	if !ok {
+		return registry.ErrNotFound
+	}
+	s.ObjectLockConfig = cfg
+	return nil
+}
+
+func (m *MemStore) AllocVersionSeq(_ context.Context, name string) (uint64, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.buckets[name]; !ok {
+		return 0, registry.ErrNotFound
+	}
+	m.verSeqs[name]++
+	return m.verSeqs[name], nil
 }
 
 // Meta methods ===============================================================
@@ -253,11 +308,12 @@ func (m *MemStore) MarkSegmentSealed(_ context.Context, plane blockstore.Plane, 
 	return nil
 }
 
-func (m *MemStore) MarkSegmentShipped(_ context.Context, plane blockstore.Plane, seq uint64, shippedAt int64, opRoots []blockstore.OpRoot) error {
+func (m *MemStore) MarkSegmentShipped(_ context.Context, plane blockstore.Plane, seq uint64, shippedAt int64, indexDigest multihash.Multihash, opRoots []blockstore.OpRoot) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if r, ok := m.segments[seq]; ok {
 		r.ShippedAt = shippedAt
+		r.IndexDigest = slices.Clone(indexDigest)
 	}
 	if plane == blockstore.PlaneCatalog {
 		for _, opr := range opRoots {
@@ -341,15 +397,26 @@ func (NopBaseReader) OpenBlob(_ context.Context, _ did.DID, _ multihash.Multihas
 // network, so the spool's local copy serves all reads.
 type NopUploader struct{}
 
-func (NopUploader) SubmitShard(_ context.Context, _ blockstore.Plane, _ did.DID, _ uploader.CARShard) (uploader.BlobLocation, error) {
-	return uploader.BlobLocation{}, nil
+func (NopUploader) SubmitShard(_ context.Context, _ blockstore.Plane, _ did.DID, _ uploader.CARShard) (uploader.BlobLocation, multihash.Multihash, error) {
+	return uploader.BlobLocation{}, nil, nil
 }
 
-func (NopUploader) UploadBlob(_ context.Context, _ did.DID, _ multihash.Multihash, size int64, _ string) (uploader.BlobLocation, error) {
-	return uploader.BlobLocation{Size: size}, nil
+// UploadBlob accepts immediately, even with WithConclude(false) — there is
+// no network to park on, so the deferred flow degenerates to the synchronous
+// one and reads keep coming from the spool.
+func (NopUploader) UploadBlob(_ context.Context, _ did.DID, digest multihash.Multihash, size int64, _ string, _ ...uploader.UploadOption) (uploader.UploadedBlob, error) {
+	return uploader.UploadedBlob{Digest: digest, Size: size, Location: &uploader.BlobLocation{Size: size}}, nil
 }
 
 func (NopUploader) RemoveBlob(_ context.Context, _ did.DID, _ multihash.Multihash) error { return nil }
+
+func (NopUploader) ConcludeBlob(_ context.Context, _ did.DID, parked uploader.UploadedBlob) (uploader.BlobLocation, error) {
+	return uploader.BlobLocation{Size: parked.Size}, nil
+}
+
+func (NopUploader) AbortBlob(_ context.Context, _ did.DID, _ multihash.Multihash, _ cid.Cid) error {
+	return nil
+}
 
 // Compile-time guarantees.
 var (
@@ -360,5 +427,6 @@ var (
 	_ blockstore.BlobReader           = NopBaseReader{}
 	_ uploader.Uploader               = NopUploader{}
 	_ uploader.BodyUploader           = NopUploader{}
+	_ uploader.DeferredBodyUploader   = NopUploader{}
 	_ uploader.BlobRemover            = NopUploader{}
 )

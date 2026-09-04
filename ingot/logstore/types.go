@@ -3,6 +3,8 @@ package logstore
 import (
 	"context"
 
+	"github.com/multiformats/go-multihash"
+
 	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
@@ -68,6 +70,11 @@ type SegmentMeta struct {
 	// plane stays 0 forever.
 	ShippedAt int64
 
+	// IndexDigest is the multihash of the shipped sharded-dag-index blob.
+	// Non-nil exactly when the ship registered blobs in the bucket's space
+	// (the CAR + this index) — the registrations DeleteBucket must release.
+	IndexDigest multihash.Multihash
+
 	// OpRoots are the per-batch (bucket, root) records. Populated only
 	// for catalog-plane segments — op-roots are MST roots.
 	OpRoots []blockstore.OpRoot
@@ -100,7 +107,7 @@ type Meta interface {
 	// to Forge, stamping shipped_at, and advances forge_root_cid in
 	// ingot.buckets for every op-root recorded against this segment (catalog
 	// roots are the MST roots durable on Forge), all in one transaction.
-	MarkSegmentShipped(ctx context.Context, plane blockstore.Plane, seq uint64, shippedAt int64, opRoots []blockstore.OpRoot) error
+	MarkSegmentShipped(ctx context.Context, plane blockstore.Plane, seq uint64, shippedAt int64, indexDigest multihash.Multihash, opRoots []blockstore.OpRoot) error
 
 	// DeleteSegment removes a segment row (cascades to op-root rows).
 	// Used by retention after the on-disk files are unlinked.

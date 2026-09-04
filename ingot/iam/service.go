@@ -44,15 +44,15 @@ import (
 
 	"time"
 
+	hiltauth "github.com/fil-forge/hilt/pkg/rpc/service/auth"
+	"github.com/fil-forge/hilt/pkg/s3perm"
+	"github.com/fil-forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/ingot/internal/fasthttputil"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
 	"github.com/fil-forge/forge/ingot/registry"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	hiltauth "github.com/fil-forge/libforge/commands/s3/request"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	"github.com/fil-forge/libforge/s3perm"
-	"github.com/fil-forge/libforge/sigv4"
 	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
@@ -63,7 +63,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
-	hiltclient "github.com/fil-forge/libforge/client/hilt"
+	hiltclient "github.com/fil-forge/hilt/pkg/client"
 )
 
 // Authorizer is the slice of [hiltclient.Client] the service uses:
@@ -88,6 +88,7 @@ type Service struct {
 	authorizer Authorizer
 	proofs     *KeyProofs
 	keys       *VerificationKeyCache
+	tenants    *TenantCache
 	logger     *zap.Logger
 
 	// agent + buckets enable the local fast path (see WithLocalAuthorization);
@@ -129,11 +130,12 @@ func WithLocalAuthorization(agent did.DID, buckets BucketResolver) Option {
 }
 
 // New creates a Service that authorizes requests via authorizer (typically a
-// *hiltclient.Client) and deposits the delegations and verification keys Hilt
-// returns into proofs (per-access-key) and keys — the caches the retrieval
-// path and the local fast path read from.
-func New(authorizer Authorizer, proofs *KeyProofs, keys *VerificationKeyCache, opts ...Option) *Service {
-	s := &Service{authorizer: authorizer, proofs: proofs, keys: keys, logger: zap.NewNop()}
+// *hiltclient.Client) and deposits the delegations, verification keys and
+// tenant DID Hilt returns into proofs (per-access-key), keys and tenants —
+// the caches the retrieval path, the write path and the local fast path read
+// from.
+func New(authorizer Authorizer, proofs *KeyProofs, keys *VerificationKeyCache, tenants *TenantCache, opts ...Option) *Service {
+	s := &Service{authorizer: authorizer, proofs: proofs, keys: keys, tenants: tenants, logger: zap.NewNop()}
 	for _, opt := range opts {
 		opt(s)
 	}
@@ -170,8 +172,14 @@ func (s *Service) GetUserAccountForRequest(ctx fiber.Ctx, accessKeyStr string) (
 
 	// Local fast path: with a cached verification key and cached delegation
 	// chains covering the request's Forge commands, Hilt is not consulted.
+	// The tenant travels with the request too (the write path encrypts to
+	// its wrap key); a verified request whose tenant has fallen out of the
+	// cache takes the Hilt path, whose response refills every cache.
 	if account, ok := s.authorizeLocal(reqCtx, req, accessKeyStr, store); ok {
-		return account, nil
+		if tenant, found := s.tenants.Get(accessKeyStr); found {
+			ctx.Locals(reqscope.TenantKey(), tenant)
+			return account, nil
+		}
 	}
 
 	ok, ctr, err := s.authorizer.AuthorizeRequest(reqCtx, req)
@@ -191,6 +199,11 @@ func (s *Service) GetUserAccountForRequest(ctx fiber.Ctx, accessKeyStr string) (
 	if !found {
 		return auth.Account{}, fmt.Errorf("hilt/iam: no sigv4 signing key for %s in authorize result", accessKeyID)
 	}
+	// The tenant is a required part of the result: the write path encrypts
+	// every object to the tenant's wrap key and will not write without it.
+	if !ok.Tenant.Defined() {
+		return auth.Account{}, fmt.Errorf("hilt/iam: no tenant for %s in authorize result", accessKeyID)
+	}
 
 	// Deposit the returned delegations (access-key→ingot re-delegations,
 	// ≤24h TTL) into THIS key's store and complete their chains if needed —
@@ -205,7 +218,12 @@ func (s *Service) GetUserAccountForRequest(ctx fiber.Ctx, accessKeyStr string) (
 	// today's scope date at a wall-clock instant just after midnight, and Hilt
 	// accepts it within ±MaxClockSkew — keep the date's key cached that much
 	// longer so those stragglers still hit the fast path instead of Hilt.
-	s.keys.Put(accessKeyStr, untilNextUTCMidnight(time.Now())+sigv4.MaxClockSkew, ok.Keys.Entries[accessKeyID]...)
+	ttl := untilNextUTCMidnight(time.Now()) + sigv4.MaxClockSkew
+	s.keys.Put(accessKeyStr, ttl, ok.Keys.Entries[accessKeyID]...)
+	// The tenant is cached to the same horizon so the fast path can stash it,
+	// and stashed on this request for the write path.
+	s.tenants.Put(accessKeyStr, ttl, ok.Tenant)
+	ctx.Locals(reqscope.TenantKey(), ok.Tenant)
 
 	// Bucket is nil for bucket-level operations (CreateBucket, ListBuckets),
 	// which authorize without addressing an existing bucket.
@@ -216,6 +234,7 @@ func (s *Service) GetUserAccountForRequest(ctx fiber.Ctx, accessKeyStr string) (
 	s.logger.Debug("hilt/iam: request authorized",
 		zap.String("access", accessKeyStr),
 		zap.String("bucket", bucketStr),
+		zap.Stringer("tenant", ok.Tenant),
 	)
 
 	return auth.Account{
@@ -305,7 +324,7 @@ func (s *Service) authorizeLocal(ctx context.Context, req s3.Request, access str
 
 	// 3. The S3 action must map to Forge commands. Bucket-level operations
 	// (create/delete/list-buckets) map to none — they go to Hilt regardless.
-	op, err := s3.OperationFor(req)
+	op, err := hiltauth.OperationFor(req)
 	if err != nil {
 		return auth.Account{}, false
 	}

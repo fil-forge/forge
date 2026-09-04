@@ -17,16 +17,16 @@ import (
 // violation (matches the literal used elsewhere in sprue's stores).
 const uniqueViolation = "23505"
 
-// Postgres is a *pgxpool.Pool-backed Registry. Schema is owned by
-// pkg/ingot/migrations and lives in the `ingot` Postgres schema. The
-// pool is borrowed, never closed by this type.
+// Postgres is a *pgxpool.Pool-backed Registry (and, via its sibling
+// files, the segment Meta and the relational stores). Schema is owned
+// by the migrations package and lives in the `ingot` Postgres schema.
+// The pool is borrowed, never closed by this type.
 //
-// Bucket operations (Create, Delete, List) are forwarded to the Hilt
-// tenant service — the authority on which buckets exist and who may act
-// on them — with the local table holding only per-bucket root state.
-// Each of those methods recovers the original signed S3 request from
-// ctx (see hiltclient.RequestFromContext), so they must be called on a
-// request-serving path.
+// Bucket authority (which buckets exist, who may act on them) lives
+// with the Hilt tenant service: s3frontend consults it through the
+// bucketauthority package before touching these rows, which hold only
+// per-bucket root/versioning state. Create and Delete here are plain
+// SQL and read nothing from ctx.
 type Postgres struct {
 	pool *pgxpool.Pool
 }
@@ -41,11 +41,15 @@ func NewPostgres(pool *pgxpool.Pool) *Postgres {
 // Compile-time assertion.
 var _ Registry = (*Postgres)(nil)
 
-func (r *Postgres) Create(ctx context.Context, name string, space did.DID) error {
+func (r *Postgres) Create(ctx context.Context, name string, space did.DID, init CreateState) error {
 	// root_cid stays NULL (empty bucket); created_at from the column default.
+	v := init.Versioning
+	if v == "" {
+		v = VersioningUnversioned
+	}
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO ingot.buckets (name, space) VALUES ($1, $2)`,
-		name, space.String())
+		`INSERT INTO ingot.buckets (name, space, versioning, object_lock_config) VALUES ($1, $2, $3, $4)`,
+		name, space.String(), string(v), init.ObjectLockConfig)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolation {
@@ -57,12 +61,12 @@ func (r *Postgres) Create(ctx context.Context, name string, space did.DID) error
 }
 
 func (r *Postgres) Get(ctx context.Context, name string) (*State, error) {
-	var rootBytes, forgeBytes []byte
+	var rootBytes, forgeBytes, lockCfg []byte
 	var createdAt time.Time
-	var spaceStr string
+	var spaceStr, versioning string
 	err := r.pool.QueryRow(ctx,
-		`SELECT root_cid, forge_root_cid, created_at, space FROM ingot.buckets WHERE name = $1`, name).
-		Scan(&rootBytes, &forgeBytes, &createdAt, &spaceStr)
+		`SELECT root_cid, forge_root_cid, created_at, space, versioning, object_lock_config FROM ingot.buckets WHERE name = $1`, name).
+		Scan(&rootBytes, &forgeBytes, &createdAt, &spaceStr, &versioning, &lockCfg)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -73,7 +77,7 @@ func (r *Postgres) Get(ctx context.Context, name string) (*State, error) {
 	if err != nil {
 		return nil, fmt.Errorf("registry: parse space %q: %w", spaceStr, err)
 	}
-	st := &State{Name: name, Space: space, CreatedAt: createdAt}
+	st := &State{Name: name, Space: space, Versioning: VersioningState(versioning), ObjectLockConfig: lockCfg, CreatedAt: createdAt}
 	if err := setCidPg(&st.Root, rootBytes, name, "root_cid"); err != nil {
 		return nil, err
 	}
@@ -143,6 +147,49 @@ func (r *Postgres) SetForgeRoot(ctx context.Context, name string, root cid.Cid) 
 		return ErrNotFound
 	}
 	return nil
+}
+
+func (r *Postgres) SetVersioning(ctx context.Context, name string, v VersioningState) error {
+	if v != VersioningEnabled && v != VersioningSuspended {
+		return fmt.Errorf("registry: set versioning %q: invalid state %q", name, v)
+	}
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE ingot.buckets SET versioning = $1 WHERE name = $2`,
+		string(v), name)
+	if err != nil {
+		return fmt.Errorf("registry: set versioning %q: %w", name, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Postgres) SetObjectLockConfig(ctx context.Context, name string, cfg []byte) error {
+	tag, err := r.pool.Exec(ctx,
+		`UPDATE ingot.buckets SET object_lock_config = $1 WHERE name = $2`,
+		cfg, name)
+	if err != nil {
+		return fmt.Errorf("registry: set object lock config %q: %w", name, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (r *Postgres) AllocVersionSeq(ctx context.Context, name string) (uint64, error) {
+	var seq int64
+	err := r.pool.QueryRow(ctx,
+		`UPDATE ingot.buckets SET next_version_seq = next_version_seq + 1 WHERE name = $1 RETURNING next_version_seq`,
+		name).Scan(&seq)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("registry: alloc version seq %q: %w", name, err)
+	}
+	return uint64(seq), nil
 }
 
 func setCidPg(dst *cid.Cid, raw []byte, name, field string) error {

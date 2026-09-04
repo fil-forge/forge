@@ -50,6 +50,18 @@ func (s *Spool) Path(digest mh.Multihash) string {
 	return filepath.Join(s.dir, hex.EncodeToString(digest))
 }
 
+// Remove deletes the blob with the given digest from the spool. Idempotent:
+// removing a blob that isn't spooled is not an error. Callers own the
+// is-it-safe-to-delete question (shared, content-addressed blobs may be
+// referenced by other parts or committed objects).
+func (s *Spool) Remove(digest mh.Multihash) error {
+	err := os.Remove(s.Path(digest))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("blockstore: spool remove: %w", err)
+	}
+	return nil
+}
+
 // WriteBlob streams r to the spool, computing its sha256 digest as it writes so
 // the blob is never held whole in memory (object-body blobs run up to
 // max_blob_size = 256 MiB; buffering them would put that × concurrency in RAM).
@@ -104,6 +116,21 @@ func (s *Spool) OpenBlob(_ context.Context, _ did.DID, digest mh.Multihash) (io.
 	return f, nil
 }
 
+// OpenBlobRange returns a reader over stored bytes [start, end] (inclusive)
+// of the spooled blob, or ErrNotFound — OpenBlob restricted to a section,
+// for the decrypting read path, which fetches only the ciphertext span a
+// plaintext range needs. An end past the file's end yields a shorter stream.
+func (s *Spool) OpenBlobRange(_ context.Context, _ did.DID, digest mh.Multihash, start, end int64) (io.ReadCloser, error) {
+	f, err := os.Open(s.Path(digest))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("blockstore: spool open %s: %w", digest.B58String(), err)
+	}
+	return readerCloser{Reader: io.NewSectionReader(f, start, end-start+1), Closer: f}, nil
+}
+
 // GetBlock returns the blob stored under c's multihash, or ErrNotFound. A miss
 // is expected and cheap: it lets the layered read path fall through to the log
 // (for catalog blocks, which are never spooled) or the network tier (for a body
@@ -122,7 +149,8 @@ func (s *Spool) GetBlock(_ context.Context, _ did.DID, c cid.Cid) (block.Block, 
 // Compile-time assertions: Spool is a raw-block read tier and the streaming
 // blob tier for object bodies.
 var (
-	_ BlockReader = (*Spool)(nil)
-	_ BlobReader  = (*Spool)(nil)
-	_ BlobWriter  = (*Spool)(nil)
+	_ BlockReader     = (*Spool)(nil)
+	_ BlobReader      = (*Spool)(nil)
+	_ BlobRangeReader = (*Spool)(nil)
+	_ BlobWriter      = (*Spool)(nil)
 )
