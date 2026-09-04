@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,7 @@ import (
 	tenantmemory "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	"github.com/fil-forge/forge/hilt/pkg/vault"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
+	swarfclient "github.com/fil-forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/plc"
 	"github.com/fil-forge/ucantone/multikey/secp256k1"
@@ -27,6 +29,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
+
+// noopRevocations stands in for the revocation service: these tests exercise the
+// HTTP layer, not revocation (see the accesskey service tests for that).
+type noopRevocations struct{}
+
+func (noopRevocations) Publish(context.Context, ucan.Issuer, ucan.Delegation, ...swarfclient.PublishOption) error {
+	return nil
+}
 
 type accessKeyDeps struct {
 	tenants     *tenantmemory.Store
@@ -72,7 +82,7 @@ func setupAccessKeys(t *testing.T) (*echo.Echo, *accessKeyDeps) {
 	deps.tenantID, deps.bucketID = addTenant(t, deps, "tenant-1", "bucket-a")
 	addTenant(t, deps, "tenant-2", deps.otherBucket) // a foreign tenant + bucket
 
-	svc := accesskeysvc.New(zap.NewNop(), deps.tenants, deps.accessKeys, deps.buckets, deps.delegations, deps.vault)
+	svc := accesskeysvc.New(zap.NewNop(), deps.tenants, deps.accessKeys, deps.buckets, deps.delegations, deps.vault, noopRevocations{})
 	e := echo.New()
 	for _, r := range []api.Route{
 		api.NewCreateAccessKeyHandler(zap.NewNop(), svc),
@@ -124,11 +134,12 @@ func TestCreateAccessKeyHandler(t *testing.T) {
 		_, err = deps.vault.Read(ctx, "/tenant/"+deps.tenantID.String()+"/access-key/"+akID.String())
 		require.NoError(t, err)
 
-		// 5 delegations: /content/retrieve + /blob/add + /index/add + /upload/add +
-		// /blob/abort, all scoped to the bucket, issued by the tenant to the access key.
+		// 6 delegations: /content/retrieve + /blob/add + /index/add + /upload/add +
+		// /blob/abort + /blob/remove, all scoped to the bucket, issued by the
+		// tenant to the access key.
 		dels, err := deps.delegations.ListByAudience(ctx, akID)
 		require.NoError(t, err)
-		require.Len(t, dels.Results, 5)
+		require.Len(t, dels.Results, 6)
 		cmds := map[string]bool{}
 		for _, d := range dels.Results {
 			cmds[d.Command().String()] = true
@@ -142,6 +153,7 @@ func TestCreateAccessKeyHandler(t *testing.T) {
 			"/index/add":        true,
 			"/upload/add":       true,
 			"/blob/abort":       true,
+			"/blob/remove":      true,
 		}, cmds)
 	})
 
