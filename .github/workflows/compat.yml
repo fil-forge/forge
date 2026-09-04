@@ -183,11 +183,15 @@ jobs:
             # service, newest first, as a comma-separated list.
             mode=tags
             ready=true
+            # awk, not head: under `set -o pipefail` an early-exiting reader
+            # turns git's SIGPIPE into exit 141 once a service has more tags
+            # than fit one stdio buffer (~300 `svc/vX.Y.Z` tags); awk reads
+            # everything and prints the first N.
             window_for() {
-              git tag --list "$1/v*" --sort=-v:refname | head -n "$N" | sed "s|^$1/||" | paste -sd, -
+              git tag --list "$1/v*" --sort=-v:refname | awk -v n="$N" 'NR <= n' | sed "s|^$1/||" | paste -sd, -
             }
             latest_for() {
-              git tag --list "$1/v*" --sort=-v:refname | head -n 1 | sed "s|^$1/||"
+              git tag --list "$1/v*" --sort=-v:refname | awk 'NR == 1' | sed "s|^$1/||"
             }
             for svc in piri ingot sprue hilt; do
               latest=$(latest_for "$svc")

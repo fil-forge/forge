@@ -349,6 +349,22 @@ func TestProvenanceGuardFires(t *testing.T) {
 	if err == nil {
 		t.Fatalf("provenance guard did NOT fire on a HEAD binary mounted over pinned %s — the suite can pass vacuously", image)
 	}
+	// Any error would satisfy err != nil; only the bind-mount branch proves
+	// mount detection. An image-string mismatch ("created from") is a
+	// different defect — the pinned ref not round-tripping through compose —
+	// that would fail run A on its own and must not be mistaken for this test
+	// passing.
+	binPath, berr := piri.binPath()
+	if berr != nil {
+		t.Fatal(berr)
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, "bind-mounted over "+binPath) {
+		t.Fatalf("provenance guard fired, but not on the bind-mount branch — this proves nothing about mount detection:\n%v", err)
+	}
+	if strings.Contains(msg, "created from") {
+		t.Fatalf("provenance guard also reports an image mismatch: the pinned ref did not round-trip through compose as-is, which would fail run A independently:\n%v", err)
+	}
 	t.Logf("provenance guard fired as expected:\n%v", err)
 }
 

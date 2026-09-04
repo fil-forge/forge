@@ -30,8 +30,9 @@ is prediction, labelled as such.
 - `compat.yml` can now be dispatched with literal image tags
   (`piri_versions`, `ingot_versions`, `baseline_piri`, `baseline_ingot`,
   `baseline_sprue`, `baseline_hilt`) that bypass git-tag resolution and the
-  `ready` gate. The schedule path is unchanged — its `GITHUB_OUTPUT` was
-  compared byte-for-byte with the previous script on a fake-tagged repo.
+  `ready` gate. The schedule path is unchanged — on a fake-tagged repo its
+  `GITHUB_OUTPUT` has the same key/value set as the previous script's (the
+  key order differs; `GITHUB_OUTPUT` is order-insensitive).
 - The suite can no longer pass vacuously in either of the two ways it could
   before: (1) every test now proves from `docker inspect` that the pinned
   service runs its pinned image with no HEAD binary mounted over it and that
@@ -125,7 +126,10 @@ container wrong; an un-inspectable container; a stack with no piri nodes).
 `TestProvenanceGuardFires` is the negative end-to-end check the plan asks
 for: gated on `COMPAT_EXPECT_PIN_MISMATCH=1`, it pins piri but calls
 `stack.WithWorkspaceBinaries()` with no exclusion, and asserts the guard
-rejects the resulting stack. It is skipped by default (it boots a full stack
+rejects the resulting stack *on the bind-mount branch*: the error must name
+`bind-mounted over /usr/bin/piri` and must not also report `created from`
+(an image-string mismatch is a separate defect that run A would surface on
+its own). It is skipped by default (it boots a full stack
 for no compatibility signal) and is reachable from the workflow through the
 `expect_pin_mismatch` input.
 
@@ -204,7 +208,8 @@ visible, not grey.
 | actionlint | v1.7.12 (built from source), `-no-color` | no findings on `compat.yml`; also none on `ci.yml`, `publish-ghcr.yml`, `release.yml`, `docs-site.yml`. shellcheck integration inactive (no `shellcheck` binary here) |
 | Resolve script, override | inputs `" sha-96a672e, sha-f60dd59 "` etc. via env, bash | `mode=override ready=true piri=sha-96a672e,sha-f60dd59 ingot=` (empty stays empty) |
 | Resolve script, tagless | temp repo, no tags, all `IN_*` empty | `mode=tags ready=false`, all values empty |
-| Resolve script, equivalence | temp repo with `piri/v0.1.0 v0.2.0 v0.10.0`, `ingot/v1.0.0 v1.1.0`, `sprue/v0.3.0`, `hilt/v0.0.1`; new vs `f60dd59` script | `GITHUB_OUTPUT` identical for N=2 and N=1 (ignoring the two new keys); `piri=v0.10.0,v0.2.0` — `--sort=-v:refname` orders semver correctly |
+| Resolve script, equivalence | temp repo with `piri/v0.1.0 v0.2.0 v0.10.0`, `ingot/v1.0.0 v1.1.0`, `sprue/v0.3.0`, `hilt/v0.0.1`; new vs `f60dd59` script | same `GITHUB_OUTPUT` key/value set for N=2 and N=1 (ignoring the two new keys `mode`, `guppy_image`; the key order differs, which `GITHUB_OUTPUT` does not care about); `piri=v0.10.0,v0.2.0` — `--sort=-v:refname` orders semver correctly |
+| Resolve script, many tags | temp repos with 300 / 600 / 1000 `piri/v*` tags, `set -euo pipefail` | `f60dd59`'s `head -n` pipeline exits 141 (SIGPIPE) from 600 tags up; the `awk` pipeline exits 0 with the same first N — latent bug 17 |
 | pre-pull script | docker stubbed | pulls the de-duplicated list of 6 refs; "nothing pinned" path exits 0 |
 | vacuous-pass guard | synthetic logs | exit 0 with one `compat: exercised` line; exit 1 with `::error` when all tests skipped |
 | summary / report scripts | synthetic inputs | render the counts table, exercised list, skipped list; `::notice` emitted when `ready=false` |
@@ -364,6 +369,10 @@ Anticipated failure modes, most likely first:
    `ENTRYPOINT ["/usr/bin/<svc>", "serve"]`; HEAD's compose passes
    `command: ["serve", …]` for the shared Dockerfile's bare-binary entrypoint,
    so an old image runs `hilt serve serve` / `sprue serve serve --config …`.
+   For sprue this is not new: `smelt/systems/upload/compose.yml` already had
+   `command: ["serve", "--config", …]` at `96a672e`, so the `96a672e` sprue
+   image ran `serve serve` in its own era; only hilt's `command: ["serve"]`
+   was added in `f60dd59`.
    Both `serve` commands are cobra commands with no `Args:` validator (checked
    at `96a672e`), so the stray positional argument should be ignored — but if
    run C fails at boot for hilt or sprue with a CLI error, this is the cause,
@@ -430,12 +439,19 @@ Found while reading; none fixed beyond what the commits above describe.
    prebuilt images (`SMELT_STACK_PREBUILT=1`), e2e mounts only with
    `SMELT_WORKSPACE` set locally, and `compat.yml` never ran. The path
    `compat.yml` depends on is exercised only on developers' machines.
-5. **`go.work` must not list libforge for compat to work.** `workspace.Detect`
-   selects every service when `libforge` is in the use-list — including
+5. **`go.work` must not list a shared module for compat to work — triggered
+   by Experiment C, fixed in `8bcbddc`.** At `f60dd59`, `workspace.Detect`
+   selected every service when `libforge` was in the use-list — including
    `indexer`, `delegator`, `guppy`, `signing-service`, whose module dirs do
-   not exist in forge — so `BuildBinary` would fail and `TestServiceTable`'s
-   workspace check would fail. Relevant to Experiments A/C: vendoring or
-   `use`-ing libforge in the repo `go.work` breaks the compat job as written.
+   not exist in forge — so `BuildBinary` would fail. Experiment C (`24ae12e`)
+   applied the same rule to the in-repo `commands` and `internal` modules,
+   which the monorepo's `go.work` always lists; when the two branches were
+   combined, `TestServiceTable` failed exactly as predicted here (measured:
+   `the workspace would build [delegator guppy hilt indexer ingot piri
+   signing-service upload] from HEAD; the compat table covers [hilt ingot piri
+   upload]`). `8bcbddc` makes `Detect` select only the services whose module
+   is in the use-list and pins that with `TestDetectSelectsOnlyWorkspaceModules`;
+   after it, `TestServiceTable` passes with the branch's `go.work` active.
 6. **Wire change between the pins not on the tested path.** libforge
    `b13386b feat!: add cause to blob release arguments (#50)` changed
    `/blob/release`, which sprue sends to piri on `blob/remove`. The smoke path
@@ -456,8 +472,10 @@ Found while reading; none fixed beyond what the commits above describe.
 9. **Compose command/entrypoint contract drift.** HEAD's `hilt/compose.yml`
    gained `command: ["serve"]` in `f60dd59` for the shared Dockerfile's
    bare-binary entrypoint; `sha-96a672e` hilt and sprue images bake `serve`
-   into `ENTRYPOINT`. Old images under new compose run `serve serve …`,
-   tolerated only because neither `serve` command validates positional
+   into `ENTRYPOINT`. The old hilt image under new compose runs `serve serve`;
+   the old sprue image already did so under its own compose at `96a672e`
+   (`upload/compose.yml` had `command: ["serve", "--config", …]` there).
+   Tolerated only because neither `serve` command validates positional
    arguments.
 10. **`workspace.BuildBinary` hardcodes `GOARCH=amd64`** while the s3 suite's
     `localIngotBinary` uses `runtime.GOARCH`. Fine on GitHub's amd64 runners;
@@ -485,6 +503,15 @@ Found while reading; none fixed beyond what the commits above describe.
     both defects fixed, and the draft is preserved under the session scratch
     directory (`exp-d-compat/draft-backup/`) for comparison. Nothing from it
     was committed as-is.
+17. **`Resolve supported window` would die of SIGPIPE at ~300 tags per
+    service — pre-existing, fixed here.** Both `f60dd59`'s script and the
+    first version of this one ran `git tag --list … | head -n "$N" | …` inside
+    `$(…)` under `set -euo pipefail`. Once a service's tag list exceeds one
+    stdio buffer (~4 KB, about 300 `piri/vX.Y.Z` tags) `head` exits early,
+    `git` takes SIGPIPE, `pipefail` fails the substitution and the step exits
+    141 — the nightly would go red for a plumbing reason. Measured on temp
+    repos: 300 tags exit 0, 600 and 1000 tags exit 141, for both scripts. The
+    `awk 'NR <= n'` form reads everything and exits 0 at every size.
 
 ## Not done, and reversibility
 
