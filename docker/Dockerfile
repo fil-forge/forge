@@ -25,7 +25,10 @@
 #   build-dev   debuggable binary (-N -l: no optimization/inlining) + delve
 #   prod        minimal debian runtime + ca-certificates, curl and wget (the
 #               compose healthchecks use curl; smelt's generated piri
-#               healthcheck uses wget — both ship so no compose file cares)
+#               healthcheck uses wget — both ship so no compose file cares).
+#               The wget is GNU wget: its --spider probes with HEAD, where
+#               busybox's probes with GET, so a compose probe against a
+#               GET-only route must use `wget -O /dev/null` instead
 #   dev         prod + a network/debug toolset and the dlv debugger; published
 #               as :main-dev for ad-hoc engineer debugging
 #
