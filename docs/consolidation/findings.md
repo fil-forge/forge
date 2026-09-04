@@ -320,6 +320,14 @@ documents for the raw logs.
   head `1647cc2`): every `unit` job including the new `commands` and
   `internal` ones, and the full `stack` job (root-context images, e2e, S3
   suite) **green**, 17 min 40 s end to end. See `commands-move.md`.
+- **A + C + D + E combined, on the branch head:** `ci.yml` run
+  [33835038235](https://github.com/fil-forge/forge/actions/runs/33835038235)
+  (dispatched on `d889fc1`, 2026-09-04 03:57 UTC) **green end to end in
+  10 min 50 s**: seven `unit` jobs (five services plus `commands` with its
+  codegen gate and `internal`) and the `stack` job — four root-context image
+  builds in 6–10 s each from the BuildKit cache, the e2e smoke suite in
+  2 min 37 s, the S3 system suite in 5 min 19 s. The 18-minute figures above
+  were cold caches; this is what a warm rerun costs.
 - **B — inventory:** 64 libforge packages, 70 guppy, 82 ucantone; tool runs
   in 7 s warm (1 min 23 s cold, network for `go list`); see
   `package-inventory.md` and the notes.
