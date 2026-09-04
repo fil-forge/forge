@@ -564,6 +564,15 @@ From the plan, with what this POC adds:
   carries the originals.
 - Tag scheme, release workflow and compat wiring changes (consolidation plan
   Phases 1 and 6).
+- Deepening the compat suite past its smoke path (decision 7, D's latent bug
+  13): `assertUploadRetrieve` — the one assertion every compat test runs —
+  logs in, uploads, and retrieves; it never calls `/blob/remove` or
+  `/blob/release`. The two image pins the suite has to test against
+  (`sha-96a672e`, `sha-f60dd59`) straddle exactly one wire-breaking libforge
+  commit, `b13386b` ("feat!: add cause to blob release arguments"), which
+  changes `/blob/release`'s arguments — the textbook case the suite exists to
+  catch, on a path it doesn't exercise. Needs at least one assertion that
+  removes an uploaded blob. Independent of the in/out decision.
 
 ## Appendix — evidence-answerable questions from the plan
 
