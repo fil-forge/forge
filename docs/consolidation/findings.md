@@ -171,7 +171,11 @@ For `go-ipni-tools` specifically, "migrate the module" overstates the job.
 Its `pkg/advertisement` (109 LOC, one function importing `commands/assert`,
 one importing `digestutil`) is a Forge→IPNI adapter — translating Storacha
 location claims into IPNI shard CIDs — and a leaf inside the library: nothing
-else in `go-ipni-tools` imports it, and only `piri` imports it back. The other
+else in `go-ipni-tools` imports it. Originally written down as having one
+consumer (`piri`); the `indexing-service` recon (`build-readiness.md`) found
+a second, independent one — `indexing-service/pkg/service/service.go` calls
+both of its exported functions directly, against its own
+`libforge/commands/assert` import. The other
 eight packages (~3,300 LOC) have no Forge content once it is gone, and are
 independently the plan's clearest "stays out" case: an externally-specified
 protocol (IPNI), a deliberately narrow-interface library shape, an unbounded

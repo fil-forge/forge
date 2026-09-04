@@ -140,8 +140,16 @@ func ShardCID(provider peer.AddrInfo, caveats assert.LocationArguments) (*cid.Ci
 location-claim's caveats, and recovers a shard CID. `space` and the location
 claim are Forge/Storacha concepts end to end; nothing else in `go-ipni-tools`
 imports `pkg/advertisement`, so it is a leaf — it can be lifted out without
-touching the other eight packages, and `piri/pkg/service/publisher/publisher.go`
-is its only consumer.
+touching the other eight packages. **Correction**: this was written up as
+`piri/pkg/service/publisher/publisher.go` being its only consumer; the
+`indexing-service` recon in `build-readiness.md` found a second, independent
+one — `indexing-service/pkg/service/service.go:13,519,538` imports
+`go-ipni-tools/pkg/advertisement` directly and calls both `EncodeContextID`
+and `ShardCID` against its own `libforge/commands/assert.LocationArguments`.
+The fix is unchanged (move the 109-LOC leaf package, not all of
+`go-ipni-tools`), but it now has two independent forcing functions instead of
+one, and if `indexing-service` joins the monorepo before this moves, it walks
+into the exact same compile error piri already hit.
 
 That makes this seam different in kind from `piri-signing-service`'s: there is
 a smaller, correct fix than "keep libforge's copy at the boundary" forever.

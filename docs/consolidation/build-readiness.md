@@ -233,9 +233,14 @@ modules), a `.storoku.json` app manifest, applied against three live
 environments (`warm-staging`, `forge-production`, `forge-test`), plus a
 cross-repo GitHub App dispatch that notifies an `infra-central` repo on every
 image bump (`README.md:239-251`). **None of forge's five services have any
-deploy automation at all** — nothing to extend, nothing to model this on.
-Folding delegator in means the monorepo inherits its first real deploy
-pipeline, not just a fourth build.
+CI-driven, storoku-style container deploy pipeline** — nothing to extend,
+nothing to model this on. (Correction from the `indexing-service` recon
+below: `forge/piri` does have its own `deploy/full-node/` Terraform —
+bare-EC2 provisioning scripts, a different topology entirely, and not wired
+into any GitHub workflow — so "no deploy automation at all" overstates it
+slightly; the precise gap is the ECS/container pattern specifically.)
+Folding delegator in means the monorepo inherits its first real
+*CI-driven container* deploy pipeline, not just a fourth build.
 
 No forked/duplicated code found (no "carried from"/"copy of"/"keep in sync"
 comments anywhere) — delegator is not another `ingot/forgeclient`-shaped
@@ -338,12 +343,168 @@ mechanism delegator has.
 - Needs no `internal/` module — only a `commands/` replace, unlike `piri`
   itself (which also needs `internal/` for `sigv4`/`s3perm`/etc.).
 
+## Recon: `indexing-service`
+
+Read-only pass over `/home/user/indexing-service` (`ba73105`), cross-checked
+against forge's five services, `delegator`, and `piri-signing-service`. Unlike
+those two, this is **not yet a settled decision** — the user proposed it
+("it's a service, so I believe it should be in the monorepo") and asked for
+thoughts and concerns, not a recommendation; this recon exists to ground that
+discussion in source rather than the two-line summary in its own `AGENTS.md`.
+
+**What it does.** The network's content-routing index: bridges IPNI with
+UCAN content claims, executing `assert/equals`/`assert/index`/`claim/cache`
+invocations from storage/upload services and answering CID/multihash lookups
+for clients and gateways (`AGENTS.md:7-13,83-88`). Deployed as a standalone
+ECS container via storoku Terraform; `cmd/lambda/` is vestigial from a
+retired architecture (`AGENTS.md:11-13`).
+
+**Module shape — sized like one of forge's own services, not like the other
+two candidates.** `go.mod` pins `go 1.25.7` exactly (needs the same bump to
+`1.27.0` the others got). 8,215 production LOC across 70 files (excluding
+tests, mockery mocks, and cbor/json codegen), plus 3,360 test LOC, 3,883 LOC
+of generated mocks, 749 LOC of codegen — **~3.7× delegator's production LOC,
+~5.2× piri-signing-service's**, reproduced fresh with the same counting
+method both existing recons used. For scale, against forge's own five
+services counted the same way: hilt 7,443, smelt 9,495, sprue/ingot ~15,600
+each, piri 32,190 — indexing-service's 8,215 sits almost exactly between hilt
+and smelt. It is not comparable in scale to delegator or piri-signing-service;
+it is comparable to a forge service. One thing already in the right shape:
+`cmd/main.go` is already `package main` inside `cmd/`, matching forge's
+shared Dockerfile's default `MAIN_PKG=./cmd` — unlike both other candidates,
+no build-arg override or file relocation needed on that axis.
+
+**`libforge` coupling — the widest of any candidate examined.** A fresh
+grep (import-path only, excluding tests and mockery-generated files) finds
+**12 distinct `libforge` packages across 22 production files**: `blobindex`
+(14 files), `commands/assert` (8), `identity` (4), `digestutil` (4),
+`ucan/retrieval` (3), `bytemap` (3), `commands/content` (2), `commands/claim`
+(2), `commands` base (2), `ucan`/`ucanlib` (1, `pkg/service/service.go:29`),
+`testutil` (1), `jobqueue` (1). Cross-checked against
+`package-inventory.json` and found consistent — the small gap is exactly the
+two mockery-generated files the grep deliberately excluded and the inventory
+tool didn't. Compare: delegator touches 3 `commands/**` packages + `identity`
++ `ucan`; piri-signing-service touches 2 `commands/**` packages + `identity`.
+**Indexing-service touches more distinct `libforge` packages, in more files,
+than delegator and piri-signing-service combined**, landing across every one
+of the plan's Phase 3 disposition buckets simultaneously — including being
+`blobindex`'s single heaviest consumer anywhere, heavier than forge's own
+five services combined (`package-inventory-notes.md`).
+
+**Type-identity seam — real, but structurally harmless.** `pkg/types.go`'s
+`RetrievalRequest.Range *contentcaps.Range` carries a `libforge/commands/content`
+type. Checked whether this creates a delegator/piri-signing-service-style
+cross-repo seam: it does not — `package-inventory.json`'s 216-record
+`packages` list has **zero** entries with an `importPath` under
+`github.com/fil-forge/indexing-service`, meaning nothing in the fil-forge
+fleet imports indexing-service as a Go module; it was only ever scanned as a
+consumer. This is the mirror image of delegator's situation: delegator is
+depended on *as a service* by `piri` (the "first service-imports-a-service
+edge" finding above); indexing-service has zero reverse Go-module dependents,
+so rewriting its imports to `forge/commands/**` cannot break anyone else's
+build the way it would have for a hypothetical importer.
+
+**A second, independent `go-ipni-tools/pkg/advertisement` seam.** Both
+`commands-move.md` §5 and `findings.md` S7 originally described `piri` as
+`pkg/advertisement`'s only consumer. It isn't:
+`indexing-service/pkg/service/service.go:13,519,538` independently imports
+`go-ipni-tools/pkg/advertisement` and calls both `EncodeContextID` and
+`ShardCID` against its own `libforge/commands/assert.LocationArguments`. Both
+documents are corrected. The fix is unchanged (move the 109-LOC leaf package
+into `forge/commands` alongside `commands/**`, not all of `go-ipni-tools`),
+but it now has two independent forcing functions — if `indexing-service`
+joins the monorepo before `pkg/advertisement` moves, it hits the identical
+compile error `piri` already did.
+
+**`go-ipni-tools` coupling is far heavier here than for `piri`.** Fresh grep:
+indexing-service imports 8 of `go-ipni-tools`'s 9 packages across **23
+files** (`pkg/queue` 10, `pkg/metadata` 10, `pkg/store` 9, `pkg/publisher` 4,
+`pkg/notifier` 3, `pkg/server`/`pkg/client`/`pkg/advertisement` 1 each); `piri`
+imports it in exactly 9 files (verified identically in both the branch's copy
+and the live clone). `findings.md`'s S7/S14 material calls `go-ipni-tools`
+"the plan's clearest stays-out case" partly because only one first-party
+service imports it — true of forge's five in-monorepo services today, but
+**indexing-service is actually the heavier consumer of the two, by a wide
+margin**. Doesn't change the "repo stays out, one leaf package moves"
+conclusion, but the eight non-`advertisement` packages (~2,250 LOC of generic
+IPNI plumbing) become a real, immediate external dependency `forge/indexing-service`
+would lean on hard from day one, as a published module outside the monorepo.
+
+**A previously untracked first-party dependency: `automobile`.**
+`github.com/fil-forge/automobile` (a CAR encode/decode helper) is imported in
+`pkg/server/server.go:305` and `pkg/service/queryresult/queryresult.go:50`.
+Zero mentions anywhere in `docs/consolidation/*.md` before this pass. It
+doesn't import `libforge/commands`, so it carries none of the seam risk
+`go-ipni-tools` does — but it's a first-party repo this consolidation effort
+has not looked at even once, and it happens to be one of the ten repos this
+session already has a designated working branch for. Worth a look before,
+not after, indexing-service actually moves.
+
+**Deploy footprint — the biggest and most stateful of the three candidates,
+by every measure checked.** `.storoku.json`: indexing-service declares 2
+DynamoDB tables, 5 S3 buckets, 3 SQS queues, 4 Redis caches; delegator
+declares 1 table and nothing else (plus 3 secrets); piri-signing-service
+declares nothing but 1 secret (its signing key). `deploy/app/main.tf` is 143
+lines vs. delegator's 82 and piri-signing-service's 71. `deploy.yml` wires
+five environments (`staging`, `warm-staging`, `production`, `forge-production`,
+`forge-test`) vs. exactly three for the other two — the two extras are a
+legacy carryover from the retired Lambda architecture, consistent with its
+own `AGENTS.md`. (This pass also corrected the "no forge service has any
+deploy automation" line above: `forge/piri` has its own `deploy/full-node/`
+Terraform, a bare-EC2 topology entirely unwired to CI — the precise gap is
+the CI-driven ECS/container pattern specifically, not deploy automation as
+such.)
+
+**CI.** Same `ipdxco/unified-github-workflows` foundation as both other
+candidates. One wrinkle: `workspace-test.yml` (a non-blocking job that tests
+against a same-named branch in a libforge/indexing-service sibling repo pair,
+explicitly documented upstream as never a required check) is present here and
+in piri-signing-service, absent in delegator — a fil-forge convention adopted
+inconsistently, and one that becomes redundant, not broken, the moment
+indexing-service is tested via forge's own `compat.yml`/`ci.yml` instead.
+
+**Docker.** Same runtime-base mismatch class as both other candidates
+(`golang:1.25-bookworm` build → `alpine:latest` runtime, vs. forge's shared
+`debian:bookworm-slim`) — not worse, not better. Easier to adopt forge's
+shared Dockerfile on one specific axis, since the entry point is already
+`package main` inside `cmd/`.
+
+**Version/maturity.** `version.json` reads `v1.13.4`, against `v0.1.1`
+(delegator) and `v0.1.0` (piri-signing-service) — a materially more mature,
+already-multi-environment-deployed service, a different migration-risk
+profile than two barely-released services independent of code size.
+
+**Blast radius — largely orthogonal to the in/out question, but sharpens
+Phase 2's priority specifically for this candidate.** Its own `AGENTS.md`
+frames the blast radius as unbounded ("every client and gateway," "all
+publishers and consumers... across the network") where delegator's and
+piri-signing-service's own framings name specific, enumerable downstreams.
+That's real, but moving the Go source into `forge/` doesn't change who
+outside the repo must coordinate on a schema change — it only tightens the
+loop between indexing-service and forge's other services once they share a
+PR and a CI run. The concrete implication: indexing-service's hardest
+consumers (external gateways) are structurally invisible to any CI this
+monorepo could run, monorepo or not — which is exactly the gap Phase 2
+("protocol gates," landed *before* Phase 3 by the plan's own sequencing) is
+meant to cover. That argues for prioritizing Phase 2 before or alongside
+folding indexing-service in specifically, not for keeping it out.
+
 ## What this recon changes about readiness
 
-Both services are a **clean fold-in** for their `libforge` coupling — smaller
-and more contained than piri's own two seams, and both fully resolve (no
-residual workaround) once the service is in-repo and its imports are
-rewritten. Neither depends on any of forge's five services as a Go module.
+Both `delegator` and `piri-signing-service` are a **clean fold-in** for their
+`libforge` coupling — smaller and more contained than piri's own two seams,
+and both fully resolve (no residual workaround) once the service is in-repo
+and its imports are rewritten. Neither depends on any of forge's five
+services as a Go module.
+
+`indexing-service` — not yet a settled decision, unlike the other two — is a
+different shape entirely: sized like a sixth forge service rather than a
+small satellite, with `libforge` coupling wider than the other two combined
+and a deploy footprint bigger than both. Its own type-identity seam is
+harmless (no reverse Go-module dependents), which is the one respect in which
+it's an *easier* case than delegator. See "Recon: `indexing-service`" above
+for the full picture; the items below fold in only what's new since that
+recon, on top of the five delegator/piri-signing-service items already here.
 The `piri`↔`delegator` edge is the one structural surprise: unlike
 `piri-signing-service` (only `piri` depends on it, and that dependency
 disappears once both share `forge/commands`), delegator is depended on by
@@ -381,6 +542,39 @@ worth resolving before or during the actual module moves:
 5. Both bring their own ten-workflow, `ipdxco/unified-github-workflows`-based
    CI, entirely separate from forge's home-grown `ci.yml`/`release.yml` —
    reconciling or replacing this is real work, not yet scoped in detail.
+
+New items from the `indexing-service` recon, same status (not blocking,
+worth resolving before or during a real move):
+
+6. **`automobile` needs its own look before indexing-service moves.** A
+   first-party dependency (`pkg/server/server.go:305`,
+   `pkg/service/queryresult/queryresult.go:50`) with zero prior mention in
+   this consolidation effort, despite already having a designated working
+   branch in this same session's scope. No seam risk found (doesn't import
+   `libforge/commands`), but "no seam risk" was asserted by one recon pass,
+   not verified the way `libforge`/`go-ipni-tools` were — worth the same
+   treatment before treating it as a non-issue.
+7. **`go-ipni-tools/pkg/advertisement` now has two independent forcing
+   functions, not one** — `commands-move.md` §5 and `findings.md` S7 are
+   corrected. Sequencing consequence: if `indexing-service` joins the
+   monorepo before `pkg/advertisement` moves into `forge/commands`, it hits
+   the same compile break `piri` already did. The fix doesn't change, but the
+   ordering now matters for a second, independent reason.
+8. **If `indexing-service` joins, `go-ipni-tools`'s other eight packages
+   become a real, immediate external dependency** — indexing-service imports
+   8 of 9 `go-ipni-tools` packages across 23 files, more than twice `piri`'s
+   9. Not a blocker (that's exactly what "stays out, cleanly" means for a
+   library `go-ipni-tools`'s size), but worth knowing the monorepo would lean
+   on it hard from day one, not lightly.
+9. **`indexing-service`'s deploy footprint (2 DynamoDB tables, 5 S3 buckets,
+   3 SQS queues, 4 Redis caches, 5 environments) is larger than delegator's
+   and piri-signing-service's combined.** The item 3 question above ("decide
+   whether either service's storoku pipeline comes in as-is, gets replaced,
+   or stays external") gets harder, not easier, if indexing-service is also
+   in scope — it's the one candidate where "stays external, monorepo just
+   points at the image" is most likely to be the pragmatic near-term answer,
+   given how much live infrastructure state (not just a container) already
+   depends on this exact deploy pipeline in five environments today.
 
 ## The `go-ipni-tools` seam, resolved
 
