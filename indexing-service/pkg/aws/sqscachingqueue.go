@@ -1,0 +1,187 @@
+package aws
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/providercacher"
+	"github.com/fil-forge/forge/protocol/blobindex"
+	"github.com/fil-forge/go-ipni-tools/pkg/queue"
+	"github.com/google/uuid"
+	"github.com/ipni/go-libipni/find/model"
+)
+
+// cachingQueueMessage is the struct that is serialized onto an SQS message queue in JSON
+type cachingQueueMessage struct {
+	JobID    uuid.UUID            `json:"JobID,omitempty"`
+	Provider model.ProviderResult `json:"Provider,omitempty"`
+}
+
+var _ providercacher.CachingQueue = (*SQSCachingQueue)(nil)
+
+// SQSCachingQueue implements the providercacher.CachingQueue interface using SQS
+type SQSCachingQueue struct {
+	queueID   string
+	bucket    string
+	s3Client  *s3.Client
+	sqsClient *sqs.Client
+	decoder   *SQSCachingDecoder
+}
+
+// NewSQSCachingQueue returns a new SQSCachingQueue for the given aws config
+func NewSQSCachingQueue(cfg aws.Config, queueID string, bucket string) *SQSCachingQueue {
+	return &SQSCachingQueue{
+		queueID:   queueID,
+		bucket:    bucket,
+		s3Client:  s3.NewFromConfig(cfg),
+		sqsClient: sqs.NewFromConfig(cfg),
+		decoder:   NewSQSCachingDecoder(cfg, bucket),
+	}
+}
+
+// Queue implements blobindexlookup.CachingQueue.
+func (s *SQSCachingQueue) Queue(ctx context.Context, job providercacher.ProviderCachingJob) error {
+	uuid := uuid.New()
+
+	var data bytes.Buffer
+	if err := blobindex.Archive(job.Index, &data); err != nil {
+		return fmt.Errorf("serializing index to CAR: %w", err)
+	}
+	_, err := s.s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucket),
+		Key:           aws.String(uuid.String()),
+		Body:          bytes.NewReader(data.Bytes()),
+		ContentLength: aws.Int64(int64(data.Len())),
+	})
+	if err != nil {
+		return fmt.Errorf("saving index CAR to S3: %w", err)
+	}
+	err = s.sendMessage(ctx, cachingQueueMessage{
+		JobID:    uuid,
+		Provider: job.Provider,
+	})
+	if err != nil {
+		// error sending message so cleanup queue
+		_, s3deleteErr := s.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(s.bucket),
+			Key:    aws.String(uuid.String()),
+		})
+		if s3deleteErr != nil {
+			err = errors.Join(err, fmt.Errorf("cleaning up index CAR on S3: %w", s3deleteErr))
+		}
+	}
+	return err
+}
+
+func (s *SQSCachingQueue) sendMessage(ctx context.Context, msg cachingQueueMessage) error {
+	messageJSON, err := json.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("serializing message json: %w", err)
+	}
+	_, err = s.sqsClient.SendMessage(ctx, &sqs.SendMessageInput{
+		QueueUrl:    aws.String(s.queueID),
+		MessageBody: aws.String(string(messageJSON)),
+	})
+	if err != nil {
+		return fmt.Errorf("enqueueing message: %w", err)
+	}
+	return nil
+}
+
+// Read reads a batch of jobs from the SQS queue.
+// Returns an empty slice if no jobs are available.
+// The caller must process jobs and delete them from the queue when done.
+func (s *SQSCachingQueue) Read(ctx context.Context, maxJobs int) ([]queue.WithID[providercacher.ProviderCachingJob], error) {
+	receiveOutput, err := s.sqsClient.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
+		QueueUrl:            aws.String(s.queueID),
+		MaxNumberOfMessages: int32(maxJobs),
+		WaitTimeSeconds:     20, // enable long-polling
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to receive messages from SQS: %w", err)
+	}
+
+	if len(receiveOutput.Messages) == 0 {
+		return []queue.WithID[providercacher.ProviderCachingJob]{}, nil
+	}
+
+	jobs := make([]queue.WithID[providercacher.ProviderCachingJob], 0, len(receiveOutput.Messages))
+	for _, msg := range receiveOutput.Messages {
+		job, err := s.decoder.DecodeMessage(ctx, aws.ToString(msg.ReceiptHandle), aws.ToString(msg.Body))
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode message: %w", err)
+		}
+
+		jobs = append(jobs, job)
+	}
+
+	return jobs, nil
+}
+
+// Release makes a job available for processing again by making it visible in the queue
+func (s *SQSCachingQueue) Release(ctx context.Context, jobID string) error {
+	_, err := s.sqsClient.ChangeMessageVisibility(ctx, &sqs.ChangeMessageVisibilityInput{
+		QueueUrl:          aws.String(s.queueID),
+		ReceiptHandle:     aws.String(jobID),
+		VisibilityTimeout: 0,
+	})
+
+	return err
+}
+
+// Delete deletes a job message from the SQS queue.
+func (s *SQSCachingQueue) Delete(ctx context.Context, jobID string) error {
+	_, err := s.sqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(s.queueID),
+		ReceiptHandle: aws.String(jobID),
+	})
+	return err
+}
+
+// SQSCachingDecoder provides interfaces for working with caching jobs received over SQS
+type SQSCachingDecoder struct {
+	bucket   string
+	s3Client *s3.Client
+}
+
+// NewSQSCachingDecoder returns a new decoder for the given AWS config
+func NewSQSCachingDecoder(cfg aws.Config, bucket string) *SQSCachingDecoder {
+	return &SQSCachingDecoder{
+		bucket:   bucket,
+		s3Client: s3.NewFromConfig(cfg),
+	}
+}
+
+// DecodeMessage decodes a provider caching job from the SQS message body, reading the stored index from S3
+func (s *SQSCachingDecoder) DecodeMessage(ctx context.Context, receiptHandle string, messageBody string) (queue.WithID[providercacher.ProviderCachingJob], error) {
+	var msg cachingQueueMessage
+	err := json.Unmarshal([]byte(messageBody), &msg)
+	if err != nil {
+		return queue.WithID[providercacher.ProviderCachingJob]{}, fmt.Errorf("deserializing message: %w", err)
+	}
+	received, err := s.s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(msg.JobID.String()),
+	})
+	if err != nil {
+		return queue.WithID[providercacher.ProviderCachingJob]{}, fmt.Errorf("reading stored index CAR: %w", err)
+	}
+	defer received.Body.Close()
+	index, err := blobindex.Extract(received.Body)
+	if err != nil {
+		return queue.WithID[providercacher.ProviderCachingJob]{}, fmt.Errorf("deserializing index: %w", err)
+	}
+	return queue.WithID[providercacher.ProviderCachingJob]{
+		ID: receiptHandle,
+		Job: providercacher.ProviderCachingJob{
+			Provider: msg.Provider,
+			Index:    index,
+		},
+	}, nil
+}

@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# GitHub
+.github
+
+# Environment files
+.env*
+
+# Documentation
+*.md
+LICENSE
+
+# Docker Compose
+docker-compose*.yml
+
+# Build artifacts
+dist/
+
+# Deployment
+deploy/.env.production.local.tpl
+deploy/.env.terraform.tpl
+deploy/.env.terraform
+deploy/Makefile
+deploy/.tfworkspace
+deploy/app
+deploy/shared
+.terraform
