@@ -383,8 +383,12 @@ documents for the raw logs.
 9. **`workspace.Detect` selected services that cannot be built (S13).** With
    `libforge` in `go.work` at `f60dd59`, and with `commands`/`internal` there
    after Experiment C, it selected all eight services in its table, four of
-   which have no module in forge. Fixed in `8bcbddc`; the fix is
-   layout-independent and cherry-pickable to `main` on its own.
+   which have no module in forge. Fixed in `8bcbddc`. The fix itself is
+   layout-independent (rebuild exactly the services whose module is in the
+   use-list, plus a test), but the commit does *not* cherry-pick onto `main`
+   (`cherry-pick -n` on `f60dd59` conflicts in `workspace.go`, because the
+   commit also removes Experiment C's `sharedDirs`); on `main` it is the same
+   three-line simplification of `Detect` applied by hand.
 10. **`compat.yml`'s `Resolve supported window` dies of SIGPIPE at about 300
     tags per service.** `git tag --list … | head -n "$N"` inside `$(…)` under
     `pipefail` exits 141 once git's output exceeds one stdio buffer; measured
