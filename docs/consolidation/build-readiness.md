@@ -79,7 +79,7 @@ POC actually built. Checked against the current POC branch:
 |---|---|---|
 | `commands/**` minus `commands/ucan/attest` | monorepo, protocol | **Wrong split**: `commands/ucan/attest` is inside `forge/commands` (`commands/ucan/attest/{proof,types}.go` present) — the plan wants it out, with `attestation` |
 | `blobindex` | monorepo, protocol | not moved; still imported from libforge (5 files, per `package-inventory.md`) |
-| `ucan` (package `ucanlib`, collides with `ucantone/ucan`) | rename into `ucantone` | not moved; still imported from libforge directly — `hilt/integration/network.go`, `hilt/pkg/api/tenants_test.go`, `hilt/pkg/api/service/tenant/service_test.go`, `hilt/pkg/fx/upload.go`, `hilt/pkg/store/delegation/memory/store.go`, `hilt/pkg/client/{upload.go,upload_test.go}`, `ingot/uploader/{forge.go,forge_test.go}` (verified by grep) |
+| `ucan` (package `ucanlib`, collides with `ucantone/ucan`) | rename into `ucantone` | not moved on **this** branch (still imported from libforge directly — `hilt/integration/network.go`, `hilt/pkg/api/tenants_test.go`, `hilt/pkg/api/service/tenant/service_test.go`, `hilt/pkg/fx/upload.go`, `hilt/pkg/store/delegation/memory/store.go`, `hilt/pkg/client/{upload.go,upload_test.go}`, `ingot/uploader/{forge.go,forge_test.go}`, verified by grep) — but now demonstrated for real on a sibling branch: `claude/forge-monorepo-poc-p9w0yr` on [`fil-forge/ucantone`](https://github.com/fil-forge/ucantone) (commit `b0f9cf6`) adds `ucanlib/` with exactly `proof_chain.go` + `proof_store.go` (176 LOC, the plan's own two ucantone-destined files — see "The go-ipni-tools seam, resolved" below for why the plan's 534 LOC figure for this row is overstated and what's excluded). Builds, vets, and tests clean standalone (`GOWORK=off go test ./...`); no other file in `ucantone` touched. This branch's own `commands/**`/`internal/` copy of `ucanlib` still needs the same move for forge's own importers (`hilt`, `ingot` above) to switch to it — not done here, this only proves the destination side. |
 | `attestation` + `attestation/didmailto` | new standalone extension module | not moved; still imported from libforge directly (same file list above overlaps) |
 | `commands/ucan/attest` | goes with `attestation`, not the protocol (its `ProofOK = commands.Unit` needs a locally-declared `Unit`) | inside `forge/commands` today — see above |
 | `jobqueue`, `identity`, `piece`, `testutil`, `bytemap`, `digestutil` | monorepo `internal/` | **partially done**: `bytemap`, `digestutil`, `jobqueue` are in `forge/internal` (the POC's "control group"); `identity`, `piece`, `testutil` are not moved, still imported from libforge (`identity` 59 files, `testutil` 48, `piece` 9 per `package-inventory.md`) |
@@ -381,3 +381,57 @@ worth resolving before or during the actual module moves:
 5. Both bring their own ten-workflow, `ipdxco/unified-github-workflows`-based
    CI, entirely separate from forge's home-grown `ci.yml`/`release.yml` —
    reconciling or replacing this is real work, not yet scoped in detail.
+
+## The `go-ipni-tools` seam, resolved
+
+`commands-move.md` §5 already established that `go-ipni-tools` splits at
+package granularity: `pkg/advertisement` (109 LOC, Forge-specific) moves
+alongside `commands`; the other eight packages (~3,300 LOC) are generic IPNI
+plumbing that stays out, cleanly, forever. It left one thing open: two of
+those eight packages (`pkg/queue`, `internal/testutil`) still import
+`libforge/jobqueue` and `libforge/testutil`, both slated for forge's
+`internal/` by the plan's own Phase 3 table — which is unreachable from
+outside forge by construction. This pass closed that out (full derivation in
+`commands-move.md` §5 and `findings.md` S18/S19):
+
+- **`jobqueue`** is 265 LOC, zero non-stdlib dependencies, zero Forge content
+  — a generic async worker pool. Direct grep (not `package-inventory.md`,
+  which has a real gap for `-consumer`-mode modules — see below) finds
+  exactly two external consumers: `go-ipni-tools/pkg/queue/poller.go` and
+  **`indexing-service/pkg/construct/construct.go:25`** — a second consumer
+  this pass found that neither `commands-move.md`'s first pass nor
+  `findings.md` S7 had surfaced. This connects directly to the discussion
+  below: if `indexing-service` joins the monorepo, `go-ipni-tools` becomes the
+  *only* permanent external consumer, and vendoring the 265 lines into it
+  (no dependency, cheap to own) is the simplest correct fix. If
+  `indexing-service` stays out, there are two permanent external consumers and
+  `jobqueue` deserves one small shared home outside `internal/` instead of two
+  vendored copies.
+- **`testutil`** (83 LOC) is mostly redundant already: nine of its symbols are
+  verbatim re-exports of `ucantone/testutil`, and its `Must` duplicates
+  `ucantone/testutil.Must` symbol for symbol. The only real content —
+  `Must2` and six named fixed identities (`Alice`/`Bob`/`Carol`/`Mallory`/
+  `Service`/`WebService`) — fits directly into `ucantone/testutil`, which its
+  own `AGENTS.md` already says exists for "tests here and in dependents."
+  Recommendation: fold the delta in, point every external consumer
+  (`go-ipni-tools`, `indexing-service`, and `guppy/pkg/client`) at
+  `ucantone/testutil`, and delete `libforge/testutil` rather than relocate
+  it. The `ucanlib` branch above demonstrates the consumer side of this at
+  small scale (its tests use `testutil.RandomIssuer(t)` in place of the fixed
+  identities, since they only need distinct principals) without yet doing the
+  fixture fold-in itself.
+- **Tooling note**: `package-inventory.md`'s JSON only records full per-package
+  import edges for modules walked as "subjects"; `-consumer`-mode modules
+  (`go-ipni-tools` included) show up as scanned but contribute no package
+  records, so a query against the JSON for "who imports `libforge/jobqueue`"
+  silently returns nothing even though two real consumers exist. Every
+  `-consumer` finding in this POC was cross-checked against a direct grep
+  before being written down, so nothing already concluded is wrong — but the
+  JSON itself should not be trusted as exhaustive here without that check,
+  and `tools/inventory` should either walk full package records for
+  `-consumer` modules too, or say in its own output that it doesn't.
+
+Neither fix is executed anywhere yet (the `testutil` fold-in touches a
+package other things already depend on; the `jobqueue` fix depends on the
+still-open `indexing-service` decision below) — both are ready to act on once
+that decision lands.

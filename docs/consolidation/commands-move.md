@@ -182,6 +182,96 @@ it, alongside `commands`." It sharpens the same point `package-inventory-notes.m
 made about `libforge` not being monolithic (S12): "true libraries stay out" is
 a line to draw inside repos, not only between them.
 
+**Follow-up: resolving `jobqueue` and `testutil`, the two dependencies left
+once `pkg/advertisement` moves out.** The paragraph above left this as an open
+menu ("either `internal/`... or a small queue interface... or `jobqueue` gets
+its own tiny module"). Read both borrowed packages end to end
+(`go-ipni-tools/pkg/queue/poller.go`, `internal/testutil/util.go`, and their
+libforge originals) to close it out.
+
+*`jobqueue` (265 LOC, `libforge/jobqueue/jobqueue.go`, one file).* Zero
+non-stdlib imports (`context`, `errors`, `sync`, `time` only) and zero
+Forge-specific content — a generic, type-parameterized async worker pool.
+`go-ipni-tools/pkg/queue.QueuePoller` wraps exactly five of its symbols
+(`JobQueue[T]`, `NewJobQueue`, `JobHandler`, `WithConcurrency`,
+`WithErrorHandler`). The "also shows up in forge's `internal/`" fact from the
+paragraph above undersells the actual conflict: `internal/` packages are
+compiler-unimportable from outside the module they sit under (that's the
+entire point of using `internal/` — see AGENTS.md's "Put the `internal/`
+group under `internal/` specifically, so the compiler prevents the
+classification being quietly re-litigated"), so **the moment `libforge/jobqueue`
+is deleted in favor of a forge-internal copy, every external importer's build
+breaks, unconditionally** — this was already true of the plan's own Phase 3
+table (`jobqueue | 265 | monorepo internal/`), independent of whether
+`go-ipni-tools` is in scope at all.
+
+And `go-ipni-tools` is not the only one who'd break. A direct grep (not
+`package-inventory.md` — see the tooling gap below) finds exactly two real
+external consumers of `libforge/jobqueue` today:
+`go-ipni-tools/pkg/queue/poller.go:10` and
+`indexing-service/pkg/construct/construct.go:25` (wiring a
+`providercacher.ProviderCachingJob` queue). Both are IPNI/content-routing
+adjacent, which is probably not a coincidence. This matters for the fix:
+- If `indexing-service` joins the monorepo (under discussion elsewhere in
+  `build-readiness.md`), it stops being an external consumer, and
+  `go-ipni-tools` is the only one left. At that point vendoring a private copy
+  of the 265 lines into `go-ipni-tools` (no dependency, easy to own, cheap to
+  keep in sync because it never needs to change) is the simplest correct fix.
+- If `indexing-service` stays external instead, there are two permanent
+  external consumers, and two independently-vendored copies of the same code
+  is worse than giving `jobqueue` one small shared home outside forge's
+  `internal/` — it has zero dependencies, so this costs nothing technically,
+  it's purely a "whose repo hosts it" question.
+Either way, "leave it as an ongoing dependency on a library that's otherwise
+being dissolved" is not a real option — `jobqueue` needs to land somewhere
+before `libforge` stops publishing it, not after.
+
+*`testutil` (83 LOC, `libforge/testutil/`, three files).* Turns out to be
+almost entirely redundant already. `fixtures.go` re-exports nine symbols
+verbatim from `ucantone/testutil` (`RandomBytes`, `RandomCID`, `RandomDID`,
+`RandomSigner`, `RandomIssuer`, `RandomMultikeySigner`, `RandomMultikeyIssuer`,
+`RandomPrincipal`, and `RandomMultihash` — itself a deprecated alias for
+`ucantone/testutil.RandomDigest`); `helpers.go`'s `Must` duplicates
+`ucantone/testutil.Must` (`ucantone/testutil/helpers.go:47`) symbol for
+symbol. `go-ipni-tools/internal/testutil/util.go` uses exactly three
+symbols — `RandomMultihash`, `Must`, `Must2` — of which only `Must2` (a
+15-line generic, no dependency of its own) and the six named fixed identities
+in `fixtures.go` (`Alice`/`Bob`/`Carol`/`Mallory`/`Service`/`WebService`,
+~30 lines) are actual net-new content over what `ucantone/testutil` already
+has. `ucantone`'s own `AGENTS.md` already says its `testutil/` package is
+meant for "tests here and in dependents" — it already intends to be exactly
+the "deliberate conformance-fixtures package" the plan's Phase 3 table hedges
+towards for `testutil` (`testutil | 83 | monorepo internal/, or a deliberate
+conformance-fixtures package`). The cleanest resolution: fold `Must2` and the
+six fixtures into `ucantone/testutil` (small, additive, matches its stated
+intent), point every consumer (`go-ipni-tools`, `indexing-service`, and
+`guppy/pkg/client` — the one piece of `guppy` the plan keeps alive — per the
+grep below) at `ucantone/testutil` instead, and delete `libforge/testutil`
+outright rather than relocate it. Demonstrated on a small scale in
+`ucantone`'s own POC branch (`claude/forge-monorepo-poc-p9w0yr`,
+[`fil-forge/ucantone`](https://github.com/fil-forge/ucantone)): the ported
+`ucanlib` package's tests use `testutil.RandomIssuer(t)` in place of the fixed
+`testutil.Alice`/`Bob`/`Carol`, since those tests only need distinct
+principals — the fixture fold-in itself is not done there, to keep that
+branch scoped to exactly the package it was asked to demonstrate.
+
+**A tooling gap, found while checking the above.** `package-inventory.md`'s
+JSON records full per-package `imports` lists only for modules walked as
+"subjects" (`libforge`, `guppy`, `ucantone`, forge's own subtrees, `delegator`,
+`piri-signing-service`, `indexing-service`); modules added with `-consumer`
+(including `go-ipni-tools`) are recorded as scanned subjects (they appear with
+a `Dir`/`Path`/`SHA` triple) but contribute **no package records at all** to
+the `packages` list — so a query for "who imports `libforge/jobqueue`" against
+that JSON silently returns nothing, even though `go-ipni-tools` and
+`indexing-service` both really do (confirmed only by grepping the clones
+directly). This isn't a correctness bug in anything this POC concluded from
+the tool so far — every `-consumer` finding to date was checked against a
+direct grep before being written down (S7, this section) — but it means the
+JSON's importer edges should not be trusted as exhaustive for consumer-mode
+modules without a direct-grep cross-check, and `tools/inventory`'s own
+`-consumer` mode should either walk full package records for those modules
+too, or say plainly in its output that it doesn't.
+
 ## The plan's checklist
 
 | question | answer |

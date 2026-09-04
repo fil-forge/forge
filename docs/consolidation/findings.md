@@ -378,6 +378,75 @@ itself, renamed; `attestation`+`attestation/didmailto`; `identity`; `piece`;
 still imported from libforge directly. `receipt` is the one package the plan
 itself leaves "open — see questions", not resolved by anything in this round.
 
+Update: `ucan`/`ucanlib` now has a real demonstration, just not on this
+branch — see `build-readiness.md`'s Phase 3 table and the
+`claude/forge-monorepo-poc-p9w0yr` branch on
+[`fil-forge/ucantone`](https://github.com/fil-forge/ucantone), which ports
+exactly the two ucantone-destined files (`proof_chain.go`, `proof_store.go`,
+176 LOC) and excludes `ucan/retrieval` (the plan's rationale already routes it
+to the monorepo instead, not `ucantone` — it's an HTTP transport binding, not
+protocol logic) and `ucan/zapucan` (undocumented in the plan's own table; see
+S18 for why it can't follow `ucan` into `ucantone` either).
+
+### S18. The plan's "534 LOC" for `ucan`→`ucantone` silently includes a package that isn't going there, and omits one entirely
+
+Re-deriving the plan's Phase 3 LOC figures from `libforge` source directly
+(not trusting the plan's table) turned up an arithmetic tell: `ucan` (root)
+is 176 non-test LOC (`proof_chain.go` 123 + `proof_store.go` 53);
+`ucan/retrieval` is 358 (`client.go` 88 + `transport.go` 135 + `server.go`
+135). `176 + 358 = 534` — exactly the plan's stated LOC for the `ucan`→
+`ucantone` row. But the plan gives `ucan/retrieval` its *own* row, with its
+*own*, different destination (monorepo, not `ucantone` — it's a UCAN
+transport binding consumed by `piri`/`ingot`, not proof-assembly logic). So
+the 534 figure that labels the `ucantone`-bound row already double-counts
+retrieval's LOC into a package that isn't going to `ucantone` at all. Checked
+whether this is a staleness artifact (LOC counted before `retrieval`/`zapucan`
+existed): no — `git ls-tree` at the plan's own reference commit (`928cf2a`)
+shows both subpackages already present, so this is a table-arithmetic slip,
+not a stale snapshot. Separately, `ucan/zapucan` (a `go.uber.org/zap`
+structured-logging helper for `ucan.Invocation`, 54 LOC + 42 test) appears in
+neither the `ucan` row nor its own row — it's simply absent from the plan's
+Phase 3 table, at a commit where it already existed. It can't quietly ride
+along with `ucan` into `ucantone` either: `ucantone`'s own `AGENTS.md` states
+its dependencies are "third-party modules (multiformats, go-cid, cbor-gen,
+dag-json-gen, secp256k1). Keep it that way" — `zap` isn't on that list, and
+adding a structured-logging dependency to core UCAN primitives is exactly the
+kind of scope creep that policy exists to block. `zapucan` most likely belongs
+with the other small, generic, monorepo-`internal/`-bound packages (`bytemap`,
+`digestutil`, `identity`, `piece`) — nothing about it is Forge-specific,
+either, but nothing makes it `ucantone`'s problem — not decided here, flagging
+it as unaddressed by the plan rather than guessing.
+
+### S19. `libforge/jobqueue` and `libforge/testutil` have real external consumers the inventory tool doesn't surface, and neither has a clean home yet
+
+Follow-up to S7/S12's "package, not module" methodology, applied this time to
+what's left in `go-ipni-tools` once `pkg/advertisement` moves out
+(`commands-move.md` §5 has the full derivation; summary here). Direct grep
+across every locally-cloned repo — not `package-inventory.md`, which turns
+out not to record full import edges for `-consumer`-mode modules at all (a
+real tooling gap, detailed in `commands-move.md` §5) — finds `libforge/jobqueue`
+has exactly two external consumers today: `go-ipni-tools/pkg/queue/poller.go`
+and `indexing-service/pkg/construct/construct.go:25` (wiring a provider-caching
+job queue). Both would lose access outright the moment `jobqueue` becomes a
+forge-`internal/`-only package, per the plan's own Phase 3 table — an
+unconditional compile break for whichever of the two stays outside the
+monorepo, not a style question. `libforge/testutil` turns out to be almost
+entirely a re-export of `ucantone/testutil` already (nine of its symbols are
+verbatim aliases, `Must` duplicates `ucantone/testutil.Must` symbol for
+symbol); its only genuine content is `Must2` and six named test identities
+(`Alice`/`Bob`/`Carol`/`Mallory`/`Service`/`WebService`), which fit naturally
+into `ucantone/testutil` — a package whose own `AGENTS.md` already says it's
+meant for "tests here and in dependents." Recommendation (not yet executed
+anywhere but demonstrated in part on the `ucantone` POC branch, see S17's
+update above): fold `testutil`'s small delta into `ucantone/testutil` and
+delete `libforge/testutil` outright rather than relocate it; for `jobqueue`,
+vendor a private copy into `go-ipni-tools` if `indexing-service` joins the
+monorepo (leaving `go-ipni-tools` as the only permanent external consumer), or
+give it one small shared home outside forge's `internal/` if `indexing-service`
+stays out (it has zero dependencies of its own, so this costs nothing
+technically). Either way, "internal/, full stop" — the plan's current
+Phase 3 answer — is incomplete for both packages as written.
+
 ## Costs measured
 
 Filled in from Experiments A, C and E as they complete; see the linked
