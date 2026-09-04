@@ -530,6 +530,14 @@ Found while reading; none fixed beyond what the commits above describe.
     a red suite is not a vacuous pass — but the exercised-configuration count
     only gates green runs. `if: always()` plus a check on the suite's outcome
     would make the summary complete on red runs too.
+21. **Four components of every compat stack float.** `guppy:main-dev`,
+    `indexing-service:main`, `delegator:main` and
+    `piri-signing-service:main` are the compose defaults
+    (`smelt/systems/*/compose.yml`); only guppy has a compat input. Runs 35
+    and 36 differ by the guppy pin alone and disagree on two of four stacks.
+    The floating indexer (post-#49 today) is what failed `upgrade_ingot` in
+    run 36. Pin all four by `sha-*` tag or digest, or the suite's answer
+    changes with other repositories' pushes.
 
 ## First real runs — what was dispatched, and pre-registered predictions
 
@@ -646,6 +654,83 @@ library change (`bfc05d9`) and dates to the 08-20/21 straddle in the live
 fleet; here it is reproduced in a lab, attributed to a component pair, and
 would have been red on the nightly every day since the bump — had the nightly
 been able to run.
+
+### Run 36 — same pins, guppy pinned to its 2026-07-31 build, no guard
+
+[33834923448](https://github.com/fil-forge/forge/actions/runs/33834923448):
+dispatched 03:55:11 and queued behind run 35; `Version skew` job 04:01:42 →
+04:09:12 (**7 min 30 s**; the suite 358 s), conclusion **failure**. The
+pre-pull fetched seven refs in 13 s (the six above plus
+`ghcr.io/fil-forge/guppy:sha-c94d43b-dev`, digest `sha256:f0a12af0…`); every
+stack logged `compat: guppy client pinned to ghcr.io/fil-forge/guppy:sha-c94d43b-dev`
+and `main-dev` appears nowhere in the log. Log saved as `run36-job.log`.
+
+| test | predicted | actual | time | what the log shows |
+|---|---|---|---|---|
+| `TestPinnedPeer/piri/sha-96a672e` | FAIL | **FAIL** | 117.0 s | the skew without guppy in the loop: HEAD sprue's `/blob/allocate` to the pinned piri → `executing request: missing receipt for task: bafyreibc2il…`, `failed to allocate blob`; piri-0 logged `allocated piece` and a 200. The 10 MB shard never reached piri: `no candidates available after filters applied {… "total": 1}` — whether that filter is a consequence of the failed allocate cannot be read from the log |
+| `TestPinnedPeer/ingot/sha-96a672e` | PASS | **FAIL** | 134.7 s | **the July guppy vs HEAD sprue**: guppy's `/ucan/conclude` (arguments `{"receipt": {"/": "bafyreiff7vtl…"}}`, its `/http/put` receipt attached) → HEAD sprue `concluding received receipt` then `receipt not found in invocation metadata` → guppy `conclusion receipt not found`; HEAD piri then logged the aborted shard PUT as `writing file: unexpected EOF` (400). The pinned ingot is not implicated: nothing on the path touches it |
+| `TestRollingUpgrade/upgrade_piri` | PASS | **PASS** | 54.6 s | `compat: exercised shape=rolling-upgrade pinned=hilt@…sha-f60dd59,ingot@…sha-f60dd59,upload@…sha-f60dd59 head=piri` — the only exercised configuration of the run, and the only one in either run where an old component read a new one's receipts: the `sha-f60dd59` sprue allocated and accepted against HEAD piri, and upload and retrieve completed |
+| `TestRollingUpgrade/upgrade_ingot` | PASS | **FAIL** | 52.1 s | **the floating indexer vs the old piri**: both blobs uploaded and accepted (`/blob/accept`, PUTs 204); `/index/add` → old sprue → indexer `/assert/index` → the indexer fetched the index blob from piri-0 by `/content/retrieve` (piri: `content/retrieve result {"status": 200, "content_length": "1292"}`) and reported `missing receipt for task: bafyreibe6fgf…`; guppy: `Upload failed with non-retriable error` |
+| `TestProvenanceGuardFires` | skipped | **skipped** | 0 s | `COMPAT_EXPECT_PIN_MISMATCH unset` |
+| `TestCheckProvenance` (12), `TestDescribe`, `TestBindMountAt`, `TestServiceTable` | PASS | **PASS** | 0.00 s | |
+| job conclusion | failure | **failure** | | |
+
+Four of six right. Both misses are the same receipt rule reaching a component
+pair the predictions did not consider:
+
+- **guppy `c94d43b` ↔ HEAD sprue.** The pre-#49 guppy issues its `/http/put`
+  receipt with `aud`. HEAD sprue's conclude handler
+  (`sprue/pkg/service/handlers/ucan_conclude.go`) looks for that receipt among
+  `req.Metadata().Receipts()`, which post-#49 `container.decodeTokens` never
+  populates with an `aud`-bearing token — so "not found". The same guppy's
+  conclude against the `sha-f60dd59` sprue in `upgrade_ingot` went through
+  (`found invocation for conclusion`, `accept success`). The decode step is
+  read from the code; the rest is in the log.
+- **`indexing-service:main` ↔ the `sha-f60dd59` piri.**
+  `smelt/systems/indexing/indexer/compose.yml` runs
+  `${INDEXER_IMAGE:-ghcr.io/fil-forge/indexing-service:main}` — floating;
+  `indexing-service` `main` pins ucantone `3a20cd5` (2026-08-17, post-#49) —
+  so today's indexer cannot read a pre-#49 piri's retrieval receipt. With HEAD
+  piri as the writer (`upgrade_piri`) the same path passed. The prediction
+  table treated guppy as the only floating component; the indexer, the
+  delegator (`delegator:main`) and the signing service
+  (`piri-signing-service:main`) float too (latent bug 21).
+
+Provenance was verified in all four stacks; boot-to-failure inside each
+stack was 38–39 s; the two pinned-peer subtests spent about 80–95 s more
+building three HEAD services each, the rolling-upgrade subtests built one.
+
+### Reading both runs together
+
+- **One asymmetric library change accounts for all seven failing stacks.**
+  ucantone `bfc05d9` (#49): a post-#49 component cannot read a receipt issued
+  by a pre-#49 executor; the reverse works. Seen through four component pairs
+  — HEAD sprue ↔ old piri (both runs), today's guppy ↔ old sprue (run 35),
+  July's guppy ↔ HEAD sprue (run 36), today's indexer ↔ old piri (run 36) —
+  and never in the other direction: the one configuration in which an old
+  reader faced a new writer (old sprue reading HEAD piri in `upgrade_piri`,
+  run 36) passed. Both passing stacks are the ones in which every reader is
+  at least as new as its writer.
+- **The rollout order this implies** is executors before their clients:
+  piri, then sprue, then indexer, guppy and anything else that reads
+  receipts. Experiment E's reading of the 08-20/21 straddle had the risk on
+  the wrong side (ingot, guppy and delegator staying old was the safe side);
+  corrected there.
+- **The Go API hid all of it.** Experiment A bumped ucantone with zero compile
+  errors and green unit tests; nothing short of booting old images against
+  HEAD showed the break. That is the suite's purpose, and it did it on its
+  first execution.
+- **The suite is not hermetic.** Four of the stack's components float
+  (`guppy:main-dev`, `indexing-service:main`, `delegator:main`,
+  `piri-signing-service:main`); the two runs differ by one of them and
+  disagree on `TestPinnedPeer/ingot` and `upgrade_ingot` because of it. A
+  compat verdict today depends on the day's images of three repositories
+  outside forge — the polyrepo shows up inside the monorepo's own test
+  harness.
+- **The error message will cost someone a day.** Every failure surfaced as
+  `missing receipt for task` or `conclusion receipt not found` against a
+  server that logged a 200. `audience must be omitted` appears in neither
+  log (latent bug 19).
 
 ## Not done, and reversibility
 
