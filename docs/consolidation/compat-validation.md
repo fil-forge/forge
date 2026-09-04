@@ -257,7 +257,7 @@ gh workflow run compat.yml --repo fil-forge/forge --ref <poc-branch> \
 The workflow's `concurrency` group is the workflow name: a dispatch during the
 07:00 UTC nightly queues behind it.
 
-## What to expect (prediction — this code has never executed)
+## What to expect (the D agent's predictions, written before any run; see Results)
 
 Mechanics common to every test, in the order they can fail:
 
@@ -326,7 +326,8 @@ Per test, for run A:
 
 Anticipated failure modes, most likely first:
 
-1. **The bind-mount path has never run in CI.** `ci.yml`'s stack job sets
+1. **The bind-mount path had never run in CI** (it has now: runs 35 and 36,
+   see Results — it worked first time). `ci.yml`'s stack job sets
    `SMELT_STACK_PREBUILT=1` and `GOWORK=off` and runs the images as built —
    "there is no binary-mounting layer in CI" (its own comment). The e2e suite
    only calls `WithWorkspaceBinaries` when `SMELT_WORKSPACE` is set (never in
