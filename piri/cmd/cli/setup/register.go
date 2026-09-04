@@ -66,11 +66,11 @@ func init() {
 	InitCmd.Flags().Uint("port", 3000, "Port Piri listens for connections on")
 	InitCmd.Flags().String("data-dir", "", "Path to a data directory Piri will maintain its permanent state in")
 	InitCmd.Flags().String("temp-dir", "", "Path to a temporary directory Piri will maintain ephemeral state in")
-	InitCmd.Flags().String("key-file", "", "Path to a PEM file containing ed25519 private key used as Piri's identity on the Storacha network")
+	InitCmd.Flags().String("key-file", "", "Path to a PEM file containing ed25519 private key used as Piri's identity on the Forge network")
 	InitCmd.Flags().String("wallet-file", "", "Path to a file containing a delegated filecoin address private key in hex format")
 	InitCmd.Flags().String("lotus-endpoint", "", "API endpoint of the Lotus node Piri will use to interact with the blockchain")
-	InitCmd.Flags().String("operator-email", "", "Email address of the piri operator (your email address for contact with the Storacha team)")
-	InitCmd.Flags().String("public-url", "", "URL Piri will advertise to the Storacha network")
+	InitCmd.Flags().String("operator-email", "", "Email address of the piri operator (your email address for contact with the Forge team)")
+	InitCmd.Flags().String("public-url", "", "URL Piri will advertise to the Forge network")
 
 	cobra.CheckErr(InitCmd.MarkFlagRequired("data-dir"))
 	cobra.CheckErr(InitCmd.MarkFlagRequired("temp-dir"))
@@ -112,7 +112,7 @@ func init() {
 
 	// base-config provides an alternative to --network for custom or local development environments.
 	// It defines the network identity: which blockchain (chain ID), which smart contracts to interact
-	// with, and which Storacha services (signing, upload, indexer, etc.) to connect to.
+	// with, and which Forge services (signing, upload, indexer, etc.) to connect to.
 	// It may also optionally include storage backend configuration (database type, S3 settings)
 	// which will be used unless overridden by explicit flags.
 	InitCmd.Flags().String(
@@ -129,18 +129,19 @@ func init() {
 
 // initFlags holds all the parsed command flags
 type initFlags struct {
-	network       presets.Network
-	host          string
-	port          uint
-	dataDir       string
-	tempDir       string
-	keyFile       string
-	publicURL     *url.URL
-	walletPath    string
-	lotusEndpoint string
-	operatorEmail string
-	delegatorURL  string
-	plcDirectory  string
+	network        presets.Network
+	host           string
+	port           uint
+	dataDir        string
+	tempDir        string
+	keyFile        string
+	publicURL      *url.URL
+	walletPath     string
+	lotusEndpoint  string
+	lotusAuthToken string
+	operatorEmail  string
+	delegatorURL   string
+	plcDirectory   string
 	// baseConfig holds values from --base-config or network presets
 	baseConfig *baseConfigValues
 	// storage holds storage backend configuration (S3/Postgres)
@@ -422,6 +423,10 @@ func parseAndValidateFlags(cmd *cobra.Command) (*initFlags, error) {
 		return nil, fmt.Errorf("error reading --lotus-endpoint: %w", err)
 	}
 
+	// Auth token for the lotus endpoint. Env var only: a token on the command
+	// line would land in shell history and ps output.
+	lotusAuthToken := os.Getenv("PIRI_PDP_LOTUS_AUTH_TOKEN")
+
 	operatorEmail, err := cmd.Flags().GetString("operator-email")
 	if err != nil {
 		return nil, fmt.Errorf("error reading --operator-email: %w", err)
@@ -588,20 +593,21 @@ func parseAndValidateFlags(cmd *cobra.Command) (*initFlags, error) {
 	}
 
 	return &initFlags{
-		network:       network,
-		host:          host,
-		port:          port,
-		dataDir:       dataDir,
-		tempDir:       tempDir,
-		keyFile:       keyFile,
-		publicURL:     parsedURL,
-		walletPath:    walletPath,
-		lotusEndpoint: lotusEndpoint,
-		operatorEmail: operatorEmail,
-		delegatorURL:  delegatorURL,
-		plcDirectory:  plcDirectory,
-		baseConfig:    baseValues,
-		storage:       storage,
+		network:        network,
+		host:           host,
+		port:           port,
+		dataDir:        dataDir,
+		tempDir:        tempDir,
+		keyFile:        keyFile,
+		publicURL:      parsedURL,
+		walletPath:     walletPath,
+		lotusEndpoint:  lotusEndpoint,
+		lotusAuthToken: lotusAuthToken,
+		operatorEmail:  operatorEmail,
+		delegatorURL:   delegatorURL,
+		plcDirectory:   plcDirectory,
+		baseConfig:     baseValues,
+		storage:        storage,
 	}, nil
 }
 
@@ -631,8 +637,9 @@ func createNode(ctx context.Context, flags *initFlags) (*fx.App, *service.PDPSer
 		},
 		Storage: lo.Must(repoConfig.ToAppConfig()),
 		PDPService: lo.Must(config.PDPServiceConfig{
-			OwnerAddress:  walletKey.Address.String(),
-			LotusEndpoint: flags.lotusEndpoint,
+			OwnerAddress:   walletKey.Address.String(),
+			LotusEndpoint:  flags.lotusEndpoint,
+			LotusAuthToken: flags.lotusAuthToken,
 			SigningService: config.SigningServiceConfig{
 				DID: flags.baseConfig.signingServiceDID,
 				URL: flags.baseConfig.signingServiceURL,
@@ -726,7 +733,7 @@ func registerWithContract(ctx context.Context, cmd *cobra.Command, id ucan.Issue
 	// else we need to register
 	if _, err := pdpSvc.RegisterProvider(ctx, types.RegisterProviderParams{
 		Name:        id.DID().String(),
-		Description: "Storacha Service Operator",
+		Description: "Forge Service Operator",
 	}); err != nil {
 		return 0, fmt.Errorf("registering provider: %w", err)
 	}
@@ -950,8 +957,9 @@ func generateConfig(cfg *appcfg.AppConfig, flags *initFlags, ownerAddress common
 			PublicURL: flags.publicURL.String(),
 		},
 		PDPService: config.PDPServiceConfig{
-			OwnerAddress:  ownerAddress.String(),
-			LotusEndpoint: flags.lotusEndpoint,
+			OwnerAddress:   ownerAddress.String(),
+			LotusEndpoint:  flags.lotusEndpoint,
+			LotusAuthToken: flags.lotusAuthToken,
 			SigningService: config.SigningServiceConfig{
 				DID: flags.baseConfig.signingServiceDID,
 				URL: flags.baseConfig.signingServiceURL,
@@ -1009,7 +1017,7 @@ func doInit(cmd *cobra.Command, _ []string) error {
 	logging.SetAllLoggers(initLevel)
 	ctx := context.Background()
 
-	cmd.PrintErrln("🚀 Initializing your Piri node on the Storacha Network...")
+	cmd.PrintErrln("🚀 Initializing your Piri node on the Forge Network...")
 	cmd.PrintErrln()
 
 	// Step 1: Parse and validate flags

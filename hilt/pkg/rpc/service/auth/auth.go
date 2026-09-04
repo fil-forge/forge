@@ -11,8 +11,7 @@ import (
 	"slices"
 	"time"
 
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
-
+	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/hilt/pkg/store"
 	"github.com/fil-forge/forge/hilt/pkg/store/accesskey"
 	"github.com/fil-forge/forge/hilt/pkg/store/bucket"
@@ -20,7 +19,6 @@ import (
 	"github.com/fil-forge/forge/hilt/pkg/store/tenant"
 	"github.com/fil-forge/forge/hilt/pkg/vault"
 	s3 "github.com/fil-forge/libforge/commands/s3"
-	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
@@ -41,7 +39,7 @@ type AuthorizedRequest struct {
 	// Operation is the S3 operation the (signature-verified) request performs. The
 	// access key is confirmed to hold its permission; handlers check it matches the
 	// operation they serve.
-	Operation s3.Operation
+	Operation Operation
 	// BucketName is the bucket name from the request.
 	BucketName string
 	// Bucket is the resolved bucket the request addresses, when the operation acts
@@ -99,7 +97,7 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	})
 	if err != nil {
 		a.logger.Debug("rejecting unparseable request signature", zap.Error(err))
-		return nil, s3req.ErrMalformedSignature
+		return nil, ErrMalformedSignature
 	}
 	log := a.logger.With(zap.String("access_key", sr.AccessKeyID), zap.Strings("regions", sr.Regions))
 	log.Debug("authorizing request")
@@ -107,13 +105,13 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	accessKeyID, err := did.Parse(did.KeyPrefix + sr.AccessKeyID)
 	if err != nil {
 		log.Debug("rejecting invalid access key id", zap.Error(err))
-		return nil, s3req.ErrInvalidAccessKeyID
+		return nil, ErrInvalidAccessKeyID
 	}
 
 	akRec, err := a.accessKeys.Get(ctx, accessKeyID)
 	if errors.Is(err, store.ErrRecordNotFound) {
 		log.Debug("rejecting unknown access key")
-		return nil, s3req.ErrUnknownAccessKey
+		return nil, ErrUnknownAccessKey
 	} else if err != nil {
 		log.Error("looking up access key", zap.Error(err))
 		return nil, fmt.Errorf("looking up access key: %w", err)
@@ -124,7 +122,7 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	// (below) bounds the signature's freshness, not the credential's lifetime.
 	if akRec.ExpiresAt != nil && time.Now().After(*akRec.ExpiresAt) {
 		log.Debug("rejecting expired access key", zap.Timep("expires_at", akRec.ExpiresAt))
-		return nil, s3req.ErrAccessKeyExpired
+		return nil, ErrAccessKeyExpired
 	}
 
 	// Authenticate: verify the request signature using the access key's secret.
@@ -139,11 +137,11 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	}
 	if err := sigv4.Verify(sr, secret); err != nil {
 		log.Debug("rejecting invalid request signature", zap.Error(err))
-		return nil, s3req.ErrSignatureMismatch
+		return nil, ErrSignatureMismatch
 	}
 	if err := sigv4.ValidateTimeBounds(sr, time.Now()); err != nil {
 		log.Debug("rejecting request outside its validity window", zap.Error(err))
-		return nil, s3req.ErrSignatureExpired
+		return nil, ErrSignatureExpired
 	}
 
 	tenantRec, err := a.tenants.Get(ctx, akRec.Tenant)
@@ -158,13 +156,13 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	// handlers gate WriteLocked themselves, since Authorize is operation-agnostic.
 	if tenantRec.Status == tenant.Disabled {
 		log.Debug("rejecting disabled tenant")
-		return nil, s3req.ErrTenantDisabled
+		return nil, ErrTenantDisabled
 	}
 
 	// Only the tenant's provider may invoke on its behalf.
 	if issuer != tenantRec.Provider {
 		log.Debug("rejecting invocation not from the tenant's provider", zap.Stringer("issuer", issuer))
-		return nil, s3req.ErrIssuerForbidden
+		return nil, ErrIssuerForbidden
 	}
 
 	// The request must be scoped to a region served by the tenant's provider.
@@ -178,31 +176,31 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	// Determine the S3 operation the (verified) request performs and confirm the
 	// access key is permitted to perform it. The operation is returned so the
 	// handler can check it matches the operation it serves.
-	op, bucketName, _, err := s3.ClassifyRequest(req)
+	op, bucketName, _, err := classifyRequest(req)
 	if err != nil {
 		log.Debug("rejecting unsupported operation", zap.Error(err))
-		return nil, s3req.ErrUnsupportedOperation
+		return nil, ErrUnsupportedOperation
 	}
 	if !slices.Contains(akRec.Permissions, op.Permission()) {
 		log.Debug("rejecting operation the access key lacks permission for", zap.Stringer("operation", op))
-		return nil, s3req.ErrOperationNotPermitted
+		return nil, ErrOperationNotPermitted
 	}
 
 	// For operations on an existing bucket, resolve it (within the tenant) and
 	// confirm it is within the access key's bucket scope (empty scope = all buckets).
 	var resolved *bucket.Record
-	if op.AddressesExistingBucket() {
+	if op.addressesExistingBucket() {
 		b, err := a.buckets.GetByName(ctx, bucketName)
 		if errors.Is(err, store.ErrRecordNotFound) || (err == nil && b.Tenant != tenantRec.ID) {
 			log.Debug("rejecting unknown bucket", zap.String("bucket", bucketName))
-			return nil, s3req.ErrUnknownBucket
+			return nil, ErrUnknownBucket
 		} else if err != nil {
 			log.Error("looking up bucket", zap.Error(err))
 			return nil, fmt.Errorf("looking up bucket: %w", err)
 		}
 		if len(akRec.Buckets) > 0 && !slices.Contains(akRec.Buckets, b.ID) {
 			log.Debug("rejecting bucket the access key is not scoped to", zap.String("bucket", bucketName))
-			return nil, s3req.ErrBucketNotPermitted
+			return nil, ErrBucketNotPermitted
 		}
 		resolved = &b
 	}
@@ -272,5 +270,5 @@ func validateRegion(ctx context.Context, providers provider.Store, regions []str
 			return r, nil
 		}
 	}
-	return "", s3req.ErrRegionNotServed
+	return "", ErrRegionNotServed
 }

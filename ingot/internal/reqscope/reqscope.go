@@ -15,6 +15,7 @@ import (
 
 	"github.com/fil-forge/libforge/commands/s3"
 	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/ucantone/did"
 )
 
 // proofStoreContextKey is the private context / user-value key type, so it can't
@@ -37,6 +38,16 @@ func ProofStore(ctx context.Context) (ucanlib.ProofStore, bool) {
 	return ps, ok
 }
 
+// WithoutProofStore returns a context whose request-scoped proof store is
+// masked. Hilt delegates Forge commands per S3 permission, and some
+// permissions (s3:DeleteBucket) carry no blob commands at all — a flow that
+// must invoke blob capabilities from such a request (DeleteBucket's implicit
+// abort of in-flight multipart uploads) hides the request store so the
+// uploader falls back to the space authority captured at UploadPart.
+func WithoutProofStore(ctx context.Context) context.Context {
+	return context.WithValue(ctx, proofStoreKey, nil)
+}
+
 type requestContextKey struct{}
 
 var requestKey any = requestContextKey{}
@@ -51,4 +62,25 @@ func RequestKey() any {
 func Request(ctx context.Context) (s3.Request, bool) {
 	req, ok := ctx.Value(requestKey).(s3.Request)
 	return req, ok
+}
+
+type tenantContextKey struct{}
+
+var tenantKey any = tenantContextKey{}
+
+// TenantKey returns the context key under which the requesting access key's
+// tenant DID is stored. The IAM service learns it from Hilt's authorize
+// response (and its per-key cache on the local fast path); the write path
+// resolves the tenant's wrap key from it — the FEE tenant recipient every
+// stored object is encrypted to.
+func TenantKey() any {
+	return tenantKey
+}
+
+// Tenant returns the tenant DID stored in the context, or ok=false when none
+// was set (e.g. a root-account request that never went through the
+// Hilt-backed IAM service).
+func Tenant(ctx context.Context) (did.DID, bool) {
+	tenant, ok := ctx.Value(tenantKey).(did.DID)
+	return tenant, ok && tenant.Defined()
 }

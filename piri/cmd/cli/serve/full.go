@@ -188,6 +188,10 @@ func init() {
 	)
 	cobra.CheckErr(viper.BindPFlag("pdp.lotus_endpoint", FullCmd.Flags().Lookup("lotus-url")))
 
+	// Auth token for the lotus endpoint. Config file or env var only: a token
+	// on the command line would land in shell history and ps output.
+	cobra.CheckErr(viper.BindEnv("pdp.lotus_auth_token", "PIRI_PDP_LOTUS_AUTH_TOKEN"))
+
 	FullCmd.Flags().String(
 		"owner-address",
 		"",
@@ -422,7 +426,7 @@ func fullServer(cmd *cobra.Command, _ []string) error {
 }
 
 func initTelemetry(ctx context.Context, instanceID, network string, dataDir string, cfg appconfig.TelemetryConfig) error {
-	// If no Storacha analytics AND no user collectors, skip setup entirely
+	// If no Forge analytics AND no user collectors, skip setup entirely
 	if cfg.DisableStorachaAnalytics && len(cfg.Metrics) == 0 && len(cfg.Traces) == 0 {
 		return nil
 	}

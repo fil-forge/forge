@@ -34,7 +34,7 @@
 # WithServiceBinary mounts over it) with a fixed-name symlink for the
 # entrypoint to exec through.
 
-FROM --platform=$BUILDPLATFORM golang:1.26-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src

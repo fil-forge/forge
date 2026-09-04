@@ -12,7 +12,7 @@ has an env var: `HILT_` + the key uppercased with `.` replaced by `_` (e.g.
 `storage.postgres.dsn` → `HILT_STORAGE_POSTGRES_DSN`). Config-file keys are the
 dotted paths below (nested YAML), e.g. `storage: { postgres: { dsn: ... } }`.
 
-Secrets (partner key, Vault token, AppRole secret ID) should be provided via env
+Secrets (partner key, OpenBao token, AppRole secret ID) should be provided via env
 var or config file, **not** flags, to avoid exposing them in process args.
 
 ### Identity (UCAN RPC service identity)
@@ -56,18 +56,21 @@ var or config file, **not** flags, to avoid exposing them in process args.
 
 | Key | Flag | Env var | Default |
 | --- | --- | --- | --- |
-| `vault.type` | `--vault` | `HILT_VAULT_TYPE` | `hashicorp` |
-| `vault.hashicorp.address` | `--hashicorp-address` | `HILT_VAULT_HASHICORP_ADDRESS` | `http://127.0.0.1:8200` |
-| `vault.hashicorp.mount` | `--hashicorp-mount` | `HILT_VAULT_HASHICORP_MOUNT` | `secret` |
-| `vault.hashicorp.auth_method` | `--hashicorp-auth-method` | `HILT_VAULT_HASHICORP_AUTH_METHOD` | `approle` |
-| `vault.hashicorp.token` | `--hashicorp-token` | `HILT_VAULT_HASHICORP_TOKEN` | _(none)_ — **secret** |
-| `vault.hashicorp.approle.role_id` | `--hashicorp-approle-role-id` | `HILT_VAULT_HASHICORP_APPROLE_ROLE_ID` | _(none)_ |
-| `vault.hashicorp.approle.secret_id` | `--hashicorp-approle-secret-id` | `HILT_VAULT_HASHICORP_APPROLE_SECRET_ID` | _(none)_ — **secret** |
-| `vault.hashicorp.approle.mount` | `--hashicorp-approle-mount` | `HILT_VAULT_HASHICORP_APPROLE_MOUNT` | `approle` |
+| `vault.type` | `--vault` | `HILT_VAULT_TYPE` | `openbao` |
+| `vault.openbao.address` | `--openbao-address` | `HILT_VAULT_OPENBAO_ADDRESS` | `http://127.0.0.1:8200` |
+| `vault.openbao.mount` | `--openbao-mount` | `HILT_VAULT_OPENBAO_MOUNT` | `secret` |
+| `vault.openbao.auth_method` | `--openbao-auth-method` | `HILT_VAULT_OPENBAO_AUTH_METHOD` | `approle` |
+| `vault.openbao.token` | `--openbao-token` | `HILT_VAULT_OPENBAO_TOKEN` | _(none)_ — **secret** |
+| `vault.openbao.approle.role_id` | `--openbao-approle-role-id` | `HILT_VAULT_OPENBAO_APPROLE_ROLE_ID` | _(none)_ |
+| `vault.openbao.approle.secret_id` | `--openbao-approle-secret-id` | `HILT_VAULT_OPENBAO_APPROLE_SECRET_ID` | _(none)_ — **secret** |
+| `vault.openbao.approle.mount` | `--openbao-approle-mount` | `HILT_VAULT_OPENBAO_APPROLE_MOUNT` | `approle` |
 
-`vault.type` is `hashicorp` or `memory`. HashiCorp keys apply when
-`type=hashicorp`; `auth_method` is `approle` or `token` (use `token` with
-`vault.hashicorp.token`, or `approle` with the role/secret IDs).
+`vault.type` is `openbao` or `memory`. OpenBao keys apply when
+`type=openbao`; `auth_method` is `approle` or `token` (use `token` with
+`vault.openbao.token`, or `approle` with the role/secret IDs). With `approle`,
+hilt logs in again and retries the operation once when OpenBao rejects its
+token (the token infra-central issues lives one hour); with `token`, a rejected
+token is a hard error.
 
 ### PLC directory
 
@@ -87,9 +90,45 @@ Pre-shared bearer token required on Tenant API requests.
 
 | Key | Flag | Env var | Default |
 | --- | --- | --- | --- |
-| `upload.service_id` | `--upload-service-id` | `HILT_UPLOAD_SERVICE_ID` | `did:web:upload.forgery.network` |
-| `upload.service_url` | `--upload-service-url` | `HILT_UPLOAD_SERVICE_URL` | `https://upload.forgery.network` |
-| `upload.product_id` | `--upload-product-id` | `HILT_UPLOAD_PRODUCT_ID` | `did:web:hilt.forgery.network` |
+| `upload.service_id` | `--upload-service-id` | `HILT_UPLOAD_SERVICE_ID` | `did:web:upload.fil-forge.com` |
+| `upload.service_url` | `--upload-service-url` | `HILT_UPLOAD_SERVICE_URL` | `https://upload.fil-forge.com` |
+| `upload.product_id` | `--upload-product-id` | `HILT_UPLOAD_PRODUCT_ID` | `did:web:hilt.fil-forge.com` |
 
 The Sprue service DID + HTTP endpoint Hilt calls to provision bucket space, and
 the product/plan DID tenants are registered under.
+
+### Revocation service (Swarf)
+
+| Key | Flag | Env var | Default |
+| --- | --- | --- | --- |
+| `revocation.service_id` | `--revocation-service-id` | `HILT_REVOCATION_SERVICE_ID` | `did:web:revoke.fil-forge.com` |
+| `revocation.service_url` | `--revocation-service-url` | `HILT_REVOCATION_SERVICE_URL` | `https://revoke.fil-forge.com` |
+
+The Swarf service DID + HTTP endpoint Hilt publishes UCAN revocations to when a
+delegation it issued is withdrawn (e.g. when an access key is deleted).
+
+## Container images
+
+A push to `main` publishes to GHCR from the `Container` workflow. The `prod`
+target becomes `ghcr.io/fil-forge/hilt:main`, a stripped binary on a slim Debian
+base. The `dev` target becomes `ghcr.io/fil-forge/hilt:main-dev` and adds delve
+plus a handful of debugging tools. Both cover `linux/amd64` and `linux/arm64`,
+and both also carry a `sha-<short-sha>` tag, the dev image with a `-dev` suffix.
+
+## Deploying to dev
+
+The same run asks [infra-central][] to deploy the prod image. It dispatches a
+`bump-deployed-image` event carrying the manifest digest it just pushed, and
+infra-central's [Bump deployed image][receiver] workflow opens a pull request
+pinning that digest in `terraform/envs/dev/apps/terraform.tfvars`, with
+auto-merge enabled. infra-central's [Check and deploy][deploy] workflow runs
+`tofu apply` on `dev/apps` on every push to its `main`, so merging that pull
+request is what deploys.
+
+The dispatch runs as the `fil-forge-bot` GitHub App and needs the
+`FORGE_BOT_APP_ID` variable and the `FORGE_BOT_PRIVATE_KEY` secret. Prod pins
+are promoted by hand.
+
+[infra-central]: https://github.com/fil-forge/infra-central
+[receiver]: https://github.com/fil-forge/infra-central/blob/main/.github/workflows/bump-deployed-image.yml
+[deploy]: https://github.com/fil-forge/infra-central/blob/main/.github/workflows/check-and-deploy.yml

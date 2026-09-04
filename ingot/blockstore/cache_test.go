@@ -2,9 +2,8 @@ package blockstore
 
 import (
 	"context"
-	"testing"
-
 	"github.com/fil-forge/ucantone/did"
+	"testing"
 
 	block "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"

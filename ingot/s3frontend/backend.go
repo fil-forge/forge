@@ -12,12 +12,14 @@
 //     staging buffer, MST CBOR view, bucket-Root CAS, and per-bucket
 //     locking.
 //
-// Operations not implemented (multipart, lifecycle, locking,
-// versioning, etc.) inherit ErrNotImplemented from the embedded
+// Operations not implemented (lifecycle, tagging, bucket policies,
+// etc.) inherit ErrNotImplemented from the embedded
 // backend.BackendUnsupported. The few unsupported-by-default
 // methods that versitygw nevertheless calls on every request
-// (GetBucketAcl, GetBucketPolicy, GetObjectLockConfiguration,
-// GetBucketVersioning, GetBucketCors) are stubbed in bucket.go.
+// (GetBucketAcl, GetBucketPolicy, GetBucketCors) are stubbed in
+// bucket.go. Object lock is implemented: the bucket configuration in
+// bucket.go, the per-version retention / legal-hold methods in
+// objectlock.go (docs/s3-object-lock.md).
 package s3frontend
 
 import (
@@ -31,7 +33,9 @@ import (
 	"github.com/fil-forge/forge/ingot/blockstore"
 	"github.com/fil-forge/forge/ingot/bucketauthority"
 	"github.com/fil-forge/forge/ingot/bucketop"
+	"github.com/fil-forge/forge/ingot/regionkey"
 	"github.com/fil-forge/forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/tenantkey"
 	"github.com/fil-forge/forge/ingot/uploader"
 )
 
@@ -54,8 +58,16 @@ type Backend struct {
 	log       blockstore.Log
 	spool     *blockstore.Spool
 	uploader  uploader.BodyUploader
+	deferred  uploader.DeferredBodyUploader
+	parks     registry.ParkStore
 	remover   uploader.BlobRemover
-	logger    *zap.Logger
+	encParams registry.EncryptionParamsStore
+	// regionKeys unwraps region-wrapped CEKs for the decrypting read path.
+	regionKeys regionkey.Provider
+	// tenantKeys yields the tenant wrap key each write encrypts to (the FEE
+	// tenant recipient). Writes fail without it.
+	tenantKeys tenantkey.Source
+	logger     *zap.Logger
 
 	maxBlobSize int64
 	// cors is Deps.CORS marshalled once at construction — GetBucketCors
@@ -96,7 +108,25 @@ type Deps struct {
 	// accept) synchronously, before the manifest commits. Remover releases a
 	// space's claim on a blob when its last reference is dropped.
 	Uploader uploader.BodyUploader
+	// Deferred extends Uploader for multipart's deferred accept
+	// (WithConclude(false), then ConcludeBlob/AbortBlob); Parks persists
+	// park state between UploadPart and Complete/Abort.
+	Deferred uploader.DeferredBodyUploader
+	Parks    registry.ParkStore
 	Remover  uploader.BlobRemover
+
+	// EncParams is the per-blob FEE encryption-parameter table: what the
+	// decrypting read path needs to serve an encrypted blob. RegionKeys
+	// unwraps its region-wrapped CEKs. Both required — which implementation
+	// backs the provider (OpenBao in production, in-process for tests and
+	// development) is configuration, but bucket encryption is not optional.
+	EncParams  registry.EncryptionParamsStore
+	RegionKeys regionkey.Provider
+	// TenantKeys resolves the requesting tenant's wrap key: the X25519
+	// public key every stored object is encrypted to as a COSE recipient (the
+	// encryption RFC's insurance copy, recoverable without the region).
+	// Required: a write that cannot obtain it fails.
+	TenantKeys tenantkey.Source
 
 	// MaxBlobSize is the coarse-split blob ceiling (0 → bucket default).
 	MaxBlobSize int64
@@ -144,7 +174,12 @@ func New(d Deps) *Backend {
 		log:         d.Log,
 		spool:       d.Spool,
 		uploader:    d.Uploader,
+		deferred:    d.Deferred,
+		parks:       d.Parks,
 		remover:     d.Remover,
+		encParams:   d.EncParams,
+		regionKeys:  d.RegionKeys,
+		tenantKeys:  d.TenantKeys,
 		logger:      logger,
 		maxBlobSize: d.MaxBlobSize,
 		cors:        corsDoc,

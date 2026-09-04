@@ -17,14 +17,13 @@ Postgres is the default store backend, so no extra flag is required.
 
 ## Store backends
 
-Sprue supports three store backends, selected by
+Sprue supports two store backends, selected by
 `storage.type` (or `SPRUE_STORAGE_TYPE`; defaults to `postgres`):
 
 - `memory` — in-process only; all data is lost on restart. Dev/test only.
 - `postgres` — PostgreSQL for metadata + S3-compatible storage (MinIO, Ceph, AWS S3)
   for storing payloads of invocations, receipts, and delegations. Schema is managed by goose migrations embedded in
   `internal/migrations/sql/` and applied on startup.
-- `aws` — DynamoDB for metadata + S3 for storing payloads of invocations, receipts, and delegations.
 
 ## Logging
 
@@ -49,8 +48,33 @@ Request logs carry `method`, `uri`, `status`, `latency`, `request_id`,
 
 * Rate limits storage was not implemented. It has never been used in JS implementation, only supports blocking completely and can probably be applied at firewall.
 * Plans, provisions, subscriptions, usage are not stores, they are services.
-* The following dynamo tables have GSIs that do not exist in w3infra that need to be added:
-    * `consumer` - `consumerV3` and `customerV2`
 * Using `cid.Cid` in new code over `ipld.Link` to ease transition to UCAN 1.0 when it comes.
 * `retrievalAuth` is now an array of CIDs - an explicit delegation chain.
 * `/upload/add` now takes an optional `index` CID, allowing us to track/remove indexes.
+
+## Container images
+
+A push to `main` publishes to GHCR from the `Container` workflow. The `prod`
+target becomes `ghcr.io/fil-forge/sprue:main`, a stripped binary on a slim
+Debian base. The `dev` target becomes `ghcr.io/fil-forge/sprue:main-dev` and
+adds delve plus a handful of debugging tools. Both cover `linux/amd64` and
+`linux/arm64`, and both also carry a `sha-<short-sha>` tag, the dev image with a
+`-dev` suffix.
+
+## Deploying to dev
+
+The same run asks [infra-central][] to deploy the prod image. It dispatches a
+`bump-deployed-image` event carrying the manifest digest it just pushed, and
+infra-central's [Bump deployed image][receiver] workflow opens a pull request
+pinning that digest in `terraform/envs/dev/apps/terraform.tfvars`, with
+auto-merge enabled. infra-central's [Check and deploy][deploy] workflow runs
+`tofu apply` on `dev/apps` on every push to its `main`, so merging that pull
+request is what deploys.
+
+The dispatch runs as the `fil-forge-bot` GitHub App and needs the
+`FORGE_BOT_APP_ID` variable and the `FORGE_BOT_PRIVATE_KEY` secret. Prod pins
+are promoted by hand.
+
+[infra-central]: https://github.com/fil-forge/infra-central
+[receiver]: https://github.com/fil-forge/infra-central/blob/main/.github/workflows/bump-deployed-image.yml
+[deploy]: https://github.com/fil-forge/infra-central/blob/main/.github/workflows/check-and-deploy.yml

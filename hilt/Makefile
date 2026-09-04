@@ -18,7 +18,7 @@ DOCKER := $(shell command -v docker)
 # Container image via the monorepo-shared docker/Dockerfile (context = this dir).
 IMAGE_BUILD_ARGS := --build-arg SERVICE=hilt
 
-.PHONY: build test vet image image-dev clean gen
+.PHONY: build test itest vet image image-dev clean gen
 
 build:
 	go build $(GOFLAGS) -o $(BIN_DIR)/$(BINARY) $(CMD)
@@ -28,6 +28,12 @@ gen:
 
 test:
 	go test ./...
+
+# Integration suite: boots the full Forge stack in Docker via smelt (itest/).
+# GOWORK=off keeps it hermetic — the harness builds the hilt binary the same
+# way; drop it to resolve unmerged sibling repos through a parent go.work.
+itest:
+	GOWORK=off go test -tags itest -v -timeout 30m ./itest
 
 vet:
 	go vet ./...

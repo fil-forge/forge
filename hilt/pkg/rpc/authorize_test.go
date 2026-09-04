@@ -6,6 +6,7 @@ import (
 
 	"github.com/fil-forge/forge/hilt/pkg/rpc"
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
+	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	accesskeymemory "github.com/fil-forge/forge/hilt/pkg/store/accesskey/memory"
 	bucketmemory "github.com/fil-forge/forge/hilt/pkg/store/bucket/memory"
 	providermemory "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
@@ -16,7 +17,6 @@ import (
 	"github.com/fil-forge/libforge/commands/content"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	"github.com/fil-forge/libforge/sigv4"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
@@ -90,6 +90,7 @@ func TestAuthorizeRequest(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, &bucketID, ok.Bucket)
+		require.Equal(t, tenantID, ok.Tenant)
 		require.Equal(t, []string{"s3:GetObject"}, ok.Permissions.Entries[akDID])
 
 		// The derived key verifies the request locally (the gateway path).

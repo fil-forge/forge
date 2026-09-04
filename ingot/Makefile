@@ -19,7 +19,7 @@ DOCKER := $(shell command -v docker)
 # Container image via the monorepo-shared docker/Dockerfile (context = this dir).
 IMAGE_BUILD_ARGS := --build-arg SERVICE=ingot --build-arg MAIN_PKG=./cmd/ingot
 
-.PHONY: build test vet itest image image-dev gen clean help
+.PHONY: build test vet itest image image-dev gen gen-check clean help
 
 ## build: compile the daemon binary (-> ./ingot)
 build:
@@ -41,7 +41,7 @@ image:
 image-dev:
 	$(DOCKER) build -f ../docker/Dockerfile $(IMAGE_BUILD_ARGS) --target dev -t forge/ingot:local-dev .
 
-## itest: run ingot's system suite (boots the Forge stack in Docker; ~6 min)
+## itest: run ingot's system suite (boots the Forge stack in Docker; ~10 min)
 # The suite lives in smelt/tests/s3 — it validates the whole stack through
 # ingot's S3 API, so it belongs to the harness, not this library module.
 itest:
@@ -50,6 +50,13 @@ itest:
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:
 	$(GO) generate ./...
+
+## gen-check: regenerate, then fail if the committed generated files are stale
+gen-check: gen
+	@git diff --exit-code -- bucket/cbor_gen.go || { \
+		echo "bucket/cbor_gen.go is stale; run 'make gen' and commit the result"; \
+		exit 1; \
+	}
 
 ## clean: remove the go build/test cache
 clean:

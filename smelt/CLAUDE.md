@@ -74,7 +74,7 @@ smelt/
 │   ├── upload/            # Upload orchestration (mock w3infra)
 │   ├── hilt/              # Tenant management (Fil One Tenant API + UCAN RPC)
 │   ├── plc/               # did:plc directory (reference impl; hilt publishes tenant DIDs here)
-│   ├── ingot/             # S3 facade (built from sibling ../ingot checkout)
+│   ├── swarf/             # UCAN revocation service (+ its own postgres)
 │   ├── guppy/             # CLI client
 │   ├── ingot/             # S3 gateway over Forge (+ its own postgres)
 │   ├── telemetry/         # Observability stack (present but not wired into Makefile)
@@ -154,14 +154,14 @@ Some services publish `:main-dev` image variants with debug symbols (`-gcflags="
 make debug-upload    # runs sprue under dlv, listening on localhost:2345
 ```
 
-The service comes up normally (dlv uses `--continue`, so healthchecks and `post_start` hooks behave as usual). Attach a Delve client whenever:
+The service comes up normally (dlv uses `--continue`, so healthchecks and the init/registrar services behave as usual). Attach a Delve client whenever:
 
 ```bash
 dlv connect localhost:2345
 # or VS Code "Connect to server" / GoLand "Go Remote"
 ```
 
-**IDE source mapping for sprue**: remote path `/go/src/sprue` maps to your local sprue checkout (e.g. `~/workspace/src/github.com/fil-forge/forge/sprue`).
+**IDE source mapping for sprue**: remote path `/go/src/sprue` maps to your local sprue checkout (e.g. `~/workspace/src/github.com/fil-forge/sprue`).
 
 To test a locally-built dev image instead of the published `:main-dev`:
 
@@ -259,16 +259,16 @@ See [docs/SNAPSHOTS.md](docs/SNAPSHOTS.md) for the full picture — what's captu
 
 Storage backends are configured per-node in `smelt.yml` rather than via compose profiles. Each node entry can independently select `db: sqlite|postgres` and `blob: filesystem|s3`. When any node uses `postgres`, the generator emits a shared `piri-postgres` service plus a `piri-postgres-init` sidecar that idempotently creates per-node databases (`piri_0`, `piri_1`, ...). When any node uses `s3`, it emits a shared `piri-minio` service; each node gets a unique bucket prefix (`piri-0-`, `piri-1-`, ...).
 
-Example manifest with all four permutations:
+**Note:** `db: sqlite` currently crash-loops with `piri:main` — its curio PDP pipeline refuses to start without Postgres ("curio PDP pipeline requires Postgres"). Until that's resolved upstream, use `db: postgres` for every node; only the blob backend (filesystem vs s3) is freely selectable.
+
+Example manifest mixing blob backends:
 
 ```yaml
 version: 1
 piri:
   nodes:
-    - storage: { db: sqlite,   blob: filesystem }  # piri-0
-    - storage: { db: postgres, blob: filesystem }  # piri-1
-    - storage: { db: sqlite,   blob: s3 }          # piri-2
-    - storage: { db: postgres, blob: s3 }          # piri-3
+    - storage: { db: postgres, blob: filesystem }  # piri-0
+    - storage: { db: postgres, blob: s3 }          # piri-1
 ```
 
 **Go test stack API** (`pkg/stack`):
@@ -301,6 +301,7 @@ All host-side ports live in a dedicated `15XXX` range to avoid collision with co
 | delegator | 15040 | HTTP/UCAN | Delegation issuance |
 | indexer | 15050 | HTTP/UCAN | Claims cache |
 | upload | 15060 | HTTP/UCAN | Upload coordination |
+| upload-postgres | 15061 | PostgreSQL | Upload service metadata stores |
 | minio S3 | 15070 | S3 | Shared object storage |
 | minio console | 15071 | HTTP | MinIO web console |
 | smtp | 15080 | SMTP | smtp4dev inbound |
@@ -311,18 +312,21 @@ All host-side ports live in a dedicated `15XXX` range to avoid collision with co
 | piri-{N} | 15100 + N | HTTP/UCAN | Storage node(s); N defined by `smelt.yml` (default 1, max 9) |
 | hilt | 15110 | HTTP/UCAN | Tenant management (Tenant API + UCAN RPC) |
 | hilt-postgres | 15111 | PostgreSQL | Hilt tenant/provider store |
-| hilt-vault | 15112 | HTTP | Hilt key vault (HashiCorp Vault dev mode) |
+| hilt-vault | 15112 | HTTP | Hilt key vault (OpenBao dev mode) |
 | plc | 15120 | HTTP | did:plc directory (reference implementation) |
 | plc-postgres | 15121 | PostgreSQL | did:plc directory store |
 | ingot | 15130 | S3/HTTP | S3 gateway over Forge |
 | ingot-postgres | 15131 | PostgreSQL | Ingot registry/metadata |
+| ingot-openbao | 15132 | HTTP | Region KEK vault for ingot (OpenBao, raft storage) |
+| swarf | 15140 | HTTP/UCAN | UCAN revocation service |
+| swarf-postgres | 15141 | PostgreSQL | Swarf revocation store |
 | guppy | (none) | CLI | Client container |
 
 **Piri Shared Storage** (only emitted when at least one node uses that backend):
 
 | Service | Host Port | Protocol | Description |
 |---------|-----------|----------|-------------|
-| piri-postgres | 5432 | PostgreSQL | Shared instance; per-node databases `piri_0`, `piri_1`, ... |
+| piri-postgres | 15074 | PostgreSQL | Shared instance; per-node databases `piri_0`, `piri_1`, ... |
 | piri-minio S3 | 15072 | S3 | Per-node bucket prefix `piri-{N}-` |
 | piri-minio console | 15073 | HTTP | MinIO console |
 
@@ -489,6 +493,7 @@ Module → service / container binary map (see `pkg/workspace`):
 | `guppy` | guppy | `/usr/bin/guppy` |
 | `hilt` | hilt | `/usr/bin/hilt` |
 | `ingot` | ingot | `/usr/bin/ingot` |
+| `swarf` | swarf | `/usr/bin/swarf` |
 
 In Go tests, `stack.WithWorkspaceBinaries()` does the same; `stack.WithServiceBinary(name, path)`
 mounts a specific prebuilt binary without the workspace machinery, and
@@ -513,7 +518,7 @@ GitHub Actions run on every PR and push to main (`.github/workflows/`):
 
 - **Go Test** / **Go Checks** — unit tests, vet, lint via the shared unified workflows.
 - **E2E** (`e2e.yml`) — `go test -tags e2e ./tests/e2e/...`: Docker-backed full-stack tests
-  (upload/retrieve smoke over the four storage-backend permutations, snapshot boot, ingot
+  (upload/retrieve smoke over the storage-backend permutations, snapshot boot, ingot
   system health). Dumps every container's logs on failure.
 
 ## Further Reading

@@ -12,7 +12,7 @@ them. It exposes two APIs and talks to one external service:
 - **Sprue** (the Forge upload service) — Hilt calls it to provision/inspect a
   bucket's storage space (`pkg/client`).
 
-Module: `github.com/fil-forge/forge/hilt` (Go 1.26). Sibling repos it builds on:
+Module: `github.com/fil-forge/forge/hilt` (Go 1.27). Sibling repos it builds on:
 `ucantone` (UCAN primitives: `did`, `multikey`, `ucan/delegation`, `binding`,
 `server`, `execution`), `libforge` (bound `commands/*`, `identity`, ucan helpers),
 and `sprue` (the upload service; mirror its patterns where relevant).
@@ -23,9 +23,22 @@ and `sprue` (the upload service; mirror its patterns where relevant).
   three after changes — this is the standard loop.
 - Run locally: `go run ./cmd serve` (flags: `--storage=memory --vault=memory` to
   avoid external deps; see `cmd/main.go` / `pkg/config`).
-- Postgres and Vault-backed tests use testcontainers and **skip when Docker is
+- Postgres and OpenBao-backed tests use testcontainers and **skip when Docker is
   unavailable** (`internal/testutil`). `go test ./...` passes without Docker but
   only exercises the memory backends; run with Docker for full coverage.
+- Integration tests: `make itest`. The `itest/` package is gated by the `itest`
+  build tag, so `go test ./...` never compiles or runs it. It boots the full
+  Forge stack in Docker via `smelt/pkg/stack` (the working tree's hilt is
+  compiled as a static linux binary and mounted over the published
+  `ghcr.io/fil-forge/hilt:main` image) and tests against real ingot, sprue,
+  piri, plc, and swarf. ~5-10 min; needs Docker; **one itest run per Docker
+  host at a time** (TestMain's `CleanupLeaked` sweeps every `smeltery-*`
+  compose project, including another run's live containers). Vet it with
+  `go vet -tags itest ./itest`. Peer services are pulled as mutable `:main`
+  images Docker never re-pulls — `docker pull` them when the stack misbehaves,
+  or override per run with `HILT_ITEST_UPLOAD_IMAGE` / `HILT_ITEST_PIRI_IMAGE`
+  / `HILT_ITEST_INGOT_IMAGE` / `HILT_ITEST_SWARF_IMAGE` / `HILT_ITEST_PIRI_BINARY`
+  / `HILT_ITEST_SWARF_BINARY`. CI runs the suite on
 - Editor/LSP diagnostics can lag after cross-file or cross-package edits —
   `go build` / `go vet` are authoritative, prefer them over stale squiggles.
 
@@ -33,7 +46,7 @@ and `sprue` (the upload service; mirror its patterns where relevant).
 
 - `cmd/main.go` — cobra entrypoint (`serve`).
 - `pkg/fx` — uber-fx wiring. `AppModule` picks the storage (`memory`/`postgres`)
-  and vault (`memory`/`hashicorp`) backend from config; `ProvideConfigs` splits
+  and vault (`memory`/`openbao`) backend from config; `ProvideConfigs` splits
   `config.Config` into injectable sub-configs; handlers/services are registered
   here. DI is **by type** — a constructor just declares the deps it needs and the
   provider must exist in the graph.
@@ -48,7 +61,7 @@ and `sprue` (the upload service; mirror its patterns where relevant).
   mapping (`libforge/s3perm`) also live in libforge for the same reason.
 - `pkg/store/{tenant,accesskey,bucket,delegation,provider}` — each an interface
   with `memory` and `postgres` backends.
-- `pkg/vault` (`memory`, `hashicorp`) — private-key storage; `paths.go` has the
+- `pkg/vault` (`memory`, `openbao`) — private-key storage; `paths.go` has the
   key path helpers (`TenantKeyPath`, `AccessKeyPath`).
 - `pkg/client` — clients for external services (the Sprue `UploadClient`) and
   the self-issued `AdminClient`. The client for Hilt's own `/s3/*` RPC API is

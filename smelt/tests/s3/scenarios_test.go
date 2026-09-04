@@ -4,10 +4,12 @@ package s3test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -32,6 +34,38 @@ func TestForgeScenarios(t *testing.T) {
 	ctx := t.Context()
 	accessKey, secretKey := hiltProvisionTenant(t, ctx, s, "scenarios")
 	cl := sdkClient(forgeS3Conf(endpoint, accessKey, secretKey))
+
+	// AgentDIDDocument: the listener publishes the agent's DID document at the
+	// did:web well-known path, ahead of the S3 route table (otherwise the path
+	// would be read as bucket ".well-known", key "did.json"). The stack config
+	// names the agent did:web:ingot; hilt resolves this document to verify
+	// ingot's /s3/* invocations, so every other subtest depends on it too.
+	t.Run("AgentDIDDocument", func(t *testing.T) {
+		hc := &http.Client{Timeout: 10 * time.Second}
+		res, err := hc.Get(endpoint + "/.well-known/did.json")
+		if err != nil {
+			t.Fatalf("GET /.well-known/did.json: %v", err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("GET /.well-known/did.json: status %d", res.StatusCode)
+		}
+		var doc struct {
+			ID                 string `json:"id"`
+			VerificationMethod []struct {
+				ID string `json:"id"`
+			} `json:"verificationMethod"`
+		}
+		if err := json.NewDecoder(res.Body).Decode(&doc); err != nil {
+			t.Fatalf("decode DID document: %v", err)
+		}
+		if doc.ID != "did:web:ingot" {
+			t.Fatalf("DID document id = %q, want did:web:ingot", doc.ID)
+		}
+		if len(doc.VerificationMethod) != 1 || doc.VerificationMethod[0].ID != "did:web:ingot#key-0" {
+			t.Fatalf("verificationMethod = %+v, want one method did:web:ingot#key-0", doc.VerificationMethod)
+		}
+	})
 
 	// BlobSplitMultiBlobRoundTrip: a PUT several times larger than
 	// max_blob_size is coarsely split into multiple BlobRefs; the
@@ -154,8 +188,10 @@ func TestForgeScenarios(t *testing.T) {
 		}
 		uploadID := create.UploadId
 
-		// Part 1 (150 KiB) spans three 64 KiB blobs; parts 2 and 3 are small.
-		partData := [][]byte{patternBytes(150 << 10), patternBytes(40 << 10), patternBytes(9 << 10)}
+		// Non-final parts must meet S3's 5 MiB minimum (enforced at Complete);
+		// at 64 KiB max_blob_size each spans dozens of internal blobs. The
+		// final part is small (exempt from the minimum).
+		partData := [][]byte{patternBytes(6 << 20), patternBytes(5 << 20), patternBytes(9 << 10)}
 		var completed []types.CompletedPart
 		var whole []byte
 		for i, data := range partData {
@@ -197,6 +233,46 @@ func TestForgeScenarios(t *testing.T) {
 		hdr := fmt.Sprintf("bytes=%d-%d", p1-10, p1+2000)
 		if got := getBody(t, ctx, cl, bucket, key, hdr); !bytes.Equal(got, whole[p1-10:p1+2001]) {
 			t.Fatalf("ranged multipart GET across the part boundary mismatch: got %d bytes", len(got))
+		}
+	})
+
+	// MultipartAbortCleansSpool: aborting an upload discards its parts — the
+	// registry rows go (upstream AbortMultipartUpload_success verifies via
+	// ListMultipartUploads) and, ingot-specifically, the parts' spooled blobs
+	// are deleted, since under the spool model an abort's cleanup is entirely
+	// local (nothing shipped to the network before Complete).
+	t.Run("MultipartAbortCleansSpool", func(t *testing.T) {
+		const bucket, key = "mpabort-spool", "obj"
+		if _, err := cl.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(bucket)}); err != nil {
+			t.Fatalf("CreateBucket: %v", err)
+		}
+		create, err := cl.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{Bucket: aws.String(bucket), Key: aws.String(key)})
+		if err != nil {
+			t.Fatalf("CreateMultipartUpload: %v", err)
+		}
+		spoolBefore := spoolBlobCount(t, ctx, s)
+		// A 150 KiB part spans three 64 KiB blobs (plaintext split; each is
+		// stored as its own envelope).
+		part := patternBytes(150 << 10)
+		for i := range part {
+			part[i] ^= 0xA5
+		}
+		if _, err := cl.UploadPart(ctx, &s3.UploadPartInput{
+			Bucket: aws.String(bucket), Key: aws.String(key), UploadId: create.UploadId,
+			PartNumber: aws.Int32(1), Body: bytes.NewReader(part),
+		}); err != nil {
+			t.Fatalf("UploadPart: %v", err)
+		}
+		if got := spoolBlobCount(t, ctx, s) - spoolBefore; got != 3 {
+			t.Fatalf("UploadPart added %d spool blobs, want 3", got)
+		}
+		if _, err := cl.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
+			Bucket: aws.String(bucket), Key: aws.String(key), UploadId: create.UploadId,
+		}); err != nil {
+			t.Fatalf("AbortMultipartUpload: %v", err)
+		}
+		if got := spoolBlobCount(t, ctx, s) - spoolBefore; got != 0 {
+			t.Fatalf("abort left %d spooled part blobs behind, want 0", got)
 		}
 	})
 

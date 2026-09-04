@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/hilt/pkg/client/upload"
 	"github.com/fil-forge/forge/hilt/pkg/rpc"
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
 	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
@@ -16,6 +16,7 @@ import (
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/libforge/testutil"
+	swarfclient "github.com/fil-forge/swarf/pkg/client"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -25,9 +26,11 @@ import (
 func TestHandlerCommands(t *testing.T) {
 	az := auth.NewAuthorizer(zap.NewNop(), accesskeymemory.New(), tenantmemory.New(), providermemory.New(), bucketmemory.New(), vaultmemory.New())
 
-	up, err := client.NewUploadClient(testutil.RandomDID(t), url.URL{Scheme: "http", Host: "sprue.test"}, testutil.RandomIssuer(t), delegationmemory.New())
+	up, err := upload.NewClient(testutil.RandomDID(t), url.URL{Scheme: "http", Host: "sprue.test"}, testutil.RandomIssuer(t), upload.WithBaseProofs(delegationmemory.New()))
 	require.NoError(t, err)
-	buckets := bucketsvc.New(zap.NewNop(), az, bucketmemory.New(), delegationmemory.New(), accesskeymemory.New(), up)
+	revocations, err := swarfclient.New(testutil.RandomDID(t), url.URL{Scheme: "http", Host: "swarf.test"})
+	require.NoError(t, err)
+	buckets := bucketsvc.New(zap.NewNop(), az, bucketmemory.New(), delegationmemory.New(), accesskeymemory.New(), up, revocations)
 
 	t.Run("list", func(t *testing.T) {
 		route := rpc.NewListBucketsHandler(zap.NewNop(), buckets)

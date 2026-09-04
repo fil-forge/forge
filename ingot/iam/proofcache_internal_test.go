@@ -61,11 +61,15 @@ func TestIndexTracksAddAndLookup(t *testing.T) {
 // stays in the index (janitor hasn't run) but must not yield from lookups.
 func TestExpiredEntryIsLiveCheckedBeforeJanitor(t *testing.T) {
 	d := NewDelegationCache()
-	dlg := mintDelegation(t, delegation.WithExpiration(ucan.Now()+1))
+	// Expiry has one-second granularity and Add drops anything already
+	// expired, so an expiry one second out is a race with the clock: if the
+	// second ticks between minting and Add, the entry is never indexed. Two
+	// seconds out cannot be reached before Add runs.
+	dlg := mintDelegation(t, delegation.WithExpiration(ucan.Now()+2))
 	d.Add(dlg)
 	require.Equal(t, 1, d.indexSize())
 
-	time.Sleep(1500 * time.Millisecond) // past expiry, well before any janitor
+	time.Sleep(2500 * time.Millisecond) // past expiry, well before any janitor
 
 	require.Equal(t, 1, d.indexSize(), "janitor has not swept; index still holds the entry")
 	for range d.listDelegations(context.Background(), dlg.Audience(), dlg.Command(), dlg.Subject()) {
