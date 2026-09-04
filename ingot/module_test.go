@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/fil-forge/forge/ingot/config"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"

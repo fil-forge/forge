@@ -6,18 +6,18 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/go-ipni-tools/pkg/advertisement"
+	"github.com/fil-forge/forge/internal/ipni/advertisement"
+	"github.com/fil-forge/forge/protocol/commands"
+	"github.com/fil-forge/forge/protocol/commands/assert"
+	"github.com/fil-forge/forge/protocol/commands/claim"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/go-ipni-tools/pkg/metadata"
 	"github.com/fil-forge/go-ipni-tools/pkg/store"
-	"github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/claim"
-	"github.com/fil-forge/libforge/digestutil"
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/server"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/fil-forge/ucantone/ucan/invocation"
@@ -45,7 +45,7 @@ func TestPublisherService(t *testing.T) {
 		require.NoError(t, err)
 
 		space := testutil.RandomDID(t)
-		shard := testutil.RandomMultihash(t)
+		shard := testutil.RandomDigest(t)
 		location := testutil.Must(url.Parse(fmt.Sprintf("http://localhost:3000/blob/%s", digestutil.Format(shard))))(t)
 
 		claimInv := mintLocationClaim(t, space, shard, *location)
@@ -87,7 +87,7 @@ func TestPublisherService(t *testing.T) {
 		require.NoError(t, err)
 
 		space := testutil.RandomDID(t)
-		shard := testutil.RandomMultihash(t)
+		shard := testutil.RandomDigest(t)
 		location := testutil.Must(url.Parse(fmt.Sprintf("http://localhost:3000/blob/%s", digestutil.Format(shard))))(t)
 		claimInv := mintLocationClaim(t, space, shard, *location)
 
@@ -146,7 +146,7 @@ func TestPublisherService(t *testing.T) {
 		require.NoError(t, err)
 
 		space := testutil.RandomDID(t)
-		shard := testutil.RandomMultihash(t)
+		shard := testutil.RandomDigest(t)
 		location := testutil.Must(url.Parse(fmt.Sprintf("http://localhost:3000/blob/%s", digestutil.Format(shard))))(t)
 		claimInv := mintLocationClaim(t, space, shard, *location)
 

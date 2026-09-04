@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/fil-forge/libforge/commands"
+	"github.com/fil-forge/forge/protocol/commands"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"
 	"github.com/google/uuid"
@@ -16,8 +16,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan"

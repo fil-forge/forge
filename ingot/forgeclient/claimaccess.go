@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"slices"
 
-	accesscmds "github.com/fil-forge/libforge/commands/access"
-	attestcmds "github.com/fil-forge/libforge/commands/ucan/attest"
+	attestcmds "github.com/fil-forge/forge/attestation/attest"
+	accesscmds "github.com/fil-forge/forge/protocol/commands/access"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"

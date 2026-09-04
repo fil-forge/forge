@@ -5,7 +5,7 @@
 // It is a trimmed, dependency-light copy of fil-forge/sprue's
 // pkg/lib/ucan_client.Execute: the executor is taken as an interface (so the
 // same helper drives both the HTTP client used for allocate/accept/publish and
-// the libforge retrieval client used for ranged reads), and the sprue-internal
+// the protocol retrieval client used for ranged reads), and the sprue-internal
 // structured logging (zapipld) has been dropped.
 package ucanexec
 

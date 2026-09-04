@@ -3,8 +3,8 @@ package testutil
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/ipfs/go-cid"
 )
 
@@ -18,13 +18,13 @@ var (
 	WebServiceSigner     = testutil.WebServiceSigner
 	RandomBytes          = testutil.RandomBytes
 	RandomDID            = testutil.RandomDID
-	RandomMultihash      = testutil.RandomMultihash
+	RandomDigest         = testutil.RandomDigest
 	RandomIssuer         = testutil.RandomIssuer
 	RandomMultikeyIssuer = testutil.RandomMultikeyIssuer
 )
 
 func RandomCID(t *testing.T) cid.Cid {
-	return cid.NewCidV1(cid.Raw, RandomMultihash(t))
+	return cid.NewCidV1(cid.Raw, RandomDigest(t))
 }
 
 func Must[T any](val T, err error) func(*testing.T) T {

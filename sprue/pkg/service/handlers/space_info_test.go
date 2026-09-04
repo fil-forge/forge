@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	spacecmds "github.com/fil-forge/libforge/commands/space"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	spacecmds "github.com/fil-forge/forge/protocol/commands/space"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"

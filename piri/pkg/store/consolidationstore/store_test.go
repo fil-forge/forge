@@ -3,8 +3,8 @@ package consolidationstore
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/commands/space/egress"
+	"github.com/fil-forge/forge/protocol/commands"
+	"github.com/fil-forge/forge/protocol/commands/space/egress"
 	"github.com/fil-forge/ucantone/testutil"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"

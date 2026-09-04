@@ -5,10 +5,10 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/forge/protocol/commands/assert"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
@@ -52,7 +52,7 @@ func TestAccept_PieceMissing(t *testing.T) {
 
 	_, err := Accept(t.Context(), deps, &AcceptRequest{
 		Space: testutil.RandomDID(t),
-		Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: 4},
+		Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: 4},
 		Cause: testutil.RandomCID(t),
 	})
 	require.Error(t, err)
@@ -62,7 +62,7 @@ func TestAccept_PieceMissing(t *testing.T) {
 func TestAccept_PieceHeld(t *testing.T) {
 	deps, pieces, accepts, claimStore, pub := newAcceptDeps(t)
 
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 	cause := testutil.RandomCID(t)
 	pieces.Put(digest, []byte("data"))
@@ -123,7 +123,7 @@ func TestAccept_AcceptanceDurableBeforeEnqueue(t *testing.T) {
 	probe := &orderProbeCommp{accepts: accepts}
 	deps.Commp = probe
 
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	pieces.Put(digest, []byte("data"))
 
 	_, err := Accept(t.Context(), deps, &AcceptRequest{
@@ -142,7 +142,7 @@ func TestAccept_EnqueueFailureCompensatesAcceptance(t *testing.T) {
 	probe := &orderProbeCommp{accepts: accepts, fail: true}
 	deps.Commp = probe
 
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	pieces.Put(digest, []byte("data"))
 
 	_, err := Accept(t.Context(), deps, &AcceptRequest{

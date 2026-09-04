@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 	gocache "github.com/patrickmn/go-cache"
 )

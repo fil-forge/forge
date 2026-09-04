@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	customercmds "github.com/fil-forge/forge/protocol/commands/customer"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	customerstore "github.com/fil-forge/forge/sprue/pkg/store/customer"
 	customer_store "github.com/fil-forge/forge/sprue/pkg/store/customer/memory"

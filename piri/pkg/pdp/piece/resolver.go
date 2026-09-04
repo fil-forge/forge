@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 	commcid "github.com/filecoin-project/go-fil-commcid"
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/ipfs/go-cid"

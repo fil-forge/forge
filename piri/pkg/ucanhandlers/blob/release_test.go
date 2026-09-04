@@ -3,9 +3,9 @@ package blob
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/command"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/fil-forge/ucantone/ucan/promise"
@@ -56,7 +56,7 @@ func TestRelease_UnknownBlobIsSuccess(t *testing.T) {
 
 	err := Release(t.Context(), w.deps, &ReleaseRequest{
 		Space:  testutil.RandomDID(t),
-		Digest: testutil.RandomMultihash(t),
+		Digest: testutil.RandomDigest(t),
 	})
 	require.NoError(t, err, "removing a blob that was never stored is idempotent success")
 	// Nothing claimed the digest, so removal of the (nonexistent) bytes is requested.
@@ -65,7 +65,7 @@ func TestRelease_UnknownBlobIsSuccess(t *testing.T) {
 
 func TestRelease_ReleasesClaimAndBytes(t *testing.T) {
 	w := newRemoveWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	claim, err := invocation.Invoke(
@@ -107,7 +107,7 @@ func TestRelease_ReleasesClaimAndBytes(t *testing.T) {
 
 func TestRelease_OtherSpaceClaimRetainsBytes(t *testing.T) {
 	w := newRemoveWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	removingSpace := testutil.RandomDID(t)
 	otherSpace := testutil.RandomDID(t)
 
@@ -144,7 +144,7 @@ func TestRelease_LiveAllocationRetainsBytes(t *testing.T) {
 	// An allocation from another space (upload possibly in flight) blocks
 	// physical deletion even when no acceptance exists.
 	w := newRemoveWorld(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	removingSpace := testutil.RandomDID(t)
 	uploadingSpace := testutil.RandomDID(t)
 

@@ -4,11 +4,11 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/key"
 	"github.com/fil-forge/ucantone/did/resolver"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/fx"
 

@@ -3,9 +3,8 @@ package handlers
 import (
 	"fmt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
@@ -13,6 +12,7 @@ import (
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/server"
 	"github.com/fil-forge/ucantone/ucan"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"go.uber.org/zap"
 )
 

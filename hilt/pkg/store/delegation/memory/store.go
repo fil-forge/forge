@@ -10,9 +10,9 @@ import (
 
 	"github.com/fil-forge/forge/hilt/pkg/store"
 	dlgstore "github.com/fil-forge/forge/hilt/pkg/store/delegation"
-	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 )
 

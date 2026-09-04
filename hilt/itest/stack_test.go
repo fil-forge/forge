@@ -33,7 +33,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/fil-forge/forge/hilt/pkg/api"
 	"github.com/fil-forge/forge/hilt/pkg/client/management"
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 	swarfclient "github.com/fil-forge/swarf/pkg/client"
 	swarfstore "github.com/fil-forge/swarf/pkg/store"
 	"github.com/fil-forge/ucantone/did"

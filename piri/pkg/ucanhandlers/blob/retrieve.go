@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/ucan/retrieval"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/forge/protocol/retrieval"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/server"

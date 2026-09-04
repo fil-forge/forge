@@ -14,9 +14,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/fil-forge/libforge/commands/blob"
-	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
-	"github.com/fil-forge/libforge/commands/pdp"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	replicacmds "github.com/fil-forge/forge/protocol/commands/blob/replica"
+	"github.com/fil-forge/forge/protocol/commands/pdp"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"
@@ -33,7 +33,7 @@ import (
 	"github.com/fil-forge/forge/piri/pkg/store/local/keystore"
 	"github.com/fil-forge/forge/piri/pkg/wallet"
 
-	delgclient "github.com/fil-forge/delegator/client"
+	delgclient "github.com/fil-forge/forge/internal/client/delegator"
 
 	"github.com/fil-forge/forge/piri/pkg/config"
 	appcfg "github.com/fil-forge/forge/piri/pkg/config/app"

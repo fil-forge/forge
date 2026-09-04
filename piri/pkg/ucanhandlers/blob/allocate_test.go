@@ -3,9 +3,9 @@ package blob
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/blob"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/ipfs/go-datastore"
 	dssync "github.com/ipfs/go-datastore/sync"
 	"github.com/multiformats/go-multihash"
@@ -33,7 +33,7 @@ func newAllocateDeps(t *testing.T) (AllocateDeps, *pdpfake.Pieces, *allocationst
 func TestAllocate_NoExistingAllocationOrBlob(t *testing.T) {
 	deps, _, allocs := newAllocateDeps(t)
 
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 	cause := testutil.RandomCID(t)
 
@@ -55,7 +55,7 @@ func TestAllocate_NoExistingAllocationOrBlob(t *testing.T) {
 
 func TestAllocate_ExistingAllocationButBlobNotReceived(t *testing.T) {
 	deps, _, allocs := newAllocateDeps(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	require.NoError(t, allocs.Put(t.Context(), allocation.Allocation{
@@ -76,7 +76,7 @@ func TestAllocate_ExistingAllocationButBlobNotReceived(t *testing.T) {
 
 func TestAllocate_BlobAlreadyReceivedInSameSpace(t *testing.T) {
 	deps, pieces, allocs := newAllocateDeps(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	require.NoError(t, allocs.Put(t.Context(), allocation.Allocation{
@@ -101,7 +101,7 @@ func TestAllocate_BlobInOtherSpace(t *testing.T) {
 	// in *this* space yet. We need a new allocation (size = blob size) but no
 	// upload URL.
 	deps, pieces, allocs := newAllocateDeps(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	otherSpace := testutil.RandomDID(t)
 	thisSpace := testutil.RandomDID(t)
 
@@ -131,7 +131,7 @@ func TestAllocate_BlobPendingRemovalNoAllocations(t *testing.T) {
 	// wrapping an empty URL sends the client a PUT to "". The allocation
 	// row written here is a claim, so the sweep cancels the queued removal.
 	deps, pieces, allocs := newAllocateDeps(t)
-	digest := testutil.RandomMultihash(t)
+	digest := testutil.RandomDigest(t)
 	space := testutil.RandomDID(t)
 
 	pieces.Put(digest, []byte("data")) // bytes present, zero allocations
@@ -173,7 +173,7 @@ func TestAllocate_SizeLimitBoundary(t *testing.T) {
 
 	t.Run("at the limit", func(t *testing.T) {
 		deps, _, allocs := newAllocateDeps(t)
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		space := testutil.RandomDID(t)
 
 		resp, err := Allocate(t.Context(), deps, &AllocateRequest{
@@ -193,7 +193,7 @@ func TestAllocate_SizeLimitBoundary(t *testing.T) {
 		// failed deep inside AllocatePiece, surfacing as a transport error
 		// rather than a receipt the caller could interpret.
 		deps, pieces, allocs := newAllocateDeps(t)
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		space := testutil.RandomDID(t)
 
 		_, err := Allocate(t.Context(), deps, &AllocateRequest{
@@ -232,7 +232,7 @@ func TestAllocate_UsesConfiguredPolicy(t *testing.T) {
 	alloc := func(size uint64) error {
 		_, err := Allocate(t.Context(), deps, &AllocateRequest{
 			Space: testutil.RandomDID(t),
-			Blob:  blob.Blob{Digest: testutil.RandomMultihash(t), Size: size},
+			Blob:  blob.Blob{Digest: testutil.RandomDigest(t), Size: size},
 			Cause: testutil.RandomCID(t),
 		})
 		return err

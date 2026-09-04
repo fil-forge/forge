@@ -14,8 +14,8 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	blobcmd "github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	blobcmd "github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/promise"
 
 	piritestutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"

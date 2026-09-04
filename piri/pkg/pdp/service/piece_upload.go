@@ -13,7 +13,7 @@ import (
 
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 	"github.com/fil-forge/forge/piri/lib/verifyread"
 	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 	"github.com/fil-forge/forge/piri/pkg/presets"

@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/forge/sprue/pkg/build"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"

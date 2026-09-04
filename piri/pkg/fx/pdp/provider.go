@@ -6,9 +6,9 @@ import (
 	"github.com/fil-forge/filecoin-services/go/eip712"
 	"go.uber.org/fx"
 
-	signerimpl "github.com/fil-forge/piri-signing-service/pkg/inprocess"
-	signingservice "github.com/fil-forge/piri-signing-service/pkg/signer"
-	signertypes "github.com/fil-forge/piri-signing-service/pkg/types"
+	signerimpl "github.com/fil-forge/forge/internal/pdpsigner/inprocess"
+	signingservice "github.com/fil-forge/forge/internal/pdpsigner/signer"
+	signertypes "github.com/fil-forge/forge/internal/pdpsigner/types"
 
 	// curio infra
 	"github.com/filecoin-project/curio/harmony/harmonydb"

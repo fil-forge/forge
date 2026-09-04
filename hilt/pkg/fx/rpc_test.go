@@ -14,8 +14,8 @@ import (
 	providermemory "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
 	tenantmemory "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/server"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )

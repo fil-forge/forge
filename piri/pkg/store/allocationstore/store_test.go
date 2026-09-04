@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-datastore"
 	"github.com/stretchr/testify/require"
@@ -22,7 +22,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 		alloc := allocation.Allocation{
 			Space: testutil.RandomDID(t),
 			Blob: blob.Blob{
-				Digest: testutil.RandomMultihash(t),
+				Digest: testutil.RandomDigest(t),
 				Size:   uint64(1 + rand.IntN(1000)),
 			},
 			Expires: ucan.UnixTimestamp(time.Now().Unix()),
@@ -43,7 +43,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 		alloc := allocation.Allocation{
 			Space: testutil.RandomDID(t),
 			Blob: blob.Blob{
-				Digest: testutil.RandomMultihash(t),
+				Digest: testutil.RandomDigest(t),
 				Size:   uint64(1 + rand.IntN(1000)),
 			},
 			Expires: ucan.UnixTimestamp(time.Now().Unix()),
@@ -64,7 +64,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 		alloc := allocation.Allocation{
 			Space: testutil.RandomDID(t),
 			Blob: blob.Blob{
-				Digest: testutil.RandomMultihash(t),
+				Digest: testutil.RandomDigest(t),
 				Size:   uint64(1 + rand.IntN(1000)),
 			},
 			Expires: ucan.UnixTimestamp(time.Now().Unix()),
@@ -87,7 +87,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 		s := NewDatastoreStore(datastore.NewMapDatastore())
 
 		blb := blob.Blob{
-			Digest: testutil.RandomMultihash(t),
+			Digest: testutil.RandomDigest(t),
 			Size:   uint64(1 + rand.IntN(1000)),
 		}
 
@@ -133,7 +133,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		s := NewDatastoreStore(datastore.NewMapDatastore())
 
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		space := testutil.RandomDID(t)
 
 		_, err := s.Get(t.Context(), digest, space)
@@ -147,7 +147,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 		s := NewDatastoreStore(datastore.NewMapDatastore())
 
 		blb := blob.Blob{
-			Digest: testutil.RandomMultihash(t),
+			Digest: testutil.RandomDigest(t),
 			Size:   uint64(1 + rand.IntN(1000)),
 		}
 
@@ -184,7 +184,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 		s := NewDatastoreStore(datastore.NewMapDatastore())
 
 		blb := blob.Blob{
-			Digest: testutil.RandomMultihash(t),
+			Digest: testutil.RandomDigest(t),
 			Size:   uint64(1 + rand.IntN(1000)),
 		}
 
@@ -207,7 +207,7 @@ func TestDatastoreAllocationStore(t *testing.T) {
 	t.Run("get any non-expired not found", func(t *testing.T) {
 		s := NewDatastoreStore(datastore.NewMapDatastore())
 
-		digest := testutil.RandomMultihash(t)
+		digest := testutil.RandomDigest(t)
 		now := ucan.Now()
 
 		_, err := s.GetAnyNonExpired(t.Context(), digest, now)

@@ -50,7 +50,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("adds a replica", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 
@@ -70,7 +70,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("returns empty list for unknown space", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 
 				records, err := s.List(t.Context(), space, digest)
 				require.NoError(t, err)
@@ -79,8 +79,8 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("returns empty list for unknown digest", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
-				otherDigest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
+				otherDigest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 
@@ -94,7 +94,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("returns error when adding duplicate replica", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 
@@ -107,7 +107,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("lists multiple replicas for a blob", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider1 := testutil.RandomDID(t)
 				provider2 := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
@@ -126,7 +126,7 @@ func TestReplicaStore(t *testing.T) {
 			t.Run("isolates replicas by space", func(t *testing.T) {
 				space1 := testutil.RandomDID(t)
 				space2 := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 
@@ -139,7 +139,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("sets status of a replica", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 
@@ -157,7 +157,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("returns error when setting status of unknown replica", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 
 				err := s.SetStatus(t.Context(), space, digest, provider, replica.Transferred)
@@ -166,7 +166,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("retries a replica", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 				newCause := testutil.RandomCID(t)
@@ -186,7 +186,7 @@ func TestReplicaStore(t *testing.T) {
 
 			t.Run("returns error when retrying unknown replica", func(t *testing.T) {
 				space := testutil.RandomDID(t)
-				digest := testutil.RandomMultihash(t)
+				digest := testutil.RandomDigest(t)
 				provider := testutil.RandomDID(t)
 				cause := testutil.RandomCID(t)
 

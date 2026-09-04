@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
 	"github.com/fil-forge/ucantone/multikey"
 )

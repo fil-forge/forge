@@ -12,7 +12,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 
 	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
 	aggtypes "github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"

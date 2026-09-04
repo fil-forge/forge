@@ -9,8 +9,8 @@ import (
 	"github.com/fil-forge/forge/hilt/pkg/store/provider"
 	providermemory "github.com/fil-forge/forge/hilt/pkg/store/provider/memory"
 	providerpostgres "github.com/fil-forge/forge/hilt/pkg/store/provider/postgres"
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 )
 

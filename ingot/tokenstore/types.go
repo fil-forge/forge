@@ -11,9 +11,9 @@ import (
 	"context"
 	"iter"
 
-	ucanlib "github.com/fil-forge/libforge/ucan"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 )
 
 // Store is a ucanlib.ProofStore that additionally accepts new

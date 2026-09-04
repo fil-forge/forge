@@ -24,7 +24,7 @@ type OpRoot struct {
 // notably the flush path that builds a ShardedDagIndexView) read
 // the entries to avoid rescanning the file.
 // TODO(forrest): replace Offset and Length with Start and End to
-// align with libforge semantics
+// align with the protocol module's semantics
 type BlockLoc struct {
 	Offset uint64
 	Length uint64

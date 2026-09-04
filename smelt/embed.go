@@ -4,7 +4,7 @@ package smelt
 import "embed"
 
 // EmbeddedFiles contains all compose files, configs, and scripts needed to run the stack.
-// Keys and proofs are generated at runtime using ucantone + libforge.
+// Keys and proofs are generated at runtime using ucantone + the protocol module.
 //
 //go:embed compose.yml .env
 

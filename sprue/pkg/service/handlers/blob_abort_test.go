@@ -6,9 +6,9 @@ import (
 	"sync"
 	"testing"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	httpcmds "github.com/fil-forge/libforge/commands/http"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	httpcmds "github.com/fil-forge/forge/protocol/commands/http"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
@@ -194,7 +194,7 @@ func TestBlobAbortHandler(t *testing.T) {
 	t.Run("forwards to the parked blob's provider", func(t *testing.T) {
 		deps := newBlobAbortTestDeps(t, uploadService, logger)
 		space := testutil.RandomIssuer(t)
-		blob := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024}
+		blob := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024}
 
 		storageProvider := testutil.RandomIssuer(t)
 		piriSrv := newMockPiriRejectServer(t, storageProvider, identity.Identity{Issuer: uploadService})
@@ -225,7 +225,7 @@ func TestBlobAbortHandler(t *testing.T) {
 		_, err := blobcmds.Abort.Invoke(
 			testutil.Alice,
 			space.DID(),
-			&blobcmds.AbortArguments{Digest: testutil.RandomMultihash(t), Cause: cid.Undef},
+			&blobcmds.AbortArguments{Digest: testutil.RandomDigest(t), Cause: cid.Undef},
 			invocation.WithAudience(uploadService.DID()),
 		)
 		require.ErrorContains(t, err, "undefined cid")
@@ -236,7 +236,7 @@ func TestBlobAbortHandler(t *testing.T) {
 		space := testutil.RandomIssuer(t)
 		cause := testutil.RandomCID(t)
 
-		rcpt, herr := invokeBlobAbort(t, deps, uploadService, space, testutil.RandomMultihash(t), cause)
+		rcpt, herr := invokeBlobAbort(t, deps, uploadService, space, testutil.RandomDigest(t), cause)
 		require.NoError(t, herr)
 		_, err := blobcmds.Abort.Unpack(rcpt)
 		var named errors.Named
@@ -248,7 +248,7 @@ func TestBlobAbortHandler(t *testing.T) {
 	t.Run("surfaces the node's BlobAccepted refusal", func(t *testing.T) {
 		deps := newBlobAbortTestDeps(t, uploadService, logger)
 		space := testutil.RandomIssuer(t)
-		blob := blobcmds.Blob{Digest: testutil.RandomMultihash(t), Size: 1024}
+		blob := blobcmds.Blob{Digest: testutil.RandomDigest(t), Size: 1024}
 
 		storageProvider := testutil.RandomIssuer(t)
 		piriSrv := newMockPiriRejectServer(t, storageProvider, identity.Identity{Issuer: uploadService})

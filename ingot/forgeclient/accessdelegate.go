@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fil-forge/libforge/commands/access"
+	"github.com/fil-forge/forge/protocol/commands/access"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"

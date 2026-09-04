@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/forge/sprue/pkg/commands/admin/provider"
 	storageprovider "github.com/fil-forge/forge/sprue/pkg/store/storage_provider"
 	"github.com/fil-forge/ucantone/binding"

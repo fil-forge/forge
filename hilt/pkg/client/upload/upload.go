@@ -6,17 +6,17 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/fil-forge/forge/hilt/pkg/lib/zapucan"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/internal/zapucan"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	customercmds "github.com/fil-forge/forge/protocol/commands/customer"
+	providercmds "github.com/fil-forge/forge/protocol/commands/provider"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/fil-forge/ucantone/ucan/invocation"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"go.uber.org/zap"
 )
 

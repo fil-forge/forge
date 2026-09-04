@@ -13,9 +13,9 @@ package reqscope
 import (
 	"context"
 
-	"github.com/fil-forge/libforge/commands/s3"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/protocol/commands/s3"
 	"github.com/fil-forge/ucantone/did"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 )
 
 // proofStoreContextKey is the private context / user-value key type, so it can't

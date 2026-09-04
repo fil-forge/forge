@@ -11,7 +11,7 @@ import (
 	"github.com/fil-forge/forge/hilt/pkg/build"
 	"github.com/fil-forge/forge/hilt/pkg/config"
 	"github.com/fil-forge/forge/hilt/pkg/echo/middleware"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/server"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"

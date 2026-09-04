@@ -172,7 +172,7 @@ func createTestReceipt(t *testing.T, client ucan.Signer, node ucan.Signer) recei
 		space.String(),
 		content.RetrieveCaveats{
 			Blob: content.BlobDigest{
-				Digest: testutil.RandomMultihash(t),
+				Digest: testutil.RandomDigest(t),
 			},
 			Range: content.Range{
 				Start: 1024,

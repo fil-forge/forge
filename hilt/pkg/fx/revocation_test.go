@@ -5,7 +5,7 @@ import (
 
 	"github.com/fil-forge/forge/hilt/pkg/config"
 	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/stretchr/testify/require"
 )
 

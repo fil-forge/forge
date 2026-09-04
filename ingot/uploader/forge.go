@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/fil-forge/libforge/blobindex"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/protocol/blobindex"
 	"github.com/fil-forge/ucantone/did"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multicodec"
 	"github.com/multiformats/go-multihash"

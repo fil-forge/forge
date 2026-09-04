@@ -3,6 +3,7 @@ package bucket_test
 import (
 	"context"
 	"errors"
+	s3req "github.com/fil-forge/forge/protocol/commands/s3/request"
 	"strings"
 	"testing"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/fil-forge/forge/hilt/pkg/client/upload"
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
 	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/hilt/pkg/store"
 	accesskeymemory "github.com/fil-forge/forge/hilt/pkg/store/accesskey/memory"
 	bucketmemory "github.com/fil-forge/forge/hilt/pkg/store/bucket/memory"
@@ -21,15 +21,16 @@ import (
 	tenantmemory "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	"github.com/fil-forge/forge/hilt/pkg/vault"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
-	"github.com/fil-forge/libforge/commands/content"
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/internal/sigv4"
+	"github.com/fil-forge/forge/protocol/commands/content"
+	s3 "github.com/fil-forge/forge/protocol/commands/s3"
+	s3bkt "github.com/fil-forge/forge/protocol/commands/s3/bucket"
 	swarfclient "github.com/fil-forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/multikey/secp256k1"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/command"
 	"github.com/fil-forge/ucantone/ucan/delegation"
@@ -128,7 +129,7 @@ func TestCreate(t *testing.T) {
 	t.Run("rejects a key without s3:CreateBucket", func(t *testing.T) {
 		svc, _ := setup(t, []string{"s3:GetObject"}, &fakeSprue{}, delegationmemory.New())
 		_, _, err := svc.Create(ctx, providerID, args())
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects a duplicate name owned by another tenant", func(t *testing.T) {
@@ -136,7 +137,7 @@ func TestCreate(t *testing.T) {
 		// Owner is a different tenant → BucketAlreadyExists.
 		require.NoError(t, buckets.Add(ctx, testutil.RandomDID(t), testutil.RandomDID(t), bucketName))
 		_, _, err := svc.Create(ctx, providerID, args())
-		require.ErrorIs(t, err, bucketsvc.ErrBucketExists)
+		require.ErrorIs(t, err, s3bkt.ErrBucketExists)
 	})
 
 	t.Run("rejects re-creating a bucket you already own", func(t *testing.T) {
@@ -144,7 +145,7 @@ func TestCreate(t *testing.T) {
 		// Owner is the requesting tenant → BucketAlreadyOwnedByYou.
 		require.NoError(t, buckets.Add(ctx, testutil.RandomDID(t), tenantID, bucketName))
 		_, _, err := svc.Create(ctx, providerID, args())
-		require.ErrorIs(t, err, bucketsvc.ErrBucketAlreadyOwned)
+		require.ErrorIs(t, err, s3bkt.ErrBucketAlreadyOwned)
 	})
 
 	t.Run("rolls back the bucket when provisioning fails", func(t *testing.T) {
@@ -336,19 +337,19 @@ func TestDelete(t *testing.T) {
 	t.Run("rejects a key without s3:DeleteBucket", func(t *testing.T) {
 		d := setup(t, []string{"s3:GetObject"}, &fakeSprue{empty: true})
 		_, err := d.svc.Delete(ctx, providerID, del(bucketName))
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects an unknown bucket", func(t *testing.T) {
 		d := setup(t, []string{"s3:DeleteBucket"}, &fakeSprue{empty: true})
 		_, err := d.svc.Delete(ctx, providerID, del("nope"))
-		require.ErrorIs(t, err, auth.ErrUnknownBucket)
+		require.ErrorIs(t, err, s3req.ErrUnknownBucket)
 	})
 
 	t.Run("rejects a non-empty bucket and keeps it", func(t *testing.T) {
 		d := setup(t, []string{"s3:DeleteBucket"}, &fakeSprue{empty: false})
 		_, err := d.svc.Delete(ctx, providerID, del(bucketName))
-		require.ErrorIs(t, err, bucketsvc.ErrBucketNotEmpty)
+		require.ErrorIs(t, err, s3bkt.ErrBucketNotEmpty)
 		_, err = d.buckets.GetByName(ctx, bucketName)
 		require.NoError(t, err)
 		require.Empty(t, d.swarf.revocations, "nothing is revoked when the delete is refused")
@@ -443,14 +444,14 @@ func TestList(t *testing.T) {
 		svc, _, _ := setup(t, []string{"s3:ListAllMyBuckets"})
 		for _, param := range []string{"max-buckets=abc", "max-buckets=0", "max-buckets=-1", "max-buckets=10001"} {
 			_, err := svc.List(ctx, providerID, listArgs(param))
-			require.ErrorIs(t, err, bucketsvc.ErrInvalidArgument, "param %q", param)
+			require.ErrorIs(t, err, s3bkt.ErrInvalidArgument, "param %q", param)
 		}
 	})
 
 	t.Run("rejects a key without the list permission", func(t *testing.T) {
 		svc, _, _ := setup(t, []string{"s3:GetObject"})
 		_, err := svc.List(ctx, providerID, listArgs())
-		require.ErrorIs(t, err, auth.ErrOperationNotPermitted)
+		require.ErrorIs(t, err, s3req.ErrOperationNotPermitted)
 	})
 
 	t.Run("rejects a validly-signed request for a different operation", func(t *testing.T) {
@@ -460,7 +461,7 @@ func TestList(t *testing.T) {
 		require.NoError(t, buckets.Add(ctx, testutil.RandomDID(t), tenantID, "bucket-a"))
 		args := &s3bkt.ListArguments{Request: presign(t, signer, "GET", "https://"+region+".s3.fil.one/bucket-a/object-key", region)}
 		_, err := svc.List(ctx, providerID, args)
-		require.ErrorIs(t, err, bucketsvc.ErrOperationMismatch)
+		require.ErrorIs(t, err, s3bkt.ErrOperationMismatch)
 	})
 }
 
@@ -507,13 +508,13 @@ func TestInfo(t *testing.T) {
 	t.Run("rejects an unknown bucket", func(t *testing.T) {
 		svc := setup(t, did.DID{})
 		_, _, err := svc.Info(ctx, &s3bkt.InfoArguments{Name: "nope", AccessKey: akDID})
-		require.ErrorIs(t, err, bucketsvc.ErrUnknownBucket)
+		require.ErrorIs(t, err, s3bkt.ErrUnknownBucket)
 	})
 
 	t.Run("rejects an unknown access key", func(t *testing.T) {
 		svc := setup(t, did.DID{})
 		_, _, err := svc.Info(ctx, &s3bkt.InfoArguments{Name: bucketName, AccessKey: testutil.RandomDID(t)})
-		require.ErrorIs(t, err, bucketsvc.ErrUnknownAccessKey)
+		require.ErrorIs(t, err, s3bkt.ErrUnknownAccessKey)
 	})
 
 	t.Run("returns empty delegations when no grant reaches the bucket", func(t *testing.T) {

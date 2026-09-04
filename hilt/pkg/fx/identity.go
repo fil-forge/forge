@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fil-forge/forge/hilt/pkg/config"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )

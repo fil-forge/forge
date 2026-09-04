@@ -4,7 +4,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
 	"github.com/fil-forge/forge/piri/pkg/server"
 )

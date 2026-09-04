@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/spf13/cobra"
 )

@@ -3,8 +3,8 @@ package handlers
 import (
 	"fmt"
 
-	accesscmds "github.com/fil-forge/libforge/commands/access"
-	uploadcmds "github.com/fil-forge/libforge/commands/upload"
+	accesscmds "github.com/fil-forge/forge/protocol/commands/access"
+	uploadcmds "github.com/fil-forge/forge/protocol/commands/upload"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	upload_store "github.com/fil-forge/forge/sprue/pkg/store/upload"
 	"github.com/fil-forge/ucantone/binding"

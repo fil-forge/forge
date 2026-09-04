@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/fil-forge/filecoin-services/go/eip712"
-	libforgesign "github.com/fil-forge/libforge/commands/pdp/sign"
+	libforgesign "github.com/fil-forge/forge/protocol/commands/pdp/sign"
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 	"github.com/filecoin-project/go-commp-utils/nonffi"
 	commcid "github.com/filecoin-project/go-fil-commcid"
@@ -528,7 +528,7 @@ func (p *PDPService) AddRoots(ctx context.Context, id uint64, request []types.Ro
 	}
 
 	// TODO(forrest)[ucan1] #9: rebuild proof bundling on top of ucantone receipts +
-	// libforge pdp/sign.PieceProofs. The previous go-ucanto path collected
+	// protocol pdp/sign.PieceProofs. The previous go-ucanto path collected
 	// blob/accept and pdp/accept invocations + receipts into per-piece agent
 	// messages; that requires the receipt/acceptance stores to be migrated
 	// first. Until then we send empty piece proofs and a nil proof

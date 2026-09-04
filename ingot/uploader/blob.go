@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	assertcmds "github.com/fil-forge/libforge/commands/assert"
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
+	assertcmds "github.com/fil-forge/forge/protocol/commands/assert"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/ipfs/go-cid"

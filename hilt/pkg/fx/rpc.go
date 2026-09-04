@@ -8,7 +8,7 @@ import (
 	"github.com/fil-forge/forge/hilt/pkg/rpc"
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
 	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
 	"github.com/fil-forge/ucantone/did/key"
 	"github.com/fil-forge/ucantone/did/resolver"
 	"github.com/fil-forge/ucantone/did/web"

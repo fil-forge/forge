@@ -3,11 +3,10 @@ package handlers
 import (
 	"net/url"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
-	pdpcmds "github.com/fil-forge/libforge/commands/pdp"
-	"github.com/fil-forge/libforge/identity"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	replicacmds "github.com/fil-forge/forge/protocol/commands/blob/replica"
+	pdpcmds "github.com/fil-forge/forge/protocol/commands/pdp"
 	"github.com/fil-forge/forge/sprue/pkg/commands/admin/provider"
 	storageprovider "github.com/fil-forge/forge/sprue/pkg/store/storage_provider"
 	"github.com/fil-forge/ucantone/binding"
@@ -15,6 +14,7 @@ import (
 	"github.com/fil-forge/ucantone/server"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"go.uber.org/zap"
 )
 

@@ -44,26 +44,26 @@ import (
 
 	"time"
 
-	hiltauth "github.com/fil-forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/hilt/pkg/s3perm"
-	"github.com/fil-forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/ingot/internal/fasthttputil"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
 	"github.com/fil-forge/forge/ingot/registry"
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/internal/s3perm"
+	"github.com/fil-forge/forge/internal/sigv4"
+	s3 "github.com/fil-forge/forge/protocol/commands/s3"
+	s3bkt "github.com/fil-forge/forge/protocol/commands/s3/bucket"
+	hiltauth "github.com/fil-forge/forge/protocol/commands/s3/request"
+	s3req "github.com/fil-forge/forge/protocol/commands/s3/request"
 	"github.com/fil-forge/ucantone/did"
 	ucanerrors "github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/fil-forge/versitygw/auth"
 	"github.com/fil-forge/versitygw/s3api/middlewares"
 	"github.com/fil-forge/versitygw/s3err"
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
 )
 
 // Authorizer is the slice of [hiltclient.Client] the service uses:
@@ -324,7 +324,7 @@ func (s *Service) authorizeLocal(ctx context.Context, req s3.Request, access str
 
 	// 3. The S3 action must map to Forge commands. Bucket-level operations
 	// (create/delete/list-buckets) map to none — they go to Hilt regardless.
-	op, err := hiltauth.OperationFor(req)
+	op, err := s3.OperationFor(req)
 	if err != nil {
 		return auth.Account{}, false
 	}

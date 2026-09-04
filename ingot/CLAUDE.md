@@ -51,7 +51,7 @@ ingot depends only on these — it must **never** import `fil-forge/sprue` or
 
 - **`ucantone`** — UCAN 1.0 primitives: `principal` (ed25519), `did`,
   `ucan/{delegation,invocation,receipt,command}`, `binding`, `client`, `execution`.
-- **`libforge`** — Forge capability bindings + helpers:
+- **`protocol`** (in-repo) — Forge capability bindings + helpers:
   `commands/{blob,content,http,assert,ucan,index,provider,access}`, `blobindex`
   (sharded-dag-index), `ucan` (ProofStore), `ucan/retrieval`, `didmailto`, `receipt`.
 - **`fil-forge/hilt/pkg/{client,rpc/service,s3perm,sigv4}`** — the auth/tenant
@@ -71,7 +71,7 @@ ingot depends only on these — it must **never** import `fil-forge/sprue` or
 
 UCAN uses the **binding pattern**: a capability is `binding.Bind[*Args,*OK](command)`
 (e.g. `blob.Allocate`) with `.Invoke`/`.Delegate`; proof chains come from a
-`libforge/ucan.ProofStore`. Materially different from go-ucanto — the UCAN code is
+`ucanlib.ProofStore` (from `github.com/fil-forge/ucantone/ucanlib`). Materially different from go-ucanto — the UCAN code is
 a real port, not an import rewrite.
 
 ## Package map
@@ -172,7 +172,7 @@ Internal:
   (empty) token store, and the goose migration `PreStartHook`. Empty option
   when `cfg.Enabled` is false.
 
-A host provides `*zap.Logger`, `*pgxpool.Pool`, libforge's `identity.Identity` (the
+A host provides `*zap.Logger`, `*pgxpool.Pool`, `internal/identity`'s `Identity` (the
 agent) and sets `Config.UploadServiceURL`/`UploadServiceDID` (sprue) +
 `AuthServiceURL`/`AuthServiceDID` (hilt). The non-fx escape hatch is
 `New(ctx, ServerConfig, ServerDeps)`.

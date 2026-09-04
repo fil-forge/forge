@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"testing"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/commands/admin/provider/weight"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"

@@ -10,8 +10,8 @@ import (
 
 	"github.com/fil-forge/go-ucanto/core/message"
 	"github.com/fil-forge/go-ucanto/transport/car/response"
-	"github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/testutil"
+	"github.com/fil-forge/forge/protocol/commands"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/fil-forge/ucantone/ucan/receipt"
 	"github.com/stretchr/testify/require"

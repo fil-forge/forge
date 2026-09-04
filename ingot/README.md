@@ -94,7 +94,7 @@ Postgres pool, and the agent identity (via `Config`):
 
 ```go
 app := fx.New(
-    // host provides: *zap.Logger, *pgxpool.Pool, libforge identity.Identity
+    // host provides: *zap.Logger, *pgxpool.Pool, `internal/identity`'s Identity
     ingot.Module(cfg), // cfg sets UploadServiceURL/DID, AuthServiceURL/DID, ...
 )
 ```
@@ -155,7 +155,7 @@ them the publish step fails and the image still lands in GHCR.
 ## Dependencies
 
 ingot depends only on the Forge stack — `ucantone` (UCAN 1.0 primitives),
-`libforge` (Forge capability definitions), the `hilt` client (request
+`protocol` (Forge capability definitions), the `hilt` client (`internal/client/hilt`) (request
 authorization + tenancy), the `indexing-service` query client, `versitygw`
 (the S3 front end) — plus standard plumbing (pgx, goose, fx, zap, go-cid). It
 must never import `fil-forge/sprue` or `fil-forge/guppy` (guppy embeds ingot

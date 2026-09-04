@@ -14,7 +14,7 @@ them. It exposes two APIs and talks to one external service:
 
 Module: `github.com/fil-forge/forge/hilt` (Go 1.27). Sibling repos it builds on:
 `ucantone` (UCAN primitives: `did`, `multikey`, `ucan/delegation`, `binding`,
-`server`, `execution`), `libforge` (bound `commands/*`, `identity`, ucan helpers),
+`server`, `execution`), the in-repo `protocol` (bound `commands/*`) and `internal` (`identity`, S3 helpers) modules,
 and `sprue` (the upload service; mirror its patterns where relevant).
 
 ## Commands
@@ -54,18 +54,18 @@ and `sprue` (the upload service; mirror its patterns where relevant).
 - `pkg/api` — Tenant REST handlers + the partner-key auth middleware.
 - `pkg/rpc` — UCAN S3 command handlers; `pkg/rpc/service/auth` is the shared
   `Authorizer` service. The wire contract those handlers expose — named error
-  sentinels, `Operation`/`ClassifyRequest` — lives in libforge next to the
+  sentinels, `Operation`/`ClassifyRequest` — lives in `protocol/commands/s3` next to the
   `commands/s3` bindings (`commands/s3`, `commands/s3/request`,
   `commands/s3/bucket`), so Ingot consumes it without importing this module.
-- SigV4 verification (`libforge/sigv4`) and the S3-permission → Forge-command
-  mapping (`libforge/s3perm`) also live in libforge for the same reason.
+- SigV4 verification (`internal/sigv4`) and the S3-permission → Forge-command
+  mapping (`internal/s3perm`) also live in the in-repo `internal` module for the same reason.
 - `pkg/store/{tenant,accesskey,bucket,delegation,provider}` — each an interface
   with `memory` and `postgres` backends.
 - `pkg/vault` (`memory`, `openbao`) — private-key storage; `paths.go` has the
   key path helpers (`TenantKeyPath`, `AccessKeyPath`).
 - `pkg/client` — clients for external services (the Sprue `UploadClient`) and
   the self-issued `AdminClient`. The client for Hilt's own `/s3/*` RPC API is
-  `libforge/client/hilt` (Ingot and the integration tests use it).
+  `internal/client/hilt` (Ingot and the integration tests use it).
 - `pkg/migrations` — goose SQL migrations run on startup (unless skipped).
 - `internal/testutil` — test-only helpers (random DIDs/issuers, testcontainers).
 
@@ -78,14 +78,14 @@ and `sprue` (the upload service; mirror its patterns where relevant).
   suite (`<entity>_test.go`). Add a method to all three (interface + both backends)
   and cover it in that suite.
 - **RPC handlers** follow one shape: a `New<Cmd>Handler(logger, deps…) server.Route`
-  constructor that returns the libforge bound command's `.Route(...)`, whose closure
+  constructor that returns the `protocol` bound command's `.Route(...)`, whose closure
   extracts `req.Invocation().Issuer()` / `req.Task().Arguments()` and delegates to an
   **exported, testable** function (`ctx, logger, deps…, issuer, args`). That function
   returns `(*OK, []ucan.Delegation, error)`; the closure calls `res.SetFailure(err)`
   or `res.SetSuccess(ok)`, and attaches any delegation blocks via
   `res.SetMetadata(container.New(container.WithDelegations(blocks...)))` (the result's
   delegation map carries only CIDs — the blocks ride back in the container).
-- **Use libforge bound commands** (`.Command`, `.Route`, `.Invoke`, `.Unpack`) — do
+- **Use the `protocol` bound commands** (`.Command`, `.Route`, `.Invoke`, `.Unpack`) — do
   not hand-write command strings with `command.MustParse`.
 - **Authorization**: signature-bearing S3 commands authenticate via the
   `auth.Authorizer` service (SigV4/SigV4a verify + time bounds + issuer == tenant's

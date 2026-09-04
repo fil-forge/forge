@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/libforge/blobindex"
-	commands "github.com/fil-forge/libforge/commands"
-	"github.com/fil-forge/libforge/testutil"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/protocol/blobindex"
+	commands "github.com/fil-forge/forge/protocol/commands"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
+	"github.com/fil-forge/ucantone/testutil"
 	"github.com/fil-forge/ucantone/ucan/container"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 

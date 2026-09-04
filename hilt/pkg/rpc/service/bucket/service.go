@@ -16,14 +16,14 @@ import (
 
 	"github.com/fil-forge/forge/hilt/pkg/client/upload"
 	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/forge/hilt/pkg/sigv4"
 	"github.com/fil-forge/forge/hilt/pkg/store"
 	"github.com/fil-forge/forge/hilt/pkg/store/accesskey"
 	bucketstore "github.com/fil-forge/forge/hilt/pkg/store/bucket"
 	delegationstore "github.com/fil-forge/forge/hilt/pkg/store/delegation"
-	s3 "github.com/fil-forge/libforge/commands/s3"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
-	s3req "github.com/fil-forge/libforge/commands/s3/request"
+	"github.com/fil-forge/forge/internal/sigv4"
+	s3 "github.com/fil-forge/forge/protocol/commands/s3"
+	s3bkt "github.com/fil-forge/forge/protocol/commands/s3/bucket"
+	s3req "github.com/fil-forge/forge/protocol/commands/s3/request"
 	swarfclient "github.com/fil-forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
@@ -103,8 +103,8 @@ func (s *Service) Create(ctx context.Context, issuer did.DID, args *s3bkt.Create
 	}
 	accessKeyID := authz.AccessKey.ID
 
-	if authz.Operation != auth.OpCreateBucket {
-		return nil, nil, fmt.Errorf("%w: %s", ErrOperationMismatch, authz.Operation)
+	if authz.Operation != s3.OpCreateBucket {
+		return nil, nil, fmt.Errorf("%w: %s", s3bkt.ErrOperationMismatch, authz.Operation)
 	}
 
 	rec, err := s.buckets.GetByName(ctx, authz.BucketName)
@@ -112,9 +112,9 @@ func (s *Service) Create(ctx context.Context, issuer did.DID, args *s3bkt.Create
 		// An existing name owned by the requesting tenant is
 		// BucketAlreadyOwnedByYou; owned by anyone else is BucketAlreadyExists.
 		if rec.Tenant == authz.Tenant.ID {
-			return nil, nil, fmt.Errorf("%w: %q", ErrBucketAlreadyOwned, authz.BucketName)
+			return nil, nil, fmt.Errorf("%w: %q", s3bkt.ErrBucketAlreadyOwned, authz.BucketName)
 		}
-		return nil, nil, fmt.Errorf("%w: %q", ErrBucketExists, authz.BucketName)
+		return nil, nil, fmt.Errorf("%w: %q", s3bkt.ErrBucketExists, authz.BucketName)
 	} else if !errors.Is(err, store.ErrRecordNotFound) {
 		return nil, nil, fmt.Errorf("looking up bucket: %w", err)
 	}
@@ -259,8 +259,8 @@ func (s *Service) Delete(ctx context.Context, issuer did.DID, args *s3bkt.Delete
 		return nil, err
 	}
 
-	if authz.Operation != auth.OpDeleteBucket {
-		return nil, fmt.Errorf("%w: %s", ErrOperationMismatch, authz.Operation)
+	if authz.Operation != s3.OpDeleteBucket {
+		return nil, fmt.Errorf("%w: %s", s3bkt.ErrOperationMismatch, authz.Operation)
 	}
 
 	// Verify the bucket is empty, listing its blobs via Sprue as the tenant (the
@@ -274,7 +274,7 @@ func (s *Service) Delete(ctx context.Context, issuer did.DID, args *s3bkt.Delete
 		return nil, fmt.Errorf("checking bucket is empty: %w", err)
 	}
 	if !empty {
-		return nil, fmt.Errorf("%w: %q", ErrBucketNotEmpty, authz.BucketName)
+		return nil, fmt.Errorf("%w: %q", s3bkt.ErrBucketNotEmpty, authz.BucketName)
 	}
 
 	if err := s.revokeDelegations(ctx, authz.Tenant.ID, authz.Bucket.ID, account); err != nil {
@@ -350,8 +350,8 @@ func (s *Service) List(ctx context.Context, issuer did.DID, args *s3bkt.ListArgu
 	}
 	// Bind the verified signature to this handler's operation: reject a
 	// (validly-signed) request for any other S3 operation.
-	if authz.Operation != auth.OpListBuckets {
-		return nil, fmt.Errorf("%w: %s", ErrOperationMismatch, authz.Operation)
+	if authz.Operation != s3.OpListBuckets {
+		return nil, fmt.Errorf("%w: %s", s3bkt.ErrOperationMismatch, authz.Operation)
 	}
 
 	// The ListBuckets options ride as query parameters on the signed URL, which
@@ -367,7 +367,7 @@ func (s *Service) List(ctx context.Context, issuer did.DID, args *s3bkt.ListArgu
 	if v := query.Get("max-buckets"); v != "" {
 		max, err = strconv.Atoi(v)
 		if err != nil || max < 1 || max > maxListBuckets {
-			return nil, fmt.Errorf("%w: max-buckets: %q", ErrInvalidArgument, v)
+			return nil, fmt.Errorf("%w: max-buckets: %q", s3bkt.ErrInvalidArgument, v)
 		}
 	}
 
@@ -412,14 +412,14 @@ func (s *Service) List(ctx context.Context, issuer did.DID, args *s3bkt.ListArgu
 func (s *Service) Info(ctx context.Context, args *s3bkt.InfoArguments) (*s3bkt.InfoOK, []ucan.Delegation, error) {
 	b, err := s.buckets.GetByName(ctx, args.Name)
 	if errors.Is(err, store.ErrRecordNotFound) {
-		return nil, nil, fmt.Errorf("%w: %q", ErrUnknownBucket, args.Name)
+		return nil, nil, fmt.Errorf("%w: %q", s3bkt.ErrUnknownBucket, args.Name)
 	} else if err != nil {
 		return nil, nil, fmt.Errorf("looking up bucket: %w", err)
 	}
 
 	akRec, err := s.accessKeys.Get(ctx, args.AccessKey)
 	if errors.Is(err, store.ErrRecordNotFound) {
-		return nil, nil, fmt.Errorf("%w: %q", ErrUnknownAccessKey, args.AccessKey)
+		return nil, nil, fmt.Errorf("%w: %q", s3bkt.ErrUnknownAccessKey, args.AccessKey)
 	} else if err != nil {
 		return nil, nil, fmt.Errorf("looking up access key: %w", err)
 	}

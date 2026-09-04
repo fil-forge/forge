@@ -14,7 +14,7 @@
 //   - *zap.Logger
 //   - *pgxpool.Pool          — ingot owns its schema and runs its own goose
 //     migrations against this pool at startup
-//   - identity.Identity       — the agent (libforge identity); issuer of every
+//   - identity.Identity       — the agent (internal/identity); issuer of every
 //     outbound invocation (a did:key, or a did:web wrapping the key)
 //
 // Module manages the embedded S3 Server's lifecycle and provides nothing to the
@@ -49,17 +49,16 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/libforge/receipt"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/internal/identity"
+	"github.com/fil-forge/forge/protocol/receipt"
 	"github.com/fil-forge/ucantone/did"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/fil-forge/versitygw/auth"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/openbao/openbao/api/v2"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
 	"github.com/fil-forge/forge/ingot/blockstore"
 	"github.com/fil-forge/forge/ingot/bucketauthority"
 	"github.com/fil-forge/forge/ingot/config"
@@ -73,6 +72,7 @@ import (
 	"github.com/fil-forge/forge/ingot/tenantkey"
 	"github.com/fil-forge/forge/ingot/tokenstore"
 	"github.com/fil-forge/forge/ingot/uploader"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
 	swarfclient "github.com/fil-forge/swarf/pkg/client"
 )
 
@@ -163,7 +163,7 @@ type serverParams struct {
 	Multipart       registry.MultipartStore
 	Parks           registry.ParkStore
 	Meta            logstore.Meta
-	// Identity is the agent identity (the host-provided libforge identity, the
+	// Identity is the agent identity (the host-provided identity.Identity, the
 	// issuer of every outbound invocation); the listener serves its DID
 	// document at /.well-known/did.json. Required.
 	Identity identity.Identity

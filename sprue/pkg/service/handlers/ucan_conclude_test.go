@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	ucancmds "github.com/fil-forge/libforge/commands/ucan"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	ucancmds "github.com/fil-forge/forge/protocol/commands/ucan"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/service/handlers"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"

@@ -3,8 +3,8 @@ package handlers
 import (
 	"fmt"
 
-	customercmds "github.com/fil-forge/libforge/commands/customer"
-	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/forge/internal/identity"
+	customercmds "github.com/fil-forge/forge/protocol/commands/customer"
 	customerstore "github.com/fil-forge/forge/sprue/pkg/store/customer"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/errors"

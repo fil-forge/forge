@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
-	bucketrpc "github.com/fil-forge/hilt/pkg/rpc/service/bucket"
-	"github.com/fil-forge/libforge/commands/s3"
-	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
+	hiltclient "github.com/fil-forge/forge/internal/client/hilt"
+	"github.com/fil-forge/forge/protocol/commands/s3"
+	bucketrpc "github.com/fil-forge/forge/protocol/commands/s3/bucket"
+	s3bkt "github.com/fil-forge/forge/protocol/commands/s3/bucket"
 	"github.com/fil-forge/ucantone/did"
 	ucanerr "github.com/fil-forge/ucantone/errors"
 )

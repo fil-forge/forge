@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 
-	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	httpcmds "github.com/fil-forge/libforge/commands/http"
-	ucancmds "github.com/fil-forge/libforge/commands/ucan"
-	"github.com/fil-forge/libforge/digestutil"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	blobcmds "github.com/fil-forge/forge/protocol/commands/blob"
+	httpcmds "github.com/fil-forge/forge/protocol/commands/http"
+	ucancmds "github.com/fil-forge/forge/protocol/commands/ucan"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/forge/sprue/pkg/routing"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
@@ -18,6 +17,7 @@ import (
 	edm "github.com/fil-forge/ucantone/errors/datamodel"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"go.uber.org/zap"
 )
 

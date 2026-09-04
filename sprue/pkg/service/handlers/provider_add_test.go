@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
+	"github.com/fil-forge/forge/attestation/didmailto"
+	providercmds "github.com/fil-forge/forge/protocol/commands/provider"
 	"github.com/fil-forge/forge/sprue/internal/config"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/billing"

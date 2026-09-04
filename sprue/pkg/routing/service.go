@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"slices"
 
-	"github.com/fil-forge/libforge/commands/blob"
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/protocol/commands/blob"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/forge/sprue/pkg/store"
 	storageprovider "github.com/fil-forge/forge/sprue/pkg/store/storage_provider"
 	"github.com/fil-forge/ucantone/did"

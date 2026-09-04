@@ -3,7 +3,7 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/fil-forge/libforge/commands/access"
+	"github.com/fil-forge/forge/protocol/commands/access"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	delegation_store "github.com/fil-forge/forge/sprue/pkg/store/delegation"
 	"github.com/fil-forge/ucantone/binding"

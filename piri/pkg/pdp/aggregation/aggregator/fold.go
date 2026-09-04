@@ -4,7 +4,7 @@ import (
 	"cmp"
 	"slices"
 
-	libpiece "github.com/fil-forge/libforge/piece"
+	libpiece "github.com/fil-forge/forge/internal/piece"
 	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"
 )
 

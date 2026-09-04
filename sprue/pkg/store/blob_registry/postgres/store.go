@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/forge/protocol/digestutil"
 	"github.com/fil-forge/forge/sprue/pkg/store"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
 	"github.com/fil-forge/forge/sprue/pkg/store/consumer"

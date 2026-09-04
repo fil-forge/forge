@@ -22,12 +22,12 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/go-ipni-tools/pkg/advertisement"
+	"github.com/fil-forge/forge/internal/ipni/advertisement"
+	"github.com/fil-forge/forge/protocol/commands/assert"
+	"github.com/fil-forge/forge/protocol/commands/claim"
 	"github.com/fil-forge/go-ipni-tools/pkg/metadata"
 	ipnipub "github.com/fil-forge/go-ipni-tools/pkg/publisher"
 	"github.com/fil-forge/go-ipni-tools/pkg/store"
-	"github.com/fil-forge/libforge/commands/assert"
-	"github.com/fil-forge/libforge/commands/claim"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
 	"github.com/fil-forge/forge/piri/lib"

@@ -16,8 +16,8 @@ import (
 	"github.com/fil-forge/forge/ingot/blockstore"
 	"github.com/fil-forge/forge/ingot/migrations"
 	"github.com/fil-forge/forge/ingot/registry"
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/testutil"
 )
 
 func liveCid(t *testing.T, s string) cid.Cid {

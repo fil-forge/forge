@@ -5,16 +5,16 @@ import (
 
 	"go.uber.org/zap"
 
-	accesscmds "github.com/fil-forge/libforge/commands/access"
-	indexcmds "github.com/fil-forge/libforge/commands/index"
-	"github.com/fil-forge/libforge/identity"
-	ucanlib "github.com/fil-forge/libforge/ucan"
+	"github.com/fil-forge/forge/internal/identity"
+	accesscmds "github.com/fil-forge/forge/protocol/commands/access"
+	indexcmds "github.com/fil-forge/forge/protocol/commands/index"
 	"github.com/fil-forge/forge/sprue/pkg/indexerclient"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/server"
+	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 )
 
 const IndexerNotConfiguredErrorName = "IndexerNotConfigured"

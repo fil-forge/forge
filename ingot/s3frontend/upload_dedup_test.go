@@ -14,8 +14,8 @@ import (
 	"github.com/fil-forge/forge/ingot/logstore"
 	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/forge/ingot/uploader"
-	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/testutil"
 )
 
 // countingUploader records how many times each digest is uploaded. It returns

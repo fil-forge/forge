@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go"
-	"github.com/fil-forge/forge/hilt/pkg/s3perm"
+	"github.com/fil-forge/forge/internal/s3perm"
 	"github.com/stretchr/testify/require"
 )
 

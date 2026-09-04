@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	s3 "github.com/fil-forge/libforge/commands/s3"
+	s3 "github.com/fil-forge/forge/protocol/commands/s3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/fil-forge/forge/ingot/iam"

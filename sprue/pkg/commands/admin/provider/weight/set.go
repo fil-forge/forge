@@ -3,7 +3,7 @@
 package weight
 
 import (
-	"github.com/fil-forge/libforge/commands"
+	"github.com/fil-forge/forge/protocol/commands"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/ucan/command"
 )
