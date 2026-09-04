@@ -1,5 +1,3 @@
-// Carried from github.com/fil-forge/guppy/pkg/client/pollclaim.go
-// (guppy/internal/ctxutil.Cause replaced with stdlib context.Cause).
 package forgeclient
 
 import (

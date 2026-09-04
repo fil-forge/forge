@@ -15,7 +15,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/forge/ingot/forgeclient"
+	"github.com/fil-forge/forge/forgeclient"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 

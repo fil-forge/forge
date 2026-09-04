@@ -28,7 +28,7 @@ it from any of them. It must list `smelt` plus the repos you're editing:
 ~/workspace/src/github.com/fil-forge/
 ├── go.work                 # the workspace file (local-only; see below)
 ├── smelt/                  # this repo
-├── protocol/, internal/, attestation/   # shared modules
+├── protocol/, internal/, attestation/, forgeclient/   # shared modules
 ├── piri/               # piri storage node
 ├── sprue/                  # upload service
 ├── indexing-service/       # indexer
@@ -83,7 +83,7 @@ siblings (piri-pdp, sprue, …) don't need it.
 ### Selection and the shared-module rule
 
 A service is rebuilt from local source when its module dir is in the `use`-list. Because the
-every service compiles the shared modules in, **listing any of `protocol`, `internal` or `attestation` forces all
+every service compiles the shared modules in, **listing any of `protocol`, `internal`, `attestation` or `forgeclient` forces all
 services to rebuild** — a published binary would otherwise still link the published copy.
 
 | Editing… | put in `go.work` | smelt rebuilds |

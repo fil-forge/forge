@@ -1,10 +1,9 @@
-// Package tokenstore persists the UCAN delegations + attestations ingot
-// holds over its space — the proof chains the forge edge-client presents
-// to sprue.
+// Package tokenstore persists the UCAN tokens an agent holds — the
+// delegations that make up its proof chains, and the invocations and
+// receipts it has issued or received — and serves them as a
+// ucanlib.ProofStore. FsStore keeps them in a CBOR file, MemStore in memory.
 //
-// Carried copy of github.com/fil-forge/guppy/pkg/tokenstore (ingot cannot
-// import guppy: guppy embeds ingot → import cycle). Keep in sync with
-// upstream; see DESIGN_NOTES.md §B for the shared-library plan.
+// It descends from github.com/fil-forge/guppy/pkg/tokenstore.
 package tokenstore
 
 import (

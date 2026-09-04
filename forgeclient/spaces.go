@@ -1,4 +1,3 @@
-// Carried from github.com/fil-forge/guppy/pkg/client/spaces.go.
 package forgeclient
 
 import "github.com/fil-forge/ucantone/ipld/datamodel"

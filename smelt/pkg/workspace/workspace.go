@@ -6,7 +6,7 @@
 // stack.WithWorkspaceBinaries() (the Go test stack). The active Go workspace
 // (go.work) is the single source of truth for "what am I editing": every
 // service whose module appears in the use-list is rebuilt from local source.
-// The shared modules (protocol, internal, attestation) are compiled into every
+// The shared modules (protocol, internal, attestation, forgeclient) are compiled into every
 // service, so any of them appearing in the use-list forces every service to be
 // rebuilt — otherwise a published binary would still link the published copy.
 //
@@ -63,7 +63,7 @@ var Services = map[string]serviceBuild{
 // sharedDirs are the workspace dirs of the modules every service compiles in.
 // Any of them in the use-list forces a rebuild of every service (see package
 // doc).
-var sharedDirs = []string{"protocol", "internal", "attestation"}
+var sharedDirs = []string{"protocol", "internal", "attestation", "forgeclient"}
 
 // Detect inspects the active go.work and returns the workspace root directory
 // (the dir containing go.work) and the sorted set of smelt services to build

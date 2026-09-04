@@ -1,4 +1,3 @@
-// Carried copy of github.com/fil-forge/guppy/pkg/tokenstore/fs.go.
 package tokenstore
 
 import (

@@ -79,7 +79,7 @@ Cross-references: [`architecture.md` §9](./architecture.md#9-the-system-contrac
 (implementation status).
 
 Sources: `module.go`, `bucketauthority/service.go`, `iam/service.go`,
-`forgeclient/`, `uploader/blob.go`, `blockstore/forge.go`. Review when these
+the `forgeclient` module, `uploader/blob.go`, `blockstore/forge.go`. Review when these
 change.
 
 ## Package map and interface seams
@@ -152,8 +152,8 @@ flowchart TB
   and park stores) and `logstore.Meta`.
 - `uploader.Forge` is one struct behind `Uploader`, `BodyUploader`,
   `DeferredBodyUploader`, and `BlobRemover`.
-- `inmem` (test-only fakes) and `tokenstore` (empty; only the dormant login
-  paths would read it) are omitted. `blockstore/locator`'s indexer-backed
+- `inmem` (test-only fakes) and `forgeclient/tokenstore` (empty; only the dormant login
+  paths would read it) are omitted. `forgeclient/locator`'s indexer-backed
   locator compiles but is never injected.
 - `iam` and the network tiers never import each other; they meet at
   `internal/reqscope` (the request-scoped proof store, drawn in

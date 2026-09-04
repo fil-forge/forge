@@ -10,9 +10,9 @@ import (
 	ucanlib "github.com/fil-forge/ucantone/ucanlib"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/forge/ingot/forgeclient"
+	"github.com/fil-forge/forge/forgeclient"
+	"github.com/fil-forge/forge/forgeclient/tokenstore"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
-	"github.com/fil-forge/forge/ingot/tokenstore"
 )
 
 // newTestForge builds a Forge with a real (but never-dialed) client; the

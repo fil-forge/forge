@@ -1,6 +1,4 @@
-// Carried/trimmed from github.com/fil-forge/guppy/pkg/client/blobadd.go.
-//
-// Ingot divergences from upstream:
+// Differences from the guppy ancestor (github.com/fil-forge/guppy/pkg/client/blobadd.go):
 //   - Proof chains come from a per-call ProofStore (WithProofStore) so an
 //     invocation can be scoped to a request's per-access-key delegations,
 //     not just the client's token store.
@@ -10,7 +8,7 @@
 //     conclude (park at UploadPart, accept at Complete); BlobConclude
 //     finishes the parked add later.
 //
-// Also dropped from upstream: otel spans, go-log, ctxutil, the progress/stall
+// Also dropped from the ancestor: otel spans, go-log, ctxutil, the progress/stall
 // readers, and the hard requirement that the accept receipt carry a PDP
 // accept invocation.
 package forgeclient

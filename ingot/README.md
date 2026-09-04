@@ -155,12 +155,12 @@ them the publish step fails and the image still lands in GHCR.
 ## Dependencies
 
 ingot depends only on the Forge stack — `ucantone` (UCAN 1.0 primitives),
-`protocol` (Forge capability definitions), the `hilt` client (`internal/client/hilt`) (request
-authorization + tenancy), the `indexing-service` query client, `versitygw`
-(the S3 front end) — plus standard plumbing (pgx, goose, fx, zap, go-cid). It
-must never import `fil-forge/sprue` or `fil-forge/guppy` (guppy embeds ingot
-→ cycle); the Forge-client subset it needs is carried in `forgeclient/` +
-`tokenstore/`.
+`protocol` (Forge capability definitions), `forgeclient` (the Forge client
+it ships through, with its token store and blob locator), the `hilt` client
+(`internal/client/hilt`) (request authorization + tenancy), the
+`indexing-service` query client, `versitygw` (the S3 front end) — plus
+standard plumbing (pgx, goose, fx, zap, go-cid). It must never import
+`fil-forge/sprue` or `fil-forge/guppy` (guppy embeds ingot → cycle).
 
 ## Status
 

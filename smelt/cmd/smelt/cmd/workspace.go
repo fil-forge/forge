@@ -24,7 +24,7 @@ var workspaceBuildCmd = &cobra.Command{
 	Long: `Reads the active go.work use-list, compiles each selected service from its
 sibling checkout into generated/bin/, and writes generated/compose/workspace.override.yml
 mounting each binary over the published image. If a shared module (protocol, internal,
-attestation) is in the workspace, every service is rebuilt (a published binary would
+attestation, forgeclient) is in the workspace, every service is rebuilt (a published binary would
 still link the published copy).`,
 	RunE: runWorkspaceBuild,
 }

@@ -1,4 +1,3 @@
-// Carried from github.com/fil-forge/guppy/pkg/client/claimaccess.go.
 package forgeclient
 
 import (

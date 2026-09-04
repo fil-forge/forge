@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.45.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.110.0
 	github.com/cenkalti/backoff/v5 v5.0.3
-	github.com/fil-forge/forge/attestation v0.0.0
+	github.com/fil-forge/forge/forgeclient v0.0.0
 	github.com/fil-forge/forge/indexing-service v0.0.0
 	github.com/fil-forge/forge/internal v0.0.0
 	github.com/fil-forge/forge/protocol v0.0.0
@@ -20,7 +20,6 @@ require (
 	github.com/ipfs/go-block-format v0.2.4
 	github.com/ipfs/go-cid v0.6.2
 	github.com/ipfs/go-ipld-cbor v0.3.0
-	github.com/ipfs/go-log/v2 v2.9.2
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/multiformats/go-multibase v0.3.0
 	github.com/multiformats/go-multicodec v0.10.0
@@ -67,6 +66,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
 	github.com/fil-forge/automobile v0.0.1 // indirect
+	github.com/fil-forge/forge/attestation v0.0.0 // indirect
 	github.com/fil-forge/libforge v0.0.0-20260807225550-3e6895b41be5 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
@@ -92,6 +92,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/boxo v0.41.0 // indirect
 	github.com/ipfs/go-ipld-format v0.6.4 // indirect
+	github.com/ipfs/go-log/v2 v2.9.2 // indirect
 	github.com/ipni/go-libipni v0.8.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
@@ -159,3 +160,5 @@ replace github.com/fil-forge/forge/internal => ../internal
 replace github.com/fil-forge/forge/indexing-service => ../indexing-service
 
 replace github.com/fil-forge/forge/attestation => ../attestation
+
+replace github.com/fil-forge/forge/forgeclient => ../forgeclient

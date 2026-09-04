@@ -8,7 +8,7 @@
 #         --target {prod|dev} .
 #
 # BUILD CONTEXT IS THE REPOSITORY ROOT. Every service reaches the shared
-# modules (protocol/, internal/, attestation/) — and some reach their siblings
+# modules (protocol/, internal/, attestation/, forgeclient/) — and some reach their siblings
 # (hilt uses smelt's stack harness in its integration tests, ingot uses the
 # indexer's query client) — through replace directives in its go.mod,
 # and a replace target outside the build context cannot be seen, so the
@@ -61,6 +61,7 @@ WORKDIR /src
 COPY protocol/go.mod protocol/go.sum ./protocol/
 COPY internal/go.mod internal/go.sum ./internal/
 COPY attestation/go.mod attestation/go.sum ./attestation/
+COPY forgeclient/go.mod forgeclient/go.sum ./forgeclient/
 COPY smelt/go.mod smelt/go.sum ./smelt/
 COPY indexing-service/go.mod indexing-service/go.sum ./indexing-service/
 COPY ${SERVICE}/go.mod ${SERVICE}/go.sum* ./${SERVICE}/

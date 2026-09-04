@@ -16,8 +16,9 @@ independent Go modules.
 | `indexing-service/` | `…/forge/indexing-service` | content-routing index (IPNI + UCAN content claims) |
 | `smelt/` | `…/forge/smelt` | the stack harness: boots the whole network in Docker; owns the e2e, S3 and compatibility suites |
 | `protocol/` | `…/forge/protocol` | the wire contract: every UCAN command binding (`commands/**`), `blobindex`, `receipt`, `retrieval`, and the `bytemap`/`digestutil` helpers they need. Depends only on ucantone and third-party modules |
-| `internal/` | `…/forge/internal` | helpers the services share that are not wire contract: `identity`, `jobqueue`, `piece`, `sigv4`, `s3perm`, `zapucan`, the `client/hilt` and `client/delegator` RPC clients, `pdpsigner`, `ipni/advertisement`. Importable only from this repository |
+| `internal/` | `…/forge/internal` | helpers the services share that are not wire contract: `identity`, `jobqueue`, `piece`, `sigv4`, `s3perm`, `zapucan`, `ucanexec`, the `client/hilt` and `client/delegator` RPC clients, `pdpsigner`, `ipni/advertisement`. Importable only from this repository |
 | `attestation/` | `…/forge/attestation` | the did:mailto attestation extension (`attestation`, `didmailto`, the `attest` command). Depends only on ucantone and multiformats |
+| `forgeclient/` | `…/forge/forgeclient` | the Forge protocol client an agent writes through (`/blob/add`, `/ucan/conclude`, `/index/add`, … against the upload service), its `tokenstore`, and the indexer-backed blob `locator`. ingot is its consumer |
 | `docker/` | — | the one `Dockerfile` every service image builds from |
 | `.github/` | — | CI (`ci.yml`), image publishing, releases, and the compatibility workflow |
 

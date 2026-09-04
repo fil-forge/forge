@@ -16,7 +16,7 @@ import (
 	"github.com/ipfs/go-cid"
 	mh "github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/forge/ingot/blockstore/locator"
+	"github.com/fil-forge/forge/forgeclient/locator"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 

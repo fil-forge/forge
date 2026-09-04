@@ -11,7 +11,7 @@ name: CI
 # Every module runs on every change. The unit tier used to be path-filtered
 # per service, which was sound while no service module imported another and
 # the shared surface lived in an external library. It stopped being sound
-# when the shared modules (protocol/, internal/, attestation/) and the
+# when the shared modules (protocol/, internal/, attestation/, forgeclient/) and the
 # service-to-service dependencies (ingot -> the indexer's query types,
 # hilt -> smelt's stack harness) moved
 # in-repo: a service's behaviour now depends on directories outside its own
@@ -63,6 +63,7 @@ jobs:
           - protocol
           - internal
           - attestation
+          - forgeclient
           - piri
           - hilt
           - sprue

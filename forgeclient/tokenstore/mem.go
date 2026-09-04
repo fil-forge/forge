@@ -1,4 +1,3 @@
-// Carried copy of github.com/fil-forge/guppy/pkg/tokenstore/mem.go.
 package tokenstore
 
 import (

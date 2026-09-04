@@ -18,8 +18,8 @@ import (
 	gocache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 
+	"github.com/fil-forge/forge/forgeclient"
 	"github.com/fil-forge/forge/ingot/blockstore"
-	"github.com/fil-forge/forge/ingot/forgeclient"
 	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 

@@ -121,16 +121,18 @@ Internal:
   path over cached delegations), plus `KeyProofs`/`DelegationCache` — per-
   access-key TTL caches of hilt-issued delegations that the uploader and the
   network read tier consume via `internal/reqscope`.
-- **`forgeclient/`** — carried-from-guppy sprue edge client: `/blob/add`
-  (with a deferrable conclude), `/ucan/conclude`, `/blob/abort`,
-  `/blob/remove`, `/index/add`, receipt polling. The `/access` login and
-  `/provider/add` flows are dormant (no CLI drives them).
+- **`forgeclient` (the repository's shared module, `../forgeclient`)** — the
+  Forge client ingot ships through: `/blob/add` (with a deferrable conclude),
+  `/ucan/conclude`, `/blob/abort`, `/blob/remove`, `/index/add`, receipt
+  polling; the `/access` login and `/provider/add` flows are dormant (no CLI
+  drives them). Its `tokenstore` (`tokens.cbor`; empty today, read only by
+  the dormant login paths) and `locator` (the indexer-backed blob locator;
+  compiles but is not injected) come with it. Not in this tree — change it
+  there.
 - **`revocation/`** — the Swarf firehose consumer (optional,
   `revocation_service_url`/`_did`): streams UCAN revocations and clears the
   affected access key's iam caches via `iam.Revoker`; resumes from the
   `registry.RevocationCursorStore` cursor (no cursor → subscribe from now).
-- **`tokenstore/`** — carried-from-guppy delegation store (`tokens.cbor`);
-  empty today, read only by the dormant login paths.
 - **`bucket/`** — the per-object model: `manifest.go` (`ObjectManifest`,
   `Body`), `leaf.go` (`ValueUnion`, `ObjectLeaf`, `VersionNode`),
   `chunker.go` (`SplitBody`, body readers), `cbor_gen.go`.
@@ -291,11 +293,10 @@ workspace checkout: `GOWORK=off goreleaser release --clean`.
 - **`GOWORK=off` for every *local* go command** (build/test/vet/run/tidy). The
   Docker and goreleaser builds intentionally omit it — their contexts have no
   `go.work` (see *Docker images & release*); don't re-add it there.
-- **No `fil-forge/sprue` or `fil-forge/guppy` imports** (cycle). The carried
-  copies — `forgeclient/`, `tokenstore/`, `blockstore/locator/`,
-  `internal/ucanexec/` — are deliberate duplicates of guppy/sprue code; keep them
-  in sync (header comments point at upstream). DESIGN_NOTES wants a shared
-  `forge-client` lib to remove them.
+- **No `fil-forge/sprue` or `fil-forge/guppy` imports** (cycle). The Forge
+  client, its token store and the blob locator come from the repository's
+  `forgeclient` module, the UCAN execute helper from `internal/ucanexec`;
+  change them there, not in a copy here.
 - **The write path holds `blockstore.Log`; production wires `logstore.Manager`**
   (one per-bucket `Store`). Reads carry no bucket context, so `Manager.Get`
   linear-scans open bucket stores — the known hot spot.
