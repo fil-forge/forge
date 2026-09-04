@@ -160,9 +160,213 @@ and independent of everything above.
   ("What a real migration would need") undersells the codegen gate, which
   partially exists for `commands`. Corrected above.
 
-## Recon: `delegator` and `piri-signing-service`
+## Recon: `delegator`
 
-Pending — two read-only recon passes are running in parallel (this
-document's structure follows the same pattern Experiment B used for the
-original five services: module shape, `libforge` dependency graph, seam
-candidates, Docker/CI fit). Appended below once both report.
+Read-only pass over `/home/user/fil-forge/delegator` (`main`), compared
+against forge's five existing services on this branch.
+
+**What it does.** The network's storage-provider onboarding gatekeeper: it
+validates a node's DID/endpoint/UCAN proofs and its on-chain contract
+approval, records registration in DynamoDB, and mints the UCAN delegation
+chains that let a registered node call `/claim/cache` on the indexing
+service and `/space/egress/track` on the egress tracker (`AGENTS.md:6-17`).
+
+**Module shape — a good fit.** One Go module, `go 1.27.0` — the same
+directive forge's five services and shared modules carry today (Experiment
+A's bump). ~2,248 lines of production Go across 14 files, ~1,005 lines of
+test (all in one `test/system_test.go`, no per-package unit tests) — smaller
+than `ingot`/`piri`/`smelt`, comparable to `hilt`/`sprue`. Uses `fx` and
+`echo`, already used by most existing services; `cobra`+`viper`, universal
+across all five. Its system test runs against an in-memory `mockStore` +
+`httptest`, no Docker dependency — a clean unit-tier fit, though there's no
+existing per-package test suite to model a `unit` CI job on the way the other
+five have.
+
+One real convention mismatch, cheap to fix: `main.go` sits at the module
+root importing a `cmd` package that is *not* `package main` (`main.go:1-13`);
+every forge service instead has `package main` inside `cmd/` itself. Forge's
+shared `docker/Dockerfile` already takes the main package as a build arg
+(default `./cmd`), so this needs a build-arg value, not a code change.
+
+**`libforge` coupling — small and contained.** Five `commands/**` packages
+(`commands/blob`, `commands/blob/replica`, `commands/claim`, `commands/pdp`,
+`commands/space/egress`), from exactly 3 files (2 production —
+`cmd/gen.go`, `internal/services/registrar/delegator.go` — 1 test). Also
+`libforge/identity` (5 files) and `libforge/ucan` — the `ucanlib` package
+Phase 3 wants renamed into `ucantone`, not moved to forge (1 file). All of
+this sits under `internal/`, so **no type-identity seam**: delegator's only
+externally-importable package, `client/`, exposes nothing but primitives and
+one `*ucantone/did.Document` — no `libforge/commands` type crosses its public
+API. Confirmed the practical consequence: rewriting delegator's imports to
+`forge/commands` would not break any other repo's compile the way it did for
+piri-signing-service.
+
+**The one finding that actually matters for how this gets done.** `piri`
+already pins `github.com/fil-forge/delegator` as a real Go module dependency
+(`piri/go.mod:12`) and imports `delegator/client` in
+`piri/cmd/cli/setup/register.go:36` (`delgclient.New`, `.IsRegisteredRequest`,
+`.RegisterRequest`). No other forge service references delegator at all, and
+delegator depends on none of the five. So today the edge is one-directional
+and external: piri → delegator. **Folding delegator in as `forge/delegator`
+while piri keeps importing its `client` package makes piri the monorepo's
+first service that imports another service** — directly against `ci.yml`'s
+own stated invariant, `# No service module imports another` (`ci.yml:31`).
+Two ways to keep that invariant: keep piri's import pointed at the external,
+still-published `github.com/fil-forge/delegator` module (which undercuts part
+of the reason to fold delegator in at all), or carve `delegator/client` out
+as a third shared module next to `commands/`/`internal/` that both `piri`
+and `forge/delegator` import, neither importing the other. This needs a
+decision before writing the module-move code, not after.
+
+**Docker/CI/deploy — the most work of anything found so far.** Delegator has
+its own Dockerfile (alpine runtime, not forge's debian-slim; no `ARG
+SERVICE`; `CMD` baked in; binary at `/usr/bin/registrar` — a naming split
+between "registrar" (binary/CLI/env prefix) and "delegator" (module/repo)
+that its own `AGENTS.md:188-189` already calls a quirk). Its CI is ten
+separate workflow files built on `ipdxco/unified-github-workflows` reusable
+workflows — a completely different release mechanism from forge's home-grown
+`release.yml`/GoReleaser-with-an-explicit-config pattern (delegator has no
+`.goreleaser.yaml` anywhere in its history; it relies on GoReleaser's
+defaults). Most consequentially: delegator has **real, working deploy
+automation** — `deploy/app` + `deploy/shared` (storoku ECS Terraform
+modules), a `.storoku.json` app manifest, applied against three live
+environments (`warm-staging`, `forge-production`, `forge-test`), plus a
+cross-repo GitHub App dispatch that notifies an `infra-central` repo on every
+image bump (`README.md:239-251`). **None of forge's five services have any
+deploy automation at all** — nothing to extend, nothing to model this on.
+Folding delegator in means the monorepo inherits its first real deploy
+pipeline, not just a fourth build.
+
+No forked/duplicated code found (no "carried from"/"copy of"/"keep in sync"
+comments anywhere) — delegator is not another `ingot/forgeclient`-shaped
+problem.
+
+## Recon: `piri-signing-service`
+
+Read-only pass over `/home/user/fil-forge/piri-signing-service` (`main`,
+`8472ad9`), cross-checked against `forge/piri` on this branch.
+
+**What it does.** A signing oracle: it wraps a cold wallet and produces
+EIP-712 signatures for PDP operations (create/delete data set, add/remove
+scheduled pieces), so piri storage nodes ask it to co-sign instead of
+holding the Storacha operator's private key themselves (`AGENTS.md:8-12`).
+
+**Module shape.** One Go module, `go 1.25.3` — the oldest directive of
+anything in scope (forge's five services and shared modules are `go 1.27.0`
+on this branch; the live per-service repos' own `main` are 1.27.0 except
+`smelt` at 1.25.9). `main.go` sits at the module root with no `cmd/`
+directory at all — an even flatter layout than delegator's, same fix (build
+arg or relocate). Small: 1,572 non-test lines across 15 files, 1,194 test —
+comparable to one mid-sized package inside `piri`, not a whole service.
+
+**`libforge` coupling — narrow and complete.** Exactly two `commands/**`
+packages: `commands/pdp/sign` (8 files — touches nearly every non-legacy,
+non-config file in the service) and `commands/access` (3 files). Plus
+`libforge/identity` (`main.go`, `pkg/server/server.go`) — which is *not* part
+of forge's `internal/` module and is already imported directly from libforge
+by all five existing services too (`smelt/pkg/stack/proofs.go`,
+`smelt/pkg/generate/keys.go`, four sites in `sprue`, `hilt/integration/network.go`),
+so this needs no new handling, it's already the norm. No `did`, `attestation`,
+`receipt`, `testutil`, `ucan` (ucanlib), `blobindex`, or `piece` imports.
+
+**The `SignAddPieces`/`PieceProofs` seam — confirmed exactly as predicted,
+nothing more complicated underneath.** `pkg/types.SigningService.SignAddPieces`
+(`pkg/types/types.go:71-82`) is the *only* method, on the *only* interface,
+anywhere in the service whose signature carries a `libforge/commands/**`
+type (`[]sign.PieceProofs`); every other method — including all of the
+sibling `OperationSigner` interface — takes only primitives and
+`eip712.MetadataEntry`. Three implementations echo the same parameter
+(`pkg/client/client.go:115`, `pkg/inprocess/signer.go:50`, and piri's own
+`proofServiceSigner.SignAddPieces` at
+`forge/piri/pkg/service/signer/proofservicesigner.go:88`). The workaround
+already on this branch — `roots_add.go:14` and `proofservicesigner.go:10-12`
+import `libforge/commands/pdp/sign` under an alias, specifically to match
+this one interface, while every other `commands/pdp/sign` use in piri is the
+in-repo `forge/commands/pdp/sign` — is confined to exactly those two files.
+**If `piri-signing-service` joins the monorepo and 10 of its files
+(`pkg/types/types.go`, `pkg/server/server.go`, `pkg/server/handlers/{sign,sign_test,access_grant,access_grant_test}.go`,
+`pkg/inprocess/signer.go`, `pkg/client/{client,client_test}.go`) get their
+import path switched to `forge/commands/**`, the seam disappears outright** —
+`PieceProofs` becomes one type again, and both alias workarounds in `piri`
+can be deleted. No other type-identity seam exists anywhere in the service
+(checked every exported signature touching a libforge type). Only `piri`
+depends on it as a Go module — no other fil-forge repo does.
+
+**Docker/CI — the same shape as delegator, a second data point that this is
+a real pattern, not a one-off.** Own Dockerfile (repo-root context, no
+`MAIN_PKG`/`ARG SERVICE` — same mismatch class as delegator's). Nine of its
+own workflow files, several wrapping the same `ipdxco/unified-github-workflows`
+reusable workflows delegator uses (`go-check.yml`, `go-test.yml`,
+`release-check.yml`, `releaser.yml`, `tagpush.yml`) — this is evidently a
+standing fil-forge convention for standalone services, not specific to
+either repo. `version.json` present, same shape forge's `release.yml`
+expects. Its own storoku Terraform pipeline (`deploy/app`, `deploy/shared`,
+`.storoku.json`) applies to `warm-staging`/`forge-production`/`forge-test` —
+again, no equivalent for any of forge's five in-monorepo services.
+`publish-ghcr.yml` also dispatches a `bump-deployed-image` event to a
+`fil-forge/infra-central` repo on every push to `main`, the same cross-repo
+mechanism delegator has.
+
+**Concrete findings that change scope, beyond the seam:**
+- **`forge/piri`'s pin on `piri-signing-service` is stale** — `2026-06-19`
+  pseudo-version vs. the local clone's `2026-08-22` HEAD. Folding it in as
+  source picks up two months of upstream change atomically; that range
+  hasn't been diffed and should be, separately from the seam fix.
+- **`smelt` already half-expects this service to be in-repo.**
+  `smelt/CLAUDE.md`'s workspace table already lists `piri-signing-service` →
+  service name `signing-service` → container binary `/usr/bin/signer`, so
+  `SMELT_WORKSPACE=1` local-build tooling would pick it up the moment it's
+  added to `go.work`. `smelt/systems/signing-service/compose.yml` currently
+  pulls the floating `ghcr.io/fil-forge/piri-signing-service:main` — one of
+  the four floating stack components S15/latent-bug-14 already flags as a
+  source of compat-run irreproducibility.
+- **Security-relevant, flagged unprompted per this org's key-handling
+  rules**: this service holds a signing key (`config.go`'s
+  `signing_key`/`signing_key_path`/`signing_keystore_path`) that authorizes
+  on-chain PDP transactions via EIP-712 signatures. It already follows good
+  practice (external secret, `.storoku.json` marks it `external: true`,
+  never logged) — noted here so whoever reviews the actual migration treats
+  this as key-custody code, not ordinary service code, since neither this
+  POC nor the original plan called that out separately.
+- **Legacy, unauthenticated `/sign/*` routes ship alongside the UCAN path**;
+  the service's own `AGENTS.md` says assume deployed piri nodes may still use
+  them. Not a reason to hold up the move, but not dead code to delete either.
+- Heavy transitive dependencies for a ~2.8k-line service (`gnark-crypto`,
+  `go-eth-kzg`, `blst`, a zkVM runtime, all via `go-ethereum`) — no action
+  needed, but the post-move `go mod tidy` diff (`ci.yml`'s existing check)
+  is worth reading, not just trusting to pass.
+- Needs no `internal/` module — only a `commands/` replace, unlike `piri`
+  itself (which also needs `internal/` for `sigv4`/`s3perm`/etc.).
+
+## What this recon changes about readiness
+
+Both services are a **clean fold-in** for their `libforge` coupling — smaller
+and more contained than piri's own two seams, and both fully resolve (no
+residual workaround) once the service is in-repo and its imports are
+rewritten. Neither depends on any of forge's five services as a Go module.
+The `piri`↔`delegator` edge is the one structural surprise: unlike
+`piri-signing-service` (only `piri` depends on it, and that dependency
+disappears once both share `forge/commands`), delegator is depended on by
+`piri` as a **service**, through `delegator/client` — folding both in without
+a decision here creates the monorepo's first service-imports-a-service edge,
+against `ci.yml`'s own stated invariant.
+
+New, concrete decisions this recon surfaced, none blocking a start but each
+worth resolving before or during the actual module moves:
+
+1. Keep `piri`'s import of `delegator/client` pointed at the external,
+   published `github.com/fil-forge/delegator` module, or carve `client/` out
+   as a third shared module (next to `commands/`, `internal/`) that both
+   `piri` and `forge/delegator` import without importing each other.
+2. Diff `piri-signing-service`'s two months of undiffed upstream change
+   before merging it as source, separately from the seam fix.
+3. Decide whether either service's storoku Terraform deploy pipeline comes
+   into the monorepo as-is, gets replaced by whatever mechanism forge's five
+   services eventually use (none exists today), or stays external and just
+   gets pointed at monorepo-built images.
+4. Both services' entry points (`main.go` at module root, no `cmd/`) need
+   either a build-arg override or a small relocation to fit forge's shared
+   Dockerfile — mechanical, not a design question.
+5. Both bring their own ten-workflow, `ipdxco/unified-github-workflows`-based
+   CI, entirely separate from forge's home-grown `ci.yml`/`release.yml` —
+   reconciling or replacing this is real work, not yet scoped in detail.
