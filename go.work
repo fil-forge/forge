@@ -1,0 +1,11 @@
+go 1.27.0
+
+use (
+	./delegator
+	./hilt
+	./ingot
+	./piri
+	./piri-signing-service
+	./smelt
+	./sprue
+)
