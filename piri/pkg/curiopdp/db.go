@@ -5,8 +5,8 @@ import (
 
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/curiopdp/schema"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/curiopdp/schema"
 )
 
 // ProvideHarmonyDB builds a harmonydb.DB (harmonyquery on Postgres) that applies

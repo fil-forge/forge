@@ -7,7 +7,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/multiformats/go-multiaddr"
 
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 type options struct {

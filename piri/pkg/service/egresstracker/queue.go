@@ -5,7 +5,7 @@ package egresstracker
 import (
 	"context"
 
-	"github.com/fil-forge/piri/lib/jobqueue"
+	"github.com/fil-forge/forge/piri/lib/jobqueue"
 	"github.com/ipfs/go-cid"
 )
 

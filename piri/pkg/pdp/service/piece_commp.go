@@ -13,7 +13,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/yugabyte/pgx/v5"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 func (p *PDPService) CalculateCommP(ctx context.Context, blob multihash.Multihash) (types.CalculateCommPResponse, error) {

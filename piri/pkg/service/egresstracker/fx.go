@@ -15,14 +15,14 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/lib/jobqueue"
-	"github.com/fil-forge/piri/lib/jobqueue/dialect"
-	"github.com/fil-forge/piri/lib/jobqueue/serializer"
-	"github.com/fil-forge/piri/pkg/client/receipts"
-	"github.com/fil-forge/piri/pkg/config/app"
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/store/consolidationstore"
-	"github.com/fil-forge/piri/pkg/store/local/retrievaljournal"
+	"github.com/fil-forge/forge/piri/lib/jobqueue"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/dialect"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/serializer"
+	"github.com/fil-forge/forge/piri/pkg/client/receipts"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/local/retrievaljournal"
 )
 
 var log = logging.Logger("egresstracker")

@@ -12,11 +12,11 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	fxlib "go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/blob"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/blob"
 )
 
 var log = logging.Logger("ucanhandlers/content")

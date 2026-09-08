@@ -30,8 +30,8 @@ import (
 	"github.com/fil-forge/libforge/commands/claim"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	"github.com/fil-forge/piri/lib"
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/lib"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 // TODO(forrest)[ucan1]: thread safety should be an attribute of the publisher package. Not this ad-hoc shit.

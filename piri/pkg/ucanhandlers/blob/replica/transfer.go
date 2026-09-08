@@ -42,12 +42,12 @@ import (
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/fil-forge/ucantone/ucan/receipt"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
-	"github.com/fil-forge/piri/pkg/service/publisher"
-	blobhandler "github.com/fil-forge/piri/pkg/service/storage/handlers/blob"
-	"github.com/fil-forge/piri/pkg/store/delegationstore"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
+	"github.com/fil-forge/forge/piri/pkg/service/publisher"
+	blobhandler "github.com/fil-forge/forge/piri/pkg/service/storage/handlers/blob"
+	"github.com/fil-forge/forge/piri/pkg/store/delegationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 var log = logging.Logger("storage/handlers/replica")

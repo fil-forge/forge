@@ -13,13 +13,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/fil-forge/piri/cmd/cli/client"
-	"github.com/fil-forge/piri/cmd/cli/identity"
-	"github.com/fil-forge/piri/cmd/cli/serve"
-	"github.com/fil-forge/piri/cmd/cli/setup"
-	"github.com/fil-forge/piri/cmd/cli/status"
-	"github.com/fil-forge/piri/cmd/cli/wallet"
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/cmd/cli/client"
+	"github.com/fil-forge/forge/piri/cmd/cli/identity"
+	"github.com/fil-forge/forge/piri/cmd/cli/serve"
+	"github.com/fil-forge/forge/piri/cmd/cli/setup"
+	"github.com/fil-forge/forge/piri/cmd/cli/status"
+	"github.com/fil-forge/forge/piri/cmd/cli/wallet"
+	"github.com/fil-forge/forge/piri/pkg/build"
 )
 
 func ExecuteContext(ctx context.Context) {

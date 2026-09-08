@@ -3,10 +3,10 @@ package blob
 import (
 	"go.uber.org/fx"
 
-	pdptypes "github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
+	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
 )
 
 // Module wires the blob/* capabilities. fx.As re-exposes the broad

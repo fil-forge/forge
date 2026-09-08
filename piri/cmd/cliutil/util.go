@@ -7,7 +7,7 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	"github.com/labstack/gommon/color"
 
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/build"
 )
 
 func PrintHero(w io.Writer, id did.DID) {

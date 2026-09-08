@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/build"
 )
 
 var versionCmd = &cobra.Command{

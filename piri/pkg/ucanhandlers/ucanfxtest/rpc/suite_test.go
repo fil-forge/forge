@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/fx"
 
-	piritestutil "github.com/fil-forge/piri/pkg/internal/testutil"
-	"github.com/fil-forge/piri/pkg/internal/testutil/pdpfake"
-	"github.com/fil-forge/piri/pkg/service/publisher"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/invocationstore"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/ucanfxtest/base"
+	piritestutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil/pdpfake"
+	"github.com/fil-forge/forge/piri/pkg/service/publisher"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/invocationstore"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/ucanfxtest/base"
 )
 
 // RPCSuite covers capabilities served on the body-CAR RPC transport

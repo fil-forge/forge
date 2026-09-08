@@ -7,5 +7,5 @@ import (
 
 var (
 	log    = logging.Logger("ucan/access/grant")
-	tracer = otel.Tracer("github.com/fil-forge/piri/pkg/ucanhandlers/access")
+	tracer = otel.Tracer("github.com/fil-forge/forge/piri/pkg/ucanhandlers/access")
 )

@@ -7,7 +7,7 @@ import (
 
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/fil-forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config"
 )
 
 var log = logging.Logger("config/dynamic")

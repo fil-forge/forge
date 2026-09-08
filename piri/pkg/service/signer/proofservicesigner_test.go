@@ -12,7 +12,7 @@ import (
 	"github.com/fil-forge/filecoin-services/go/eip712"
 	"github.com/fil-forge/libforge/commands/access"
 	libforgesign "github.com/fil-forge/libforge/commands/pdp/sign"
-	signerclient "github.com/fil-forge/piri-signing-service/pkg/client"
+	signerclient "github.com/fil-forge/forge/piri-signing-service/pkg/client"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/server"
@@ -23,8 +23,8 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/service/proofs"
-	piriSigner "github.com/fil-forge/piri/pkg/service/signer"
+	"github.com/fil-forge/forge/piri/pkg/service/proofs"
+	piriSigner "github.com/fil-forge/forge/piri/pkg/service/signer"
 )
 
 func TestProofServiceSigner(t *testing.T) {

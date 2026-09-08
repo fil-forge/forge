@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
 )
 
 // DefaultMinimumEgressBatchSize is the minimum allowed egress tracker batch size (10 MiB).

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 func (p *PDPService) AllocatePiece(ctx context.Context, allocation types.PieceAllocation) (res *types.AllocatedPiece, retErr error) {

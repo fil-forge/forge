@@ -10,10 +10,10 @@ package policy
 import (
 	"fmt"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/config/dynamic"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/dynamic"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
 )
 
 // New registers the aggregation threshold with the dynamic registry and

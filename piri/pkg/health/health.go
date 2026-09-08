@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/build"
 )
 
 // ServerMode indicates the operational mode of the server

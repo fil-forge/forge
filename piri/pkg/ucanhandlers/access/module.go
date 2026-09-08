@@ -3,7 +3,7 @@ package access
 import (
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
 )
 
 // Module wires the access/grant capability into the body-CAR RPC server.

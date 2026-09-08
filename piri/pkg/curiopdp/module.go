@@ -18,10 +18,10 @@ import (
 	"github.com/filecoin-project/curio/tasks/pay"
 	"github.com/filecoin-project/curio/tasks/pdpv0"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/pdp/service"
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/pdp/service"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
 )
 
 // taskGroup is the fx group collecting every harmonytask.TaskInterface the engine runs.

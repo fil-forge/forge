@@ -17,12 +17,12 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 
-	appconfig "github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/fx/app"
-	piritestutil "github.com/fil-forge/piri/pkg/internal/testutil"
-	"github.com/fil-forge/piri/pkg/internal/testutil/pdpfake"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore/allocation"
+	appconfig "github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/fx/app"
+	piritestutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil/pdpfake"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore/allocation"
 )
 
 // TestFXReplicaAllocateTransfer validates the full replica allocation flow in the UCAN server,

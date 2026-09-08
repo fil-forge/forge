@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/config"
-	appcfg "github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	appcfg "github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 // setupViperDefaults sets up viper with default values for tests.

@@ -17,10 +17,10 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	piritestutil "github.com/fil-forge/piri/pkg/internal/testutil"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/objectstore/flatfs"
-	minio_store "github.com/fil-forge/piri/pkg/store/objectstore/minio"
+	piritestutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/flatfs"
+	minio_store "github.com/fil-forge/forge/piri/pkg/store/objectstore/minio"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )

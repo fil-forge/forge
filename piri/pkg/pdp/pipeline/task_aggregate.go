@@ -14,9 +14,9 @@ import (
 
 	libpiece "github.com/fil-forge/libforge/piece"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator"
-	aggtypes "github.com/fil-forge/piri/pkg/pdp/aggregation/types"
-	"github.com/fil-forge/piri/pkg/pdp/promise"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
+	aggtypes "github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/promise"
 )
 
 const AggregateTaskName = "PDPAggregate"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/filecoin-project/curio/pdp/contract"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 // RegisterProvider registers this node as a service provider by adopting Curio's

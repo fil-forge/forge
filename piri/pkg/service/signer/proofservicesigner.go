@@ -8,14 +8,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fil-forge/filecoin-services/go/eip712"
 	"github.com/fil-forge/libforge/commands/pdp/sign"
-	signerclient "github.com/fil-forge/piri-signing-service/pkg/client"
-	signertypes "github.com/fil-forge/piri-signing-service/pkg/types"
+	signerclient "github.com/fil-forge/forge/piri-signing-service/pkg/client"
+	signertypes "github.com/fil-forge/forge/piri-signing-service/pkg/types"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	"github.com/fil-forge/piri/pkg/service/proofs"
+	"github.com/fil-forge/forge/piri/pkg/service/proofs"
 )
 
 // proofServiceSigner wraps a remote signing-service client and obtains an

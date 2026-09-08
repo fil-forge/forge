@@ -21,9 +21,9 @@ import (
 	"github.com/fil-forge/ucantone/ucan/promise"
 	fxlib "go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/service/replicator"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
-	blob2 "github.com/fil-forge/piri/pkg/ucanhandlers/blob"
+	"github.com/fil-forge/forge/piri/pkg/service/replicator"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
+	blob2 "github.com/fil-forge/forge/piri/pkg/ucanhandlers/blob"
 )
 
 // transferTimeout caps how long we allow ourselves to transfer the blob

@@ -9,10 +9,10 @@ import (
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
-	"github.com/fil-forge/piri/pkg/pdp/service"
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/pdp/service"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 var log = logging.Logger("pdp/api")

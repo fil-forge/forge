@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fil-forge/filecoin-services/go/eip712"
-	signer "github.com/fil-forge/piri-signing-service/pkg/types"
+	signer "github.com/fil-forge/forge/piri-signing-service/pkg/types"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/lotus/api"
@@ -21,15 +21,15 @@ import (
 	"github.com/filecoin-project/curio/lib/ethchain"
 	"github.com/filecoin-project/curio/tasks/message"
 
-	appconfig "github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
-	"github.com/fil-forge/piri/pkg/pdp/smartcontracts"
-	"github.com/fil-forge/piri/pkg/pdp/tasks"
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	appconfig "github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/pdp/smartcontracts"
+	"github.com/fil-forge/forge/piri/pkg/pdp/tasks"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 var log = logging.Logger("pdp/service")

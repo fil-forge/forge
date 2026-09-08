@@ -1,4 +1,4 @@
-module github.com/fil-forge/piri
+module github.com/fil-forge/forge/piri
 
 go 1.27.0
 
@@ -9,11 +9,11 @@ require (
 	github.com/deckarep/golang-set/v2 v2.9.0
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/ethereum/go-ethereum v1.17.5
-	github.com/fil-forge/delegator v0.0.0-20260814010356-6b1794dbbab9
 	github.com/fil-forge/filecoin-services/go v0.0.0-20260507172456-36ebe4467390
+	github.com/fil-forge/forge/delegator v0.0.0
+	github.com/fil-forge/forge/piri-signing-service v0.0.0
 	github.com/fil-forge/go-ipni-tools v0.0.0-20260820150418-78ca0c16834d
 	github.com/fil-forge/libforge v0.0.0-20260904125112-81372e7200bf
-	github.com/fil-forge/piri-signing-service v0.0.0-20260801143551-d7c06ad1d899
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/filecoin-project/curio v1.28.3-0.20260717015646-38ca280c43a2
 	github.com/filecoin-project/go-commp-utils/nonffi v0.0.0-20240802040721-2a04ffc8ffe8
@@ -333,3 +333,7 @@ require (
 )
 
 replace google.golang.org/genproto => google.golang.org/genproto v0.0.0-20240617180043-68d350f18fd4
+
+replace github.com/fil-forge/forge/delegator => ../delegator
+
+replace github.com/fil-forge/forge/piri-signing-service => ../piri-signing-service

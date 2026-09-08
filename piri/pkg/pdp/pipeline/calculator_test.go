@@ -11,7 +11,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil"
 )
 
 // fakeAdder wires a CommPTask's promise to a synchronous AddTask stand-in:

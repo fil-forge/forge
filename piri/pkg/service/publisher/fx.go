@@ -7,8 +7,8 @@ import (
 	"github.com/fil-forge/libforge/identity"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
 )
 
 var Module = fx.Module("publisher",

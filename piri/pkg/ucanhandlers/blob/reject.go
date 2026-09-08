@@ -17,10 +17,10 @@ import (
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/server"
 
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore/acceptance"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore/acceptance"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
 )
 
 // RejectDeps is the dependency set populated by fx for the Reject handler.

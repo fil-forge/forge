@@ -22,14 +22,14 @@ import (
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/presets"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore/allocation"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/presets"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore/allocation"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
 )
 
 var log = logging.Logger("storage/handlers/blob")

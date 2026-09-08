@@ -6,9 +6,9 @@ import (
 	"github.com/fil-forge/filecoin-services/go/eip712"
 	"go.uber.org/fx"
 
-	signerimpl "github.com/fil-forge/piri-signing-service/pkg/inprocess"
-	signingservice "github.com/fil-forge/piri-signing-service/pkg/signer"
-	signertypes "github.com/fil-forge/piri-signing-service/pkg/types"
+	signerimpl "github.com/fil-forge/forge/piri-signing-service/pkg/inprocess"
+	signingservice "github.com/fil-forge/forge/piri-signing-service/pkg/signer"
+	signertypes "github.com/fil-forge/forge/piri-signing-service/pkg/types"
 
 	// curio infra
 	"github.com/filecoin-project/curio/harmony/harmonydb"
@@ -16,19 +16,19 @@ import (
 	"github.com/filecoin-project/curio/lib/ethchain"
 	"github.com/filecoin-project/curio/tasks/message"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	echofx "github.com/fil-forge/piri/pkg/fx/echo"
-	"github.com/fil-forge/piri/pkg/pdp/httpapi/server"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
-	"github.com/fil-forge/piri/pkg/pdp/service"
-	"github.com/fil-forge/piri/pkg/pdp/smartcontracts"
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/service/proofs"
-	"github.com/fil-forge/piri/pkg/service/signer"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	echofx "github.com/fil-forge/forge/piri/pkg/fx/echo"
+	"github.com/fil-forge/forge/piri/pkg/pdp/httpapi/server"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/pdp/service"
+	"github.com/fil-forge/forge/piri/pkg/pdp/smartcontracts"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/service/proofs"
+	"github.com/fil-forge/forge/piri/pkg/service/signer"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 var Module = fx.Module("pdp-service",

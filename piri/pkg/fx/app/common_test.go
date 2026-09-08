@@ -5,12 +5,12 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/config/dynamic"
-	fxapp "github.com/fil-forge/piri/pkg/fx/app"
-	"github.com/fil-forge/piri/pkg/internal/testutil"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/dynamic"
+	fxapp "github.com/fil-forge/forge/piri/pkg/fx/app"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

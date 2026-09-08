@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 type UCANServerConfig struct {

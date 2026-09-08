@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
 	"github.com/multiformats/go-multihash"
 )
 

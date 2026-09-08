@@ -6,11 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/config/dynamic"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator/policy"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/dynamic"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator/policy"
 )
 
 func TestNew_ZeroConfigUsesDefault(t *testing.T) {

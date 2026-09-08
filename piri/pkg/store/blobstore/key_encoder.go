@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/fil-forge/libforge/digestutil"
-	"github.com/fil-forge/piri/pkg/store/objectstore/flatfs"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/flatfs"
 	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multihash"
 )

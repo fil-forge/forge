@@ -12,14 +12,14 @@ import (
 	"github.com/ipfs/go-datastore/sync"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
-	"github.com/fil-forge/piri/pkg/store/consolidationstore"
-	"github.com/fil-forge/piri/pkg/store/invocationstore"
-	"github.com/fil-forge/piri/pkg/store/local/keystore"
-	"github.com/fil-forge/piri/pkg/store/local/retrievaljournal"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/invocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/local/keystore"
+	"github.com/fil-forge/forge/piri/pkg/store/local/retrievaljournal"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 var Module = fx.Module("memory-store",

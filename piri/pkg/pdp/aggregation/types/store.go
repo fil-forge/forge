@@ -7,7 +7,7 @@ import (
 	"github.com/ipfs/go-datastore/namespace"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/internal/ipldstore"
+	"github.com/fil-forge/forge/piri/internal/ipldstore"
 )
 
 type Store ipldstore.KVStore[cid.Cid, Aggregate]

@@ -17,9 +17,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	fxlib "go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
 )
 
 // InvalidResourceErrorName is the name given to an error where the resource did

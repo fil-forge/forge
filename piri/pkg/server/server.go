@@ -8,7 +8,7 @@ import (
 
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/fil-forge/piri/pkg/build"
+	"github.com/fil-forge/forge/piri/pkg/build"
 	"github.com/fil-forge/ucantone/ucan"
 )
 
@@ -30,7 +30,7 @@ func NewHandler(id ucan.Issuer) http.Handler {
 		ID: id.DID().String(),
 		Build: BuildInfo{
 			Version: build.Version,
-			Repo:    "https://github.com/fil-forge/piri",
+			Repo:    "https://github.com/fil-forge/forge/piri",
 		},
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +46,7 @@ func NewHandler(id ucan.Issuer) http.Handler {
 		} else {
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.Write([]byte(fmt.Sprintf("🔥 piri %s\n", info.Build.Version)))
-			w.Write([]byte("- https://github.com/fil-forge/piri\n"))
+			w.Write([]byte("- https://github.com/fil-forge/forge/piri\n"))
 			w.Write([]byte(fmt.Sprintf("- %s", info.ID)))
 		}
 	})

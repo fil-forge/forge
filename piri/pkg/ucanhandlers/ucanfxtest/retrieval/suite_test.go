@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/fx"
 
-	piritestutil "github.com/fil-forge/piri/pkg/internal/testutil"
-	"github.com/fil-forge/piri/pkg/internal/testutil/pdpfake"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/ucanhandlers/ucanfxtest/base"
+	piritestutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil/pdpfake"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers/ucanfxtest/base"
 )
 
 // RetrievalSuite covers capabilities served on the header-container

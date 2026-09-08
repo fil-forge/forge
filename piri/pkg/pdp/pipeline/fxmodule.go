@@ -4,11 +4,11 @@ import (
 	"github.com/filecoin-project/curio/harmony/harmonytask"
 	"go.uber.org/fx"
 
-	aggregatorpolicy "github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator/policy"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/manager"
-	aggtypes "github.com/fil-forge/piri/pkg/pdp/aggregation/types"
-	"github.com/fil-forge/piri/pkg/pdp/service"
+	aggregatorpolicy "github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator/policy"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/manager"
+	aggtypes "github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/service"
 )
 
 // Module wires the aggregation pipeline tasks into the curiopdp harmonytask

@@ -6,8 +6,8 @@ package replicator
 import (
 	"context"
 
-	"github.com/fil-forge/piri/lib/jobqueue"
-	replicahandler "github.com/fil-forge/piri/pkg/service/storage/handlers/replica"
+	"github.com/fil-forge/forge/piri/lib/jobqueue"
+	replicahandler "github.com/fil-forge/forge/piri/pkg/service/storage/handlers/replica"
 )
 
 type Replicator interface {

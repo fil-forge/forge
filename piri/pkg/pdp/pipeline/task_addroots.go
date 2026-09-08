@@ -12,10 +12,10 @@ import (
 	"github.com/filecoin-project/curio/harmony/taskhelp"
 	"github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/manager"
-	aggtypes "github.com/fil-forge/piri/pkg/pdp/aggregation/types"
-	"github.com/fil-forge/piri/pkg/pdp/promise"
-	pdptypes "github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/manager"
+	aggtypes "github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/promise"
+	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 const AddRootsTaskName = "PDPAddRoots"

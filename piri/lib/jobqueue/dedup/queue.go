@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fil-forge/piri/lib/jobqueue/dialect"
-	internalsql "github.com/fil-forge/piri/lib/jobqueue/internal/sql"
-	"github.com/fil-forge/piri/lib/jobqueue/logger"
-	"github.com/fil-forge/piri/lib/jobqueue/queue"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/dialect"
+	internalsql "github.com/fil-forge/forge/piri/lib/jobqueue/internal/sql"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/logger"
+	"github.com/fil-forge/forge/piri/lib/jobqueue/queue"
 )
 
 //go:embed schema.sqlite.sql

@@ -6,7 +6,7 @@ import (
 
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 func (p *PDPService) ParkPiece(ctx context.Context, params types.ParkPieceRequest) error {

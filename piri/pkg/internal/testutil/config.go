@@ -11,7 +11,7 @@ import (
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
 )
 
 // TestConfigOption is a function that modifies a test config

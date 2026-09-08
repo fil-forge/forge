@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/config/dynamic"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/dynamic"
 )
 
 // ConfigProvider provides dynamic configuration for the Manager.

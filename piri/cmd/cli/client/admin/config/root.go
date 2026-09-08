@@ -5,9 +5,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/fil-forge/piri/pkg/admin/httpapi"
-	"github.com/fil-forge/piri/pkg/admin/httpapi/client"
-	"github.com/fil-forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/admin/httpapi"
+	"github.com/fil-forge/forge/piri/pkg/admin/httpapi/client"
+	"github.com/fil-forge/forge/piri/pkg/config"
 )
 
 var Cmd = &cobra.Command{

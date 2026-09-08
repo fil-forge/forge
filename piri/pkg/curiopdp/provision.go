@@ -9,8 +9,8 @@ import (
 
 	"github.com/filecoin-project/curio/harmony/harmonydb"
 
-	appconfig "github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/wallet"
+	appconfig "github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/wallet"
 )
 
 var log = logging.Logger("curiopdp")

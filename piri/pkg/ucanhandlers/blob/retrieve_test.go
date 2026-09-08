@@ -13,9 +13,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/pdp/piece"
-	"github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piece"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
 )
 
 // Unit tests for the shared Retrieve function — exercises piece-store

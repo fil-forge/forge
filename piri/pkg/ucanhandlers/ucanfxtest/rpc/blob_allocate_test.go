@@ -7,7 +7,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	blobhandler "github.com/fil-forge/piri/pkg/ucanhandlers/blob"
+	blobhandler "github.com/fil-forge/forge/piri/pkg/ucanhandlers/blob"
 )
 
 // /blob/allocate is now provider-scoped: the invocation subject is the storage

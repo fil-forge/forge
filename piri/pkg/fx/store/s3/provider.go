@@ -7,14 +7,14 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/allocationstore"
-	"github.com/fil-forge/piri/pkg/store/blobstore"
-	"github.com/fil-forge/piri/pkg/store/consolidationstore"
-	"github.com/fil-forge/piri/pkg/store/invocationstore"
-	minio_store "github.com/fil-forge/piri/pkg/store/objectstore/minio"
-	"github.com/fil-forge/piri/pkg/store/receiptstore"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/allocationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/blobstore"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/invocationstore"
+	minio_store "github.com/fil-forge/forge/piri/pkg/store/objectstore/minio"
+	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
 )
 
 // Module provides stores backed by S3-compatible storage.

@@ -26,13 +26,13 @@ import (
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/fil-forge/ucantone/ucan/promise"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
-	pdptypes "github.com/fil-forge/piri/pkg/pdp/types"
-	"github.com/fil-forge/piri/pkg/service/publisher"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore"
-	"github.com/fil-forge/piri/pkg/store/acceptancestore/acceptance"
-	"github.com/fil-forge/piri/pkg/store/invocationstore"
-	"github.com/fil-forge/piri/pkg/ucanhandlers"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
+	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/service/publisher"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore"
+	"github.com/fil-forge/forge/piri/pkg/store/acceptancestore/acceptance"
+	"github.com/fil-forge/forge/piri/pkg/store/invocationstore"
+	"github.com/fil-forge/forge/piri/pkg/ucanhandlers"
 )
 
 // InternalErrorName is the stable receipt-failure name for invariant

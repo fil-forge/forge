@@ -8,8 +8,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/pdp/httpapi"
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/httpapi"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 // handlePreparePiece -> POST /pdp/piece

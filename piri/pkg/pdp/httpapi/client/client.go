@@ -22,9 +22,9 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/pdp/httpapi"
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/pdp/httpapi"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 var log = logging.Logger("pdp/client")

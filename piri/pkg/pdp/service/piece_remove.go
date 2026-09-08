@@ -10,7 +10,7 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/yugabyte/pgx/v5"
 
-	"github.com/fil-forge/piri/pkg/store"
+	"github.com/fil-forge/forge/piri/pkg/store"
 )
 
 // RemovePiece records a request to release a blob's bytes. It never deletes

@@ -10,10 +10,10 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-datastore"
 
-	"github.com/fil-forge/piri/pkg/store/genericstore"
-	"github.com/fil-forge/piri/pkg/store/objectstore"
-	"github.com/fil-forge/piri/pkg/store/objectstore/dsadapter"
-	"github.com/fil-forge/piri/pkg/store/objectstore/minio"
+	"github.com/fil-forge/forge/piri/pkg/store/genericstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/dsadapter"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore/minio"
 )
 
 // InvocationStore stores UCAN invocations.

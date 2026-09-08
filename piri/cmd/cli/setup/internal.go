@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fil-forge/piri/pkg/client"
+	"github.com/fil-forge/forge/piri/pkg/client"
 	"github.com/spf13/cobra"
 )
 

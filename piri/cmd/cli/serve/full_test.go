@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config"
 )
 
 // The lotus auth token has no CLI flag, so viper only sees PIRI_PDP_LOTUS_AUTH_TOKEN

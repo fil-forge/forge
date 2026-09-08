@@ -14,7 +14,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/internal/testutil"
 )
 
 func TestBucketCreation(t *testing.T) {

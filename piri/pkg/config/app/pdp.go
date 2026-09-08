@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	signerclient "github.com/fil-forge/piri-signing-service/pkg/client"
+	signerclient "github.com/fil-forge/forge/piri-signing-service/pkg/client"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/aggregator"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
 )
 
 type ContractAddresses struct {

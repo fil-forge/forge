@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fil-forge/piri/pkg/store/objectstore"
+	"github.com/fil-forge/forge/piri/pkg/store/objectstore"
 	logging "github.com/ipfs/go-log/v2"
 )
 

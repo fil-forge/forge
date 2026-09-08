@@ -3,8 +3,8 @@ package pdpfake
 import (
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/pdp/aggregation/commp"
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/commp"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 // Module supplies in-memory fakes for the PDP backend. Include it alongside

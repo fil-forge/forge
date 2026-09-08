@@ -16,7 +16,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/receipt"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/client/receipts"
+	"github.com/fil-forge/forge/piri/pkg/client/receipts"
 )
 
 func TestFetch(t *testing.T) {

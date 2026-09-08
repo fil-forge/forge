@@ -33,10 +33,10 @@ import (
 	cidlink "github.com/ipld/go-ipld-prime/linking/cid"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/client/receipts"
-	piritutil "github.com/fil-forge/piri/pkg/internal/testutil"
-	"github.com/fil-forge/piri/pkg/store/consolidationstore"
-	"github.com/fil-forge/piri/pkg/store/local/retrievaljournal"
+	"github.com/fil-forge/forge/piri/pkg/client/receipts"
+	piritutil "github.com/fil-forge/forge/piri/pkg/internal/testutil"
+	"github.com/fil-forge/forge/piri/pkg/store/consolidationstore"
+	"github.com/fil-forge/forge/piri/pkg/store/local/retrievaljournal"
 )
 
 func TestAddReceipt(t *testing.T) {

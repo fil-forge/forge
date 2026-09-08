@@ -10,7 +10,7 @@ import (
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 
-	"github.com/fil-forge/piri/pkg/database"
+	"github.com/fil-forge/forge/piri/pkg/database"
 )
 
 var log = logging.Logger("database")

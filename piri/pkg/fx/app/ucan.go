@@ -3,10 +3,10 @@ package app
 import (
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/piri/pkg/fx/root"
-	"github.com/fil-forge/piri/pkg/service/claims"
-	"github.com/fil-forge/piri/pkg/service/publisher"
-	ucanhandlersfx "github.com/fil-forge/piri/pkg/ucanhandlers/ucanfx"
+	"github.com/fil-forge/forge/piri/pkg/fx/root"
+	"github.com/fil-forge/forge/piri/pkg/service/claims"
+	"github.com/fil-forge/forge/piri/pkg/service/publisher"
+	ucanhandlersfx "github.com/fil-forge/forge/piri/pkg/ucanhandlers/ucanfx"
 )
 
 var UCANModule = fx.Module("ucan",

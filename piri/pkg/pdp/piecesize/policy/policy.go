@@ -10,10 +10,10 @@ package policy
 import (
 	"fmt"
 
-	"github.com/fil-forge/piri/pkg/config"
-	"github.com/fil-forge/piri/pkg/config/app"
-	"github.com/fil-forge/piri/pkg/config/dynamic"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/config"
+	"github.com/fil-forge/forge/piri/pkg/config/app"
+	"github.com/fil-forge/forge/piri/pkg/config/dynamic"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
 )
 
 // New registers the piece-size entries with the dynamic registry and returns a

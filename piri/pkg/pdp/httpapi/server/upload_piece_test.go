@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/pdp/httpapi/server/middleware"
-	"github.com/fil-forge/piri/pkg/pdp/piecesize"
+	"github.com/fil-forge/forge/piri/pkg/pdp/httpapi/server/middleware"
+	"github.com/fil-forge/forge/piri/pkg/pdp/piecesize"
 )
 
 // TestLimitUploadBody covers the cheap early exit on the upload route: a
