@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/fil-forge/delegator/cmd"
+	"github.com/fil-forge/forge/delegator/cmd"
 )
 
 func main() {

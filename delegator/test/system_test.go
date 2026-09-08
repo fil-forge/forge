@@ -30,12 +30,12 @@ import (
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 
-	"github.com/fil-forge/delegator/client"
-	"github.com/fil-forge/delegator/internal/config"
-	"github.com/fil-forge/delegator/internal/handlers"
-	"github.com/fil-forge/delegator/internal/server"
-	"github.com/fil-forge/delegator/internal/services/registrar"
-	"github.com/fil-forge/delegator/internal/store"
+	"github.com/fil-forge/forge/delegator/client"
+	"github.com/fil-forge/forge/delegator/internal/config"
+	"github.com/fil-forge/forge/delegator/internal/handlers"
+	"github.com/fil-forge/forge/delegator/internal/server"
+	"github.com/fil-forge/forge/delegator/internal/services/registrar"
+	"github.com/fil-forge/forge/delegator/internal/store"
 )
 
 // mockStore implements the store.Store interface for testing

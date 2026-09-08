@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/fil-forge/delegator/internal/services/registrar"
+	"github.com/fil-forge/forge/delegator/internal/services/registrar"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan/container"

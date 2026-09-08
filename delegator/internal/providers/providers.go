@@ -8,8 +8,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/fil-forge/delegator/internal/config"
-	"github.com/fil-forge/delegator/internal/services/registrar"
+	"github.com/fil-forge/forge/delegator/internal/config"
+	"github.com/fil-forge/forge/delegator/internal/services/registrar"
 	"github.com/fil-forge/forgectl/pkg/services/chain"
 	"github.com/fil-forge/forgectl/pkg/services/inspector"
 	"github.com/fil-forge/forgectl/pkg/services/operator"

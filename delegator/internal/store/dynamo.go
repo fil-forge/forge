@@ -13,7 +13,7 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/fil-forge/delegator/internal/config"
+	"github.com/fil-forge/forge/delegator/internal/config"
 )
 
 var log = logging.Logger("store/dynamo")

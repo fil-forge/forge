@@ -1,4 +1,4 @@
-module github.com/fil-forge/delegator
+module github.com/fil-forge/forge/delegator
 
 go 1.27.0
 

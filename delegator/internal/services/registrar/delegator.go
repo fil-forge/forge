@@ -29,7 +29,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 
-	"github.com/fil-forge/delegator/internal/store"
+	"github.com/fil-forge/forge/delegator/internal/store"
 )
 
 var log = logging.Logger("service/delegator")

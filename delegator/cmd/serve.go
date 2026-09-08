@@ -5,12 +5,12 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/delegator/internal/config"
-	"github.com/fil-forge/delegator/internal/handlers"
-	"github.com/fil-forge/delegator/internal/providers"
-	"github.com/fil-forge/delegator/internal/server"
-	"github.com/fil-forge/delegator/internal/services/registrar"
-	"github.com/fil-forge/delegator/internal/store"
+	"github.com/fil-forge/forge/delegator/internal/config"
+	"github.com/fil-forge/forge/delegator/internal/handlers"
+	"github.com/fil-forge/forge/delegator/internal/providers"
+	"github.com/fil-forge/forge/delegator/internal/server"
+	"github.com/fil-forge/forge/delegator/internal/services/registrar"
+	"github.com/fil-forge/forge/delegator/internal/store"
 )
 
 var ServeCmd = &cobra.Command{
