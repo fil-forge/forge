@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/fil-forge/sprue/pkg/store/consumer"
-	"github.com/fil-forge/sprue/pkg/store/subscription"
+	"github.com/fil-forge/forge/sprue/pkg/store/consumer"
+	"github.com/fil-forge/forge/sprue/pkg/store/subscription"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ipld/codec/dagcbor"

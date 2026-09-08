@@ -4,10 +4,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/sprue/internal/testutil"
-	"github.com/fil-forge/sprue/pkg/store/metrics"
-	metricsmemory "github.com/fil-forge/sprue/pkg/store/metrics/memory"
-	metricspostgres "github.com/fil-forge/sprue/pkg/store/metrics/postgres"
+	"github.com/fil-forge/forge/sprue/internal/testutil"
+	"github.com/fil-forge/forge/sprue/pkg/store/metrics"
+	metricsmemory "github.com/fil-forge/forge/sprue/pkg/store/metrics/memory"
+	metricspostgres "github.com/fil-forge/forge/sprue/pkg/store/metrics/postgres"
 	"github.com/stretchr/testify/require"
 )
 

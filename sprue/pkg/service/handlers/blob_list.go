@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
-	blobregistry "github.com/fil-forge/sprue/pkg/store/blob_registry"
+	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/server"
 	"go.uber.org/zap"

@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fil-forge/sprue/pkg/store"
-	"github.com/fil-forge/sprue/pkg/store/upload"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	"github.com/fil-forge/forge/sprue/pkg/store/upload"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 )

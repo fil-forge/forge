@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"github.com/fil-forge/sprue/cmd/client/admin/provider/weight"
+	"github.com/fil-forge/forge/sprue/cmd/client/admin/provider/weight"
 	"github.com/spf13/cobra"
 )
 

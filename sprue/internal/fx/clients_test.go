@@ -3,8 +3,8 @@ package fx
 import (
 	"testing"
 
-	"github.com/fil-forge/sprue/internal/config"
-	"github.com/fil-forge/sprue/internal/testutil"
+	"github.com/fil-forge/forge/sprue/internal/config"
+	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )

@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/fil-forge/sprue/cmd/client/admin"
+	"github.com/fil-forge/forge/sprue/cmd/client/admin"
 	"github.com/spf13/cobra"
 )
 

@@ -8,7 +8,7 @@ import (
 	assertcmds "github.com/fil-forge/libforge/commands/assert"
 	contentcmds "github.com/fil-forge/libforge/commands/content"
 	ucanlib "github.com/fil-forge/libforge/ucan"
-	"github.com/fil-forge/sprue/pkg/lib/ucan_client"
+	"github.com/fil-forge/forge/sprue/pkg/lib/ucan_client"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/execution"

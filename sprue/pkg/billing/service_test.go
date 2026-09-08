@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/fil-forge/libforge/attestation/didmailto"
-	customermemory "github.com/fil-forge/sprue/pkg/store/customer/memory"
+	customermemory "github.com/fil-forge/forge/sprue/pkg/store/customer/memory"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/stretchr/testify/require"
 )

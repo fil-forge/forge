@@ -21,9 +21,9 @@ package handlers
 // 	"github.com/storacha/go-ucanto/ucan"
 // 	"github.com/storacha/go-ucanto/validator"
 //
-// 	"github.com/fil-forge/sprue/pkg/internal/ipldutil"
-// 	"github.com/fil-forge/sprue/pkg/store/agent"
-// 	"github.com/fil-forge/sprue/pkg/store/replica"
+// 	"github.com/fil-forge/forge/sprue/pkg/internal/ipldutil"
+// 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
+// 	"github.com/fil-forge/forge/sprue/pkg/store/replica"
 // 	"go.uber.org/zap"
 // )
 

@@ -3,7 +3,7 @@ package delegation
 import (
 	"context"
 
-	"github.com/fil-forge/sprue/pkg/store"
+	"github.com/fil-forge/forge/sprue/pkg/store"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-cid"

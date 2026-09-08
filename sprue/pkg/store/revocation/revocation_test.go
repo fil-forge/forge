@@ -4,10 +4,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/sprue/internal/testutil"
-	"github.com/fil-forge/sprue/pkg/store/revocation"
-	revocationmemory "github.com/fil-forge/sprue/pkg/store/revocation/memory"
-	revocationpostgres "github.com/fil-forge/sprue/pkg/store/revocation/postgres"
+	"github.com/fil-forge/forge/sprue/internal/testutil"
+	"github.com/fil-forge/forge/sprue/pkg/store/revocation"
+	revocationmemory "github.com/fil-forge/forge/sprue/pkg/store/revocation/memory"
+	revocationpostgres "github.com/fil-forge/forge/sprue/pkg/store/revocation/postgres"
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 )

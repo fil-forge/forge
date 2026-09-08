@@ -4,7 +4,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/sprue/internal/config"
+	"github.com/fil-forge/forge/sprue/internal/config"
 )
 
 // LoggerModule provides the zap logger.

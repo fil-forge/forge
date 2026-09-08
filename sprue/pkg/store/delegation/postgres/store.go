@@ -11,8 +11,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/fil-forge/sprue/pkg/store"
-	dlgstore "github.com/fil-forge/sprue/pkg/store/delegation"
+	"github.com/fil-forge/forge/sprue/pkg/store"
+	dlgstore "github.com/fil-forge/forge/sprue/pkg/store/delegation"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/delegation"

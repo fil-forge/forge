@@ -5,9 +5,9 @@ import (
 	"net/url"
 
 	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/sprue/internal/config"
-	"github.com/fil-forge/sprue/internal/fx"
-	"github.com/fil-forge/sprue/pkg/client"
+	"github.com/fil-forge/forge/sprue/internal/config"
+	"github.com/fil-forge/forge/sprue/internal/fx"
+	"github.com/fil-forge/forge/sprue/pkg/client"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 )

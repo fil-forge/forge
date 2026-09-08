@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/sprue/internal/config"
+	"github.com/fil-forge/forge/sprue/internal/config"
 )
 
 // A custom S3 endpoint (e.g. MinIO) must authenticate with the credentials from

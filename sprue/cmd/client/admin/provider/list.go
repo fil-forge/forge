@@ -3,7 +3,7 @@ package provider
 import (
 	"fmt"
 
-	"github.com/fil-forge/sprue/cmd/client/lib"
+	"github.com/fil-forge/forge/sprue/cmd/client/lib"
 	"github.com/spf13/cobra"
 )
 

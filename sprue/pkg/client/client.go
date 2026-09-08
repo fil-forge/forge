@@ -6,9 +6,9 @@ import (
 	"net/url"
 	"slices"
 
-	providercap "github.com/fil-forge/sprue/pkg/commands/admin/provider"
-	weightcap "github.com/fil-forge/sprue/pkg/commands/admin/provider/weight"
-	"github.com/fil-forge/sprue/pkg/lib/ucan_client"
+	providercap "github.com/fil-forge/forge/sprue/pkg/commands/admin/provider"
+	weightcap "github.com/fil-forge/forge/sprue/pkg/commands/admin/provider/weight"
+	"github.com/fil-forge/forge/sprue/pkg/lib/ucan_client"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
