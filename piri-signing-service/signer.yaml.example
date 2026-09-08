@@ -1,0 +1,49 @@
+# Piri Signing Service Configuration
+
+# Network binding configuration
+host: localhost  # Host to bind the HTTP server (default: localhost)
+port: 7446      # Port to bind the HTTP server (default: 7446, spells SIGN on T9 :) )
+
+# Ethereum RPC endpoint
+# Required: Must be a valid Ethereum RPC URL
+# Example for Filecoin Calibration testnet: https://api.calibration.node.glif.io/rpc/v1
+# Example for Filecoin Mainnet: https://api.node.glif.io/rpc/v1
+rpc_url: https://api.calibration.node.glif.io/rpc/v1
+
+# FilecoinWarmStorageService contract address
+# Required: The deployed contract address for signature verification
+# This address must match the on-chain deployment
+service_contract_address: "0x0000000000000000000000000000000000000000"
+
+# Signing key configuration (choose one method)
+# Method 1: Hex-encoded private signing key
+signing_key: "0x0000000000000000000000000000000000000000"
+
+# Method 2: Direct signing key file path
+# signing_key_path: /path/to/your/signing-key.hex
+
+# Method 3: Encrypted keystore file
+# signing_keystore_path: /path/to/your/signing-keystore.json
+# signing_keystore_password: your-signing-keystore-password
+
+# Environment variable overrides:
+# You can override any of these settings using environment variables:
+#   SIGNING_SERVICE_HOST=0.0.0.0
+#   SIGNING_SERVICE_PORT=8080
+#   SIGNING_SERVICE_RPC_URL=https://your-rpc-endpoint.com
+#   SIGNING_SERVICE_SERVICE_CONTRACT_ADDRESS=0xYourContractAddress
+#   SIGNING_SERVICE_SIGNING_KEY=0xYourSigningKey
+#   SIGNING_SERVICE_SIGNING_KEY_PATH=/secure/path/to/signing-key.hex
+#   SIGNING_SERVICE_SIGNING_KEYSTORE_PATH=/secure/path/to/signing-keystore.json
+#   SIGNING_SERVICE_SIGNING_KEYSTORE_PASSWORD=your-signing-keystore-password
+
+# Command-line flag overrides:
+# You can override any setting via command-line flags:
+#   --host=0.0.0.0
+#   --port=8080
+#   --rpc-url=https://your-rpc-endpoint.com
+#   --contract-address=0xYourContractAddress
+#   --signing-key=0xYourSigningKey
+#   --signing-key-path=/secure/path/to/signing-key.hex
+#   --signing-keystore-path=/secure/path/to/signing-keystore.json
+#   --signing-keystore-password=your-signing-keystore-password

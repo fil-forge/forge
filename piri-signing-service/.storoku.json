@@ -1,0 +1,28 @@
+{
+  "app": "signer",
+  "privateKeyEnvVar": "SIGNING_SERVICE_SERVICE_KEY",
+  "didEnvVar": "SIGNING_SERVICE_SERVICE_DID",
+  "port": 7446,
+  "js": null,
+  "domainBase": "",
+  "cloudflare": true,
+  "createDB": false,
+  "caches": null,
+  "topics": null,
+  "queues": null,
+  "buckets": null,
+  "secrets": [
+    {
+      "name": "SIGNING_SERVICE_SIGNING_KEY",
+      "variable": false,
+      "external": true
+    }
+  ],
+  "tables": null,
+  "networks": [
+    "warm",
+    "forge",
+    "test"
+  ],
+  "writeToContainer": false
+}
