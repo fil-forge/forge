@@ -9,8 +9,8 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/config"
-	"github.com/fil-forge/ingot/regionkey"
+	"github.com/fil-forge/forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/regionkey"
 )
 
 // regionKeyCfg wraps a RegionKeyConfig into the minimal Config the provider

@@ -25,11 +25,11 @@ import (
 	mh "github.com/multiformats/go-multihash"
 	"go.uber.org/zap"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/mst"
-	"github.com/fil-forge/ingot/registry"
-	"github.com/fil-forge/ingot/uploader"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/uploader"
 )
 
 // defaultMaxListing is the S3 default and cap for max-parts / max-uploads.

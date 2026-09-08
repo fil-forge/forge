@@ -12,10 +12,10 @@ import (
 	"github.com/fil-forge/versitygw/s3err"
 	"github.com/ipfs/go-cid"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/bucketop"
-	"github.com/fil-forge/ingot/mst"
-	"github.com/fil-forge/ingot/registry"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/bucketop"
+	"github.com/fil-forge/forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // This file implements the per-version half of S3 Object Lock

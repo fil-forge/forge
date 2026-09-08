@@ -25,8 +25,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/fil-forge/versitygw/tests/integration"
 
-	ingottest "github.com/fil-forge/ingot/testing"
-	"github.com/fil-forge/smelt/pkg/stack"
+	ingottest "github.com/fil-forge/forge/ingot/testing"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 )
 
 // This file is the shared harness for the integration tests: they boot the

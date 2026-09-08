@@ -8,7 +8,7 @@ import (
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 
-	"github.com/fil-forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/config"
 )
 
 // writeAgentKey generates an ed25519 key, writes it as PEM under t.TempDir()

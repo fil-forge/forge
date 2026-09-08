@@ -30,9 +30,9 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	cbor "github.com/ipfs/go-ipld-cbor"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/mst"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // ErrBucketNotFound is returned by Begin when the bucket doesn't

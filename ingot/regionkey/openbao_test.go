@@ -11,7 +11,7 @@ import (
 	"github.com/openbao/openbao/api/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/regionkey"
+	"github.com/fil-forge/forge/ingot/regionkey"
 )
 
 // fakeTransit is an httptest stand-in for OpenBao's transit endpoints. It pins

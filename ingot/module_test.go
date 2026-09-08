@@ -3,14 +3,14 @@ package ingot_test
 import (
 	"testing"
 
-	"github.com/fil-forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/config"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot"
+	"github.com/fil-forge/forge/ingot"
 )
 
 // TestModuleValidate_Enabled asserts that an enabled ingot.Module, given the

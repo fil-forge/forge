@@ -9,7 +9,7 @@ import (
 	"github.com/fil-forge/libforge/commands/s3/bucket"
 	"github.com/fil-forge/libforge/testutil"
 
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // TestMemStoreListBucketsPagination covers the local pagination semantics of

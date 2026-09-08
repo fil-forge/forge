@@ -11,7 +11,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // recover scans this plane's subdirectory and the Meta backend, rebuilds

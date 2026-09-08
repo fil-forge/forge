@@ -13,7 +13,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/fil-forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/config"
 )
 
 // TestApp_GraphValidates ensures the fx graph is complete — every collaborator

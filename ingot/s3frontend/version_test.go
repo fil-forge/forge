@@ -13,8 +13,8 @@ import (
 	"github.com/fil-forge/versitygw/s3err"
 	"github.com/fil-forge/versitygw/s3response"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/mst"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/mst"
 )
 
 // Versioning tests over the same in-process harness as refindex_test.go,

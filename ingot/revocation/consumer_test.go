@@ -14,9 +14,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/inmem"
-	"github.com/fil-forge/ingot/registry"
-	"github.com/fil-forge/ingot/revocation"
+	"github.com/fil-forge/forge/ingot/inmem"
+	"github.com/fil-forge/forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/revocation"
 )
 
 func testCid(t *testing.T, s string) cid.Cid {

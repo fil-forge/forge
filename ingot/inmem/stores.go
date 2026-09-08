@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/multiformats/go-multihash"
 )

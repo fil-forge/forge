@@ -18,9 +18,9 @@ import (
 	gocache "github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/forgeclient"
-	"github.com/fil-forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/forgeclient"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 
 // Uploader is the seam between the per-plane log flushers and durable

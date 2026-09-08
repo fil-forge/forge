@@ -7,7 +7,7 @@
 package main
 
 import (
-	"github.com/fil-forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/bucket"
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 

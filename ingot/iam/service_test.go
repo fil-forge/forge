@@ -18,9 +18,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/stretchr/testify/require"
 
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
-	"github.com/fil-forge/ingot/iam"
-	"github.com/fil-forge/ingot/internal/reqscope"
+	hiltclient "github.com/fil-forge/forge/hilt/pkg/client"
+	"github.com/fil-forge/forge/ingot/iam"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 
 // fakeAuthorizer records the request it authorized and returns canned

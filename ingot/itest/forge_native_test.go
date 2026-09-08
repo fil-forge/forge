@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"github.com/filecoin-project/go-fee/cose"
 
-	ingottest "github.com/fil-forge/ingot/testing"
+	ingottest "github.com/fil-forge/forge/ingot/testing"
 )
 
 // TestForgeNativeProvision proves the hilt onboarding path end-to-end on a

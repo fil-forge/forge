@@ -8,7 +8,7 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	"io"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // DefaultMaxBlobSize is the blob ceiling used when callers don't supply one.

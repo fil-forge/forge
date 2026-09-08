@@ -3,7 +3,7 @@ package s3frontend
 import (
 	"context"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
 )
 
 // This file implements S3 object tagging (docs/s3-object-tagging.md): the

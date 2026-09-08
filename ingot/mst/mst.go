@@ -20,7 +20,7 @@ import (
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // The MST package consumes blockstore.Reader on the load + traversal

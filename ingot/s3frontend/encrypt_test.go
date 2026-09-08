@@ -21,7 +21,7 @@ import (
 	"github.com/filecoin-project/go-fee"
 	"github.com/filecoin-project/go-fee/cose"
 
-	"github.com/fil-forge/ingot/tenantkey"
+	"github.com/fil-forge/forge/ingot/tenantkey"
 )
 
 // These tests drive the full write path (PutObject → SplitBody →

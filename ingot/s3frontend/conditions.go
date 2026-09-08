@@ -7,7 +7,7 @@ import (
 
 	"github.com/fil-forge/versitygw/s3err"
 
-	"github.com/fil-forge/ingot/bucketop"
+	"github.com/fil-forge/forge/ingot/bucketop"
 )
 
 // currentObjectETag resolves the committed ETag of (bucket, key) for evaluating

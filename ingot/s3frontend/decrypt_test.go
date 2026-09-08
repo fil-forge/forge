@@ -16,11 +16,11 @@ import (
 	"github.com/filecoin-project/go-fee/aesstream"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore"
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/inmem"
-	"github.com/fil-forge/ingot/regionkey"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/inmem"
+	"github.com/fil-forge/forge/ingot/regionkey"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // encFixture is a spool + registry + region-key harness holding an object

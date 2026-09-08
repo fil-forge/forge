@@ -15,9 +15,9 @@ import (
 	"github.com/fil-forge/versitygw/s3response"
 	"github.com/ipfs/go-cid"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/mst"
-	"github.com/fil-forge/ingot/registry"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // ListObjectVersions walks every version of every key (docs/s3-versioning.md

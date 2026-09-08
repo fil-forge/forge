@@ -13,10 +13,10 @@ import (
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/inmem"
-	"github.com/fil-forge/ingot/logstore"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/inmem"
+	"github.com/fil-forge/forge/ingot/logstore"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // recordingRemover captures the digests RemoveBlob is called with so the

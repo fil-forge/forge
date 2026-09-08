@@ -14,7 +14,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/iam"
+	"github.com/fil-forge/forge/ingot/iam"
 )
 
 // revokerFixture is one access key's cached authorization state: a

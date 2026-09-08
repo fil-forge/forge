@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/fil-forge/libforge/digestutil"
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"github.com/multiformats/go-multihash"
 )
 

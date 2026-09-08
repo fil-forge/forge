@@ -10,7 +10,7 @@ import (
 
 	"github.com/fil-forge/ucantone/did"
 
-	"github.com/fil-forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
 )
 
 var testTenant = did.MustParse("did:plc:ewvi7nxzyoun6zhxrhs64oiz")

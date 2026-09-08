@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap/zaptest"
 
-	"github.com/fil-forge/ingot/migrations"
+	"github.com/fil-forge/forge/ingot/migrations"
 )
 
 // TestUp_Live applies the embedded migrations against a real Postgres and

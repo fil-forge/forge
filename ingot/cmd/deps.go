@@ -8,7 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/config"
 )
 
 // loadAgentIdentity builds the agent identity (the issuer of every outbound

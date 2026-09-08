@@ -9,7 +9,7 @@ import (
 	"github.com/openbao/openbao/api/v2"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/regionkey"
+	"github.com/fil-forge/forge/ingot/regionkey"
 )
 
 // TestOpenBaoProvider_Live exercises OpenBaoProvider against a real OpenBao —

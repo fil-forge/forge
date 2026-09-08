@@ -7,8 +7,8 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/registry"
 	"github.com/fil-forge/libforge/testutil"
 )
 

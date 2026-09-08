@@ -5,7 +5,7 @@ import (
 
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/blockstore"
 )
 
 // State describes the lifecycle stage of a segment. A segment is open

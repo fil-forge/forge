@@ -27,7 +27,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // Source is the slice of the swarf client the consumer reads

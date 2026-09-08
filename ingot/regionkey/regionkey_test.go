@@ -6,7 +6,7 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/fil-forge/ingot/regionkey"
+	"github.com/fil-forge/forge/ingot/regionkey"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"

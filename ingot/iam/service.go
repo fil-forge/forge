@@ -44,12 +44,12 @@ import (
 
 	"time"
 
-	hiltauth "github.com/fil-forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/hilt/pkg/s3perm"
-	"github.com/fil-forge/hilt/pkg/sigv4"
-	"github.com/fil-forge/ingot/internal/fasthttputil"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/registry"
+	hiltauth "github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
+	"github.com/fil-forge/forge/hilt/pkg/s3perm"
+	"github.com/fil-forge/forge/hilt/pkg/sigv4"
+	"github.com/fil-forge/forge/ingot/internal/fasthttputil"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/registry"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
@@ -63,7 +63,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"go.uber.org/zap"
 
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
+	hiltclient "github.com/fil-forge/forge/hilt/pkg/client"
 )
 
 // Authorizer is the slice of [hiltclient.Client] the service uses:

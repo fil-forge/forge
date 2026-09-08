@@ -12,9 +12,9 @@ import (
 	"github.com/filecoin-project/go-fee"
 	"github.com/multiformats/go-multihash"
 
-	"github.com/fil-forge/ingot/blockstore"
-	"github.com/fil-forge/ingot/regionkey"
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/blockstore"
+	"github.com/fil-forge/forge/ingot/regionkey"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // This file is the encrypting half of the body write path (the FilOne

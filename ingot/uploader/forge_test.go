@@ -10,9 +10,9 @@ import (
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/ingot/forgeclient"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/tokenstore"
+	"github.com/fil-forge/forge/ingot/forgeclient"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/tokenstore"
 )
 
 // newTestForge builds a Forge with a real (but never-dialed) client; the
