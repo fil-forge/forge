@@ -14,8 +14,8 @@ import (
 	"github.com/fil-forge/ucantone/server"
 	"github.com/fil-forge/ucantone/validator"
 
-	"github.com/fil-forge/piri-signing-service/pkg/server/handlers"
-	"github.com/fil-forge/piri-signing-service/pkg/types"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/server/handlers"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/types"
 )
 
 type config struct {

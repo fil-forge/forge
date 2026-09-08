@@ -18,10 +18,10 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/piri-signing-service/pkg/config"
-	"github.com/fil-forge/piri-signing-service/pkg/handlers"
-	"github.com/fil-forge/piri-signing-service/pkg/server"
-	"github.com/fil-forge/piri-signing-service/pkg/signer"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/config"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/handlers"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/server"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/signer"
 )
 
 var rootCmd = &cobra.Command{

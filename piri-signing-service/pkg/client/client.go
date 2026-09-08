@@ -19,7 +19,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/ipfs/go-cid"
 
-	"github.com/fil-forge/piri-signing-service/pkg/types"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/types"
 )
 
 // Client uses UCAN invocations to request a remote signing service to sign PDP operations.

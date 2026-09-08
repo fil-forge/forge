@@ -11,7 +11,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri-signing-service/pkg/server/handlers"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/server/handlers"
 )
 
 func TestAccessGrant_Success(t *testing.T) {

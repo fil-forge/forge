@@ -10,8 +10,8 @@ import (
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	"github.com/fil-forge/piri-signing-service/pkg/signer"
-	"github.com/fil-forge/piri-signing-service/pkg/types"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/signer"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/types"
 )
 
 // Signer implements [types.SigningService] using eip712.Signer directly.

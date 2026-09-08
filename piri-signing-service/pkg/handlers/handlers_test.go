@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri-signing-service/pkg/signer"
-	"github.com/fil-forge/piri-signing-service/pkg/types"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/signer"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/types"
 )
 
 // createTestSigner creates a test signer with a random key

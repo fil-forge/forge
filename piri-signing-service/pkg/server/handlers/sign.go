@@ -11,7 +11,7 @@ import (
 	"github.com/fil-forge/ucantone/ucan"
 	logging "github.com/ipfs/go-log/v2"
 
-	"github.com/fil-forge/piri-signing-service/pkg/types"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/types"
 )
 
 var log = logging.Logger("pkg/server/handlers")

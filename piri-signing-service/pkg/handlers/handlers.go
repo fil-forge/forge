@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/labstack/echo/v4"
 
-	"github.com/fil-forge/piri-signing-service/pkg/signer"
-	"github.com/fil-forge/piri-signing-service/pkg/types"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/signer"
+	"github.com/fil-forge/forge/piri-signing-service/pkg/types"
 )
 
 // Handler wraps the EIP-712 signer and provides HTTP endpoints

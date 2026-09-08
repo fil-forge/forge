@@ -1,4 +1,4 @@
-module github.com/fil-forge/piri-signing-service
+module github.com/fil-forge/forge/piri-signing-service
 
 go 1.25.3
 
