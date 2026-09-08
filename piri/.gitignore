@@ -1,0 +1,25 @@
+/.vscode
+/storage
+*.car
+build
+.terraform
+.env
+.tfworkspace
+
+# Binary executable
+piri
+
+# PEM files (certificates/keys)
+*.pem
+
+# IntelliJ IDEA directory
+.idea/
+
+# Wallet Private Keys
+*.hex
+
+# GoReleaser output
+dist/
+
+# mkdocs output
+docs/site

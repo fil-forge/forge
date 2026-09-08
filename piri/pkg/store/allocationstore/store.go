@@ -1,0 +1,150 @@
+package allocationstore
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/fil-forge/libforge/digestutil"
+	"github.com/fil-forge/ucantone/did"
+	"github.com/fil-forge/ucantone/ucan"
+	"github.com/ipfs/go-datastore"
+	"github.com/multiformats/go-multihash"
+
+	"github.com/fil-forge/piri/pkg/store/allocationstore/allocation"
+	"github.com/fil-forge/piri/pkg/store/genericstore"
+	"github.com/fil-forge/piri/pkg/store/objectstore"
+	"github.com/fil-forge/piri/pkg/store/objectstore/dsadapter"
+	"github.com/fil-forge/piri/pkg/store/objectstore/minio"
+)
+
+// AllocationStore tracks the items that have been, or will soon be stored on
+// the storage node.
+type AllocationStore interface {
+	// Get retrieves an allocation for a blob (digest) in a space (DID). It
+	// returns [github.com/fil-forge/piri/pkg/store.ErrNotFound] if the allocation
+	// does not exist.
+	Get(context.Context, multihash.Multihash, did.DID) (allocation.Allocation, error)
+	// GetAny retrieves any allocation for a blob (digest), regardless of space.
+	// Returns [github.com/fil-forge/piri/pkg/store.ErrNotFound] if no allocation exists.
+	GetAny(context.Context, multihash.Multihash) (allocation.Allocation, error)
+	// GetAnyNonExpired retrieves any allocation for a blob that has not expired.
+	// The now parameter should be the current unix timestamp in seconds.
+	// Returns [github.com/fil-forge/piri/pkg/store.ErrNotFound] if no non-expired allocation exists.
+	GetAnyNonExpired(ctx context.Context, digest multihash.Multihash, now ucan.UnixTimestamp) (allocation.Allocation, error)
+	// Exists checks if any allocation exists for a blob (digest).
+	Exists(context.Context, multihash.Multihash) (bool, error)
+	// Put adds or replaces allocation data in the store.
+	Put(context.Context, allocation.Allocation) error
+	// Delete removes the allocation for a blob (digest) in a space.
+	// Deleting a missing allocation succeeds (idempotent).
+	Delete(context.Context, multihash.Multihash, did.DID) error
+	// ListSpaces returns the DID of every space holding an allocation for
+	// the digest. An unknown digest yields an empty list.
+	ListSpaces(context.Context, multihash.Multihash) ([]did.DID, error)
+}
+
+// KeyEncoder defines how to encode keys for a specific backend.
+type KeyEncoder interface {
+	EncodeKey(digest multihash.Multihash, space did.DID) string
+	EncodeKeyPrefix(digest multihash.Multihash) string
+}
+
+// Store implements AllocationStore backed by any ListableStore.
+type Store struct {
+	store   *genericstore.Store[allocation.Allocation]
+	encoder KeyEncoder
+}
+
+var _ AllocationStore = (*Store)(nil)
+
+// New creates an AllocationStore with the given backend and key encoder.
+func New(backend objectstore.ListableStore, encoder KeyEncoder) *Store {
+	return &Store{
+		store:   genericstore.New(backend, allocation.Codec{}),
+		encoder: encoder,
+	}
+}
+
+func (s *Store) Get(ctx context.Context, digest multihash.Multihash, space did.DID) (allocation.Allocation, error) {
+	alloc, err := s.store.Get(ctx, s.encoder.EncodeKey(digest, space))
+	if err != nil {
+		return allocation.Allocation{}, fmt.Errorf("getting allocation: %w", err)
+	}
+	return alloc, nil
+}
+
+func (s *Store) GetAny(ctx context.Context, digest multihash.Multihash) (allocation.Allocation, error) {
+	alloc, err := s.store.GetAny(ctx, s.encoder.EncodeKeyPrefix(digest))
+	if err != nil {
+		return allocation.Allocation{}, fmt.Errorf("getting any allocation: %w", err)
+	}
+	return alloc, nil
+}
+
+func (s *Store) GetAnyNonExpired(ctx context.Context, digest multihash.Multihash, now ucan.UnixTimestamp) (allocation.Allocation,
+	error) {
+	alloc, err := s.store.GetAnyMatching(ctx, s.encoder.EncodeKeyPrefix(digest), func(a allocation.Allocation) bool {
+		return a.Expires > now
+	})
+	if err != nil {
+		return allocation.Allocation{}, fmt.Errorf("getting non-expired allocation: %w", err)
+	}
+	return alloc, nil
+}
+
+func (s *Store) Exists(ctx context.Context, digest multihash.Multihash) (bool, error) {
+	return s.store.ExistsWithPrefix(ctx, s.encoder.EncodeKeyPrefix(digest))
+}
+
+func (s *Store) Put(ctx context.Context, alloc allocation.Allocation) error {
+	return s.store.Put(ctx, s.encoder.EncodeKey(alloc.Blob.Digest, alloc.Space), alloc)
+}
+
+func (s *Store) Delete(ctx context.Context, digest multihash.Multihash, space did.DID) error {
+	return s.store.Delete(ctx, s.encoder.EncodeKey(digest, space))
+}
+
+func (s *Store) ListSpaces(ctx context.Context, digest multihash.Multihash) ([]did.DID, error) {
+	var spaces []did.DID
+	for alloc, err := range s.store.ListPrefix(ctx, s.encoder.EncodeKeyPrefix(digest)) {
+		if err != nil {
+			return nil, fmt.Errorf("listing allocations for %s: %w", digestutil.Format(digest), err)
+		}
+		spaces = append(spaces, alloc.Space)
+	}
+	return spaces, nil
+}
+
+// S3KeyEncoder encodes keys for S3/MinIO backends (keys end with .cbor).
+type S3KeyEncoder struct{}
+
+func (S3KeyEncoder) EncodeKey(digest multihash.Multihash, space did.DID) string {
+	return fmt.Sprintf("%s/%s.cbor", digestutil.Format(digest), space.String())
+}
+
+func (S3KeyEncoder) EncodeKeyPrefix(digest multihash.Multihash) string {
+	return fmt.Sprintf("%s/", digestutil.Format(digest))
+}
+
+// DatastoreKeyEncoder encodes keys for LevelDB/datastore backends (no suffix).
+type DatastoreKeyEncoder struct{}
+
+func (DatastoreKeyEncoder) EncodeKey(digest multihash.Multihash, space did.DID) string {
+	return fmt.Sprintf("%s/%s", digestutil.Format(digest), space.String())
+}
+
+func (DatastoreKeyEncoder) EncodeKeyPrefix(digest multihash.Multihash) string {
+	return fmt.Sprintf("%s/", digestutil.Format(digest))
+}
+
+// NewS3Store creates an AllocationStore for S3/MinIO backends.
+// Allocations are stored with keys formatted as "allocations/{digest}/{space}.cbor".
+func NewS3Store(backend *minio.Store) *Store {
+	return New(backend, S3KeyEncoder{})
+}
+
+// NewDatastoreStore creates an AllocationStore for LevelDB/datastore backends.
+// Allocations are stored with keys formatted as "{digest}/{space}".
+func NewDatastoreStore(ds datastore.Datastore) *Store {
+	return New(dsadapter.New(ds), DatastoreKeyEncoder{})
+}

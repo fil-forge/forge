@@ -1,0 +1,24 @@
+package client
+
+import (
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/fil-forge/piri/cmd/cli/client/admin"
+	"github.com/fil-forge/piri/cmd/cli/client/pdp"
+)
+
+var (
+	Cmd = &cobra.Command{
+		Use:   "client",
+		Short: "Interact with a Piri node",
+	}
+)
+
+func init() {
+	Cmd.PersistentFlags().String("node-url", "http://localhost:3000", "URL of a Piri node")
+	cobra.CheckErr(viper.BindPFlag("api.endpoint", Cmd.PersistentFlags().Lookup("node-url")))
+
+	Cmd.AddCommand(admin.Cmd)
+	Cmd.AddCommand(pdp.Cmd)
+}

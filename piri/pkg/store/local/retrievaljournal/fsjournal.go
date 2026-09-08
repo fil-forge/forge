@@ -1,0 +1,292 @@
+package retrievaljournal
+
+import (
+	"context"
+	"crypto/sha256"
+	"fmt"
+	"hash"
+	"io"
+	"iter"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"github.com/fil-forge/ucantone/ucan"
+	"github.com/ipfs/go-cid"
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/ipld/go-car"
+	carutil "github.com/ipld/go-car/util"
+	"github.com/multiformats/go-multicodec"
+	"github.com/multiformats/go-multihash"
+)
+
+var log = logging.Logger("retrievaljournal")
+
+const (
+	// DefaultBatchSize is the default maximum size of a receipt batch in bytes.
+	DefaultBatchSize = 100 * 1024 * 1024 // 100MiB
+
+	// currentBatchName is the name of the current batch file.
+	currentBatchName = "egress.car.wip"
+
+	// batchFilePrefix is the prefix for completed batch files.
+	batchFilePrefix = "egress."
+	batchFileSuffix = ".car"
+)
+
+var _ Journal = (*fsJournal)(nil)
+
+type fsJournal struct {
+	mu            sync.Mutex
+	basePath      string
+	currBatchPath string
+	currBatch     *os.File
+	currSize      int64
+	currHash      hash.Hash
+	multiw        io.Writer
+	maxBatchSize  int64
+}
+
+// NewFSJournal creates a new file system based retrieval journal.
+// Batches will be stored in the given basePath.
+// If maxBatchSize is 0, DefaultBatchSize will be used.
+func NewFSJournal(basePath string, maxBatchSize int64) (*fsJournal, error) {
+	if maxBatchSize <= 0 {
+		maxBatchSize = DefaultBatchSize
+	}
+
+	if err := os.MkdirAll(basePath, 0755); err != nil {
+		return nil, fmt.Errorf("creating retrieval journal directory: %w", err)
+	}
+
+	currBatchPath := filepath.Join(basePath, currentBatchName)
+
+	j := &fsJournal{
+		basePath:      basePath,
+		currBatchPath: currBatchPath,
+		maxBatchSize:  maxBatchSize,
+	}
+
+	if err := j.newBatch(false); err != nil {
+		return nil, fmt.Errorf("creating or opening current batch file: %w", err)
+	}
+
+	return j, nil
+}
+
+func (j *fsJournal) newBatch(truncate bool) error {
+	flags := os.O_RDWR | os.O_CREATE
+	if truncate {
+		flags |= os.O_TRUNC
+	}
+
+	var err error
+	j.currBatch, err = os.OpenFile(j.currBatchPath, flags, 0644)
+	if err != nil {
+		return err
+	}
+
+	j.currHash = sha256.New()
+
+	// Use a multiwriter to write to both the file and the hash at the same time.
+	j.multiw = io.MultiWriter(j.currBatch, j.currHash)
+
+	if truncate {
+		j.currSize = 0
+	} else {
+		info, err := j.currBatch.Stat()
+		if err != nil {
+			return err
+		}
+
+		j.currSize = info.Size()
+
+		// If the file has existing content, hash it to ensure the final hash
+		// includes all data, not just what we append in this session
+		if j.currSize > 0 {
+			if _, err := j.currBatch.Seek(0, io.SeekStart); err != nil {
+				return err
+			}
+			if _, err := io.Copy(j.currHash, j.currBatch); err != nil {
+				return err
+			}
+		}
+	}
+
+	if j.currSize == 0 {
+		// Write the CAR header if the file is new or truncated
+		hdr := &car.CarHeader{Roots: []cid.Cid{}, Version: 1}
+		if err := car.WriteHeader(hdr, j.multiw); err != nil {
+			return err
+		}
+
+		hdrSize, err := car.HeaderSize(hdr)
+		if err != nil {
+			return err
+		}
+
+		j.currSize = int64(hdrSize)
+	}
+
+	return nil
+}
+
+// TODO(forrest)[ucan1]: Append currently journals only the bare receipt.
+// UCAN 1.0 is flat, so to be self-describing it needs the receipt plus the
+// invocation it ran and any proofs, bundled as a container. See #10.
+func (j *fsJournal) Append(_ context.Context, rcpt ucan.Receipt) (bool, cid.Cid, error) {
+	if rcpt == nil {
+		return false, cid.Cid{}, fmt.Errorf("receipt is nil")
+	}
+
+	// Don't journal failure receipts: the egress tracker only accounts for
+	// successful retrievals, so a failure receipt is extra bytes we'd send
+	// that earn no compensation.
+	if rcpt.Out().IsErr() {
+		return false, cid.Cid{}, nil
+	}
+
+	archiveCID, err := cid.V1Builder{
+		Codec:  uint64(multicodec.Car),
+		MhType: uint64(multihash.SHA2_256),
+	}.Sum(rcpt.Bytes())
+	if err != nil {
+		return false, cid.Cid{}, fmt.Errorf("creating receipt archive CID: %w", err)
+	}
+
+	// cid to bytes
+	cidBytes := archiveCID.Bytes()
+
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	// append a line in the car file, this is what `Put` is doing internally, but less complicated.
+	if err := carutil.LdWrite(j.multiw, cidBytes, rcpt.Bytes()); err != nil {
+		return false, cid.Cid{}, err
+	}
+	// record the size of the data written
+	blockSize := int64(carutil.LdSize(cidBytes, rcpt.Bytes()))
+	j.currSize += blockSize
+
+	// rotate the batch if it exceeds the size limit
+	if j.currSize >= j.maxBatchSize {
+		rotatedBatchCID, err := j.rotate()
+		if err != nil {
+			return false, cid.Cid{}, fmt.Errorf("rotating batch: %w", err)
+		}
+
+		return true, rotatedBatchCID, nil
+	}
+
+	return false, cid.Cid{}, nil
+}
+
+// ForceRotate causes a rotation of the current journal batch, regardless of
+// its size. It returns a CID that identifies the rotated batch. If there are no
+// entries in the current batch it returns (false, [cid.Undef], nil).
+func (j *fsJournal) ForceRotate(ctx context.Context) (bool, cid.Cid, error) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+
+	hdr := &car.CarHeader{Roots: []cid.Cid{}, Version: 1}
+	hdrSize, err := car.HeaderSize(hdr)
+	if err != nil {
+		return false, cid.Cid{}, fmt.Errorf("calculating CAR header size: %w", err)
+	}
+
+	// If the current batch is empty, we cannot rotate
+	if j.currSize <= int64(hdrSize) {
+		return false, cid.Cid{}, nil
+	}
+
+	batchID, err := j.rotate()
+	if err != nil {
+		return false, cid.Cid{}, fmt.Errorf("rotating batch: %w", err)
+	}
+
+	return true, batchID, nil
+}
+
+func (j *fsJournal) rotate() (cid.Cid, error) {
+	// Close the current batch file
+	if err := j.currBatch.Close(); err != nil {
+		return cid.Cid{}, fmt.Errorf("closing current batch file: %w", err)
+	}
+
+	// Compute the CID of the batch
+	// error from Encode can be discarded, it's always nil
+	mhBytes, _ := multihash.Encode(j.currHash.Sum(nil), multihash.SHA2_256)
+	mh := multihash.Multihash(mhBytes)
+
+	batchCID := cid.NewCidV1(uint64(multicodec.Car), mh)
+
+	// Rename the file to include the CID
+	newPath := filepath.Join(j.basePath, batchFilePrefix+batchCID.String()+batchFileSuffix)
+	if err := os.Rename(j.currBatchPath, newPath); err != nil {
+		return cid.Cid{}, fmt.Errorf("renaming batch file: %w", err)
+	}
+
+	// Create a new current batch file
+	if err := j.newBatch(true); err != nil {
+		return cid.Cid{}, fmt.Errorf("creating new batch file: %w", err)
+	}
+
+	return batchCID, nil
+}
+
+func (j *fsJournal) GetBatch(ctx context.Context, cid cid.Cid) (reader io.ReadCloser, err error) {
+	return os.Open(filepath.Join(j.basePath, batchFilePrefix+cid.String()+batchFileSuffix))
+}
+
+func (s *fsJournal) List(ctx context.Context) (iter.Seq[cid.Cid], error) {
+	entries, err := os.ReadDir(s.basePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading batch entries: %w", err)
+	}
+
+	return func(yield func(cid.Cid) bool) {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			name := entry.Name()
+			// Skip the current batch file
+			if name == currentBatchName {
+				continue
+			}
+
+			// Check if the file has the correct prefix and suffix
+			if !strings.HasPrefix(name, batchFilePrefix) || !strings.HasSuffix(name, batchFileSuffix) {
+				continue
+			}
+
+			// Extract the CID from the filename
+			cidStr := name[len(batchFilePrefix) : len(name)-len(batchFileSuffix)]
+			c, err := cid.Decode(cidStr)
+			if err != nil {
+				log.Warnf("skipping file with invalid CID in name: %s: %v", name, err)
+				continue
+			}
+
+			if !yield(c) {
+				return
+			}
+		}
+	}, nil
+}
+
+func (s *fsJournal) Remove(ctx context.Context, cid cid.Cid) error {
+	path := filepath.Join(s.basePath, batchFilePrefix+cid.String()+batchFileSuffix)
+	if err := os.Remove(path); err != nil {
+		return fmt.Errorf("removing batch file: %w", err)
+	}
+	return nil
+}
+
+func (j *fsJournal) Close() error {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.currBatch.Close()
+}

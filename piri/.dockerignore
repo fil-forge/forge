@@ -1,0 +1,12 @@
+# dirs
+.git
+.github
+.claude
+
+# files
+.env*
+*.md
+.goreleaser.yaml
+docker-compose*.yml
+LICENSE
+version.json

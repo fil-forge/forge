@@ -1,0 +1,55 @@
+<div align="center">
+  <img width="200" src="https://github.com/user-attachments/assets/13a3dbad-daaa-4773-b258-995af927ba0f" />
+  <h1>Piri</h1>
+  <p>A storage node that runs on the Forge network.</p>
+</div>
+
+## What is Piri?
+
+What's Piri? It's the _**P**rovable **I**nformation **R**etention **I**nterface_ - a Go-based storage node that's part of the Forge network backbone. It works alongside other services like the [indexing service](https://github.com/fil-forge/indexing-service) and [upload service](https://github.com/fil-forge/sprue) to enable decentralized storage with cryptographic proofs.
+
+## Documentation
+
+Get started with Piri by exploring our comprehensive documentation:
+
+- **[🚀 Getting Started](https://fil-forge.github.io/piri/)** - Complete setup guide to deploy Piri
+- **[⭐️ Best Practices](https://fil-forge.github.io/piri/operations/best-practices/)** - A checklist of things you should be doing as a Piri node operator
+
+### Setup Guides
+
+Follow these guides in order to set up Piri:
+
+1. **[Prerequisites](https://fil-forge.github.io/piri/setup/prerequisites)** - System, network, and Filecoin requirements
+2. **[Installation](https://fil-forge.github.io/piri/setup/installation)** - Download and install Piri
+3. **[Key Generation](https://fil-forge.github.io/piri/setup/key-generation)** - Create your cryptographic identity
+4. **[TLS Configuration](https://fil-forge.github.io/piri/setup/tls-termination)** - Set up HTTPS for your domains
+5. **[Server Setup](https://fil-forge.github.io/piri/setup/piri-server)** - Deploy the Piri server
+
+### Quick Links
+
+- **New to Piri?** Start with the [Getting Started Guide](https://fil-forge.github.io/piri/)
+
+## Deploying to the dev node
+
+Every merge to `main` publishes `ghcr.io/fil-forge/piri:main` and dispatches the digest it just
+pushed to
+[infra-nodes](https://github.com/fil-forge/infra-nodes/blob/main/.github/workflows/bump-deployed-image.yml).
+That workflow rewrites the pin the FilOne Appliance dev node runs and opens a pull request with
+auto-merge armed. Merging queues the image; the node picks it up on its next reconcile pass, waits
+for a safe proving window, and then restarts.
+
+The dispatch needs two repository credentials: the Actions variable `FORGE_BOT_APP_ID` and the
+Actions secret `FORGE_BOT_PRIVATE_KEY`, which mint a token scoped to `infra-nodes` alone. Without
+them the publish step fails and the image still lands in GHCR.
+
+## Contributing
+
+All welcome! Piri is open-source. Please feel empowered to open a PR or an issue.
+
+### Reporting Issues
+
+Found a bug or have a feature request? Please [open an issue](https://github.com/fil-forge/piri/issues) on our GitHub repository.
+
+## License
+
+Dual-licensed under [Apache 2.0 OR MIT](LICENSE.md)
