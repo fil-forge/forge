@@ -151,7 +151,7 @@ func serverInfoHandler(id identity.Identity) echo.HandlerFunc {
 		ID: id.DID().String(),
 		Build: buildInfo{
 			Version: build.Version,
-			Repo:    "https://github.com/fil-forge/forge/sprue",
+			Repo:    "https://github.com/fil-forge/forge",
 		},
 	}
 	return func(c echo.Context) error {

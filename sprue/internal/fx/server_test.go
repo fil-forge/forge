@@ -34,7 +34,7 @@ func TestServerInfoHandler(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &info))
 		require.Equal(t, id.DID().String(), info.ID)
 		require.Equal(t, build.Version, info.Build.Version)
-		require.Equal(t, "https://github.com/fil-forge/forge/sprue", info.Build.Repo)
+		require.Equal(t, "https://github.com/fil-forge/forge", info.Build.Repo)
 	})
 
 	t.Run("returns a plain-text banner by default", func(t *testing.T) {
@@ -46,7 +46,7 @@ func TestServerInfoHandler(t *testing.T) {
 		require.Contains(t, rec.Header().Get(echo.HeaderContentType), "text/plain")
 		body := rec.Body.String()
 		require.Contains(t, body, "sprue "+build.Version)
-		require.Contains(t, body, "https://github.com/fil-forge/forge/sprue")
+		require.Contains(t, body, "https://github.com/fil-forge/forge")
 		require.Contains(t, body, id.DID().String())
 	})
 }
