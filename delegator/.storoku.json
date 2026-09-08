@@ -1,0 +1,50 @@
+{
+  "app": "registrar",
+  "privateKeyEnvVar": "REGISTRAR_DELEGATOR_KEY",
+  "didEnvVar": "REGISTRAR_DELEGATOR_DID",
+  "port": 0,
+  "js": null,
+  "domainBase": "",
+  "cloudflare": true,
+  "createDB": false,
+  "caches": null,
+  "topics": null,
+  "queues": null,
+  "buckets": null,
+  "secrets": [
+    {
+      "name": "REGISTRAR_DELEGATOR_INDEXING_SERVICE_PROOF",
+      "variable": true,
+      "external": false
+    },
+    {
+      "name": "REGISTRAR_DELEGATOR_EGRESS_TRACKING_SERVICE_PROOF",
+      "variable": true,
+      "external": false
+    },
+    {
+      "name": "REGISTRAR_CONTRACT_TRANSACTOR_KEY",
+      "variable": false,
+      "external": true
+    }
+  ],
+  "tables": [
+    {
+      "name": "storage-provider-allow-list",
+      "attributes": [
+        {
+          "name": "did",
+          "type": "S"
+        }
+      ],
+      "hashKey": "did",
+      "rangeKey": ""
+    }
+  ],
+  "networks": [
+    "warm",
+    "forge",
+    "test"
+  ],
+  "writeToContainer": false
+}

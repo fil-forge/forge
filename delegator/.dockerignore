@@ -1,0 +1,36 @@
+# Deployment
+deploy/.env.production.local.tpl
+deploy/.env.terraform.tpl
+deploy/.env.terraform
+deploy/Makefile
+.terraform
+deploy/.tfworkspace
+deploy/app
+deploy/shared
+
+# Git/CI
+.github
+.git
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# Docker tooling
+docker-compose*.yml
+
+# Environment files
+.env*
+
+# IDE/Editor
+.idea
+.vscode
+*.swp
+
+# Build artifacts
+bin/
+
+# Config (service uses env vars)
+*.yaml
+*.yml
