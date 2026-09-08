@@ -11,37 +11,41 @@ on:
   pull_request:
 
 jobs:
+  replaces:
+    name: replaces
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: smelt/go.mod
+      - name: every in-repo require has a replace
+        run: .github/scripts/check-replaces.sh
+
   unit:
     strategy:
       fail-fast: false
       matrix:
         include:
+          # piri needs -tags skiff to select curio's FFI-free variants; without
+          # it the CGO-free build dies on undefined ffi.* symbols.
           - service: piri
             build_flags: -tags skiff
             cgo_enabled: "0"
           - service: hilt
-            build_flags: ""
-            cgo_enabled: "1"
+            tagged_suites: itest
           - service: ingot
-            build_flags: ""
-            cgo_enabled: "1"
+            tagged_suites: itest
           - service: sprue
-            build_flags: ""
-            cgo_enabled: "1"
           - service: smelt
-            build_flags: ""
-            cgo_enabled: "1"
+            tagged_suites: e2e
           - service: delegator
-            build_flags: ""
-            cgo_enabled: "1"
           - service: piri-signing-service
-            build_flags: ""
-            cgo_enabled: "1"
     name: unit ${{ matrix.service }}
     runs-on: ubuntu-latest
     env:
       GOWORK: "off"
-      CGO_ENABLED: ${{ matrix.cgo_enabled }}
+      CGO_ENABLED: ${{ matrix.cgo_enabled || '1' }}
     defaults:
       run:
         working-directory: ${{ matrix.service }}
@@ -60,3 +64,10 @@ jobs:
           git diff --exit-code -- go.mod go.sum
       - name: test
         run: go test ${{ matrix.build_flags }} ./...
+      # Tag-gated packages are invisible to every step above, so a broken
+      # import path in them stays green until someone runs the suite by hand.
+      # Compiling them (not running them — they need Docker and a live stack)
+      # is what keeps that from happening.
+      - name: vet tagged suites
+        if: matrix.tagged_suites != ''
+        run: go vet -tags ${{ matrix.tagged_suites }} ./...
