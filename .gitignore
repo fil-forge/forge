@@ -1,0 +1,6 @@
+# Derived from go.work and every module's go.sum. Each module's own go.sum is
+# the source of truth and CI checks it under GOWORK=off, so this file only adds
+# churn. (See findings.md S8 for the failure mode this must not hide: `go work
+# sync` writing hashes only here, leaving a per-module go.sum incomplete —
+# guarded by the per-module `go mod tidy` diff check in ci.yml.)
+go.work.sum
