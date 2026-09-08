@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/fil-forge/smelt"
+	"github.com/fil-forge/forge/smelt"
 )
 
 // extractFiles extracts all embedded files to a temp directory,

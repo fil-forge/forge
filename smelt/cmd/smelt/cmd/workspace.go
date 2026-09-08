@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/fil-forge/smelt/pkg/manifest"
-	"github.com/fil-forge/smelt/pkg/workspace"
+	"github.com/fil-forge/forge/smelt/pkg/manifest"
+	"github.com/fil-forge/forge/smelt/pkg/workspace"
 	"github.com/spf13/cobra"
 )
 

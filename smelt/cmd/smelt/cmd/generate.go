@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/fil-forge/smelt/pkg/generate"
+	"github.com/fil-forge/forge/smelt/pkg/generate"
 	"github.com/spf13/cobra"
 )
 

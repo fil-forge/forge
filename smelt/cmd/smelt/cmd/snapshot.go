@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/fil-forge/smelt/pkg/snapshot"
+	"github.com/fil-forge/forge/smelt/pkg/snapshot"
 	"github.com/spf13/cobra"
 )
 

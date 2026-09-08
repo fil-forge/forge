@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/smelt/pkg/manifest"
+	"github.com/fil-forge/forge/smelt/pkg/manifest"
 	"gopkg.in/yaml.v3"
 )
 

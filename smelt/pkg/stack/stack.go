@@ -30,10 +30,10 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/compose"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/fil-forge/smelt/pkg/generate"
-	"github.com/fil-forge/smelt/pkg/manifest"
-	"github.com/fil-forge/smelt/pkg/snapshot"
-	"github.com/fil-forge/smelt/pkg/workspace"
+	"github.com/fil-forge/forge/smelt/pkg/generate"
+	"github.com/fil-forge/forge/smelt/pkg/manifest"
+	"github.com/fil-forge/forge/smelt/pkg/snapshot"
+	"github.com/fil-forge/forge/smelt/pkg/workspace"
 )
 
 // Stack represents a running Forge network.
