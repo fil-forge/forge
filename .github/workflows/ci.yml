@@ -9,6 +9,10 @@ name: ci
 on:
   push:
   pull_request:
+  # A workflow does not run for the commits that were already present when it
+  # first appeared, so this repo's own main arrived unverified. Dispatch makes
+  # a run possible without inventing a commit to trigger one.
+  workflow_dispatch:
 
 jobs:
   replaces:
