@@ -1,0 +1,28 @@
+# Guppy System - CLI client for uploads
+#
+# Interactive CLI for uploading and retrieving content.
+
+services:
+  guppy:
+    image: ${GUPPY_IMAGE:-ghcr.io/fil-forge/guppy:main-dev}
+    volumes:
+      - ../../generated/keys/guppy.pem:/keys/guppy.pem:ro
+      - ./config/guppy-config.toml:/root/.config/guppy/config.toml:ro
+      - guppy-data:/root/.fil-forge/guppy
+    depends_on:
+      upload:
+        condition: service_healthy
+      # Uploads fail until the piri providers are registered with sprue, so
+      # gate the client container on the registrar having completed.
+      upload-init:
+        condition: service_completed_successfully
+    stdin_open: true
+    tty: true
+    # Keep container alive for interactive use (exec into it with: make shell-guppy)
+    entrypoint: ["sleep", "infinity"]
+    restart: unless-stopped
+    networks:
+      - forge-network
+
+volumes:
+  guppy-data:

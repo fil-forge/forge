@@ -1,0 +1,4 @@
+# Ignore generated artifacts (created at runtime by 'make generate' and scripts/init.sh)
+keys/
+proofs/
+compose/
