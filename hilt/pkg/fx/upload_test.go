@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/config"
-	appfx "github.com/fil-forge/hilt/pkg/fx"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	appfx "github.com/fil-forge/forge/hilt/pkg/fx"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/fil-forge/ucantone/ucan/command"
 	"github.com/fil-forge/ucantone/ucan/container"

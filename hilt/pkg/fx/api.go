@@ -1,9 +1,9 @@
 package fx
 
 import (
-	"github.com/fil-forge/hilt/pkg/api"
-	accesskeysvc "github.com/fil-forge/hilt/pkg/api/service/accesskey"
-	tenantsvc "github.com/fil-forge/hilt/pkg/api/service/tenant"
+	"github.com/fil-forge/forge/hilt/pkg/api"
+	accesskeysvc "github.com/fil-forge/forge/hilt/pkg/api/service/accesskey"
+	tenantsvc "github.com/fil-forge/forge/hilt/pkg/api/service/tenant"
 	"go.uber.org/fx"
 )
 

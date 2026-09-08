@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fil-forge/hilt/pkg/store"
-	"github.com/fil-forge/hilt/pkg/store/bucket"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	"github.com/fil-forge/forge/hilt/pkg/store/bucket"
 	"github.com/fil-forge/ucantone/did"
 )
 

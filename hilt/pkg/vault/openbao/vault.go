@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	hiltvault "github.com/fil-forge/hilt/pkg/vault"
+	hiltvault "github.com/fil-forge/forge/hilt/pkg/vault"
 	api "github.com/openbao/openbao/api/v2"
 )
 

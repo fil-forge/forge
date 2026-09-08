@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/url"
 
-	accesskeysvc "github.com/fil-forge/hilt/pkg/api/service/accesskey"
-	"github.com/fil-forge/hilt/pkg/config"
-	bucketsvc "github.com/fil-forge/hilt/pkg/rpc/service/bucket"
+	accesskeysvc "github.com/fil-forge/forge/hilt/pkg/api/service/accesskey"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
 	swarfclient "github.com/fil-forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"go.uber.org/fx"

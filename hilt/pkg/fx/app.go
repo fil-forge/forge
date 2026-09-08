@@ -3,11 +3,11 @@ package fx
 import (
 	"fmt"
 
-	"github.com/fil-forge/hilt/pkg/config"
-	storememory "github.com/fil-forge/hilt/pkg/fx/store/memory"
-	storepostgres "github.com/fil-forge/hilt/pkg/fx/store/postgres"
-	vaultmemory "github.com/fil-forge/hilt/pkg/fx/vault/memory"
-	vaultopenbao "github.com/fil-forge/hilt/pkg/fx/vault/openbao"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	storememory "github.com/fil-forge/forge/hilt/pkg/fx/store/memory"
+	storepostgres "github.com/fil-forge/forge/hilt/pkg/fx/store/postgres"
+	vaultmemory "github.com/fil-forge/forge/hilt/pkg/fx/vault/memory"
+	vaultopenbao "github.com/fil-forge/forge/hilt/pkg/fx/vault/openbao"
 	"go.uber.org/fx"
 )
 

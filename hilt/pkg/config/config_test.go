@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/config"
 	"github.com/stretchr/testify/require"
 )
 

@@ -10,8 +10,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/fil-forge/hilt/pkg/store"
-	dlgstore "github.com/fil-forge/hilt/pkg/store/delegation"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	dlgstore "github.com/fil-forge/forge/hilt/pkg/store/delegation"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/delegation"

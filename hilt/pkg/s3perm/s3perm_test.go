@@ -3,8 +3,8 @@ package s3perm_test
 import (
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/rpc/service/auth"
-	"github.com/fil-forge/hilt/pkg/s3perm"
+	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
+	"github.com/fil-forge/forge/hilt/pkg/s3perm"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	"github.com/stretchr/testify/require"
 )

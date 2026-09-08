@@ -1,4 +1,4 @@
-module github.com/fil-forge/hilt
+module github.com/fil-forge/forge/hilt
 
 go 1.27.0
 
@@ -10,8 +10,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.103.3
 	github.com/aws/smithy-go v1.27.2
 	github.com/docker/docker v28.5.2+incompatible
+	github.com/fil-forge/forge/smelt v0.0.0
 	github.com/fil-forge/libforge v0.0.0-20260904125112-81372e7200bf
-	github.com/fil-forge/smelt v0.0.0-20260828105933-8ba0939fb9a7
 	github.com/fil-forge/swarf v0.0.1-0.20260821142121-d5d1a0a56f00
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/ipfs/go-cid v0.6.2
@@ -225,3 +225,5 @@ require (
 	pitr.ca/jsontokenizer v0.3.2 // indirect
 	tags.cncf.io/container-device-interface v1.1.0 // indirect
 )
+
+replace github.com/fil-forge/forge/smelt => ../smelt

@@ -3,7 +3,7 @@ package lib
 import (
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )

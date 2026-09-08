@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/fil-forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/config"
 	"github.com/fil-forge/ucantone/did/plc"
 	"go.uber.org/fx"
 )

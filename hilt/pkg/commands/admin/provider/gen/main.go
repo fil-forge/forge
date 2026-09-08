@@ -6,7 +6,7 @@ import (
 	"os"
 
 	jsg "github.com/alanshaw/dag-json-gen"
-	provider "github.com/fil-forge/hilt/pkg/commands/admin/provider"
+	provider "github.com/fil-forge/forge/hilt/pkg/commands/admin/provider"
 	cbg "github.com/whyrusleeping/cbor-gen"
 )
 

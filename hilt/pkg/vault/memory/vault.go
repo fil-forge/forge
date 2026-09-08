@@ -6,7 +6,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/fil-forge/hilt/pkg/vault"
+	"github.com/fil-forge/forge/hilt/pkg/vault"
 )
 
 type Store struct {

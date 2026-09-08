@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/hilt/pkg/api"
-	"github.com/fil-forge/hilt/pkg/client/management"
+	"github.com/fil-forge/forge/hilt/pkg/api"
+	"github.com/fil-forge/forge/hilt/pkg/client/management"
 	"github.com/stretchr/testify/require"
 )
 

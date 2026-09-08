@@ -6,9 +6,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fil-forge/hilt/pkg/config"
-	hiltvault "github.com/fil-forge/hilt/pkg/vault"
-	vaultopenbao "github.com/fil-forge/hilt/pkg/vault/openbao"
+	"github.com/fil-forge/forge/hilt/pkg/config"
+	hiltvault "github.com/fil-forge/forge/hilt/pkg/vault"
+	vaultopenbao "github.com/fil-forge/forge/hilt/pkg/vault/openbao"
 	api "github.com/openbao/openbao/api/v2"
 	"go.uber.org/fx"
 	"go.uber.org/zap"

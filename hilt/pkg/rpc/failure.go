@@ -3,8 +3,8 @@ package rpc
 import (
 	"errors"
 
-	"github.com/fil-forge/hilt/pkg/rpc/service/auth"
-	bucketsvc "github.com/fil-forge/hilt/pkg/rpc/service/bucket"
+	"github.com/fil-forge/forge/hilt/pkg/rpc/service/auth"
+	bucketsvc "github.com/fil-forge/forge/hilt/pkg/rpc/service/bucket"
 )
 
 // failer is the subset of *binding.Response[OK] used to record a receipt failure.

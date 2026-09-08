@@ -3,8 +3,8 @@
 package memory
 
 import (
-	"github.com/fil-forge/hilt/pkg/vault"
-	vaultmemory "github.com/fil-forge/hilt/pkg/vault/memory"
+	"github.com/fil-forge/forge/hilt/pkg/vault"
+	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
 	"go.uber.org/fx"
 )
 

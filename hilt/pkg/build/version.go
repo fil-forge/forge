@@ -11,7 +11,7 @@ import (
 
 var (
 	// version is the built version. Set with ldflags via
-	// -X github.com/fil-forge/hilt/pkg/build.version=v{{.Version}} (see Makefile).
+	// -X github.com/fil-forge/forge/hilt/pkg/build.version=v{{.Version}} (see Makefile).
 	version string
 	// Version is the current version of the application, including the VCS
 	// revision (e.g. "v0.1.0-abc1234").

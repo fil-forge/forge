@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/echo/middleware"
+	"github.com/fil-forge/forge/hilt/pkg/echo/middleware"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"

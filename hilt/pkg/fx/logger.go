@@ -3,7 +3,7 @@ package fx
 import (
 	"fmt"
 
-	"github.com/fil-forge/hilt/pkg/config"
+	"github.com/fil-forge/forge/hilt/pkg/config"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

@@ -5,11 +5,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/hilt/internal/testutil"
-	"github.com/fil-forge/hilt/pkg/store"
-	"github.com/fil-forge/hilt/pkg/store/wrapkey"
-	wrapkeymemory "github.com/fil-forge/hilt/pkg/store/wrapkey/memory"
-	wrapkeypostgres "github.com/fil-forge/hilt/pkg/store/wrapkey/postgres"
+	"github.com/fil-forge/forge/hilt/internal/testutil"
+	"github.com/fil-forge/forge/hilt/pkg/store"
+	"github.com/fil-forge/forge/hilt/pkg/store/wrapkey"
+	wrapkeymemory "github.com/fil-forge/forge/hilt/pkg/store/wrapkey/memory"
+	wrapkeypostgres "github.com/fil-forge/forge/hilt/pkg/store/wrapkey/postgres"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/stretchr/testify/require"
 )

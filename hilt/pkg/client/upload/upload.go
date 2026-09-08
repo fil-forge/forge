@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/fil-forge/hilt/pkg/lib/zapucan"
+	"github.com/fil-forge/forge/hilt/pkg/lib/zapucan"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	customercmds "github.com/fil-forge/libforge/commands/customer"
 	providercmds "github.com/fil-forge/libforge/commands/provider"

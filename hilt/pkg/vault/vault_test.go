@@ -4,10 +4,10 @@ import (
 	"runtime"
 	"testing"
 
-	htestutil "github.com/fil-forge/hilt/internal/testutil"
-	"github.com/fil-forge/hilt/pkg/vault"
-	vaultmemory "github.com/fil-forge/hilt/pkg/vault/memory"
-	vaultopenbao "github.com/fil-forge/hilt/pkg/vault/openbao"
+	htestutil "github.com/fil-forge/forge/hilt/internal/testutil"
+	"github.com/fil-forge/forge/hilt/pkg/vault"
+	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
+	vaultopenbao "github.com/fil-forge/forge/hilt/pkg/vault/openbao"
 	api "github.com/openbao/openbao/api/v2"
 	"github.com/stretchr/testify/require"
 )
