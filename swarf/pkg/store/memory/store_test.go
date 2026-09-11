@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/swarf/pkg/store"
-	"github.com/fil-forge/swarf/pkg/store/memory"
+	"github.com/fil-forge/forge/swarf/pkg/store"
+	"github.com/fil-forge/forge/swarf/pkg/store/memory"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"

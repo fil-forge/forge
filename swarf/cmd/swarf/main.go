@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/fil-forge/swarf/pkg/config"
-	appfx "github.com/fil-forge/swarf/pkg/fx"
+	"github.com/fil-forge/forge/swarf/pkg/config"
+	appfx "github.com/fil-forge/forge/swarf/pkg/fx"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
 )

@@ -73,7 +73,7 @@ import (
 	"github.com/fil-forge/forge/ingot/tenantkey"
 	"github.com/fil-forge/forge/ingot/tokenstore"
 	"github.com/fil-forge/forge/ingot/uploader"
-	swarfclient "github.com/fil-forge/swarf/pkg/client"
+	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
 )
 
 // PreStartHook runs once during the server's OnStart, before the listener is

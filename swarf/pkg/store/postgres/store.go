@@ -8,7 +8,7 @@ import (
 	"iter"
 	"time"
 
-	"github.com/fil-forge/swarf/pkg/store"
+	"github.com/fil-forge/forge/swarf/pkg/store"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/delegation"
 	"github.com/fil-forge/ucantone/ucan/invocation"

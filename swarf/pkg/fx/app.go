@@ -16,13 +16,13 @@ import (
 	jsg "github.com/alanshaw/dag-json-gen"
 	ucancmd "github.com/fil-forge/libforge/commands/ucan"
 	"github.com/fil-forge/libforge/identity"
-	"github.com/fil-forge/swarf/pkg/api"
-	"github.com/fil-forge/swarf/pkg/build"
-	"github.com/fil-forge/swarf/pkg/config"
-	"github.com/fil-forge/swarf/pkg/store"
-	memstore "github.com/fil-forge/swarf/pkg/store/memory"
-	pgstore "github.com/fil-forge/swarf/pkg/store/postgres"
-	"github.com/fil-forge/swarf/pkg/store/postgres/migrations"
+	"github.com/fil-forge/forge/swarf/pkg/api"
+	"github.com/fil-forge/forge/swarf/pkg/build"
+	"github.com/fil-forge/forge/swarf/pkg/config"
+	"github.com/fil-forge/forge/swarf/pkg/store"
+	memstore "github.com/fil-forge/forge/swarf/pkg/store/memory"
+	pgstore "github.com/fil-forge/forge/swarf/pkg/store/postgres"
+	"github.com/fil-forge/forge/swarf/pkg/store/postgres/migrations"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/key"
@@ -279,7 +279,7 @@ func serverInfoHandler(id identity.Identity) echo.HandlerFunc {
 		ID: id.DID().String(),
 		Build: buildInfo{
 			Version: build.Version,
-			Repo:    "https://github.com/fil-forge/swarf",
+			Repo:    "https://github.com/fil-forge/forge/swarf",
 		},
 	}
 	return func(c echo.Context) error {

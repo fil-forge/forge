@@ -1,4 +1,4 @@
-module github.com/fil-forge/swarf
+module github.com/fil-forge/forge/swarf
 
 go 1.27.0
 

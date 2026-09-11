@@ -6,7 +6,7 @@ import (
 	"os"
 
 	jsg "github.com/alanshaw/dag-json-gen"
-	"github.com/fil-forge/swarf/pkg/api"
+	"github.com/fil-forge/forge/swarf/pkg/api"
 )
 
 const buildTag = "//go:build !codegen\n\n"

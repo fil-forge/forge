@@ -11,9 +11,9 @@ require (
 	github.com/aws/smithy-go v1.28.1
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/fil-forge/forge/hilt v0.0.0
+	github.com/fil-forge/forge/swarf v0.0.0
 	github.com/fil-forge/indexing-service v1.13.5-0.20260820151722-9eb620409a4e
 	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
-	github.com/fil-forge/swarf v0.0.1-0.20260821142121-d5d1a0a56f00
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/fil-forge/versitygw v0.0.0-20260914113944-a628e2cc628c
 	github.com/filecoin-project/go-fee v0.1.1-0.20260826122013-1c3970b90b0d
@@ -153,3 +153,5 @@ require (
 )
 
 replace github.com/fil-forge/forge/hilt => ../hilt
+
+replace github.com/fil-forge/forge/swarf => ../swarf

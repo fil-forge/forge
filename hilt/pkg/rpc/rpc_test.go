@@ -16,7 +16,7 @@ import (
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/libforge/testutil"
-	swarfclient "github.com/fil-forge/swarf/pkg/client"
+	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )

@@ -24,7 +24,7 @@ import (
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
-	swarfclient "github.com/fil-forge/swarf/pkg/client"
+	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/fil-forge/ucantone/multikey/ed25519"

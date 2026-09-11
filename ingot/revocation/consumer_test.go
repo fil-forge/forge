@@ -8,7 +8,7 @@ import (
 	"time"
 
 	jsg "github.com/alanshaw/dag-json-gen"
-	"github.com/fil-forge/swarf/pkg/api"
+	"github.com/fil-forge/forge/swarf/pkg/api"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multihash"

@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fil-forge/swarf/pkg/store"
+	"github.com/fil-forge/forge/swarf/pkg/store"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-cid"
 )

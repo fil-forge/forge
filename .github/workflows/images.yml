@@ -62,6 +62,8 @@ jobs:
             context: delegator
           - service: piri-signing-service
             context: piri-signing-service
+          - service: swarf
+            context: swarf
     name: image ${{ matrix.service }}
     runs-on: ubuntu-24.04
     # piri links curio; its build time is the unknown this run measures.

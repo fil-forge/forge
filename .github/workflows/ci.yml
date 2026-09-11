@@ -70,6 +70,12 @@ jobs:
             tagged_suites: e2e
           - service: delegator
           - service: piri-signing-service
+          # No tagged_suites: unlike hilt and ingot, swarf's itest carries no
+          # build tag, so `go test ./...` runs it. It boots one postgres via
+          # testcontainers and runs swarf in-process -- not a full stack -- and
+          # it deliberately fails rather than skips when Docker is missing in
+          # CI, so it cannot go quietly green.
+          - service: swarf
     name: unit ${{ matrix.service }}
     runs-on: ubuntu-latest
     env:
