@@ -73,3 +73,42 @@ func TestRenderOverrideNoConfigPath(t *testing.T) {
 		t.Fatal("expected error for service without a config path")
 	}
 }
+
+// TestPiriBuildsWithSkiff pins the tag that piri cannot build without. Dropping
+// it does not fail here in any obvious way — it fails much later, as undefined
+// ffi.*/supraffi.* symbols inside curio, from a build path nobody was looking
+// at. That has now happened four times: piri's .goreleaser.yaml, this
+// workspace builder, the repo CI, and the monorepo's e2e job.
+func TestPiriBuildsWithSkiff(t *testing.T) {
+	spec, ok := Services["piri"]
+	if !ok {
+		t.Fatal("no piri entry in Services")
+	}
+	if spec.buildTags != "skiff" {
+		t.Fatalf("piri buildTags = %q, want \"skiff\"", spec.buildTags)
+	}
+	args := buildArgs(spec, "/tmp/piri")
+	var sawTags bool
+	for i, a := range args {
+		if a == "-tags" {
+			if i+1 >= len(args) || args[i+1] != "skiff" {
+				t.Fatalf("-tags not followed by skiff: %v", args)
+			}
+			sawTags = true
+		}
+	}
+	if !sawTags {
+		t.Fatalf("buildArgs dropped the tag: %v", args)
+	}
+}
+
+// TestBuildArgsOmitsEmptyTags keeps the other direction honest: a service with
+// no tags must not get a bare -tags flag, which go build rejects.
+func TestBuildArgsOmitsEmptyTags(t *testing.T) {
+	args := buildArgs(serviceBuild{buildTarget: "./cmd"}, "/tmp/x")
+	for _, a := range args {
+		if a == "-tags" {
+			t.Fatalf("unexpected -tags for a service with none: %v", args)
+		}
+	}
+}

@@ -36,6 +36,7 @@ type serviceBuild struct {
 	binPath     string   // absolute path of the binary inside the container image
 	configPath  string   // absolute path of the service's config file inside the container; empty when the service has no single-file config to override
 	alsoBinIn   []string // additional compose services that run the same image and must receive the binary mount (e.g. one-shot registrars invoking the service's CLI)
+	buildTags   string   // -tags value, when the service cannot be built without one
 }
 
 // Services maps smelt service name -> build descriptor. The map key doubles as
@@ -43,7 +44,13 @@ type serviceBuild struct {
 // the generated piri-N nodes. Verified against each sibling's Dockerfile — note
 // delegator installs its binary as /usr/bin/registrar (binary name != module).
 var Services = map[string]serviceBuild{
-	"piri":            {moduleDir: "piri", buildTarget: "./cmd", binPath: "/usr/bin/piri"},
+	// piri's skiff tag is load-bearing, not an optimisation: without it the
+	// CGO_ENABLED=0 build fails outright on undefined ffi.*/supraffi.* symbols
+	// in curio's lib/ffiselect and lib/paths. skiff selects curio's FFI-free
+	// variants, which is what makes a static build possible at all. piri's own
+	// Makefile has always passed it; every other build path that forgot has
+	// had to learn the same lesson.
+	"piri":            {moduleDir: "piri", buildTarget: "./cmd", binPath: "/usr/bin/piri", buildTags: "skiff"},
 	"upload":          {moduleDir: "sprue", buildTarget: "./cmd/main.go", binPath: "/usr/bin/sprue", alsoBinIn: []string{"upload-init"}},
 	"signing-service": {moduleDir: "piri-signing-service", buildTarget: ".", binPath: "/usr/bin/signer"},
 	"indexer":         {moduleDir: "indexing-service", buildTarget: "./cmd", binPath: "/usr/bin/indexer"},
@@ -123,7 +130,7 @@ func BuildBinary(root, service, outDir string) (string, error) {
 	}
 
 	out := filepath.Join(absOutDir, service)
-	cmd := exec.Command(goTool(), "build", "-o", out, spec.buildTarget)
+	cmd := exec.Command(goTool(), buildArgs(spec, out)...)
 	cmd.Dir = moduleRoot
 	// Static linux/amd64 build so the binary drops into the published image's
 	// base cleanly. GOWORK is pinned explicitly so the build resolves the same
@@ -140,6 +147,18 @@ func BuildBinary(root, service, outDir string) (string, error) {
 		return "", fmt.Errorf("build %s (%s in %s): %w\n%s", service, spec.buildTarget, moduleRoot, err, stderr.String())
 	}
 	return filepath.Abs(out)
+}
+
+// buildArgs assembles the `go build` argument list for one service. Split out
+// from BuildBinary so the build-tag wiring is testable without a toolchain: a
+// service whose tags go missing fails only at link time, deep inside a
+// dependency, which is how this has repeatedly gone unnoticed.
+func buildArgs(spec serviceBuild, out string) []string {
+	args := []string{"build"}
+	if spec.buildTags != "" {
+		args = append(args, "-tags", spec.buildTags)
+	}
+	return append(args, "-o", out, spec.buildTarget)
 }
 
 // RenderOverride returns a docker-compose override (YAML) that mounts each built
