@@ -1,0 +1,99 @@
+name: e2e
+
+# Boots the full Forge stack in Docker and drives an upload/retrieve through
+# it. This is the first thing in this repository that can observe the wire at
+# all — ci.yml only proves each module compiles and its unit tests pass, which
+# is why a six-week ucantone skew between smelt and the services it drives sat
+# undetected until someone read the pins by hand.
+#
+# HEAD is tested via SMELT_WORKSPACE, not via built images: smelt compiles each
+# in-repo service from source and bind-mounts the binary over the published
+# image (pkg/workspace, and smoke_test.go's opt-in at line ~58). That means
+# this job exercises HEAD's *code* in the published images' *packaging*. It
+# does not validate Dockerfiles, base images or entrypoints — this repository
+# has no Dockerfiles yet, and building them belongs with the release work.
+#
+# Which services come from HEAD is decided by go.work: workspace.Detect()
+# selects exactly those whose module dir is in the use-list. Today that is
+# piri, sprue (compose name "upload"), hilt, ingot, delegator and
+# piri-signing-service. indexer and swarf are in smelt's service table but not
+# yet in this repo, so they run as published images until they move in.
+#
+# GOWORK must stay unset here. ci.yml pins GOWORK=off to prove each module
+# stands alone; this job needs the opposite, and Detect() fails outright with
+# "no active go.work" if the workspace is disabled.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One stack at a time per ref. Each permutation boots ~20 containers, so
+# overlapping runs on a shared runner starve each other's healthchecks.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    # Pinned rather than -latest so the Docker version cannot drift underneath
+    # the harness, which requires 25+.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: smelt
+    env:
+      SMELT_WORKSPACE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: smelt/go.mod
+
+      - name: docker version
+        run: |
+          docker version
+          docker compose version
+
+      - name: workspace use-list
+        # Which services get built from HEAD is derived from this. If a
+        # service unexpectedly runs as a published image, look here first.
+        working-directory: .
+        run: cat go.work
+
+      - name: e2e
+        # -parallel bounds concurrent stacks. Each spins ~20 containers
+        # (several postgres, an OpenBao, the JVM-based dynamodb-local), and
+        # booting several at once saturates the runner until slow services
+        # miss their healthcheck windows.
+        run: go test -tags e2e -v -timeout 20m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
+
+      - name: dump container state on failure
+        if: failure()
+        working-directory: .
+        run: |
+          mkdir -p /tmp/container-logs
+          {
+            echo "=== docker ps -a ==="; docker ps -a
+            echo; echo "=== docker network ls ==="; docker network ls
+            echo; echo "=== docker volume ls ==="; docker volume ls
+          } | tee /tmp/container-logs/_overview.txt
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "/tmp/container-logs/$c.log" 2>&1 || true
+            echo "::group::$c"
+            tail -200 "/tmp/container-logs/$c.log"
+            echo "::endgroup::"
+          done
+
+      - name: upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-logs
+          path: /tmp/container-logs/
+          if-no-files-found: ignore
+          retention-days: 7
