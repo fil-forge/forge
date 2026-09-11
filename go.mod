@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.21.3
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.67.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.111.0
-	github.com/aws/aws-sdk-go-v2/service/sns v1.42.8
+	github.com/aws/aws-sdk-go-v2/service/sns v1.46.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.50.0
 	github.com/aws/smithy-go v1.28.1
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
