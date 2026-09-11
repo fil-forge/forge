@@ -1,6 +1,6 @@
 # MinIO image removal
 
-**Status: open — blocking, needs a decision.** Opened 2026-09-11.
+**Status: resolved.** Opened and closed 2026-09-11.
 
 `minio/minio` has been removed from Docker Hub. It is a hard dependency of
 four places in this repository, so `unit piri`, `unit sprue` and the whole of
@@ -124,23 +124,78 @@ Two aggravating details:
 - **Two of the four are in testcontainers calls**, not compose, so they were
   never covered by the image-override thinking at all.
 
-## Options
+## What we did
 
-Not chosen — this needs a human call. Vendor claims are the vendors' own.
+**Forked MinIO and build the image ourselves.** `fil-forge/minio` is a fork of
+`minio/minio` carrying all 523 upstream release tags; its `Dockerfile` builds
+from source and `publish-image.yml` pushes
+`ghcr.io/fil-forge/minio:<upstream tag>`. `forge-2` consumes that image and
+builds nothing third-party itself.
 
-1. **Chainguard `minio` / `minio-client`.** Chainguard states these are on
-   its free tier with no account approval, built from source. Closest to a
-   drop-in, if the entrypoint and the `mc ready local` healthcheck match.
-2. **Community fork, e.g. `pgsty/minio`.** Reported to be a CVE-patched
-   continuation. Trust and longevity are the open questions.
-3. **Build from source and mirror into `ghcr.io/fil-forge`.** Most control,
-   permanently immune to a repeat, and the only option that does not add a
-   new third party. Costs a build pipeline and an owner.
-4. **Replace S3-in-tests entirely** (moto, s3proxy, seaweedfs, …). Cheapest
-   to adopt, but ingot's S3 conformance suite cares about fidelity, so this
-   trades a supply-chain problem for a correctness one.
-5. **Split the decision**: something quick for `piri`/`sprue` unit tests,
-   something faithful for the stack. Two dependencies instead of one.
+Pinned to `RELEASE.2025-10-15T17-29-55Z` — upstream's last release, and the
+one whose absence as an image opened minio/minio#21647. So the build carries
+a security fix that was never published as a container: **ahead of the
+`:latest` we had been running, not a restoration of it.**
+
+Why this and not the alternatives:
+
+- **Quay was out** — the primary source reports the release missing there too.
+- **Chainguard's free tier and community forks** re-acquire the same class of
+  dependency: a free artifact a third party can withdraw. That is what broke,
+  twice (publishing stopped Oct 2025; tags deleted today). One of the
+  recommended alternatives, Minimus, is itself reportedly shutting down next
+  month.
+- **Upstream is archived** (2026-04-25), so there is no upstream release to
+  track. A fork is not optional scaffolding; it is the only place future
+  MinIO maintenance — a CVE patch, say — can happen at all.
+- **Source and recipe end up co-located**, so the AGPLv3 Corresponding Source
+  is complete in one repository on a server we operate, and the image's
+  `org.opencontainers.image.source` label points at it. The package is
+  public, which is redistribution; that is permitted, and the labels plus the
+  in-image `LICENSE`/`CREDITS`/`NOTICE` are what make it clean rather than
+  merely unnoticed.
+
+### Deliberate differences from what we used to pull
+
+- **No `mc`.** Upstream shipped the client in the same image; we used it for
+  the compose healthcheck `mc ready local` and nothing else. The healthcheck
+  now polls `/minio/health/cluster`, which piri's own testutil had already
+  identified as the correct readiness probe because `live` and `ready` answer
+  200 before the object layer is up.
+- **Runtime is `debian:bookworm-slim`, not upstream's `ubi-micro`.** That
+  exact combination — bookworm build, bookworm-slim runtime, upstream's
+  entrypoint unmodified — passed the full e2e suite: upload and retrieve over
+  both filesystem and S3, plus a three-node snapshot boot. ubi-micro was not
+  tested, and their hotfix image targets RedHat certification, which is not
+  our requirement.
+- **`MINIO_IMAGE` now exists.** MinIO was the one image with no override
+  hook: hardcoded at both smelt sites and passed as a literal at both
+  testcontainers sites. That is why its disappearance cost a code change
+  across three modules instead of an environment variable.
+
+### Things that went wrong on the way, worth not repeating
+
+- **The build was put in the wrong repository first.** `forge-2` grew a
+  `third_party/minio/` Dockerfile and published from there before the fork
+  existed. That claimed the GHCR package name under `forge-2`, and when the
+  build moved to the fork the fork was locked out —
+  `denied: permission_denied: write_package` — because GHCR ties a package to
+  its creating repository. Fixed by deleting the package and letting the fork
+  create it. **Decide where an artifact is produced before publishing it
+  anywhere.**
+- **A workflow comment claimed the package was private.** Visibility is not
+  expressible in a workflow: GHCR inherits it from the repository on first
+  publish. Asserting it in a committed file made a guess look verified.
+- **Tag pushes were blocked** from the agent environment (403 on
+  `refs/tags/*`, `refs/heads/*` fine), so a human pushed the 523 tags. The
+  publish workflow is `workflow_dispatch`-only partly because of that bulk
+  push: a tag trigger would have fanned out or silently fired for none.
+- **Upstream's CI was removed from the fork.** Fourteen of its workflows
+  trigger on `pull_request` and one on `push`; enabling Actions to run our
+  publish workflow would have armed all of them, against services and secrets
+  the fork does not have. A dozen permanently-red checks nobody can fix is
+  worse than none — people learn to scroll past red, and then a real failure
+  scrolls past too.
 
 ## The lesson, stated plainly
 
