@@ -10,8 +10,9 @@ name: e2e
 # in-repo service from source and bind-mounts the binary over the published
 # image (pkg/workspace, and smoke_test.go's opt-in at line ~58). That means
 # this job exercises HEAD's *code* in the published images' *packaging*. It
-# does not validate Dockerfiles, base images or entrypoints — this repository
-# has no Dockerfiles yet, and building them belongs with the release work.
+# does not validate Dockerfiles, base images or entrypoints. (An earlier
+# version of this comment claimed the repository has no Dockerfiles; it has
+# six, carried in by the subtree import. images.yml builds them.)
 #
 # Which services come from HEAD is decided by go.work: workspace.Detect()
 # selects exactly those whose module dir is in the use-list. Today that is

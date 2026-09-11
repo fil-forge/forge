@@ -1,0 +1,8 @@
+# Build context for the monorepo root. Three service images (piri, hilt,
+# ingot) build with the repo root as context because their go.mod carries a
+# `replace => ../<svc>` that Go resolves before it will download anything --
+# a context scoped to the service directory fails in `go mod download`.
+#
+# Each Dockerfile then COPYs only the module directories it needs, so this
+# file only has to keep the context transfer small.
+.git
