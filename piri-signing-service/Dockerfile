@@ -15,7 +15,7 @@ COPY . .
 
 # Build with cross-compilation and stripped binary
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
-    go build -ldflags="-s -w" -o /app github.com/fil-forge/piri-signing-service
+    go build -ldflags="-s -w" -o /app .
 
 FROM alpine:latest AS prod
 
