@@ -294,8 +294,25 @@ Copying just `smelt/go.mod` and `go.sum` is enough to resolve the module graph,
 verified by building each service from a staged context with no smelt source
 present.
 
-Useful beyond Docker: **derive dependency lists, never hand-maintain them.**
-The derived one is narrower *and* cannot go stale.
+**The lesson is not "derived is narrower" — it is "derived is right".** The
+swarf migration proved the other direction. Bringing swarf in made hilt's and
+ingot's closures *wider* than they had been:
+
+```
+hilt  -> hilt, swarf
+ingot -> hilt, ingot, swarf
+```
+
+swarf is linked into both binaries (the revocation client, the SSE firehose
+consumer), so both Dockerfiles needed its source and not just its go.mod.
+Assuming instead of running `go list -deps` would have broken both images,
+and the failure would have surfaced as a missing package deep inside a
+dependency, naming nothing about swarf.
+
+So: **derive dependency lists, never hand-maintain them.** A derived list is
+sometimes narrower and sometimes wider than the one you would have written;
+what matters is that it cannot go stale, in either direction. Re-derive on
+every migration, not once.
 
 ---
 
