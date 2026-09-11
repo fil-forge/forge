@@ -34,31 +34,53 @@ Our own timeline, from CI on one commit:
 
 Under three hours between working and gone.
 
-## What the sources say
+## Two events, ten months apart
 
-Primary: [minio/minio#21647](https://github.com/minio/minio/issues/21647) —
-a user reports a security release (`RELEASE.2025-10-15T17-29-55Z`) missing
-from **Quay.io *and* DockerHub**. Maintainers labelled it `community` and
-**`working as intended`**, and closed it.
+This is the thing to get straight, because the public record conflates them:
 
-That the report names Quay too is the important part: **Quay is not a
-fallback.** It was the obvious one-line fix and it would have burned a CI
-cycle to discover.
+1. **October 2025 — publishing stopped.** MinIO moved the community edition
+   to source-only: no *new* images to Docker Hub or Quay. Widely reported at
+   the time ([GIGAZINE](https://gigazine.net/gsc_news/en/20251023-minio-stops-distributing-free-docker-images/),
+   [faun.dev](https://faun.dev/c/news/devopslinks/minio-pulls-docker-images-and-documentation-community-calls-move-malicious-and-lock-in-strategy/),
+   [r/laravel](https://www.reddit.com/r/laravel/comments/1od75f3/minio_moving_to_sourceonly_no_docker_images/)).
+   **This broke nothing for us.** `:latest` still resolved to their last
+   push, and the stack kept pulling it for ten months.
+2. **2026-09-11 — the existing tags were deleted.** That is what broke CI.
 
-Secondary, several independent outlets, consistent with each other: MinIO
-moved the community edition to source-only distribution, announced around
-October 2025, and has since archived the repository. These are summaries of
-the change, not statements by MinIO; treat the details as second-hand.
+Primary source for (1): [minio/minio#21647](https://github.com/minio/minio/issues/21647),
+where a user reports a security release missing from **Quay.io *and*
+DockerHub** and maintainers label it `community` / `working as intended`.
+Note the Quay half — **Quay is not a fallback**, which was the obvious
+one-line fix and would have cost a CI cycle to disprove.
 
-- [GIGAZINE](https://gigazine.net/gsc_news/en/20251023-minio-stops-distributing-free-docker-images/)
-- [faun.dev roundup](https://faun.dev/c/news/devopslinks/minio-pulls-docker-images-and-documentation-community-calls-move-malicious-and-lock-in-strategy/)
-- [DevPro](https://devpro.fr/minio-container-images-gone-best-alternatives-2025/)
+Evidence for (2) being recent is our own CI, and it is an inference rather
+than an observed pull, so stated plainly: at 20:15Z compose failed pulling
+minio for **all three** tests, `TestUploadAndRetrieve/filesystem` included,
+so minio is in the base stack regardless of node config. At 17:30Z the same
+compose files ran the same three tests and passed. Nothing between the runs
+changed which services compose builds.
 
-One discrepancy worth keeping in view: the announcement is dated to late
-2025, but the image was pullable here until today. The consistent reading is
-that publishing **new** images stopped then, and the repository itself was
-**deleted** much later. We have first-hand evidence only for the deletion
-being recent.
+### Registry, not just the web API
+
+Worth separating, since "delisted" and "deleted" are different failures.
+Same auth flow, same proxy, seconds apart:
+
+| | |
+|---|---|
+| `library/alpine:latest` | **200** |
+| `minio/minio:latest` | **401** |
+| `minio/minio:RELEASE.2025-10-15T17-29-55Z` | **401** |
+
+The control rules out a sandbox or rate-limit artifact — a per-IP rate limit
+would have taken alpine down too, and `minio/operator` answered 200 from the
+same address in the same second.
+
+### Treat the secondary coverage with care
+
+It is inconsistent on specifics and some of it is written by vendors selling
+replacements. One widely-syndicated summary states `bitnami/minio` is "now
+deleted"; it answered **HTTP 200** when measured here. Verify before
+repeating.
 
 ## Where it bites
 
@@ -106,3 +128,16 @@ third-party tag could take the stack offline. The correction is not "pin it"
 > A dependency you do not control and cannot rebuild is a dependency you can
 > lose outright. For anything load-bearing, hold a copy you can serve
 > yourself.
+
+And a second lesson, which is the quieter one. L6 said floating tags are
+dangerous because they **move** under you. The inverse is just as real and
+far harder to see: a floating tag that **stops moving** hands you a frozen
+dependency while still reading as current. `minio/minio:latest` had not been
+republished since October 2025 — by the reporting, with a known high-severity
+CVE in that final image (a vendor claim, from sellers of alternatives, though
+the identifier is checkable). We ran it for ten months and nothing said a
+word.
+
+Today's outage is the better outcome: it turned ten months of silent
+staleness into one loud failure. A check on **tag age** would have caught it
+in week one; nothing we had was looking.
