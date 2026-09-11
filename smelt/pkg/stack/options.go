@@ -2,6 +2,7 @@ package stack
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
@@ -349,4 +350,51 @@ func WithEmbeddedSnapshot(name string) Option {
 	return func(c *config) {
 		c.embeddedSnapshotName = name
 	}
+}
+
+// envImageOptions maps each image-override environment variable to its
+// option. The variable names match the ones the compose files already
+// interpolate (systems/*/compose.yml, and PIRI_IMAGE in pkg/generate), so a
+// caller that can set them for `docker compose` can set them for a Go test
+// and get the same stack.
+var envImageOptions = []struct {
+	env string
+	opt func(string) Option
+}{
+	{"PIRI_IMAGE", WithPiriImage},
+	{"GUPPY_IMAGE", WithGuppyImage},
+	{"INDEXER_IMAGE", WithIndexerImage},
+	{"DELEGATOR_IMAGE", WithDelegatorImage},
+	{"UPLOAD_IMAGE", WithUploadImage},
+	{"HILT_IMAGE", WithHiltImage},
+	{"SIGNER_IMAGE", WithSignerImage},
+	{"BLOCKCHAIN_IMAGE", WithBlockchainImage},
+	{"IPNI_IMAGE", WithIPNIImage},
+	{"INGOT_IMAGE", WithIngotImage},
+	{"SWARF_IMAGE", WithSwarfImage},
+}
+
+// OptionsFromEnv returns the options implied by the process environment: an
+// image override per service, plus SMELT_WORKSPACE to build every service in
+// the active go.work use-list from local source.
+//
+// Every test that boots a stack should append these, so that a CI job can
+// redirect the whole stack at locally-built images by setting environment
+// variables alone. Hand-rolling the mapping per test is what let
+// TestStackFromSnapshot run on published :main images inside a job that
+// existed to exercise HEAD -- it read neither variable, and nothing said so.
+//
+// Append these last: an override supplied by the environment should win over
+// one a test hard-codes, which is the point of an override.
+func OptionsFromEnv() []Option {
+	var opts []Option
+	for _, m := range envImageOptions {
+		if image := os.Getenv(m.env); image != "" {
+			opts = append(opts, m.opt(image))
+		}
+	}
+	if os.Getenv("SMELT_WORKSPACE") != "" {
+		opts = append(opts, WithWorkspaceBinaries())
+	}
+	return opts
 }
