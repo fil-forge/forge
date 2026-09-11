@@ -28,6 +28,7 @@ type config struct {
 	ipniImage       string
 	ingotImage      string
 	swarfImage      string
+	minioImage      string
 
 	// Binary injection: bind-mount host-built binaries over the published
 	// images instead of rebuilding the image. serviceBinaries holds explicit
@@ -98,6 +99,9 @@ func (c *config) buildEnv() map[string]string {
 	}
 	if c.swarfImage != "" {
 		env["SWARF_IMAGE"] = c.swarfImage
+	}
+	if c.minioImage != "" {
+		env["MINIO_IMAGE"] = c.minioImage
 	}
 
 	return env
@@ -372,6 +376,7 @@ var envImageOptions = []struct {
 	{"IPNI_IMAGE", WithIPNIImage},
 	{"INGOT_IMAGE", WithIngotImage},
 	{"SWARF_IMAGE", WithSwarfImage},
+	{"MINIO_IMAGE", WithMinioImage},
 }
 
 // OptionsFromEnv returns the options implied by the process environment: an
@@ -397,4 +402,14 @@ func OptionsFromEnv() []Option {
 		opts = append(opts, WithWorkspaceBinaries())
 	}
 	return opts
+}
+
+// WithMinioImage overrides the MinIO image. MinIO is not one of our services,
+// but upstream withdrew it from every public registry and archived the
+// project, so fil-forge/minio builds it from source and the stack points at
+// that build.
+func WithMinioImage(image string) Option {
+	return func(c *config) {
+		c.minioImage = image
+	}
 }

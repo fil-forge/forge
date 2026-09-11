@@ -23,6 +23,7 @@ var imageFields = []struct {
 	{"IPNI_IMAGE", "img-ipni", func(c *config) string { return c.ipniImage }},
 	{"INGOT_IMAGE", "img-ingot", func(c *config) string { return c.ingotImage }},
 	{"SWARF_IMAGE", "img-swarf", func(c *config) string { return c.swarfImage }},
+	{"MINIO_IMAGE", "img-minio", func(c *config) string { return c.minioImage }},
 }
 
 // clearEnv blanks every variable OptionsFromEnv reads, so a test does not
