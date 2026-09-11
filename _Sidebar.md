@@ -7,3 +7,4 @@
   - Went better (G1–G3)
   - Open items (O1–O3)
   - Working principles
+- [[MinIO Image Removal]] ⚠️

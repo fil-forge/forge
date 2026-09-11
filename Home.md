@@ -9,6 +9,9 @@ history stays about the code.
 - **[[Consolidation Findings]]** — the running log: latent bugs found, blind
   spots where a test did not cover what it appeared to, and the open items
   each one leaves behind.
+- **[[MinIO Image Removal]]** — open and blocking: `minio/minio` was
+  withdrawn from Docker Hub, breaking CI on every branch. Investigation,
+  evidence, and the options.
 
 ## What lives where
 
