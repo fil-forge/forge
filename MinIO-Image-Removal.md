@@ -60,6 +60,30 @@ so minio is in the base stack regardless of node config. At 17:30Z the same
 compose files ran the same three tests and passed. Nothing between the runs
 changed which services compose builds.
 
+### Independent corroboration that the deletion is today's
+
+Two issues filed by unrelated projects on 2026-09-11, minutes either side of
+our own failure:
+
+| issue | filed | |
+|---|---|---|
+| [smartsolutionslab/smart-sentinel-eye#2265](https://github.com/smartsolutionslab/smart-sentinel-eye/issues/2265) | 19:59Z | "MinIO withdrew their Docker Hub organisation today"; 354 tests failed across 1416 pull attempts |
+| [Renaissance-Analytics/genie#636](https://github.com/Renaissance-Analytics/genie/issues/636) | 20:14Z | same denial on `minio/minio:latest`, red on `main` |
+
+Different organisations, different stacks (.NET Aspire, Node). The first
+published a probe table **identical to the one above** — `library/postgres`
+200, `bitnami/minio` 200, `minio/minio` 404, `minio/mc` 404 — reached
+independently. Our own last success was 17:30Z.
+
+**They were pulling a pinned tag** (`RELEASE.2025-09-07T16-13-09Z`) and it
+failed the same way. That is first-hand confirmation from outside this
+project that **pinning would not have helped**: the repository is gone, so
+every tag in it is gone.
+
+One correction to their wording: #2265 says the *organisation* was
+withdrawn. It was not — `minio/operator` and `minio/sidekick` still answer
+200. The server, the client and the console were.
+
 ### Registry, not just the web API
 
 Worth separating, since "delisted" and "deleted" are different failures.
