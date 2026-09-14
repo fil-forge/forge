@@ -14,8 +14,6 @@ import (
 	"time"
 
 	jsg "github.com/alanshaw/dag-json-gen"
-	ucancmd "github.com/fil-forge/libforge/commands/ucan"
-	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/forge/swarf/pkg/api"
 	"github.com/fil-forge/forge/swarf/pkg/build"
 	"github.com/fil-forge/forge/swarf/pkg/config"
@@ -23,6 +21,8 @@ import (
 	memstore "github.com/fil-forge/forge/swarf/pkg/store/memory"
 	pgstore "github.com/fil-forge/forge/swarf/pkg/store/postgres"
 	"github.com/fil-forge/forge/swarf/pkg/store/postgres/migrations"
+	ucancmd "github.com/fil-forge/libforge/commands/ucan"
+	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/key"

@@ -7,8 +7,8 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/fil-forge/libforge/identity"
 	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
+	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/fil-forge/ucantone/ucan"

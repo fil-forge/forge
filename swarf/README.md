@@ -147,27 +147,23 @@ values.
 
 ## Container images
 
-A push to `main` publishes to GHCR from the `Container` workflow. The `prod`
-target becomes `ghcr.io/fil-forge/swarf:main`, a stripped binary on a slim
-Debian base. The `dev` target becomes `ghcr.io/fil-forge/swarf:main-dev` and
-adds delve plus a handful of debugging tools. Both cover `linux/amd64` and
-`linux/arm64`, and both also carry a `sha-<short-sha>` tag, the dev image with a
-`-dev` suffix.
+**Nothing publishes a swarf image today.** The repository-root `images.yml`
+builds `swarf/Dockerfile` on every push and pull request, but with
+`push: false` — the build is a check that the image still builds, and the
+result is discarded. `e2e.yml` builds the same Dockerfile and `--load`s it
+locally to run the stack against this commit.
 
-## Deploying to dev
+Before swarf moved into this monorepo it had its own `Container` workflow,
+which published `ghcr.io/fil-forge/swarf:main` and `:main-dev` to GHCR for
+`linux/amd64` and `linux/arm64`, each also tagged `sha-<short-sha>`, and then
+dispatched a `bump-deployed-image` event to
+[infra-central](https://github.com/fil-forge/infra-central) to open an
+auto-merging pull request that pinned the new digest for the dev environment.
+That workflow lived under `swarf/.github/`, which GitHub does not read —
+only the repository root is scanned — so it was removed rather than left
+inert.
 
-The same run asks [infra-central][] to deploy the prod image. It dispatches a
-`bump-deployed-image` event carrying the manifest digest it just pushed, and
-infra-central's [Bump deployed image][receiver] workflow opens a pull request
-pinning that digest in `terraform/envs/dev/apps/terraform.tfvars`, with
-auto-merge enabled. infra-central's [Check and deploy][deploy] workflow runs
-`tofu apply` on `dev/apps` on every push to its `main`, so merging that pull
-request is what deploys.
-
-The dispatch runs as the `fil-forge-bot` GitHub App and needs the
-`FORGE_BOT_APP_ID` variable and the `FORGE_BOT_PRIVATE_KEY` secret. Prod pins
-are promoted by hand.
-
-[infra-central]: https://github.com/fil-forge/infra-central
-[receiver]: https://github.com/fil-forge/infra-central/blob/main/.github/workflows/bump-deployed-image.yml
-[deploy]: https://github.com/fil-forge/infra-central/blob/main/.github/workflows/check-and-deploy.yml
+Restoring publication and deployment for every service in this repository is
+Phase 1 of the consolidation plan, along with release tags. Until that lands,
+`ghcr.io/fil-forge/swarf:main` keeps whatever digest the last pre-migration
+build pushed, and will not advance.

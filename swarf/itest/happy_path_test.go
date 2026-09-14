@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/forge/swarf/internal/testutil"
 	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
 	"github.com/fil-forge/forge/swarf/pkg/config"
 	appfx "github.com/fil-forge/forge/swarf/pkg/fx"
+	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"
