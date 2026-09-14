@@ -1,4 +1,4 @@
-// Package migrations embeds the hilt Postgres migrations and exposes a runner
+// Package migrations embeds the swarf Postgres migrations and exposes a runner
 // that applies them via goose.
 package migrations
 
