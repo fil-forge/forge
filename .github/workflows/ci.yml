@@ -1,10 +1,18 @@
 name: ci
 
 # Minimal Phase 0 check: each module builds, vets, is tidy, and its tests
-# pass, standalone (GOWORK=off). No Docker, no release/publish — that's
-# later-phase work. Unfiltered on purpose: with only one job covering every
-# module, there's no path-filter list to fall out of sync with a new shared
-# module (see forge-consolidation-plan.md's Traps section, #1).
+# pass, standalone (GOWORK=off). No release/publish -- that's later-phase
+# work.
+#
+# Unfiltered on purpose: with only one job covering every module, there's no
+# path-filter list to fall out of sync with a new shared module (see
+# forge-consolidation-plan.md's Traps section, #1).
+#
+# It does need Docker, for one module: swarf's itest carries no build tag, so
+# `go test ./...` runs it and it boots a postgres through testcontainers. It
+# fails rather than skips without a daemon, which is the behaviour we want --
+# but it means this matrix is not daemon-free, whatever the rest of it
+# implies.
 
 on:
   # Only main: a push to a branch with an open pull request would otherwise

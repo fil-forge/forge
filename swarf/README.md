@@ -10,7 +10,9 @@ swarf serve --storage memory
 
 By default, Swarf uses PostgreSQL. Configure it with `--postgres-dsn`, a
 `config.yaml`, or `SWARF_STORAGE_POSTGRES_DSN`. Configuration sections are
-`identity`, `server`, `log`, and `storage`; environment variable names use the
+`identity`, `server`, `log`, `storage`, and `plc` -- the last holds
+`plc.directory`, the did:plc directory used to resolve `did:plc` issuers,
+defaulting to `https://plc.directory`. Environment variable names use the
 `SWARF_` prefix, for example `SWARF_SERVER_PORT`.
 
 ## CLI
