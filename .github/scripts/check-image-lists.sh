@@ -13,11 +13,16 @@
 # That is the hazard the consolidation plan's Traps section calls silent
 # green, so it gets a guard rather than a comment.
 #
-# This check originally compared only the first two, which left the third
-# link -- by far the easiest to break, since the variable names do not match
-# the service names -- unguarded. Deleting `UPLOAD_IMAGE` kept it green while
-# the stack quietly ran published sprue. Found in review; the lesson is that a
-# guard over part of a chain reads exactly like a guard over the chain.
+# There is a fourth link, and it is the one that actually broke: a test has to
+# call stack.OptionsFromEnv() for any of the above to reach the stack at all.
+# TestStackFromSnapshot did not, and ran the published images inside the job
+# that existed to test HEAD. Nothing about that is visible in a workflow file.
+#
+# This check has twice been a guard over part of a chain: it first compared
+# only images.yml against e2e.yml's build list, then only those two plus the
+# env block. Each time it read exactly like a guard over the whole chain --
+# same name, same green tick -- which is worse than no guard, because it is
+# trusted. Both gaps were found in review, neither by CI.
 set -euo pipefail
 
 python3 - <<'PY'
@@ -70,6 +75,25 @@ for svc, var in sorted(tagged.items()):
         fail(f"{svc} is passed as {var}, which OptionsFromEnv does not read",
              f"known variables: {', '.join(sorted(known))}")
 
+# Link 4: a test that boots a stack must append OptionsFromEnv(), or none of
+# the plumbing above has any effect. File-level check on purpose -- parsing Go
+# to find the option list is more machinery than the property needs.
+e2e_dir = pathlib.Path("smelt/tests/e2e")
+booting = []
+for f in sorted(e2e_dir.glob("*_test.go")):
+    text = f.read_text()
+    if re.search(r"\bstack\.(Must)?NewStack\(", text):
+        booting.append(f)
+        if "OptionsFromEnv" not in text:
+            fail(f"{f} boots a stack without stack.OptionsFromEnv()",
+                 "it would run the published images and pass.")
+if not booting:
+    fail("no test under smelt/tests/e2e boots a stack",
+         "this check is not looking at what it thinks it is.")
+
+for f in booting:
+    print(f"ok   {f}: boots a stack and reads the environment")
+
 for svc in sorted(matrix & built & set(tagged)):
     var = tagged[svc]
     if var in known:
@@ -78,6 +102,7 @@ for svc in sorted(matrix & built & set(tagged)):
 if failed:
     sys.exit(1)
 
-print(f"\nAll {len(matrix)} service images are built by both workflows and "
-      f"reach the stack through a variable OptionsFromEnv reads.")
+print(f"\nAll {len(matrix)} service images are built by both workflows, reach "
+      f"the stack through a variable OptionsFromEnv reads, and every e2e test "
+      f"that boots a stack reads it.")
 PY

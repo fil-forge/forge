@@ -17,6 +17,17 @@ set -uo pipefail
 
 attempts=${RETRY_ATTEMPTS:-3}
 
+# Validate before use: `seq 1 0` and `seq 1 abc` both print nothing, so the
+# loop below would never run and the script would fall off the end with
+# status 0 -- reporting success for a command it never executed. That is the
+# failure this script exists to prevent, one level up.
+case "$attempts" in
+  ''|*[!0-9]*|0)
+    echo "::error::RETRY_ATTEMPTS must be a positive integer, got '$attempts'" >&2
+    exit 2
+    ;;
+esac
+
 for i in $(seq 1 "$attempts"); do
   "$@" && exit 0
   status=$?
