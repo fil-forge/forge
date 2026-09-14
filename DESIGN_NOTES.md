@@ -73,9 +73,15 @@ claim also deletes its params row (crypto-shred — the ciphertext is
 unreadable even where copies survive), and **cross-space CopyObject is
 rejected** `NotImplemented` (the CEK wrap is space-bound; a rewrap flow is a
 filed follow-up). A copy source in **another tenant's bucket is refused**
-`AccessDenied` before that: hilt authorizes a copy against the destination
-only, so ingot compares the tenant recorded on the two bucket rows (a row
-whose owner predates the record matches none).
+`AccessDenied` before that: hilt refuses the source when it authorizes the
+request, and ingot compares the tenant recorded on the two bucket rows as
+well (a row whose owner predates the record matches none). Because hilt
+resolves the source during authorization, ahead of the gateway's argument
+validation, a copy whose source parses but names a missing or foreign bucket
+(an invalid bucket name, an empty key) reports hilt's answer (`NoSuchBucket`,
+`AccessDenied`) rather than `InvalidArgument`; a source hilt cannot parse
+(bad percent-encoding) is authorized as a plain write and the gateway
+reports the encoding error as S3 does.
 Rotation: Hilt replaces `#wrap` in place and archives the
 old key, so a write inside the cache TTL of a rotation still recovers.
 
@@ -168,7 +174,8 @@ HEAD never decrypts. See `s3frontend/decrypt.go`.
   paths compare the two buckets'.
 - **access key**: the S3 access key ID is a `did:key`. Every non-root
   request is authorized through hilt (`/s3/request/authorize`, with a local
-  fast path over cached delegations); hilt re-delegates the key's grant to
+  fast path over the cached derived key, the key's effective S3 action set
+  per bucket and its delegations); hilt re-delegates the key's grant to
   the agent, and the per-key `DelegationCache` carries those proofs into the
   request via `internal/reqscope`, where the uploader and the network read
   tier spend them. The uploader also captures a per-space ship authority

@@ -232,6 +232,69 @@ func TestProofChainCapture(t *testing.T) {
 		require.Len(t, chain, 3, "chain must resolve after the info fetch")
 	})
 
+	t.Run("cross-bucket copy: bucket info for the destination and the source", func(t *testing.T) {
+		root, mid, leaf, agent := mintRetrieveChain(t)
+		cache := iam.NewKeyProofs()
+		fake := &fakeAuthorizer{
+			res:      authorizeOK(t, keyDID, sigv4),
+			dlgs:     []ucan.Delegation{leaf},
+			infoDlgs: []ucan.Delegation{root, mid},
+		}
+		svc := iam.New(fake, cache, iam.NewVerificationKeyCache(), iam.NewTenantCache())
+
+		req := httptest.NewRequest(http.MethodPut, "http://example.com/dst/key", nil)
+		req.Header.Set("X-Amz-Copy-Source", "/src/key")
+		_, err := resolveForRequest(t, svc, access, req)
+		require.NoError(t, err)
+		require.Equal(t, []string{"dst", "src"}, fake.infoBuckets,
+			"a copy's chains span two buckets; both need their bucket→tenant→key remainder")
+
+		chain, _, err := cache.For(keyDID).ProofChain(ctx, agent.DID(), leaf.Command(), leaf.Subject())
+		require.NoError(t, err)
+		require.Len(t, chain, 3)
+	})
+
+	t.Run("the effective action set is cached under the bucket hilt named", func(t *testing.T) {
+		_, _, leaf, _ := mintRetrieveChain(t)
+		cache := iam.NewKeyProofs()
+		fake := &fakeAuthorizer{res: authorizeOK(t, keyDID, sigv4), dlgs: []ucan.Delegation{leaf}}
+		svc := iam.New(fake, cache, iam.NewVerificationKeyCache(), iam.NewTenantCache())
+
+		_, err := resolveForRequest(t, svc, access,
+			httptest.NewRequest(http.MethodGet, "http://example.com/bkt/key", nil))
+		require.NoError(t, err)
+
+		allowed, known := cache.For(keyDID).Permits(*fake.res.Bucket, "s3:GetObject")
+		require.True(t, known, "the authorize answer must be cached")
+		require.True(t, allowed)
+		allowed, known = cache.For(keyDID).Permits(*fake.res.Bucket, "s3:PutObject")
+		require.True(t, known)
+		require.False(t, allowed, "an action the key does not hold is denied from cache")
+	})
+
+	t.Run("a copy's action set is cached under the source bucket too", func(t *testing.T) {
+		_, _, leaf, _ := mintRetrieveChain(t)
+		cache := iam.NewKeyProofs()
+		res := authorizeOK(t, keyDID, sigv4)
+		src, err := ed25519.GenerateIssuer()
+		require.NoError(t, err)
+		srcID := src.DID()
+		res.SourceBucket = &srcID
+		fake := &fakeAuthorizer{res: res, dlgs: []ucan.Delegation{leaf}}
+		svc := iam.New(fake, cache, iam.NewVerificationKeyCache(), iam.NewTenantCache())
+
+		req := httptest.NewRequest(http.MethodPut, "http://example.com/dst/key", nil)
+		req.Header.Set("X-Amz-Copy-Source", "/src/key")
+		_, err = resolveForRequest(t, svc, access, req)
+		require.NoError(t, err)
+
+		for _, b := range []did.DID{*res.Bucket, srcID} {
+			allowed, known := cache.For(keyDID).Permits(b, "s3:GetObject")
+			require.True(t, known, "hilt named %s; its set must be cached", b)
+			require.True(t, allowed)
+		}
+	})
+
 	t.Run("bucket info failure degrades, auth still succeeds", func(t *testing.T) {
 		_, _, leaf, _ := mintRetrieveChain(t)
 		fake := &fakeAuthorizer{

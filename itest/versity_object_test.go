@@ -157,7 +157,6 @@ var deleteObjectXFail = []forgeCase{
 var copyObjectPass = []forgeCase{
 	{name: "copy_to_itself", fn: integration.CopyObject_copy_to_itself},
 	{name: "copy_to_itself_invalid_directive", fn: integration.CopyObject_copy_to_itself_invalid_directive},
-	{name: "invalid_copy_source", fn: integration.CopyObject_invalid_copy_source},
 	{name: "non_existing_dst_bucket", fn: integration.CopyObject_non_existing_dst_bucket},
 	{name: "to_itself_with_new_metadata", fn: integration.CopyObject_to_itself_with_new_metadata},
 	{name: "invalid_tagging_directive", fn: integration.CopyObject_invalid_tagging_directive},
@@ -192,6 +191,14 @@ var copyObjectPass = []forgeCase{
 // Observed failing against the forge stack: multi-account semantics and
 // ACLs are unimplemented surface.
 var copyObjectXFail = []forgeCase{
+	// The case walks a table of malformed copy sources. The badly encoded
+	// ones ("bucket/%ZZ") pass: hilt's parser rejects them, the request is
+	// authorized as a plain write, and the controller reports the encoding.
+	// The well-encoded ones with an invalid bucket name ("192.168.1.1/foo")
+	// or an empty key ("bucket/") parse as copies, so hilt resolves the
+	// source while authorizing, ahead of the controller's validation, and
+	// answers NoSuchBucket where S3 gives InvalidArgument.
+	{name: "invalid_copy_source", fn: integration.CopyObject_invalid_copy_source},
 	// Cross-bucket copies are cross-SPACE copies (every bucket has its own
 	// space) and are rejected NotImplemented: each blob's CEK wrap is bound
 	// to (space, digest), so serving them needs the rewrap flow — a filed
