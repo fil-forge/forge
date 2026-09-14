@@ -37,8 +37,13 @@ permissions:
 
 # One stack at a time per ref. Each permutation boots ~20 containers, so
 # overlapping runs on a shared runner starve each other's healthchecks.
+#
+# Keyed on the ref, not the sha: a per-sha key is unique to each run, so
+# cancel-in-progress has nothing to cancel and two pushes to one branch boot
+# two stacks -- exactly what the line above says must not happen. event_name
+# is in the key so a push and its pull_request run do not cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

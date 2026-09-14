@@ -28,8 +28,10 @@ on:
 permissions:
   contents: read
 
+# Keyed on the ref, not the sha -- see e2e.yml. A per-sha key never shares a
+# group, so cancel-in-progress cannot supersede an obsolete image build.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
