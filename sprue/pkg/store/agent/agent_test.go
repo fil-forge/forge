@@ -5,11 +5,11 @@ import (
 	"runtime"
 	"testing"
 
-	ucancap "github.com/fil-forge/libforge/commands/ucan"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/store/agent"
 	agentmemory "github.com/fil-forge/forge/sprue/pkg/store/agent/memory"
 	agentpostgres "github.com/fil-forge/forge/sprue/pkg/store/agent/postgres"
+	ucancap "github.com/fil-forge/libforge/commands/ucan"
 	"github.com/fil-forge/ucantone/ipld/datamodel"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/command"

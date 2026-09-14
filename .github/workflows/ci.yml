@@ -32,6 +32,22 @@ jobs:
         run: .github/scripts/check-setup-go-cache.sh
       - name: every Dockerfile retries its module download
         run: .github/scripts/check-dockerfile-retry.sh
+      # gofmt is not a style preference here: the module-path rewrite changed
+      # import sort order (github.com/fil-forge/forge/... sorts before
+      # .../libforge/...), and nothing re-ran it, so 89 files across seven
+      # modules drifted. `go vet` does not check formatting and neither did
+      # anything else, which is why it went unnoticed until a reviewer read
+      # the diff.
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "::error::these files are not gofmt-clean:"
+            echo "$unformatted" | sed 's/^/  /'
+            echo "Run: gofmt -l . | xargs gofmt -w"
+            exit 1
+          fi
+          echo "All Go files are gofmt-clean."
 
   unit:
     strategy:

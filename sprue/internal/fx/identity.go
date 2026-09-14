@@ -6,8 +6,8 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/forge/sprue/internal/config"
+	"github.com/fil-forge/libforge/identity"
 )
 
 // IdentityModule provides the service identity.

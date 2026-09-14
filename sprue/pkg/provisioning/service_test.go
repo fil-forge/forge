@@ -4,13 +4,13 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/provisioning"
 	"github.com/fil-forge/forge/sprue/pkg/store/consumer"
 	consumermemory "github.com/fil-forge/forge/sprue/pkg/store/consumer/memory"
 	"github.com/fil-forge/forge/sprue/pkg/store/subscription"
 	subscriptionmemory "github.com/fil-forge/forge/sprue/pkg/store/subscription/memory"
+	"github.com/fil-forge/libforge/attestation/didmailto"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/stretchr/testify/require"
 )

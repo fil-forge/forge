@@ -16,9 +16,9 @@ import (
 	"github.com/fil-forge/ucantone/errors"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 
-	libpiece "github.com/fil-forge/libforge/piece"
 	pdptypes "github.com/fil-forge/forge/piri/pkg/pdp/types"
 	"github.com/fil-forge/forge/piri/pkg/store/receiptstore"
+	libpiece "github.com/fil-forge/libforge/piece"
 )
 
 var log = logging.Logger("storage/ucan")
