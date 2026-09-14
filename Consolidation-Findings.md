@@ -345,6 +345,39 @@ were things the rewrite failed to reach. This one it reached and changed
 correctly — the breakage is that a *correct* edit invalidated a derived
 property nobody recomputed.
 
+### L11. Fixing the instance, not the class — three times in one afternoon
+
+Not a defect in the repository; a defect in how the repository was being
+fixed. Recorded because it happened three times in a row, each time with the
+remaining instances found by someone other than the person fixing it.
+
+1. **Docker module retries.** piri's unretried `go mod download` failed in CI
+   and was fixed. The same commit message observed that hilt and sprue
+   "remain exposed at that later step" — and left them. A reviewer flagged
+   hilt within the hour. A guard written in response then failed immediately
+   on swarf, whose Dockerfile carried the same `|| true` and had never been
+   looked at.
+2. **Stale counts in workflow comments.** A review flagged `e2e.yml`'s header
+   as saying six services when it built seven. The number was updated and the
+   file was not grepped for other counts; the *same file* had a second stale
+   count nine lines from the build commands. A later review flagged that one.
+3. **The module-path rewrite**, across the whole project: Dockerfiles, then a
+   `Makefile`'s ldflags, then a repository URL, then import ordering
+   ([L1](#l1-the-module-path-rewrite-never-reached-non-go-files--fixed),
+   [L10](#l10-the-module-path-rewrite-silently-unformatted-89-files--9-fixed-80-open)).
+   Each was fixed as it surfaced; the class was never swept.
+
+The shape is always the same, and it is not carelessness about the fix — each
+individual fix was correct and tested. It is that *finding* a defect and
+*characterising* it are different acts, and only the second one tells you
+where else it lives. A fix applied without the second act is a coin flip on
+whether the reviewer or the guard finds the rest.
+
+What actually worked, both times it was tried: writing the check. `gofmt -l`
+turned "nine files Copilot flagged" into "89, of which 80 predate this work".
+`check-dockerfile-retry.sh` found swarf on its first run. In both cases the
+mechanical sweep found instances that careful reading had missed, immediately.
+
 ---
 
 ## Part 3 — Things that turned out better than expected
@@ -492,11 +525,18 @@ become wrong too.
 8. **"Not yet observed" is not "unlikely"** on a failure mode you have just
    proved is live. The Docker-side module fetch was called residual exposure
    and failed within the hour (L9).
-9. **A correct edit can invalidate a derived property.** The module-path
+9. **When you fix one, grep for the rest before you commit.** Characterising
+   a defect is a separate act from finding it, and only the second tells you
+   where else it lives (L11). Prefer a command that enumerates the class to
+   reading carefully for it.
+10. **Don't write counts in prose.** "The other three take their own
+   directory" is a derived value nothing recomputes; state the rule instead
+   and let the list below it be the answer (L11).
+11. **A correct edit can invalidate a derived property.** The module-path
    rewrite was right; import *order* was computed from the old paths and
    nobody recomputed it (L10). Ask what else was derived from what you just
    changed.
-10. **Some defects only change a probability.** They are the hardest to
+12. **Some defects only change a probability.** They are the hardest to
    attribute, because every individual failure already has a complete and
    correct explanation that is not them (L9). "This failure was a transient"
    and "our setup makes transients frequent" are both true at once.

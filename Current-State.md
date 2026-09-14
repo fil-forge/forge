@@ -60,6 +60,11 @@ Six rules that have actually decided things:
    the artifact that reaches production.
 5. **A green check is a claim about what ran.** Ask what the job would have
    had to *do* to catch the fault.
+   - Corollary, learned three times in one afternoon: when you fix one
+     instance, run a command that enumerates the class before committing.
+     Careful reading missed the rest every time; `gofmt -l` and
+     `check-dockerfile-retry.sh` found them instantly. See
+     [[Consolidation Findings]] L11.
 6. **Stacked branches rebase onto their base; they do not merge it.** A merge
    buries the branch's own commits under someone else's and makes the PR diff
    grow every time the base moves. One exception, and it is load-bearing:
@@ -140,8 +145,6 @@ project. We build from source and publish
   formatting and nothing else does. Wants fixing together with a `gofmt` step
   in `ci.yml`, or adding the step turns every branch red.
   [[Consolidation Findings]] L10.
-- `hilt` and `sprue` Dockerfiles swallow a failed `go mod download` with
-  `|| true` and refetch during `go build`, which is not retried.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
