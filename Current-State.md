@@ -11,9 +11,24 @@ Consolidating the Fil Forge polyrepo into a monorepo at
 
 Four rules that have actually decided things:
 
-1. **Build what we own; pin what we don't.** In-repo services are built from
-   HEAD in CI. External images get digest pins. A module moving in retires
-   its pin by construction — so don't pin something that is about to arrive.
+1. **Build what we own; pin what we don't — this is about container images.**
+   In-repo services are built from HEAD in CI; external images get digest
+   pins. A module moving in retires its pin by construction, so don't pin
+   something that is about to arrive.
+
+   Go modules follow the same principle, but Go already enforces it:
+   `replace => ../<svc>` for in-repo (always the matching commit), and
+   `go.mod` + `go.sum` for external (a digest pin by another name). The rule
+   needs stating for images precisely because the ergonomics are inverted —
+   Go makes the correct thing the default and will not let you depend on a
+   moving external version, while Docker makes `:latest` and `:main` the
+   default and nothing complains. The instinct "dependencies are pinned,
+   that's handled" is true in Go and silently false in Docker.
+
+   Go's separate problem is *agreement*, not reproducibility: modules can be
+   pinned to reproducibly-different versions of the same library, which is
+   how a six-week ucantone wire skew survived a green CI. That is what
+   unifying the library pins fixed.
 2. **Derive dependency lists, never hand-maintain them.** `go list -deps` on
    the build target, not `go.mod`'s replace list. It is sometimes narrower
    and sometimes wider than the obvious guess, and it cannot go stale.
