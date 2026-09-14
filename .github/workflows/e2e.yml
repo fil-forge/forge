@@ -14,15 +14,16 @@ name: e2e
 # Dockerfiles, so delegator and piri-signing-service had been unbuildable
 # since consolidation under a green CI.
 #
-# So the six in-repo services are built here (same Dockerfiles images.yml
+# So the seven in-repo services are built here (same Dockerfiles images.yml
 # builds) and passed by *_IMAGE, which pkg/stack.OptionsFromEnv turns into
 # stack options. SMELT_WORKSPACE is deliberately NOT set: a bind-mounted
 # binary would shadow the image's own and mask exactly the faults this job
 # now exists to catch.
 #
-# guppy, indexer, swarf, plc, ipni and blockchain still run as published
-# images -- they are not in this repository. indexer and swarf move in later;
-# guppy retires as the driver in the plan's Phase 5.
+# guppy, indexer, plc, ipni and blockchain still run as published images --
+# they are not in this repository. indexer moves in later; guppy retires as
+# the driver in the plan's Phase 5. minio is pulled from ghcr.io/fil-forge,
+# built from source in our own fork because upstream withdrew it.
 #
 # GOWORK must stay unset here. ci.yml pins GOWORK=off to prove each module
 # stands alone; the stack harness needs the workspace to resolve siblings.

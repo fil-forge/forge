@@ -5,7 +5,7 @@ CMD := ./cmd/swarf
 VERSION := $(shell awk -F'"' '/"version":/ {print $$4}' version.json)
 COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 DATE := $(shell date -u -Iseconds)
-GOFLAGS := -ldflags="-X github.com/fil-forge/swarf/pkg/build.version=$(VERSION) -X github.com/fil-forge/swarf/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/swarf/pkg/build.Date=$(DATE) -X github.com/fil-forge/swarf/pkg/build.BuiltBy=make"
+GOFLAGS := -ldflags="-X github.com/fil-forge/forge/swarf/pkg/build.version=$(VERSION) -X github.com/fil-forge/forge/swarf/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/forge/swarf/pkg/build.Date=$(DATE) -X github.com/fil-forge/forge/swarf/pkg/build.BuiltBy=make"
 
 .PHONY: build test vet clean gen
 
