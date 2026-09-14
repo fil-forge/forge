@@ -29,6 +29,7 @@ type config struct {
 	ingotImage      string
 	swarfImage      string
 	minioImage      string
+	plcImage        string
 
 	// Binary injection: bind-mount host-built binaries over the published
 	// images instead of rebuilding the image. serviceBinaries holds explicit
@@ -102,6 +103,9 @@ func (c *config) buildEnv() map[string]string {
 	}
 	if c.minioImage != "" {
 		env["MINIO_IMAGE"] = c.minioImage
+	}
+	if c.plcImage != "" {
+		env["PLC_IMAGE"] = c.plcImage
 	}
 
 	return env
@@ -377,6 +381,7 @@ var envImageOptions = []struct {
 	{"INGOT_IMAGE", WithIngotImage},
 	{"SWARF_IMAGE", WithSwarfImage},
 	{"MINIO_IMAGE", WithMinioImage},
+	{"PLC_IMAGE", WithPLCImage},
 }
 
 // OptionsFromEnv returns the options implied by the process environment: an
@@ -411,5 +416,15 @@ func OptionsFromEnv() []Option {
 func WithMinioImage(image string) Option {
 	return func(c *config) {
 		c.minioImage = image
+	}
+}
+
+// WithPLCImage overrides the did:web/did:plc directory image.
+// systems/plc/compose.yml has interpolated PLC_IMAGE and documented it as the
+// override since before this option existed, so until now the documented knob
+// worked for docker compose and silently did nothing from a Go test.
+func WithPLCImage(image string) Option {
+	return func(c *config) {
+		c.plcImage = image
 	}
 }

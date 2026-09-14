@@ -2,11 +2,14 @@ name: images
 
 # Builds every in-repo service image from THIS commit.
 #
-# Why this exists: e2e.yml boots the stack with SMELT_WORKSPACE, which
-# compiles each service from HEAD and bind-mounts the binary over the
-# published `ghcr.io/fil-forge/<svc>:main` image. That tests HEAD's *code* in
-# the polyrepo's *packaging* -- a broken entrypoint, base image or Dockerfile
-# is invisible to it. These builds close that half.
+# Why this exists: an image-build check independent of the stack. e2e.yml
+# builds the same Dockerfiles and then boots them, so a failure there could be
+# a build fault or a runtime one; this job isolates the build half and reports
+# each service separately, in parallel.
+#
+# (An earlier version of this comment described e2e.yml as using
+# SMELT_WORKSPACE to bind-mount binaries over published images. It stopped
+# doing that in the same pull request that added this file.)
 #
 # No caching, deliberately (2026-09-11). A cache hit means the build did not
 # run, and right now the point is to provoke build failures, not to avoid

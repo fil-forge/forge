@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/minio"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // minioImage is our own build of MinIO. Upstream withdrew minio/minio from
@@ -32,7 +33,16 @@ func minioImage() string {
 }
 
 func CreateS3(t *testing.T) *url.URL {
-	container, err := minio.Run(t.Context(), minioImage())
+	// Wait on /minio/health/cluster, not the module default /minio/health/live:
+	// live returns 200 as soon as the process accepts connections, before the
+	// object layer is up, so a store created immediately after this returns can
+	// fail with a transient "Server not initialized". piri's testutil documents
+	// the same reasoning.
+	container, err := minio.Run(t.Context(), minioImage(),
+		testcontainers.WithWaitStrategy(
+			wait.ForHTTP("/minio/health/cluster").WithPort("9000/tcp"),
+		),
+	)
 	testcontainers.CleanupContainer(t, container)
 	require.NoError(t, err)
 

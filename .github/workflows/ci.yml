@@ -25,6 +25,8 @@ jobs:
           go-version-file: smelt/go.mod
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
+      - name: images.yml and e2e.yml build the same services
+        run: .github/scripts/check-image-lists.sh
 
   unit:
     strategy:
