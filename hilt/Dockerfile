@@ -24,8 +24,12 @@ ARG TARGETOS=linux
 WORKDIR /src
 COPY hilt/go.mod hilt/go.sum* ./hilt/
 COPY smelt/go.mod smelt/go.sum ./smelt/
+# Retried, and allowed to fail: a swallowed `go mod download` does not avoid
+# the network, it just defers the same fetch to `go build` below, where there
+# is no retry and the failure is harder to read. See the other Dockerfiles and
+# .github/scripts/retry.sh.
 RUN --mount=type=cache,target=/go/pkg/mod \
-    cd hilt && go mod download || true
+    cd hilt && (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
 COPY hilt/ ./hilt/
 WORKDIR /src/hilt
 

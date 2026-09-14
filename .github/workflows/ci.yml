@@ -30,6 +30,8 @@ jobs:
         run: .github/scripts/check-image-lists.sh
       - name: every setup-go step caches the module cache
         run: .github/scripts/check-setup-go-cache.sh
+      - name: every Dockerfile retries its module download
+        run: .github/scripts/check-dockerfile-retry.sh
 
   unit:
     strategy:
