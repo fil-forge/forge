@@ -75,7 +75,8 @@ Six rules that have actually decided things:
 subtree-merged with history, module paths rewritten, `go.work`, per-module
 CI, library pins unified.
 
-Three open PRs, **none merged**. They stack in this order:
+Three open PRs, **all green on `ci` / `images` / `e2e`, none merged**. They
+stack in this order:
 
 | PR | branch | what |
 |---|---|---|
@@ -85,11 +86,12 @@ Three open PRs, **none merged**. They stack in this order:
 
 #2 and #3 were rebased onto #1 (rule 6) rather than carrying merges from it.
 
-**CI reds are all one external fault.** Seven `proxy.golang.org`
-`INTERNAL_ERROR` stream drops so far, across build, `go mod tidy` and
-test-compile — no code failure among them. #1 now sets
-`cache-dependency-path` (the cache had silently never been on) and retries
-dependency resolution, which is the part that actually stops the red. See
+**Every CI red so far was one external fault.** Seven `proxy.golang.org`
+`INTERNAL_ERROR` stream drops, across build, `go mod tidy` and test-compile —
+no code failure among them. #1 now sets `cache-dependency-path` (the cache had
+silently never been on) and retries dependency resolution, which is the part
+that actually stops the red. First run after the fix: all three branches green,
+and the cache saved 440 MB for the first time in the repository's life. See
 [[Consolidation Findings]] L9.
 
 `pin-guppy` and `bring-in-swarf` are independent of each other; either can
