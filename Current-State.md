@@ -9,12 +9,36 @@ Consolidating the Fil Forge polyrepo into a monorepo at
 
 ## Approach
 
-Four rules that have actually decided things:
+Five rules that have actually decided things:
 
-1. **Build what we own; pin what we don't — this is about container images.**
+1. **What goes in: things that ship as the Forge network.** The services and
+   the tools that operate them — deployed together, versioned together, and
+   not built by anyone outside. Three categories stay out:
+
+   - **Outward-facing libraries**, which have consumers beyond Forge and so
+     want real semantic versions and their own cadence: `ucantone`,
+     `automobile`. When `libforge` dissolves, it splits on this line — the
+     parts that were only ever private to Forge come in; the parts that are
+     externally useful become properly versioned libraries outside.
+   - **Forks of upstream software** we patch or repackage: `minio`,
+     `storetheindex`, `did-method-plc`, `filecoin-localdev`, `versitygw`,
+     `filecoin-services`. Folding these in would destroy what makes them
+     useful — upstream history, provenance, and the ability to take upstream
+     changes.
+   - **Things being retired**, which are not worth moving: `guppy` is
+     archived in Phase 4 once its client is consolidated.
+
+   In: `piri`, `hilt`, `ingot`, `sprue`, `smelt`, `delegator`,
+   `piri-signing-service` (all landed), `swarf` (landed), `indexing-service`
+   and `forgectl` (pending).
+
+   This rule has a useful side effect: anything moving in stops being an
+   external dependency, so it needs no image pin — see rule 2.
+
+2. **Build what we own; pin what we don't — this is about container images.**
    In-repo services are built from HEAD in CI; external images get digest
    pins. A module moving in retires its pin by construction, so don't pin
-   something that is about to arrive.
+   something that is about to arrive (rule 1).
 
    Go modules follow the same principle, but Go already enforces it:
    `replace => ../<svc>` for in-repo (always the matching commit), and
@@ -29,12 +53,12 @@ Four rules that have actually decided things:
    pinned to reproducibly-different versions of the same library, which is
    how a six-week ucantone wire skew survived a green CI. That is what
    unifying the library pins fixed.
-2. **Derive dependency lists, never hand-maintain them.** `go list -deps` on
+3. **Derive dependency lists, never hand-maintain them.** `go list -deps` on
    the build target, not `go.mod`'s replace list. It is sometimes narrower
    and sometimes wider than the obvious guess, and it cannot go stale.
-3. **Test what ships.** A bind-mounted binary in someone else's image is not
+4. **Test what ships.** A bind-mounted binary in someone else's image is not
    the artifact that reaches production.
-4. **A green check is a claim about what ran.** Ask what the job would have
+5. **A green check is a claim about what ran.** Ask what the job would have
    had to *do* to catch the fault.
 
 ## Where it stands
