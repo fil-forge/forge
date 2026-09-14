@@ -26,7 +26,7 @@ Six rules that have actually decided things:
      useful — upstream history, provenance, and the ability to take upstream
      changes.
    - **Things being retired**, which are not worth moving: `guppy` is
-     archived in Phase 4 once its client is consolidated.
+     being dismantled and archived now, not at some later phase.
 
    In: `piri`, `hilt`, `ingot`, `sprue`, `smelt`, `delegator`,
    `piri-signing-service` (all landed), `swarf` (landed), `indexing-service`
@@ -89,16 +89,26 @@ see.
 subtree-merged with history, module paths rewritten, `go.work`, per-module
 CI, library pins unified.
 
-Three open PRs, **all green on `ci` / `images` / `e2e`, none merged**. They
-stack in this order:
+Two open PRs, **both green on `ci` / `images` / `e2e`, neither merged**.
+#3 stacks on #1:
 
 | PR | branch | what |
 |---|---|---|
 | [#1](https://github.com/fil-forge/forge-2/pull/1) | `claude/images-from-head` | stack runs on images built from HEAD, not the polyrepos' daily builds; fixes 2 Dockerfiles unbuildable since consolidation; minio repoint; restores the Go module cache, which had never worked |
-| [#2](https://github.com/fil-forge/forge-2/pull/2) | `claude/pin-guppy` | guppy pinned by digest (the e2e driver; republished on every push to its main) |
 | [#3](https://github.com/fil-forge/forge-2/pull/3) | `claude/bring-in-swarf` | swarf subtree-merged — the 8th module |
 
-#2 and #3 were rebased onto #1 (rule 6) rather than carrying merges from it.
+#3 is rebased onto #1 (rule 6) rather than carrying merges from it.
+
+**#2 (pin guppy by digest) was closed unmerged.** guppy is being dismantled
+and archived and the remaining phases are expected to complete within the
+week, so the tag cannot move under us in that window. Two claims on it were
+also wrong on inspection: the reviewer's warning that registry pruning would
+break the pin (no cleanup action, no retention pattern across the org), and
+the PR's own "republished on every push to main — 39 in 90 days". guppy's
+dependabot auto-merges use `secrets.GITHUB_TOKEN`, which does not trigger
+workflow runs, so those commits publish nothing: `:main-dev` last moved
+2026-08-21. A side effect, left alone deliberately: `ghcr.io/fil-forge/guppy:main`
+does not reflect guppy's `main`.
 
 **Every CI red so far was one external fault.** Seven `proxy.golang.org`
 `INTERNAL_ERROR` stream drops, across build, `go mod tidy` and test-compile —
@@ -109,8 +119,7 @@ that actually stops the red. All three branches are green, and the cache saved
 left unretried as "residual"; it failed twenty minutes later and is now
 retried too. See [[Consolidation Findings]] L9.
 
-`pin-guppy` and `bring-in-swarf` are independent of each other; either can
-merge first once `images-from-head` lands.
+`bring-in-swarf` merges once `images-from-head` lands.
 
 **[`fil-forge/minio`](https://github.com/fil-forge/minio)** — our fork.
 Upstream withdrew every image from Docker Hub on 2026-09-11 and archived the

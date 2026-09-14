@@ -575,14 +575,20 @@ become wrong too.
    nobody re-derives its coverage (L12). Ask what it would have to observe.
 11. **When you add a local note, read the global claim it might contradict.**
    The header nine lines up is where the stale version lives (L12).
-12. **Don't write counts in prose.** "The other three take their own
+12. **A count can be wrong without being stale** — it can have counted the
+   wrong event from the start. "39 pushes to guppy's main in 90 days" was a
+   true count of *commits*, offered as a count of *publishes*; guppy's
+   dependabot auto-merges use `secrets.GITHUB_TOKEN`, which triggers no
+   workflow run, so the tag had not moved in 24 days. Check what the number
+   counts, not only when it was taken.
+13. **Don't write counts in prose.** "The other three take their own
    directory" is a derived value nothing recomputes; state the rule instead
    and let the list below it be the answer (L11).
-13. **A correct edit can invalidate a derived property.** The module-path
+14. **A correct edit can invalidate a derived property.** The module-path
    rewrite was right; import *order* was computed from the old paths and
    nobody recomputed it (L10). Ask what else was derived from what you just
    changed.
-14. **Some defects only change a probability.** They are the hardest to
+15. **Some defects only change a probability.** They are the hardest to
    attribute, because every individual failure already has a complete and
    correct explanation that is not them (L9). "This failure was a transient"
    and "our setup makes transients frequent" are both true at once.
