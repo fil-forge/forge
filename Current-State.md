@@ -9,7 +9,7 @@ Consolidating the Fil Forge polyrepo into a monorepo at
 
 ## Approach
 
-Five rules that have actually decided things:
+Six rules that have actually decided things:
 
 1. **What goes in: things that ship as the Forge network.** The services and
    the tools that operate them — deployed together, versioned together, and
@@ -60,6 +60,14 @@ Five rules that have actually decided things:
    the artifact that reaches production.
 5. **A green check is a claim about what ran.** Ask what the job would have
    had to *do* to catch the fault.
+6. **Stacked branches rebase onto their base; they do not merge it.** A merge
+   buries the branch's own commits under someone else's and makes the PR diff
+   grow every time the base moves. One exception, and it is load-bearing:
+   `git subtree add` produces a merge commit that *carries* the imported
+   history, and a plain `git rebase` silently flattens it. Rebuild those
+   branches instead — base tip, fresh `git subtree add` at the same upstream
+   commit, then cherry-pick — and check afterwards that the tree is unchanged
+   and the upstream root is still an ancestor.
 
 ## Where it stands
 
@@ -67,14 +75,15 @@ Five rules that have actually decided things:
 subtree-merged with history, module paths rewritten, `go.work`, per-module
 CI, library pins unified.
 
-Three branches, **all green on `ci` / `images` / `e2e`, none merged**. They
-stack in this order:
+Three open PRs, **none merged**. They stack in this order:
 
-| branch | what |
-|---|---|
-| `claude/images-from-head` | stack runs on images built from HEAD, not the polyrepos' daily builds; fixes 2 Dockerfiles unbuildable since consolidation; minio repoint |
-| `claude/pin-guppy` | guppy pinned by digest (the e2e driver; republished on every push to its main) |
-| `claude/bring-in-swarf` | swarf subtree-merged — the 8th module |
+| PR | branch | what |
+|---|---|---|
+| [#1](https://github.com/fil-forge/forge-2/pull/1) | `claude/images-from-head` | stack runs on images built from HEAD, not the polyrepos' daily builds; fixes 2 Dockerfiles unbuildable since consolidation; minio repoint |
+| [#2](https://github.com/fil-forge/forge-2/pull/2) | `claude/pin-guppy` | guppy pinned by digest (the e2e driver; republished on every push to its main) |
+| [#3](https://github.com/fil-forge/forge-2/pull/3) | `claude/bring-in-swarf` | swarf subtree-merged — the 8th module |
+
+#2 and #3 were rebased onto #1 (rule 6) rather than carrying merges from it.
 
 `pin-guppy` and `bring-in-swarf` are independent of each other; either can
 merge first once `images-from-head` lands.
