@@ -378,6 +378,48 @@ turned "nine files Copilot flagged" into "89, of which 80 predate this work".
 `check-dockerfile-retry.sh` found swarf on its first run. In both cases the
 mechanical sweep found instances that careful reading had missed, immediately.
 
+### L12. A guard over part of a chain — **fixed**
+
+`check-image-lists.sh` existed to prevent silent green, and had a silent-green
+hole in it.
+
+The path from "this commit's image" to "the stack ran it" has three links, and
+the inventory is stated once per link: `images.yml`'s matrix, `e2e.yml`'s build
+list, and `e2e.yml`'s job `env:` as `*_IMAGE` variables that
+`pkg/stack.OptionsFromEnv` reads. The guard compared the first two and stopped.
+
+Deleting `UPLOAD_IMAGE` therefore left the check green while compose fell back
+to the published sprue image and the suite passed — *the exact failure the
+script's own header describes*. The third link is also the easiest to break,
+because the variable names are not derivable from the service name (`sprue` →
+`UPLOAD_IMAGE`, `piri-signing-service` → `SIGNER_IMAGE`), so nothing about a
+mismatch looks wrong on the page.
+
+Fixed: the check now follows the chain to the end, including that each variable
+is one `envImageOptions` actually reads, parsed out of `options.go` rather than
+restated — a guard that hardcoded the list would be the same bug one level up.
+Verified against all four ways to break the chain, not just the original two.
+
+**The general form is worse than a missing guard.** A partial guard reads
+exactly like a complete one: same name, same green tick, same sentence in the
+PR description. Nobody re-derives its coverage afterwards, so it converts "we
+have not checked this" into "we have checked this" at no cost and with no
+signal. Ask of any guard what it would have to *observe* to catch the fault,
+and then whether it observes that.
+
+Found in review. Two sibling findings in the same review were the same shape,
+one level down — comments that had gone false:
+
+- Both workflows' `concurrency` keys included `github.sha` for push events,
+  making every run's group unique, so `cancel-in-progress` had nothing to
+  cancel. `e2e.yml`'s comment directly above said "one stack at a time per ref
+  … overlapping runs starve each other's healthchecks." The code had never done
+  that.
+- `ci.yml`'s header said "No Docker". Adding swarf made it false in the same
+  commit that added a matrix comment *explaining* swarf's Docker dependency in
+  detail, nine lines below. The local note was written; the global claim it
+  contradicted was not read.
+
 ---
 
 ## Part 3 — Things that turned out better than expected
@@ -529,14 +571,18 @@ become wrong too.
    a defect is a separate act from finding it, and only the second tells you
    where else it lives (L11). Prefer a command that enumerates the class to
    reading carefully for it.
-10. **Don't write counts in prose.** "The other three take their own
+10. **A partial guard is worse than none**, because it reads as complete and
+   nobody re-derives its coverage (L12). Ask what it would have to observe.
+11. **When you add a local note, read the global claim it might contradict.**
+   The header nine lines up is where the stale version lives (L12).
+12. **Don't write counts in prose.** "The other three take their own
    directory" is a derived value nothing recomputes; state the rule instead
    and let the list below it be the answer (L11).
-11. **A correct edit can invalidate a derived property.** The module-path
+13. **A correct edit can invalidate a derived property.** The module-path
    rewrite was right; import *order* was computed from the old paths and
    nobody recomputed it (L10). Ask what else was derived from what you just
    changed.
-12. **Some defects only change a probability.** They are the hardest to
+14. **Some defects only change a probability.** They are the hardest to
    attribute, because every individual failure already has a complete and
    correct explanation that is not them (L9). "This failure was a transient"
    and "our setup makes transients frequent" are both true at once.

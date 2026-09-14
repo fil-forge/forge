@@ -65,6 +65,10 @@ Six rules that have actually decided things:
      Careful reading missed the rest every time; `gofmt -l` and
      `check-dockerfile-retry.sh` found them instantly. See
      [[Consolidation Findings]] L11.
+   - And the same question applies to the guards themselves: a guard over
+     *part* of a chain reads exactly like a guard over the chain, so it
+     converts "unchecked" into "checked" for free. `check-image-lists.sh`
+     shipped that way (L12).
 6. **Stacked branches rebase onto their base; they do not merge it.** A merge
    buries the branch's own commits under someone else's and makes the PR diff
    grow every time the base moves. One exception, and it is load-bearing:
@@ -75,6 +79,11 @@ Six rules that have actually decided things:
    and the upstream root is still an ancestor.
 
 ## Where it stands
+
+Four guards now run in `ci.yml`: `check-replaces.sh`,
+`check-image-lists.sh`, `check-setup-go-cache.sh` and
+`check-dockerfile-retry.sh` — each written after a defect that CI could not
+see.
 
 **`forge-2` `main` is at `046807f`** — Phase 0 complete: 7 services
 subtree-merged with history, module paths rewritten, `go.work`, per-module
