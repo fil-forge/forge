@@ -23,10 +23,13 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: smelt/go.mod
+          cache-dependency-path: smelt/go.sum
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
       - name: images.yml and e2e.yml build the same services
         run: .github/scripts/check-image-lists.sh
+      - name: every setup-go step caches the module cache
+        run: .github/scripts/check-setup-go-cache.sh
 
   unit:
     strategy:
@@ -60,13 +63,29 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: ${{ matrix.service }}/go.mod
+          # setup-go caches the module cache by default, but resolves go.sum
+          # from the repository root. This is a multi-module repo with no root
+          # go.sum, so without this line it logs
+          #   Restore cache failed: Dependencies file is not found
+          # as a *warning* and runs with no cache at all -- every job
+          # re-downloading its whole dependency graph, every run.
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+      # Fetch the build list up front, with retries, so one dropped
+      # proxy.golang.org stream costs a retry instead of the job. piri is the
+      # reason this is not optional: its graph (lotus, curio, specs-actors,
+      # boxo) is the largest here, so it draws the most chances to lose.
+      - name: download modules
+        run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
       - name: build
         run: go build ${{ matrix.build_flags }} ./...
       - name: vet
         run: go vet ${{ matrix.build_flags }} ./...
+      # tidy is retried separately: it walks the test dependencies of
+      # dependencies, which `go mod download` does not fetch, so it can still
+      # reach the network after the step above. That is how smelt failed.
       - name: tidy (no diff)
         run: |
-          go mod tidy
+          $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod tidy
           git diff --exit-code -- go.mod go.sum
       - name: test
         run: go test ${{ matrix.build_flags }} ./...

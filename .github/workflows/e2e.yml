@@ -64,6 +64,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: smelt/go.mod
+          # See ci.yml -- without this there is no module cache at all.
+          cache-dependency-path: smelt/go.sum
+
+      # The e2e suite has failed at *compile* time on a dropped
+      # proxy.golang.org stream ("[setup failed]", before any container
+      # starts). Fetching first, with retries, keeps that out of the run.
+      # `go test` itself is deliberately never retried -- that would mask a
+      # genuinely flaky test, which is the one thing this job exists to see.
+      - name: download modules
+        run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
 
       - name: docker version
         run: |
