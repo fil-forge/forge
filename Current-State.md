@@ -90,9 +90,10 @@ stack in this order:
 `INTERNAL_ERROR` stream drops, across build, `go mod tidy` and test-compile —
 no code failure among them. #1 now sets `cache-dependency-path` (the cache had
 silently never been on) and retries dependency resolution, which is the part
-that actually stops the red. First run after the fix: all three branches green,
-and the cache saved 440 MB for the first time in the repository's life. See
-[[Consolidation Findings]] L9.
+that actually stops the red. All three branches are green, and the cache saved
+440 MB for the first time in the repository's life. The Docker-side fetch was
+left unretried as "residual"; it failed twenty minutes later and is now
+retried too. See [[Consolidation Findings]] L9.
 
 `pin-guppy` and `bring-in-swarf` are independent of each other; either can
 merge first once `images-from-head` lands.
@@ -134,8 +135,13 @@ project. We build from source and publish
   pin when convenient.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
-- `image *` jobs run `go build` inside Docker, still with no retry around the
-  module fetch. Not yet bitten.
+- **80 files fail `gofmt`** on `main`, from the original module-path rewrite
+  (64 `sprue`, 12 `piri`). CI cannot see it: `go vet` does not check
+  formatting and nothing else does. Wants fixing together with a `gofmt` step
+  in `ci.yml`, or adding the step turns every branch red.
+  [[Consolidation Findings]] L10.
+- `hilt` and `sprue` Dockerfiles swallow a failed `go mod download` with
+  `|| true` and refetch during `go build`, which is not retried.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13

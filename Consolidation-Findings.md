@@ -294,8 +294,56 @@ run, so build, vet and test touch no network at all.
 
 `.github/scripts/check-setup-go-cache.sh` asserts it stays on.
 
-**Residual, open:** the `image *` jobs run `go build` inside Docker, where a
-dropped stream would still fail the build. None has yet.
+**Residual — which stopped being residual within the hour.** The first fix
+left `go mod download` inside the Dockerfiles unretried, on the grounds that
+it had never failed there. It failed there twenty minutes later, on #2's
+`e2e`:
+
+```
+process "/bin/sh -c cd piri && go mod download" did not complete successfully
+```
+
+Now retried inline in the five Dockerfiles where the download is fatal. piri
+is the one that broke and the most exposed of the seven: alone among them it
+has neither a BuildKit module cache mount nor `|| true`. hilt and sprue
+tolerate a failed download and refetch during `go build`, so they are left
+alone and remain exposed at that later step.
+
+The lesson is about the estimate, not the code. "Not yet observed" was
+treated as "unlikely" on the same path that had just produced seven failures
+in a day. On a failure mode you have just proved is live, an unfixed instance
+is not residual risk; it is the next one.
+
+### L10. The module-path rewrite silently unformatted 89 files — **9 fixed, 80 open**
+
+`gofmt` sorts imports within each blank-line-delimited block.
+`github.com/fil-forge/forge/...` sorts before `github.com/fil-forge/libforge/...`
+— `f` before `l` — and the two sit in one contiguous block, so rewriting the
+module paths changed what `gofmt` wants in every file that imports both. Nothing
+re-ran it.
+
+`gofmt -l` reports **89 files**: 80 pre-existing on `main` from the original
+seven-service rewrite (64 in `sprue`, 12 in `piri`), and 9 introduced by the
+swarf migration (6 swarf, 3 hilt).
+
+**CI cannot see this.** `ci.yml` runs build, vet, tidy and test; `go vet` does
+not check formatting, and nothing else does. Unlike the other entries here,
+this is not a job that ran and proved less than it appeared to — it is a check
+that does not exist.
+
+Copilot found the 9 in the migration's diff, exactly and with no false
+positives, which is worth noting given how much of its other output on that
+pull request was pre-existing upstream code rather than migration damage.
+
+**Fixed:** the 9. **Open:** the 80, which want to land together with a `gofmt`
+check in `ci.yml` — adding the check first would turn every branch red.
+
+This is the **fourth** thing the rewrite broke outside Go import paths, after
+[L1](#l1-the-module-path-rewrite-never-reached-non-go-files--fixed)'s
+Dockerfiles, a `Makefile`'s `-X` ldflags and a repository URL. The first three
+were things the rewrite failed to reach. This one it reached and changed
+correctly — the breakage is that a *correct* edit invalidated a derived
+property nobody recomputed.
 
 ---
 
@@ -441,7 +489,14 @@ become wrong too.
 7. **A warning is a behaviour you asked for and did not get.** If you depend
    on it, assert it. L9 sat in plain sight in every green log for the life of
    the repository.
-8. **Some defects only change a probability.** They are the hardest to
+8. **"Not yet observed" is not "unlikely"** on a failure mode you have just
+   proved is live. The Docker-side module fetch was called residual exposure
+   and failed within the hour (L9).
+9. **A correct edit can invalidate a derived property.** The module-path
+   rewrite was right; import *order* was computed from the old paths and
+   nobody recomputed it (L10). Ask what else was derived from what you just
+   changed.
+10. **Some defects only change a probability.** They are the hardest to
    attribute, because every individual failure already has a complete and
    correct explanation that is not them (L9). "This failure was a transient"
    and "our setup makes transients frequent" are both true at once.
