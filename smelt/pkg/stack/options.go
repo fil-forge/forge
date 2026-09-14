@@ -3,6 +3,8 @@ package stack
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
@@ -62,6 +64,20 @@ func defaultConfig() *config {
 	return &config{
 		timeout: 5 * time.Minute, // Default 5 minute timeout for stack startup
 	}
+}
+
+// imageOverrides reports the image overrides in force, as "VAR=value" lines
+// sorted for stable output. Derived from buildEnv rather than restated, so it
+// cannot list a different set from the one the stack actually uses.
+func (c *config) imageOverrides() []string {
+	var out []string
+	for k, v := range c.buildEnv() {
+		if strings.HasSuffix(k, "_IMAGE") && v != "" {
+			out = append(out, k+"="+v)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // buildEnv returns the environment variables for docker-compose.
