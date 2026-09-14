@@ -4,8 +4,12 @@ ARG TARGETARCH
 ARG TARGETOS=linux
 WORKDIR /go/src/swarf
 COPY go.mod go.sum* ./
+# Retried, and allowed to fail: a swallowed `go mod download` does not avoid
+# the network, it just defers the same fetch to `go build` below, where there
+# is no retry and the failure is harder to read. Matches the other Dockerfiles
+# and is asserted by .github/scripts/check-dockerfile-retry.sh.
 RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download || true
+    (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
 COPY . .
 
 # Production build - stripped binary.
