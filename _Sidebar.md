@@ -1,6 +1,7 @@
 ### Forge monorepo
 
 - [[Home]]
+- [[Current State]] ← start here
 - [[Consolidation Findings]]
   - Blind spots (B1–B6)
   - Latent issues (L1–L9)

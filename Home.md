@@ -6,6 +6,8 @@ history stays about the code.
 
 ## Pages
 
+- **[[Current State]]** — where the work is right now: approach, what
+  has landed, what is next. Start here; it is a snapshot, kept current.
 - **[[Consolidation Findings]]** — the running log: latent bugs found, blind
   spots where a test did not cover what it appeared to, and the open items
   each one leaves behind.
