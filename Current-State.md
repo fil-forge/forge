@@ -79,11 +79,18 @@ Three open PRs, **none merged**. They stack in this order:
 
 | PR | branch | what |
 |---|---|---|
-| [#1](https://github.com/fil-forge/forge-2/pull/1) | `claude/images-from-head` | stack runs on images built from HEAD, not the polyrepos' daily builds; fixes 2 Dockerfiles unbuildable since consolidation; minio repoint |
+| [#1](https://github.com/fil-forge/forge-2/pull/1) | `claude/images-from-head` | stack runs on images built from HEAD, not the polyrepos' daily builds; fixes 2 Dockerfiles unbuildable since consolidation; minio repoint; restores the Go module cache, which had never worked |
 | [#2](https://github.com/fil-forge/forge-2/pull/2) | `claude/pin-guppy` | guppy pinned by digest (the e2e driver; republished on every push to its main) |
 | [#3](https://github.com/fil-forge/forge-2/pull/3) | `claude/bring-in-swarf` | swarf subtree-merged — the 8th module |
 
 #2 and #3 were rebased onto #1 (rule 6) rather than carrying merges from it.
+
+**CI reds are all one external fault.** Seven `proxy.golang.org`
+`INTERNAL_ERROR` stream drops so far, across build, `go mod tidy` and
+test-compile — no code failure among them. #1 now sets
+`cache-dependency-path` (the cache had silently never been on) and retries
+dependency resolution, which is the part that actually stops the red. See
+[[Consolidation Findings]] L9.
 
 `pin-guppy` and `bring-in-swarf` are independent of each other; either can
 merge first once `images-from-head` lands.
@@ -125,6 +132,8 @@ project. We build from source and publish
   pin when convenient.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
+- `image *` jobs run `go build` inside Docker, still with no retry around the
+  module fetch. Not yet bitten.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13

@@ -122,6 +122,11 @@ The `ci` failure was not a code fault — `proxy.golang.org` returned
 download, before a test body ran. But the failure being benign is luck, not a
 process.
 
+The recurrence was not luck either: see [L9](#l9-the-go-module-cache-was-never-on--fixed).
+The module cache had never worked in this repository, so every job
+re-downloaded its whole dependency graph every run — far more exposure to a
+per-request failure than anyone intended.
+
 Two habits fall out, and they are cheap:
 
 - Read the **run list for the commit**, not the run you were waiting for.
@@ -241,6 +246,56 @@ unavailable", so `go test ./...` stays meaningful without one.
 Consequence: a plain `go test ./pkg/...` in smelt is red for any developer
 without Docker, which trains people to ignore a red suite. Same family as the
 rest of this document — a result that says something other than it appears to.
+
+### L9. The Go module cache was never on — **fixed**
+
+`actions/setup-go` defaults to `cache: true`, and every job in this repository
+had it on. None of them ever used it.
+
+setup-go resolves `go.sum` from the **repository root**. This is a
+multi-module repo: every module carries its own `go.sum` and there is no root
+one. So every job logged
+
+```
+##[warning]Restore cache failed: Dependencies file is not found in
+/home/runner/work/forge-2/forge-2. Supported file pattern: go.sum
+```
+
+and then ran with no module cache whatsoever. Ten jobs, two triggers, each
+re-downloading its entire dependency graph on every run, since the repository
+was created.
+
+**Why it stayed invisible:** it is a *warning*. Nothing turns red, nothing is
+annotated, and the job still passes — just slower, and with far more network
+exposure than intended. The only symptom is one line in a log nobody reads
+when the job is green.
+
+**What it cost.** This is the cause behind [B6](#b6-the-branch-is-green-meant-one-workflow-of-three).
+`proxy.golang.org` intermittently drops an HTTP/2 stream mid-transfer
+(`INTERNAL_ERROR`), and the go command does not retry. Seven occurrences to
+date across four modules and four jobs — `unit ingot` (build), `unit smelt`
+(`go mod tidy`), `unit piri` twice, and `e2e`, which died at *compile* time
+with `[setup failed]` before a container started. They kept landing on piri
+because piri's graph (lotus, curio, specs-actors, boxo) is the largest here,
+so it drew the most chances to lose.
+
+Note the shape: the dead cache is not the *cause* of any single failure —
+proxy.golang.org is — but it set the failure rate. A defect that changes only
+a probability is the hardest kind to attribute, because every individual
+instance has a complete and correct explanation that isn't it.
+
+**Fixed** by `cache-dependency-path: <module>/go.sum` on each step, plus a
+retry around dependency resolution only — `go mod download` up front and
+`go mod tidy`, which reaches further because it walks the test dependencies
+of dependencies. `go test` is deliberately never retried: that would mask a
+flaky test, the one failure the job exists to show. Verified sufficient by
+checking that a module builds with `GOPROXY=off` once `go mod download` has
+run, so build, vet and test touch no network at all.
+
+`.github/scripts/check-setup-go-cache.sh` asserts it stays on.
+
+**Residual, open:** the `image *` jobs run `go build` inside Docker, where a
+dropped stream would still fail the build. None has yet.
 
 ---
 
@@ -383,3 +438,10 @@ become wrong too.
    build-time problem that turned out not to exist (G1).
 6. **When a fix is missing, ask whether it was ever made.** B3 was not an
    oversight; it was a regression introduced by re-importing upstream.
+7. **A warning is a behaviour you asked for and did not get.** If you depend
+   on it, assert it. L9 sat in plain sight in every green log for the life of
+   the repository.
+8. **Some defects only change a probability.** They are the hardest to
+   attribute, because every individual failure already has a complete and
+   correct explanation that is not them (L9). "This failure was a transient"
+   and "our setup makes transients frequent" are both true at once.
