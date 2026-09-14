@@ -8,7 +8,12 @@ WORKDIR /src
 
 # Copy dependency files first for better layer caching
 COPY go.mod go.sum ./
-RUN go mod download
+# proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR) and the
+# go command does not retry, so one bad fetch out of several hundred fails the
+# image build. Retried here for the same reason CI retries it in
+# .github/scripts/retry.sh; inline because the per-service build contexts do
+# not all include .github/.
+RUN (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
 
 # Copy source code
 COPY . .
