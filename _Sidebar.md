@@ -3,9 +3,9 @@
 - [[Home]]
 - [[Current State]] ← start here
 - [[Consolidation Findings]]
-  - Blind spots (B1–B6)
-  - Latent issues (L1–L9)
-  - Went better (G1–G3)
-  - Open items (O1–O3)
+  - Blind spots (B1–B7)
+  - Latent issues (L1–L12)
+  - Went better (G1–G4)
+  - Open items (O1–O4)
   - Working principles
 - [[MinIO Image Removal]] ⚠️

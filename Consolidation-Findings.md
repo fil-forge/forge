@@ -9,7 +9,7 @@ implicit assumption about how the repositories relate to each other to become
 explicit, and most of them turn out to be wrong in some small way nobody had
 occasion to notice.
 
-Entries cite `file:line` at the commit where they were found. Last updated 2026-09-11.
+Entries cite `file:line` at the commit where they were found. Last updated 2026-09-15.
 
 ---
 
@@ -133,6 +133,44 @@ Two habits fall out, and they are cheap:
 - A module-download error is *not* a test result. It should be visibly
   distinguishable from a real failure, because it will be treated as one
   otherwise — or worse, dismissed as one.
+
+---
+
+### B7. A suite that boots a stack passed from cache, having booted nothing
+
+The first green run of `itest.yml` — the workflow added *because* `hilt/itest`
+and `ingot/itest` had never been executed — took 26 seconds and started no
+containers:
+
+```
+ok  github.com/fil-forge/forge/hilt/itest  (cached)
+```
+
+The replayed output carried the previous run's timestamps (`18:23:24`) while
+the job itself ran at 18:38.
+
+`actions/setup-go` restores `GOCACHE`, which holds Go's test-result cache.
+From `go help test`: "Tests that open files within the package's module or
+that consult environment variables only match future runs in which the files
+and environment variables are unchanged." Nothing under `hilt/itest` had
+changed between the two commits, so the result was still valid **by every
+input Go can see**.
+
+What Go cannot see is that the subject of these suites is a Docker stack
+assembled from images built elsewhere. It is outside the module, outside the
+environment, and outside every file the test opens.
+
+`itest ingot` re-ran in the same run, taking 12 minutes — only because
+failures are not cached. One suite honest, one cached, same commit.
+
+Fixed with `-count=1` on every invocation whose subject is a live stack.
+**`e2e.yml` had carried the identical exposure since it was written**, and had
+never been hit only because smelt's own files kept changing between runs.
+Nothing guaranteed that.
+
+The shape worth remembering: this is O2's "skip the build, never the test"
+rule being broken by a tool that had no idea it was making that decision — in
+the workflow written to remove silent green, on its first green run.
 
 ---
 
@@ -604,6 +642,54 @@ keep narrow `COPY` lists rather than `COPY . .`.
 
 B4 and L2 are the same sweep. Best done at rename time, when the clone URLs
 become wrong too.
+
+### O4. Digest-keyed test caching — the only safe way to skip a stack run
+
+`-count=1` (B7) is correct and blunt: the suite re-runs even when neither the
+code nor a single image has moved. The precise version keys on what the stack
+actually **is**.
+
+Go's test cache already accounts for environment variables —
+`cmd/go/internal/test/test.go` has a `getenv` case hashing the variable's
+value into the key, and `go help test` documents it. So the hook exists: if
+the suite reads the image *digests* from the environment, the cache key
+becomes stack-aware for free.
+
+The better framing is not to compute digests *as a cache key* but to **use
+them as the image references**: resolve `:main` to `...@sha256:...` once, up
+front, and pass that as `PIRI_IMAGE` and friends. Then
+
+- the run is reproducible — a tag cannot move between two containers pulling it,
+- the log records exactly what ran, and
+- the cache key is correct as a side effect, because `OptionsFromEnv` already
+  reads those variables.
+
+`smelt/snapshots/*/manifest.json` already records `tag` *and* `digest` per
+service; this gives the runtime path the property the snapshot format assumes.
+Resolving costs one registry metadata call per image
+(`docker buildx imagetools inspect <ref> --format '{{.Manifest.Digest}}'`), no pull.
+
+Four things to settle before building it:
+
+1. **A cached pass must read as a skip.** B7 got past review because
+   `ok ... (cached)` is one line in a 4,700-line log behind a tick
+   indistinguishable from a real run. Caching deliberately means printing the
+   decision and the digests it was made on. Otherwise this rebuilds B7 on purpose.
+2. **`GOCACHE` survives via `setup-go`, under a key that hashes `go.sum`.** Any
+   dependency change gives a cold cache and a full re-run regardless — safe,
+   but the hit rate is lower than the design suggests.
+3. **It does not catch upstream drift between pull requests.** Nothing runs
+   when `:main` moves; you find out at the next push. If noticing drift is a
+   goal this wants a schedule — and the digest key is what makes a scheduled
+   run cheap, because it no-ops when nothing moved. That is the stronger
+   argument for building it at all.
+4. **Weigh it honestly.** hilt is ~3 min, ingot ~12. On an active pull request
+   the inputs almost always change, so the saving lands mostly on pushes that
+   touch other services.
+
+Note the tension with O2: that entry caches an *artifact* and says the suite
+runs every time. This one caches a **verdict**, so it carries a higher bar —
+the key must include the stack's identity, not just the repository's.
 
 ---
 
