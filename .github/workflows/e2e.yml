@@ -35,6 +35,12 @@ on:
 permissions:
   contents: read
 
+env:
+  # Pipe, not comma: the default separator falls back to the origin only on
+  # 404/410, and proxy.golang.org's mid-transfer stream drops (golang/go#51323)
+  # are not "not found", so they fail the build outright. See ci.yml.
+  GOPROXY: "https://proxy.golang.org|direct"
+
 # One stack at a time per ref. Each permutation boots ~20 containers, so
 # overlapping runs on a shared runner starve each other's healthchecks.
 #
@@ -72,9 +78,12 @@ jobs:
           # See ci.yml -- without this there is no module cache at all.
           cache-dependency-path: smelt/go.sum
 
-      # The e2e suite has failed at *compile* time on a dropped
-      # proxy.golang.org stream ("[setup failed]", before any container
-      # starts). Fetching first, with retries, keeps that out of the run.
+      # This suite has failed at *compile* time on a dropped proxy.golang.org
+      # stream -- "[setup failed]", before any container starts, in a job
+      # whose whole purpose is to report what the stack did. Fetching first
+      # turns that into a download failure at a step that says "download".
+      # Retried as well as proxied to the origin, because the fallback above
+      # handles a bad response and not a body that stops arriving.
       # `go test` itself is deliberately never retried -- that would mask a
       # genuinely flaky test, which is the one thing this job exists to see.
       - name: download modules

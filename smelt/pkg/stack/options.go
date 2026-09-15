@@ -340,9 +340,11 @@ func WithPiriNodes(nodes ...PiriNodeConfig) Option {
 // snapshot save` (manifest.json, smelt.yml, blockchain/, keys/, proofs/,
 // volumes/). Topology comes from the snapshot's embedded smelt.yml —
 // pairing with WithPiriCount or WithPiriNodes returns an error from
-// NewStack. Image references in your .env must match what the snapshot
-// was saved against (the Go SDK does not emit a drift warning; that's
-// the test author's responsibility).
+// NewStack. Running different images against a restored snapshot is
+// allowed, and is what testing HEAD against saved state means, so it is
+// not an error — but nothing checks it either. NewStack logs the
+// snapshot's capture time, the images that wrote the restored state and
+// the overrides in force, and leaves the comparison to you.
 //
 // CI should exercise the cold-boot path. Skip in CI via an env check:
 //

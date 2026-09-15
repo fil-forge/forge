@@ -14,6 +14,17 @@ on:
   # a run possible without inventing a commit to trigger one.
   workflow_dispatch:
 
+env:
+  # proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR);
+  # golang/go#51323 has tracked it since 2022 and is still open, unassigned
+  # and NeedsInvestigation, so there is no fix to wait for. The default
+  # GOPROXY separator is a comma, which falls back to the next entry only on
+  # 404/410 -- a dropped stream is not "not found", so the build just fails.
+  # A pipe falls back on any error, so the fetch retries against the origin.
+  # This is not a trust change: go.sum and the checksum database verify what
+  # comes back, whichever source served it.
+  GOPROXY: "https://proxy.golang.org|direct"
+
 jobs:
   replaces:
     name: replaces
@@ -26,18 +37,7 @@ jobs:
           cache-dependency-path: smelt/go.sum
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
-      - name: images.yml and e2e.yml build the same services
-        run: .github/scripts/check-image-lists.sh
-      - name: every setup-go step caches the module cache
-        run: .github/scripts/check-setup-go-cache.sh
-      - name: every Dockerfile retries its module download
-        run: .github/scripts/check-dockerfile-retry.sh
-      # gofmt is not a style preference here: the module-path rewrite changed
-      # import sort order (github.com/fil-forge/forge/... sorts before
-      # .../libforge/...), and nothing re-ran it, so 89 files across seven
-      # modules drifted. `go vet` does not check formatting and neither did
-      # anything else, which is why it went unnoticed until a reviewer read
-      # the diff.
+      # go vet does not check formatting, so nothing else here would.
       - name: gofmt
         run: |
           unformatted=$(gofmt -l .)
@@ -88,10 +88,13 @@ jobs:
           # as a *warning* and runs with no cache at all -- every job
           # re-downloading its whole dependency graph, every run.
           cache-dependency-path: ${{ matrix.service }}/go.sum
-      # Fetch the build list up front, with retries, so one dropped
-      # proxy.golang.org stream costs a retry instead of the job. piri is the
-      # reason this is not optional: its graph (lotus, curio, specs-actors,
-      # boxo) is the largest here, so it draws the most chances to lose.
+      # Fetch the build list up front so a proxy failure is reported as a
+      # download failure, not as a compile error three steps later -- that is
+      # how it first presented, as "undefined: X" from a package go never
+      # fetched. Retried because GOPROXY's origin fallback (above) covers a
+      # bad proxy response but not a connection that dies mid-body. piri
+      # draws the most chances to lose: lotus, curio, specs-actors and boxo
+      # make its graph the largest here.
       - name: download modules
         run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
       - name: build

@@ -1,18 +1,15 @@
 #!/usr/bin/env bash
-# Retry a command that can fail on a transient proxy.golang.org error.
+# Run a command, retrying on failure with a widening delay.
 #
-# proxy.golang.org intermittently drops an HTTP/2 stream mid-transfer:
+#   retry.sh <command> [args...]
+#   RETRY_ATTEMPTS=5 retry.sh <command> [args...]    # default 3
 #
-#   read "https://proxy.golang.org/<mod>/@v/<ver>.zip":
-#   stream error: stream ID 205; INTERNAL_ERROR; received from peer
+# Generic: it knows nothing about what it runs. Why a particular step needs
+# retrying belongs in a comment at that step, not here.
 #
-# The go command does not retry these, so one dropped stream out of several
-# hundred module fetches fails the whole step. Six occurrences in this
-# repository so far, across four different modules and four different jobs.
-#
-# Use this ONLY for dependency resolution (go mod download, go mod tidy).
-# Never wrap `go test`: a retry there would mask a flaky test, which is
-# exactly the failure we most need to see.
+# One rule about what to wrap: dependency resolution only (go mod download,
+# go mod tidy). Never `go test` -- a retry there would mask a flaky test,
+# which is the one failure we most need to see.
 set -uo pipefail
 
 attempts=${RETRY_ATTEMPTS:-3}
@@ -21,12 +18,15 @@ attempts=${RETRY_ATTEMPTS:-3}
 # loop below would never run and the script would fall off the end with
 # status 0 -- reporting success for a command it never executed. That is the
 # failure this script exists to prevent, one level up.
+bad=""
 case "$attempts" in
-  ''|*[!0-9]*|0)
-    echo "::error::RETRY_ATTEMPTS must be a positive integer, got '$attempts'" >&2
-    exit 2
-    ;;
+  ''|*[!0-9]*) bad=1 ;;
+  *) [ "$attempts" -ge 1 ] || bad=1 ;;
 esac
+if [ -n "$bad" ]; then
+  echo "::error::RETRY_ATTEMPTS must be a positive integer, got '$attempts'" >&2
+  exit 2
+fi
 
 for i in $(seq 1 "$attempts"); do
   "$@" && exit 0
