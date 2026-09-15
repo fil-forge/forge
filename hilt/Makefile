@@ -15,14 +15,19 @@ build:
 gen:
 	go generate ./...
 
+# itest/ is its own module, so `go test ./...` here does not reach it. Vet it
+# so a broken import cannot sit undetected until someone runs the suite.
 test:
 	go test ./...
+	cd itest && GOWORK=off go vet ./...
 
-# Integration suite: boots the full Forge stack in Docker via smelt (itest/).
-# GOWORK=off keeps it hermetic — the harness builds the hilt binary the same
-# way; drop it to resolve unmerged sibling repos through a parent go.work.
+# Integration suite: boots the full Forge stack in Docker via smelt. It is its
+# own module (itest/go.mod) rather than a build-tagged package, so it needs no
+# tag to stay out of the build above. GOWORK=off keeps it hermetic — the
+# harness builds the hilt binary the same way; drop it to resolve unmerged
+# sibling repos through a parent go.work.
 itest:
-	GOWORK=off go test -tags itest -v -timeout 30m ./itest
+	cd itest && GOWORK=off go test -v -timeout 30m ./...
 
 vet:
 	go vet ./...

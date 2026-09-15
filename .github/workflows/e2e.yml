@@ -102,10 +102,10 @@ jobs:
         # No caching, deliberately -- see images.yml. The whole matrix builds
         # in ~2.5 min wall-clock there, and piri, the slowest, is 2m14s.
         #
-        # piri, hilt and ingot build with the repository root as context
-        # because their go.mod carries a `replace => ../<svc>`; the other
-        # three take their own directory. Each Dockerfile's header explains
-        # its COPY list.
+        # A service builds with the repository root as context when its
+        # go.mod carries a `replace => ../<svc>`, and with its own directory
+        # otherwise -- the build lines below say which is which. Each
+        # Dockerfile's header explains its COPY list.
         env:
           DOCKER_BUILDKIT: "1"
         run: |
@@ -116,7 +116,7 @@ jobs:
             echo "::endgroup::"
           }
           build piri .
-          build hilt .
+          build hilt hilt
           build ingot .
           build sprue sprue
           build delegator delegator

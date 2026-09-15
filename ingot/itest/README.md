@@ -1,6 +1,8 @@
 # Integration tests (itest)
 
-Docker-backed integration tests behind the `itest` build tag. Everything here
+Docker-backed integration tests. This directory is its own Go module
+(`go.mod` here), which is what keeps it out of `go test ./...` one level up —
+it used to be a build tag. Everything here
 runs against a **forge-mode ingot deployed in the smelt Forge stack** (sprue,
 piri, indexing-service, postgres, ...) with a build of **this working tree**
 bind-mounted over the published image — what you just edited is what runs.
@@ -8,13 +10,13 @@ There is no in-memory ingot anywhere: the deployment under test is the real
 one. No smelt checkout needed; compose files travel with the Go import.
 
 The pattern: `make test` while iterating (seconds, no Docker), `make itest`
-when you're ready to wait for the real thing. CI does the same — unit tests
-first, integration only after they pass.
+when you're ready to wait for the real thing. CI runs this suite as its own
+job (`.github/workflows/itest.yml`), in parallel with the unit matrix.
 
 ```bash
-make itest                                                  # everything (~10 min)
-go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v          # one category
-go test -tags itest ./itest -run 'TestForgeVersity/PutObject/success' -v  # one case
+make itest                                              # everything (~10 min)
+cd itest && go test -run 'TestForgeVersity/PutObject' -v         # one category
+cd itest && go test -run 'TestForgeVersity/PutObject/success' -v # one case
 ```
 
 ## Hilt-era provisioning and credentials

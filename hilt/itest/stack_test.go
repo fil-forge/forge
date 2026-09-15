@@ -1,5 +1,3 @@
-//go:build itest
-
 // Package itest boots the full Forge network with smelt (Docker) and
 // exercises hilt end to end against real services: the working tree's hilt
 // is compiled and mounted over the published image, tenants and access keys

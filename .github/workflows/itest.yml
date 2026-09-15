@@ -1,0 +1,106 @@
+name: itest
+
+# Runs hilt's and ingot's integration suites, which boot the Forge stack in
+# Docker through smelt and drive the service under test through it.
+#
+# They existed before this workflow and were never run. ci.yml compiled them
+# behind the `itest` build tag and discarded the result -- its own comment said
+# so -- which meant a suite could rot for weeks without anything going red. Each
+# is now its own Go module, so it gets a job instead of a build tag.
+#
+# What a run actually proves is worth naming, because it is not what e2e.yml
+# proves. Each suite compiles the working tree's service to a static binary,
+# mounts it over that service's published image, and takes every *other*
+# service from the registry -- which is what stack.WithPublishedImages() states.
+# So this is HEAD-of-one-service against the published network: a compatibility
+# check. e2e.yml is the whole-stack check, where every in-repo image is built
+# from the commit under test.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # See ci.yml: the default comma separator falls back to the origin only on
+  # 404/410, so a dropped proxy stream fails the job outright.
+  GOPROXY: "https://proxy.golang.org|direct"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  itest:
+    strategy:
+      fail-fast: false
+      # One suite per runner, and it must stay that way: each TestMain calls
+      # stack.CleanupLeaked, which removes every container and volume whose
+      # compose project starts `smeltery-` -- including another suite's live
+      # ones. pkg/stack/cleanup.go says as much ("For single-suite test
+      # machines this is safe"). A matrix gives each job its own Docker host;
+      # folding these into one job would have them tear each other down.
+      matrix:
+        service: [hilt, ingot]
+    name: itest ${{ matrix.service }}
+    # Pinned rather than -latest so the Docker version cannot drift underneath
+    # the harness, which requires 25+. Same reason as e2e.yml.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}/itest
+    env:
+      # Each itest module resolves its service and smelt through its own
+      # `replace`, so it stands alone exactly as ci.yml requires of every other
+      # module -- and so the binary it builds is the one the Dockerfile would.
+      GOWORK: "off"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.service }}/itest/go.mod
+          cache-dependency-path: ${{ matrix.service }}/itest/go.sum
+
+      - name: download modules
+        run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
+      - name: vet
+        run: go vet ./...
+      - name: tidy (no diff)
+        run: |
+          $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: docker version
+        run: |
+          docker version
+          docker compose version
+
+      # Never retried, deliberately: a retry here would mask a flaky suite,
+      # which is the one thing this job exists to see.
+      - name: itest
+        run: go test -v -timeout 25m ./...
+
+      - name: dump container state on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/container-logs
+          {
+            echo "=== docker ps -a ==="; docker ps -a
+            echo; echo "=== docker volume ls ==="; docker volume ls
+          } | tee /tmp/container-logs/_overview.txt
+          for c in $(docker ps -aq); do
+            echo "::group::$c"
+            docker logs "$c" 2>&1 | tail -200 | tee "/tmp/container-logs/$c.log"
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: itest-${{ matrix.service }}-container-logs
+          path: /tmp/container-logs
+          retention-days: 7

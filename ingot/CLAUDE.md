@@ -29,7 +29,7 @@ make test       # unit tests: GOWORK=off go test ./... (fast, no Docker)
 make itest      # integration tests: boots the Forge stack in Docker (~6 min)
 make gen        # regenerate bucket/cbor_gen.go after changing bucket types
 GOWORK=off go vet ./...
-GOWORK=off go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v  # one S3 category
+cd itest && GOWORK=off go test -run 'TestForgeVersity/PutObject' -v         # one S3 category
 GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 ```
 
@@ -37,11 +37,12 @@ GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 
 **The test pattern — unit first, integration when you're ready to wait.**
 `make test` runs library/unit tests in seconds with no Docker. `make itest`
-runs `itest/` (build tag `itest`): it boots the full smelt Forge stack in
-Docker, mounts THIS working tree's binary over the published ingot image, and
-validates the real network path — including the curated S3 conformance
-partition (`itest/versity_*_test.go`); see `itest/README.md`. CI mirrors the
-same ordering: the `itest` job only runs after the unit job passes
+runs `itest/`, which is its own Go module rather than a build-tagged package:
+it boots the full smelt Forge stack in Docker, mounts THIS working tree's
+binary over the published ingot image, and validates the real network path —
+including the curated S3 conformance partition (`itest/versity_*_test.go`);
+see `itest/README.md`. CI runs it as `itest (ingot)` in its own workflow,
+alongside the unit matrix rather than gated behind it
 (`.github/workflows/go-test.yml`).
 
 ## Dependency stack
@@ -206,7 +207,7 @@ forge-mode daemon. Two tiers:
 - **`make test` — unit** (seconds, no Docker): library/unit tests across the
   packages, plus the thin S3-client glue in `testing/` (`Config`/`NewS3Conf`,
   roundtrip helpers).
-- **`make itest` — integration** (`itest/`, build tag `itest`, Docker):
+- **`make itest` — integration** (`itest/`, its own module, Docker):
   boots the smelt Forge stack with THIS working tree's binary mounted over
   the published image.
   - **`versity_{bucket,object,multipart,versioning}_test.go`** — the S3

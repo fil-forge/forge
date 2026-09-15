@@ -64,9 +64,7 @@ jobs:
             build_flags: -tags skiff
             cgo_enabled: "0"
           - service: hilt
-            tagged_suites: itest
           - service: ingot
-            tagged_suites: itest
           - service: sprue
           - service: smelt
             tagged_suites: e2e

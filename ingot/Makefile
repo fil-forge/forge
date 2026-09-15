@@ -17,13 +17,15 @@ GO ?= go
 build:
 	$(GO) build -o ingot ./cmd/ingot
 
-## test: run the unit test suite (fast, no Docker)
+## test: run the unit test suite (fast, no Docker) and vet the itest module
 test:
 	$(GO) test ./...
+	cd itest && GOWORK=off $(GO) vet ./...
 
 ## itest: run the integration test suite (boots the Forge stack in Docker; ~6 min)
+## itest/ is its own module, so it needs no build tag to stay out of `make test`.
 itest:
-	$(GO) test -tags itest -v -timeout 30m ./itest
+	cd itest && GOWORK=off $(GO) test -v -timeout 30m ./...
 
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:

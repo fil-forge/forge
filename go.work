@@ -3,7 +3,9 @@ go 1.27.0
 use (
 	./delegator
 	./hilt
+	./hilt/itest
 	./ingot
+	./ingot/itest
 	./piri
 	./piri-signing-service
 	./smelt
