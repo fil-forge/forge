@@ -1,0 +1,18 @@
+# Build context for the monorepo root. Three service images (piri, hilt,
+# ingot) build with the repo root as context because their go.mod carries a
+# `replace => ../<svc>` that Go resolves before it will download anything --
+# a context scoped to the service directory fails in `go mod download`.
+#
+# Each Dockerfile then COPYs only the module directories it needs, so this
+# file only has to keep the context transfer small.
+.git
+
+# smelt's snapshot archives are 40M of the 53M root context and no Dockerfile
+# copies them, so every root-context build (piri, hilt, ingot) was shipping
+# them to BuildKit for nothing.
+#
+# A stricter form -- ignore everything, then allowlist the module directories
+# the root-context Dockerfiles COPY -- would trim a few more MB, at the cost
+# of a hand-maintained list mirroring those COPY lines. Not worth it for the
+# remainder; revisit if the context grows again.
+smelt/snapshots

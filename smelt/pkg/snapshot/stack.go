@@ -12,6 +12,29 @@ import (
 	"strings"
 )
 
+// composeArgs builds a `docker compose` argument list for a CLI-path call
+// against projectDir.
+//
+// The compose files declare every image this repository builds as required
+// (${PIRI_IMAGE:?...}) rather than defaulting it to a published tag, so that a
+// test which forgets to pass overrides fails instead of silently exercising
+// published images. Compose only auto-loads .env, which carries nothing, so
+// these calls must be told where the published references live.
+//
+// Both files are optional: `--env-file` on a path that does not exist is a hard
+// error, unlike the implicit .env, and a caller may have its own project layout.
+func composeArgs(projectDir string, rest ...string) []string {
+	args := []string{"compose"}
+	// .env last, so a developer's own overrides beat the published refs --
+	// the same precedence the Makefile uses.
+	for _, name := range []string{".env.published", ".env"} {
+		if _, err := os.Stat(filepath.Join(projectDir, name)); err == nil {
+			args = append(args, "--env-file", name)
+		}
+	}
+	return append(args, rest...)
+}
+
 // projectName resolves the docker-compose project name used to namespace
 // volumes. `docker compose` defaults to the lowercased basename of the
 // project directory (e.g. "smelt"); callers can override via the
@@ -36,7 +59,7 @@ type composeService struct {
 // stackStatus returns the list of compose-managed services for the project.
 // Empty slice + nil error means the stack is fully down.
 func stackStatus(ctx context.Context, projectDir string) ([]composeService, error) {
-	cmd := exec.CommandContext(ctx, "docker", "compose", "ps", "--all", "--format", "json")
+	cmd := exec.CommandContext(ctx, "docker", composeArgs(projectDir, "ps", "--all", "--format", "json")...)
 	cmd.Dir = projectDir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -143,7 +166,7 @@ func requireStackDown(ctx context.Context, projectDir string) error {
 // in dependency order. The blockchain container's entrypoint trap turns that
 // signal into a `/output/anvil-state.json` dump.
 func stopStack(ctx context.Context, projectDir string) error {
-	cmd := exec.CommandContext(ctx, "docker", "compose", "stop")
+	cmd := exec.CommandContext(ctx, "docker", composeArgs(projectDir, "stop")...)
 	cmd.Dir = projectDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -159,7 +182,7 @@ func stopStack(ctx context.Context, projectDir string) error {
 // gap that tag-only capture leaves open: a rolling tag like `:main` resolves
 // to different image content depending on when the user last pulled.
 func captureImages(ctx context.Context, projectDir string) (map[string]ImageInfo, error) {
-	cmd := exec.CommandContext(ctx, "docker", "compose", "config", "--format", "json")
+	cmd := exec.CommandContext(ctx, "docker", composeArgs(projectDir, "config", "--format", "json")...)
 	cmd.Dir = projectDir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -270,7 +293,7 @@ func shortDigest(d string) string {
 // stopped containers still holding mounts. Volumes survive compose down
 // without -v; our volume restore then wipes and repopulates them.
 func removeStoppedContainers(ctx context.Context, projectDir string) error {
-	cmd := exec.CommandContext(ctx, "docker", "compose", "down", "--remove-orphans")
+	cmd := exec.CommandContext(ctx, "docker", composeArgs(projectDir, "down", "--remove-orphans")...)
 	cmd.Dir = projectDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

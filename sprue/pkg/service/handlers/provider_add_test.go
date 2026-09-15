@@ -4,8 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/libforge/attestation/didmailto"
-	providercmds "github.com/fil-forge/libforge/commands/provider"
 	"github.com/fil-forge/forge/sprue/internal/config"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/billing"
@@ -14,6 +12,8 @@ import (
 	consumer_store "github.com/fil-forge/forge/sprue/pkg/store/consumer/memory"
 	customer_store "github.com/fil-forge/forge/sprue/pkg/store/customer/memory"
 	subscription_store "github.com/fil-forge/forge/sprue/pkg/store/subscription/memory"
+	"github.com/fil-forge/libforge/attestation/didmailto"
+	providercmds "github.com/fil-forge/libforge/commands/provider"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/plc"
 	"github.com/fil-forge/ucantone/errors/datamodel"

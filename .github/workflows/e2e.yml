@@ -1,0 +1,157 @@
+name: e2e
+
+# Boots the full Forge stack in Docker and drives an upload/retrieve through
+# it. This is the first thing in this repository that can observe the wire at
+# all — ci.yml only proves each module compiles and its unit tests pass, which
+# is why a six-week ucantone skew between smelt and the services it drives sat
+# undetected until someone read the pins by hand.
+#
+# HEAD is tested via images built from this commit, not via SMELT_WORKSPACE.
+# The workspace path compiles each service and bind-mounts the binary over the
+# published image, which exercises HEAD's *code* in the polyrepo's
+# *packaging* -- it cannot see a broken Dockerfile, base image or entrypoint.
+# It also hid a real one: the module-path rewrite never reached the
+# Dockerfiles, so delegator and piri-signing-service had been unbuildable
+# since consolidation under a green CI.
+#
+# So the six in-repo services are built here (same Dockerfiles images.yml
+# builds) and passed by *_IMAGE, which pkg/stack.OptionsFromEnv turns into
+# stack options. SMELT_WORKSPACE is deliberately NOT set: a bind-mounted
+# binary would shadow the image's own and mask exactly the faults this job
+# now exists to catch.
+#
+# guppy, indexer, swarf, plc, ipni and blockchain still run as published
+# images -- they are not in this repository. indexer and swarf move in later;
+# guppy retires as the driver in the plan's Phase 5.
+#
+# GOWORK must stay unset here. ci.yml pins GOWORK=off to prove each module
+# stands alone; the stack harness needs the workspace to resolve siblings.
+
+on:
+  # Only main: a push to a branch with an open pull request would otherwise
+  # run everything twice, once per event. The pull_request event covers
+  # branches, and workflow_dispatch covers a branch with no PR yet.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Pipe, not comma: the default separator falls back to the origin only on
+  # 404/410, and proxy.golang.org's mid-transfer stream drops (golang/go#51323)
+  # are not "not found", so they fail the build outright. See ci.yml.
+  GOPROXY: "https://proxy.golang.org|direct"
+
+# One stack at a time per ref. Each permutation boots ~20 containers, so
+# overlapping runs on a shared runner starve each other's healthchecks.
+#
+# Keyed on the ref, not the sha: a per-sha key is unique to each run, so
+# cancel-in-progress has nothing to cancel and two pushes to one branch boot
+# two stacks -- exactly what the line above says must not happen.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    # Pinned rather than -latest so the Docker version cannot drift underneath
+    # the harness, which requires 25+.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: smelt
+    env:
+      # Consumed by pkg/stack.OptionsFromEnv. Every one of these is an image
+      # this job builds below; anything absent here runs as a published image.
+      PIRI_IMAGE: forge/piri:head
+      HILT_IMAGE: forge/hilt:head
+      INGOT_IMAGE: forge/ingot:head
+      UPLOAD_IMAGE: forge/sprue:head
+      DELEGATOR_IMAGE: forge/delegator:head
+      SIGNER_IMAGE: forge/piri-signing-service:head
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: smelt/go.mod
+          # See ci.yml -- without this there is no module cache at all.
+          cache-dependency-path: smelt/go.sum
+
+      # This suite has failed at *compile* time on a dropped proxy.golang.org
+      # stream -- "[setup failed]", before any container starts, in a job
+      # whose whole purpose is to report what the stack did. Fetching first
+      # turns that into a download failure at a step that says "download".
+      # Retried as well as proxied to the origin, because the fallback above
+      # handles a bad response and not a body that stops arriving.
+      # `go test` itself is deliberately never retried -- that would mask a
+      # genuinely flaky test, which is the one thing this job exists to see.
+      - name: download modules
+        run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
+
+      - name: docker version
+        run: |
+          docker version
+          docker compose version
+
+      - name: build service images from HEAD
+        working-directory: .
+        # No caching, deliberately -- see images.yml. The whole matrix builds
+        # in ~2.5 min wall-clock there, and piri, the slowest, is 2m14s.
+        #
+        # piri, hilt and ingot build with the repository root as context
+        # because their go.mod carries a `replace => ../<svc>`; the other
+        # three take their own directory. Each Dockerfile's header explains
+        # its COPY list.
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: |
+          set -euo pipefail
+          build() {
+            echo "::group::build $1"
+            docker build -f "$1/Dockerfile" --target prod -t "forge/$1:head" "$2"
+            echo "::endgroup::"
+          }
+          build piri .
+          build hilt .
+          build ingot .
+          build sprue sprue
+          build delegator delegator
+          build piri-signing-service piri-signing-service
+          docker image ls --filter 'reference=forge/*:head'
+
+      - name: e2e
+        # -parallel bounds concurrent stacks. Each spins ~20 containers
+        # (several postgres, an OpenBao, the JVM-based dynamodb-local), and
+        # booting several at once saturates the runner until slow services
+        # miss their healthcheck windows.
+        run: go test -tags e2e -v -timeout 20m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
+
+      - name: dump container state on failure
+        if: failure()
+        working-directory: .
+        run: |
+          mkdir -p /tmp/container-logs
+          {
+            echo "=== docker ps -a ==="; docker ps -a
+            echo; echo "=== docker network ls ==="; docker network ls
+            echo; echo "=== docker volume ls ==="; docker volume ls
+          } | tee /tmp/container-logs/_overview.txt
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "/tmp/container-logs/$c.log" 2>&1 || true
+            echo "::group::$c"
+            tail -200 "/tmp/container-logs/$c.log"
+            echo "::endgroup::"
+          done
+
+      - name: upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-logs
+          path: /tmp/container-logs/
+          if-no-files-found: ignore
+          retention-days: 7

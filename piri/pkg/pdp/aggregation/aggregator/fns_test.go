@@ -10,8 +10,8 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 
-	libpiece "github.com/fil-forge/libforge/piece"
 	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
+	libpiece "github.com/fil-forge/libforge/piece"
 )
 
 // Human-friendly byte sizes

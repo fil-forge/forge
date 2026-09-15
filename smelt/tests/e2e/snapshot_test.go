@@ -25,7 +25,11 @@ func TestStackFromSnapshot(t *testing.T) {
 	ctx := t.Context()
 
 	start := time.Now()
-	s := stack.MustNewStack(t, stack.WithEmbeddedSnapshot("3-piri-postgres-s3"))
+	// OptionsFromEnv last: without it this test ran the published :main
+	// images even inside a job whose whole purpose was to exercise HEAD.
+	opts := append([]stack.Option{stack.WithEmbeddedSnapshot("3-piri-postgres-s3")},
+		stack.OptionsFromEnv()...)
+	s := stack.MustNewStack(t, opts...)
 	elapsed := time.Since(start)
 	t.Logf("stack up from snapshot in %s", elapsed)
 

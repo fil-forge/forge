@@ -14,6 +14,14 @@ SMELT_WORKSPACE ?= 0
 
 WORKSPACE_OVERRIDE := generated/compose/workspace.override.yml
 
+# ENV_FILES supplies the published image references to every compose call.
+# The compose files no longer default those (`${HILT_IMAGE:?...}`, not
+# `:-`), so without this every target below would fail on an unset
+# variable. .env.published comes first and the developer's own .env
+# second, because the last --env-file wins — so an uncommented line in
+# .env still overrides the published reference.
+ENV_FILES := --env-file .env.published --env-file .env
+
 # Chain the workspace binary-mount override into every compose call, but only
 # when it exists on disk. `workspace-build` (a prereq of up/build/fresh) creates
 # it when SMELT_WORKSPACE=1 and removes it otherwise, so a plain `make up` never
@@ -25,7 +33,7 @@ WORKSPACE_OVERRIDE := generated/compose/workspace.override.yml
 # recipe's functions up front and caches directory listings, so $(wildcard)
 # would still report the file absent. Deferring `test -f` to the shell at
 # recipe-execution time always reflects what workspace-build just reconciled.
-COMPOSE = $(DOCKER) compose $$(test -f $(WORKSPACE_OVERRIDE) && echo "-f compose.yml -f $(WORKSPACE_OVERRIDE)")
+COMPOSE = $(DOCKER) compose $(ENV_FILES) $$(test -f $(WORKSPACE_OVERRIDE) && echo "-f compose.yml -f $(WORKSPACE_OVERRIDE)")
 
 # workspace-build reconciles the override to the current SMELT_WORKSPACE value:
 # build the selected sibling binaries + write the override when enabled, else
@@ -310,7 +318,7 @@ debug-upload: generated/compose/piri.yml ensure-state
 	@if [ ! -d "generated/keys" ] || [ -z "$$(ls -A generated/keys 2>/dev/null)" ]; then \
 		$(MAKE) init; \
 	fi
-	$(DOCKER) compose -f compose.yml -f compose.debug.yml up -d --force-recreate upload upload-init
+	$(DOCKER) compose $(ENV_FILES) -f compose.yml -f compose.debug.yml up -d --force-recreate upload upload-init
 	@echo ""
 	@echo "upload is running under Delve. Attach to localhost:2345:"
 	@echo "  dlv connect localhost:2345"

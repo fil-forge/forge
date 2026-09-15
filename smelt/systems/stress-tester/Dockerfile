@@ -7,7 +7,10 @@ RUN apk add --no-cache git
 
 # Copy go mod files
 COPY go.mod go.sum ./
-RUN go mod download
+# proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR) and the
+# go command does not retry, so one bad fetch out of several hundred fails the
+# image build.
+RUN (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
 
 # Copy source
 COPY . .

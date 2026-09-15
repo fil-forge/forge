@@ -11,7 +11,7 @@
 
 services:
   ingot:
-    image: ${INGOT_IMAGE:-ghcr.io/fil-forge/ingot:main}
+    image: ${INGOT_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     command: ["serve", "--config", "/etc/ingot/config.yaml"]
     ports:

@@ -21,6 +21,7 @@ import (
 	osexec "os/exec"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -116,6 +117,36 @@ func NewStack(ctx context.Context, t *testing.T, opts ...Option) (*Stack, error)
 		}
 		t.Logf("smeltery: booting from snapshot %s (%d piri node(s), %d volume(s))",
 			snapDir, len(resolvedNodes), len(snapDesc.Volumes))
+
+		// Say in the log what this run is actually testing. The restored
+		// volumes are state those saved images wrote; any image override in
+		// force replaces one of them with something else, so a failure here
+		// can be the override's fault or the age gap's, and nothing else in
+		// the output separates the two.
+		//
+		// snapshot.Load warns on drift, but that is the CLI path -- this one
+		// goes through LoadFiles and never reaches it. A computed diff would
+		// need a stack-service to compose-service mapping, which is a list
+		// nobody would keep in step; printing both sides costs nothing and
+		// does not rot.
+		if age := time.Since(snapDesc.CreatedAt); len(snapDesc.Images) > 0 {
+			t.Logf("smeltery: snapshot captured %s (%s ago); its state was written by:",
+				snapDesc.CreatedAt.UTC().Format(time.RFC3339), age.Round(time.Hour))
+			svcs := make([]string, 0, len(snapDesc.Images))
+			for svc := range snapDesc.Images {
+				svcs = append(svcs, svc)
+			}
+			sort.Strings(svcs)
+			for _, svc := range svcs {
+				t.Logf("smeltery:   %-22s %s", svc, snapDesc.Images[svc].Tag)
+			}
+			if overrides := cfg.imageOverrides(); len(overrides) > 0 {
+				t.Logf("smeltery: overridden for this run, so these are NOT what wrote that state:")
+				for _, o := range overrides {
+					t.Logf("smeltery:   %s", o)
+				}
+			}
+		}
 	} else {
 		resolvedNodes = cfg.resolveNodes()
 		keysDir := filepath.Join(tempDir, "generated", "keys")

@@ -12,10 +12,10 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/forge/sprue/internal/config"
 	"github.com/fil-forge/forge/sprue/pkg/build"
 	"github.com/fil-forge/forge/sprue/pkg/service"
+	"github.com/fil-forge/libforge/identity"
 )
 
 // ServerModule provides the HTTP server with lifecycle management.

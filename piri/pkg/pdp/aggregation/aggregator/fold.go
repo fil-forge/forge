@@ -4,8 +4,8 @@ import (
 	"cmp"
 	"slices"
 
-	libpiece "github.com/fil-forge/libforge/piece"
 	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/types"
+	libpiece "github.com/fil-forge/libforge/piece"
 )
 
 // Append folds pieces, in order, into aggregates. A piece whose padded size

@@ -114,6 +114,11 @@ func startForge(t *testing.T) *forgeNet {
 	t.Helper()
 	t.Logf("booting the smelt Forge stack (~1-2 min; first run also compiles hilt and pulls images)")
 	opts := []stack.Option{
+		// First, so everything below still wins: smelt's compose files no
+		// longer default the images this repo's siblings build, and this
+		// suite tests one service (hilt) against the published rest of the
+		// network.
+		stack.WithPublishedImages(),
 		// Postgres-backed piri: piri:main's curio PDP pipeline refuses
 		// sqlite ("curio PDP pipeline requires Postgres").
 		stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
@@ -121,7 +126,7 @@ func startForge(t *testing.T) *forgeNet {
 	}
 	// Local-dev escape hatches: run against sprue / piri / ingot images the
 	// registry doesn't have yet — e.g. built from an unmerged branch. Unset
-	// (CI) uses the published defaults.
+	// (CI) leaves the published references WithPublishedImages just supplied.
 	if img := os.Getenv("HILT_ITEST_UPLOAD_IMAGE"); img != "" {
 		t.Logf("using upload-service image override: %s", img)
 		opts = append(opts, stack.WithUploadImage(img))

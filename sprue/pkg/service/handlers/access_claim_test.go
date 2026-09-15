@@ -3,9 +3,9 @@ package handlers
 import (
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/access"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	dlgmemory "github.com/fil-forge/forge/sprue/pkg/store/delegation/memory"
+	"github.com/fil-forge/libforge/commands/access"
 	"github.com/fil-forge/ucantone/execution"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/command"

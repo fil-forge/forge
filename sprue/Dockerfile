@@ -4,8 +4,11 @@ ARG TARGETARCH
 ARG TARGETOS=linux
 WORKDIR /go/src/sprue
 COPY go.mod go.sum* ./
+# proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR) and the
+# go command does not retry, so one bad fetch out of several hundred fails the
+# image build.
 RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download || true
+    (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
 COPY . .
 
 # Production build - stripped binary

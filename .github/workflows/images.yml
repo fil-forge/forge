@@ -1,0 +1,89 @@
+name: images
+
+# Builds every in-repo service image from THIS commit.
+#
+# Why this exists: an image-build check independent of the stack. e2e.yml
+# builds the same Dockerfiles and then boots them, so a failure there could be
+# a build fault or a runtime one; this job isolates the build half and reports
+# each service separately, in parallel.
+#
+# (An earlier version of this comment described e2e.yml as using
+# SMELT_WORKSPACE to bind-mount binaries over published images. It stopped
+# doing that in the same pull request that added this file.)
+#
+# No caching, deliberately (2026-09-11). A cache hit means the build did not
+# run, and right now the point is to provoke build failures, not to avoid
+# them. Revisit only if the wall-clock becomes untenable; the design is
+# recorded in docs/consolidation/ rather than half-implemented here.
+#
+# No registry either: nothing is pushed. The follow-up that feeds these
+# images to the stack builds them in the same job and --loads them, so this
+# workflow needs no packages: write and works unchanged on fork PRs.
+
+on:
+  # Only main: a push to a branch with an open pull request would otherwise
+  # run everything twice, once per event. The pull_request event covers
+  # branches, and workflow_dispatch covers a branch with no PR yet.
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Keyed on the ref, not the sha -- see e2e.yml. A per-sha key never shares a
+# group, so cancel-in-progress cannot supersede an obsolete image build.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # context "." means the repo root: these three carry a
+          # `replace => ../<svc>` that Go resolves before it downloads
+          # anything, so a context scoped to the service dir dies in
+          # `go mod download`. Each Dockerfile COPYs only its own derived
+          # module closure -- see the header comment in each.
+          - service: piri
+            context: .
+          - service: hilt
+            context: .
+          - service: ingot
+            context: .
+          # No cross-module replace: the service dir is a sufficient context,
+          # exactly as it was in the polyrepo.
+          - service: sprue
+            context: sprue
+          - service: delegator
+            context: delegator
+          - service: piri-signing-service
+            context: piri-signing-service
+    name: image ${{ matrix.service }}
+    runs-on: ubuntu-24.04
+    # piri links curio; its build time is the unknown this run measures.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: build ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.service }}/Dockerfile
+          # Every service Dockerfile defines a `prod` target; that is what
+          # the published :main tags are and what smelt's compose runs.
+          target: prod
+          push: false
+          # Materialise into the runner's daemon rather than discarding the
+          # result, so this measures what the stack job will actually pay.
+          load: true
+          tags: forge/${{ matrix.service }}:head
+
+      - name: image size
+        run: docker image inspect forge/${{ matrix.service }}:head --format '{{.Size}}' | numfmt --to=iec

@@ -104,6 +104,11 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 	t.Helper()
 	t.Logf("booting the smelt Forge stack (~1-2 min; first run also compiles ingot and pulls images)")
 	opts := []stack.Option{
+		// First, so everything below still wins: smelt's compose files no
+		// longer default the images this repo's siblings build, and this
+		// suite tests one service (ingot) against the published rest of the
+		// network.
+		stack.WithPublishedImages(),
 		// Postgres-backed piri: piri:main's curio PDP pipeline refuses
 		// sqlite ("curio PDP pipeline requires Postgres") as of 2026-07-24.
 		stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
@@ -111,11 +116,12 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 	}
 	// Local-dev escape hatches: run against upload-service (sprue) / piri
 	// images the registry doesn't have yet — e.g. built from an unmerged
-	// branch. Unset (CI) uses the published defaults. These exist because the
-	// hilt integration made the forge stack cross-service: hilt mints did:plc
-	// tenant spaces, so both sprue (bucket create / catalog ship) and piri
-	// (the /content/retrieve read tier) must be able to resolve did:plc — a
-	// capability that lands in those services branch-by-branch.
+	// branch. Unset (CI) leaves the published references WithPublishedImages
+	// just supplied. These exist because the hilt integration made the forge
+	// stack cross-service: hilt mints did:plc tenant spaces, so both sprue
+	// (bucket create / catalog ship) and piri (the /content/retrieve read
+	// tier) must be able to resolve did:plc — a capability that lands in
+	// those services branch-by-branch.
 	if img := os.Getenv("INGOT_ITEST_UPLOAD_IMAGE"); img != "" {
 		t.Logf("using upload-service image override: %s", img)
 		opts = append(opts, stack.WithUploadImage(img))

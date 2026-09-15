@@ -3,8 +3,8 @@ package fx
 import (
 	"net/url"
 
-	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/forge/sprue/internal/config"
+	"github.com/fil-forge/libforge/identity"
 
 	"github.com/fil-forge/forge/sprue/pkg/indexerclient"
 	"github.com/fil-forge/forge/sprue/pkg/piriclient"

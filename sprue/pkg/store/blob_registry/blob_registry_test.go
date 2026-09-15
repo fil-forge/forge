@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/libforge/commands/blob"
 	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/forge/sprue/pkg/store"
 	blobregistry "github.com/fil-forge/forge/sprue/pkg/store/blob_registry"
@@ -18,6 +17,7 @@ import (
 	metricsmemory "github.com/fil-forge/forge/sprue/pkg/store/metrics/memory"
 	metricspostgres "github.com/fil-forge/forge/sprue/pkg/store/metrics/postgres"
 	spacediffmemory "github.com/fil-forge/forge/sprue/pkg/store/space_diff/memory"
+	"github.com/fil-forge/libforge/commands/blob"
 	"github.com/stretchr/testify/require"
 )
 

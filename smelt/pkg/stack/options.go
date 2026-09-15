@@ -2,6 +2,9 @@ package stack
 
 import (
 	"fmt"
+	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
@@ -27,6 +30,8 @@ type config struct {
 	ipniImage       string
 	ingotImage      string
 	swarfImage      string
+	minioImage      string
+	plcImage        string
 
 	// Binary injection: bind-mount host-built binaries over the published
 	// images instead of rebuilding the image. serviceBinaries holds explicit
@@ -59,6 +64,20 @@ func defaultConfig() *config {
 	return &config{
 		timeout: 5 * time.Minute, // Default 5 minute timeout for stack startup
 	}
+}
+
+// imageOverrides reports the image overrides in force, as "VAR=value" lines
+// sorted for stable output. Derived from buildEnv rather than restated, so it
+// cannot list a different set from the one the stack actually uses.
+func (c *config) imageOverrides() []string {
+	var out []string
+	for k, v := range c.buildEnv() {
+		if strings.HasSuffix(k, "_IMAGE") && v != "" {
+			out = append(out, k+"="+v)
+		}
+	}
+	sort.Strings(out)
+	return out
 }
 
 // buildEnv returns the environment variables for docker-compose.
@@ -97,6 +116,12 @@ func (c *config) buildEnv() map[string]string {
 	}
 	if c.swarfImage != "" {
 		env["SWARF_IMAGE"] = c.swarfImage
+	}
+	if c.minioImage != "" {
+		env["MINIO_IMAGE"] = c.minioImage
+	}
+	if c.plcImage != "" {
+		env["PLC_IMAGE"] = c.plcImage
 	}
 
 	return env
@@ -315,9 +340,11 @@ func WithPiriNodes(nodes ...PiriNodeConfig) Option {
 // snapshot save` (manifest.json, smelt.yml, blockchain/, keys/, proofs/,
 // volumes/). Topology comes from the snapshot's embedded smelt.yml —
 // pairing with WithPiriCount or WithPiriNodes returns an error from
-// NewStack. Image references in your .env must match what the snapshot
-// was saved against (the Go SDK does not emit a drift warning; that's
-// the test author's responsibility).
+// NewStack. Running different images against a restored snapshot is
+// allowed, and is what testing HEAD against saved state means, so it is
+// not an error — but nothing checks it either. NewStack logs the
+// snapshot's capture time, the images that wrote the restored state and
+// the overrides in force, and leaves the comparison to you.
 //
 // CI should exercise the cold-boot path. Skip in CI via an env check:
 //
@@ -348,5 +375,127 @@ func WithSnapshot(path string) Option {
 func WithEmbeddedSnapshot(name string) Option {
 	return func(c *config) {
 		c.embeddedSnapshotName = name
+	}
+}
+
+// envImageOptions maps each image-override environment variable to its
+// option. The variable names match the ones the compose files already
+// interpolate (systems/*/compose.yml, and PIRI_IMAGE in pkg/generate), so a
+// caller that can set them for `docker compose` can set them for a Go test
+// and get the same stack.
+var envImageOptions = []struct {
+	env string
+	opt func(string) Option
+}{
+	{"PIRI_IMAGE", WithPiriImage},
+	{"GUPPY_IMAGE", WithGuppyImage},
+	{"INDEXER_IMAGE", WithIndexerImage},
+	{"DELEGATOR_IMAGE", WithDelegatorImage},
+	{"UPLOAD_IMAGE", WithUploadImage},
+	{"HILT_IMAGE", WithHiltImage},
+	{"SIGNER_IMAGE", WithSignerImage},
+	{"BLOCKCHAIN_IMAGE", WithBlockchainImage},
+	{"IPNI_IMAGE", WithIPNIImage},
+	{"INGOT_IMAGE", WithIngotImage},
+	{"SWARF_IMAGE", WithSwarfImage},
+	{"MINIO_IMAGE", WithMinioImage},
+	{"PLC_IMAGE", WithPLCImage},
+}
+
+// publishedImages is the published reference for each image this repository
+// builds, alongside the config field it lands in. It is the Go-side twin of
+// .env.published, which says the same thing for `make up` — the Makefile
+// shells out to `docker compose` directly, so it cannot read this table.
+// Neither copy can drift silently: the compose interpolations for these six
+// are required (`${X:?...}`), so a missing entry fails at `compose up`
+// naming the variable rather than quietly booting :main.
+//
+// Deliberately only these six. The other images the stack runs (guppy,
+// indexer, swarf, ipni, plc, blockchain, minio) are not built here and keep
+// their `:-` compose defaults, so there is nothing for this to fill in.
+var publishedImages = []struct {
+	ref string
+	get func(*config) *string
+}{
+	{"ghcr.io/fil-forge/piri:main", func(c *config) *string { return &c.piriImage }},
+	{"ghcr.io/fil-forge/hilt:main", func(c *config) *string { return &c.hiltImage }},
+	{"ghcr.io/fil-forge/ingot:main", func(c *config) *string { return &c.ingotImage }},
+	{"ghcr.io/fil-forge/sprue:main", func(c *config) *string { return &c.uploadImage }},
+	{"ghcr.io/fil-forge/delegator:main", func(c *config) *string { return &c.delegatorImage }},
+	{"ghcr.io/fil-forge/piri-signing-service:main", func(c *config) *string { return &c.signerImage }},
+}
+
+// WithPublishedImages fills in the published :main reference for every image
+// this repository builds that the caller has not already set. It is how a
+// suite that tests one service against the rest of the network says so: pass
+// your own service's image or binary, and take everyone else's from the
+// registry.
+//
+// It exists because the compose files no longer default these images. A
+// missing override used to boot ghcr.io/fil-forge/<svc>:main in silence, so
+// a test that forgot to pass one passed while exercising published code
+// rather than the commit under test. Wanting the published network is now
+// something a caller states out loud.
+//
+// It never overwrites a value already in place, so ordering is what you
+// would want either way: put it first and anything appended after it wins.
+//
+//	opts := []stack.Option{
+//	    stack.WithPublishedImages(),
+//	    stack.WithServiceBinary("hilt", localHiltBinary(t)),
+//	}
+//	opts = append(opts, stack.OptionsFromEnv()...) // still wins
+func WithPublishedImages() Option {
+	return func(c *config) {
+		for _, p := range publishedImages {
+			if field := p.get(c); *field == "" {
+				*field = p.ref
+			}
+		}
+	}
+}
+
+// OptionsFromEnv returns the options implied by the process environment: an
+// image override per service, plus SMELT_WORKSPACE to build every service in
+// the active go.work use-list from local source.
+//
+// Every test that boots a stack should append these, so that a CI job can
+// redirect the whole stack at locally-built images by setting environment
+// variables alone. Hand-rolling the mapping per test is what let
+// TestStackFromSnapshot run on published :main images inside a job that
+// existed to exercise HEAD -- it read neither variable, and nothing said so.
+//
+// Append these last: an override supplied by the environment should win over
+// one a test hard-codes, which is the point of an override.
+func OptionsFromEnv() []Option {
+	var opts []Option
+	for _, m := range envImageOptions {
+		if image := os.Getenv(m.env); image != "" {
+			opts = append(opts, m.opt(image))
+		}
+	}
+	if os.Getenv("SMELT_WORKSPACE") != "" {
+		opts = append(opts, WithWorkspaceBinaries())
+	}
+	return opts
+}
+
+// WithMinioImage overrides the MinIO image. MinIO is not one of our services,
+// but upstream withdrew it from every public registry and archived the
+// project, so fil-forge/minio builds it from source and the stack points at
+// that build.
+func WithMinioImage(image string) Option {
+	return func(c *config) {
+		c.minioImage = image
+	}
+}
+
+// WithPLCImage overrides the did:web/did:plc directory image.
+// systems/plc/compose.yml has interpolated PLC_IMAGE and documented it as the
+// override since before this option existed, so until now the documented knob
+// worked for docker compose and silently did nothing from a Go test.
+func WithPLCImage(image string) Option {
+	return func(c *config) {
+		c.plcImage = image
 	}
 }

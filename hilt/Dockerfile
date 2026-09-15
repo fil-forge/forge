@@ -2,11 +2,35 @@
 FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
 ARG TARGETARCH
 ARG TARGETOS=linux
-WORKDIR /go/src/hilt
-COPY go.mod go.sum* ./
+# BUILD CONTEXT IS THE REPOSITORY ROOT, not this directory:
+#
+#   docker build -f hilt/Dockerfile --target prod .
+#
+# hilt's go.mod carries `replace => ../smelt`, and Go resolves every replace
+# target before it will download anything -- a context scoped to hilt/ dies in
+# `go mod download` reading ../smelt/go.mod.
+#
+# smelt is a TEST-only dependency (hilt/itest/stack_test.go); no smelt code is
+# linked into the binary, so its go.mod/go.sum alone satisfy the module graph
+# and no smelt source is copied. Consequently a smelt change does not
+# invalidate this image. The closure is derived, not hand-maintained:
+#
+#   cd hilt && GOWORK=off go list -deps ./cmd | grep fil-forge/forge/
+#   -> hilt
+#
+# go.work is deliberately NOT copied: the build must resolve through this
+# module's own go.mod, as it did when this was a standalone repo. Copying it
+# (or a broad `COPY . .`) would silently switch the build to workspace mode.
+WORKDIR /src
+COPY hilt/go.mod hilt/go.sum* ./hilt/
+COPY smelt/go.mod smelt/go.sum ./smelt/
+# proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR) and the
+# go command does not retry, so one bad fetch out of several hundred fails the
+# image build.
 RUN --mount=type=cache,target=/go/pkg/mod \
-    go mod download || true
-COPY . .
+    cd hilt && (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
+COPY hilt/ ./hilt/
+WORKDIR /src/hilt
 
 # Production build - stripped binary
 FROM build AS build-prod

@@ -12,8 +12,8 @@ import (
 	commp "github.com/filecoin-project/go-fil-commp-hashhash"
 	"github.com/stretchr/testify/require"
 
-	libpiece "github.com/fil-forge/libforge/piece"
 	"github.com/fil-forge/forge/piri/pkg/pdp/aggregation/aggregator"
+	libpiece "github.com/fil-forge/libforge/piece"
 )
 
 func TestAggregate(t *testing.T) {
