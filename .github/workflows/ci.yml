@@ -8,21 +8,27 @@ name: ci
 # path-filter list to fall out of sync with a new shared module (see
 # forge-consolidation-plan.md's Traps section, #1).
 #
-# It does need Docker. Testcontainers-backed tests exist without a build tag,
-# so `go test ./...` runs them, and not every one degrades gracefully: piri's
-# minio store test panics in TestMain when the container will not start
-# (skipping only on darwin), and swarf's itest boots a postgres. smelt's
-# pkg/stack tests shell out to `docker build` but skip cleanly when it is
-# absent.
+# It does need a Docker daemon, and this comment deliberately does not tell
+# you which modules, because every attempt to say so has been wrong.
 #
-# Do not trust that list -- re-derive it:
+# Tests across several modules start containers, and most reach testcontainers
+# through an internal helper -- hilt/internal/testutil, piri/pkg/internal/testutil,
+# sprue/internal/testutil and friends -- so the test file itself never mentions
+# it. None of them carry a build tag, so plain `go test ./...` runs them. They
+# do not all degrade the same way either: piri's minio store test panics in
+# TestMain when the container will not start, while smelt's pkg/stack tests
+# skip cleanly.
 #
-#   grep -rl -E 'testcontainers|docker build' --include='*_test.go' .
+# The exact set is a call-graph question, not a grep: matching test files for
+# "testcontainers" finds 2 of them, and matching every test file that imports a
+# package which imports testcontainers finds 71, most of which never call it.
+# If you need the real answer, ask the compiler, not this comment.
 #
-# then check each hit for a `//go:build` tag and a skip path. An earlier
-# version of this comment said "No Docker", which was already false before
-# swarf arrived; its replacement said "for one module", which was false the
-# moment it was written. Both were written without running that command.
+# Three earlier versions of these lines claimed otherwise. "No Docker" was
+# already false before swarf arrived. "For one module: swarf" was false when
+# written. The third named three modules and supplied a grep to re-derive them
+# -- a grep that finds two of twenty-two. Each was written without running
+# anything.
 
 on:
   # Only main: a push to a branch with an open pull request would otherwise
