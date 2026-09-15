@@ -12,7 +12,7 @@ services:
     # that branch merges nothing here can build it, so e2e never sets
     # SWARF_IMAGE. Flip this to `:?` with the same message as the others
     # when the branch that builds swarf lands.
-    image: ${SWARF_IMAGE:-ghcr.io/fil-forge/swarf:main}
+    image: ${SWARF_IMAGE:-ghcr.io/fil-forge/swarf:main@sha256:9066674b99e6d040e48b2986dd2fd14e9db0d9704e13a8be368a4b26567cb96a}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     ports:
       # Internal port 80 for did:web resolution

@@ -4,7 +4,7 @@
 
 services:
   guppy:
-    image: ${GUPPY_IMAGE:-ghcr.io/fil-forge/guppy:main-dev}
+    image: ${GUPPY_IMAGE:-ghcr.io/fil-forge/guppy:main-dev@sha256:4d8950d8171584f562df00c90a3dcd4f954c00ede10d1bb92eb6e93375b9d93d}
     volumes:
       - ../../generated/keys/guppy.pem:/keys/guppy.pem:ro
       - ./config/guppy-config.toml:/root/.config/guppy/config.toml:ro

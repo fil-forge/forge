@@ -5,7 +5,7 @@
 
 services:
   blockchain:
-    image: ${BLOCKCHAIN_IMAGE:-ghcr.io/fil-forge/filecoin-localdev:main}
+    image: ${BLOCKCHAIN_IMAGE:-ghcr.io/fil-forge/filecoin-localdev:main@sha256:96e72624eb71efb1c15de1d0729b780955e5ece700e840dd56291f5c522b4bee}
     # Port mapping is env-var interpolated so pkg/stack can override to
     # `"8545"` (container-only, ephemeral host port) for parallel SDK
     # test stacks. `make up` leaves the var unset and gets the fixed

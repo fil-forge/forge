@@ -9,7 +9,7 @@
 
 services:
   plc:
-    image: ${PLC_IMAGE:-ghcr.io/fil-forge/did-method-plc:main}
+    image: ${PLC_IMAGE:-ghcr.io/fil-forge/did-method-plc:main@sha256:ebb12470f6fc50906c0ed867d009a056e131db1a994b45d7c3f1c8d2eb26dee9}
     ports:
       - "${SMELT_PLC_PORT:-15120:3000}"
     environment:

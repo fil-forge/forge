@@ -1,0 +1,56 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Etc/UTC",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 10,
+  "postUpdateOptions": ["gomodTidy"],
+  "packageRules": [
+    {
+      "description": "In-repo libraries must hold the same version in every module. ci.yml does not check that; a split is only visible as a build failure somewhere else, so keep each bump to a single PR that moves all nine go.mod files together rather than nine PRs that land at nine different times.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": [
+        "github.com/fil-forge/libforge",
+        "github.com/fil-forge/ucantone",
+        "github.com/fil-forge/swarf",
+        "github.com/fil-forge/versitygw",
+        "github.com/fil-forge/go-ipni-tools"
+      ],
+      "groupName": "fil-forge libraries"
+    },
+    {
+      "description": "Everything else in Go, one PR per dependency, matching the cadence the per-service dependabot configs used before the consolidation dropped them.",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": ["*"],
+      "excludePackageNames": [
+        "github.com/fil-forge/libforge",
+        "github.com/fil-forge/ucantone",
+        "github.com/fil-forge/swarf",
+        "github.com/fil-forge/versitygw",
+        "github.com/fil-forge/go-ipni-tools"
+      ]
+    },
+    {
+      "description": "Actions as one grouped PR, as the per-service dependabot configs did.",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Images the stack pulls rather than builds. Pinning them by digest is the point of this config: without it a CI result is a function of the registry as well as the commit, so an old commit re-run later can go red with nothing to bisect. The tag is kept alongside the digest so the file still says what it is running.",
+      "matchManagers": ["docker-compose", "custom.regex"],
+      "pinDigests": true,
+      "groupName": "stack images"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "MinIO is referenced from Go as well as from compose: two testutil constants and the piri compose generator, whose output is gitignored and so has no file for the docker-compose manager to read. Scoped to the minio image by name, which deliberately leaves smelt/pkg/stack/options.go alone - the six ghcr.io/fil-forge/<service>:main references there are the published peers an itest run is meant to be tested against, and pinning those would turn that compatibility check into a slower copy of e2e.",
+      "customType": "regex",
+      "managerFilePatterns": ["/\\.go$/"],
+      "matchStrings": [
+        "(?<depName>ghcr\\.io/fil-forge/minio):(?<currentValue>[^\"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}
