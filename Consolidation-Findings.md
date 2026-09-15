@@ -314,7 +314,7 @@ treated as "unlikely" on the same path that had just produced seven failures
 in a day. On a failure mode you have just proved is live, an unfixed instance
 is not residual risk; it is the next one.
 
-### L10. The module-path rewrite silently unformatted 89 files — **9 fixed, 80 open**
+### L10. The module-path rewrite silently unformatted 89 files — **fixed**
 
 `gofmt` sorts imports within each blank-line-delimited block.
 `github.com/fil-forge/forge/...` sorts before `github.com/fil-forge/libforge/...`
@@ -335,8 +335,10 @@ Copilot found the 9 in the migration's diff, exactly and with no false
 positives, which is worth noting given how much of its other output on that
 pull request was pre-existing upstream code rather than migration damage.
 
-**Fixed:** the 9. **Open:** the 80, which want to land together with a `gofmt`
-check in `ci.yml` — adding the check first would turn every branch red.
+**Fixed:** all 89, together with a `gofmt` step in `ci.yml`. The two had to
+land in one commit — adding the check first turns every branch red. The diff
+is 134 insertions and 134 deletions, every changed line an import; all five
+affected modules still compile.
 
 This is the **fourth** thing the rewrite broke outside Go import paths, after
 [L1](#l1-the-module-path-rewrite-never-reached-non-go-files--fixed)'s
@@ -406,6 +408,26 @@ PR description. Nobody re-derives its coverage afterwards, so it converts "we
 have not checked this" into "we have checked this" at no cost and with no
 signal. Ask of any guard what it would have to *observe* to catch the fault,
 and then whether it observes that.
+
+**Then the guards themselves were reviewed, and three more were hollow.** An
+independent review session found that `retry.sh` exited 0 without running the
+command at all when `RETRY_ATTEMPTS` was `0` or non-numeric (`seq 1 0` prints
+nothing, the loop never runs, the script falls off the end) — which in the
+tidy step leaves the following `git diff --exit-code` passing trivially;
+that `check-dockerfile-retry.sh` tested for the substring `sleep` on one
+physical line, so `RUN sleep 1 && go mod download` passed with no retry at all
+while a correct retry written across continuations was *rejected*; and that
+`check-setup-go-cache.sh`'s text scan was blind to a quoted `uses:` value and,
+on a four-space `steps:` list, ran past the end of the step to be satisfied by
+a **different job's** setting.
+
+All three were guards written that same afternoon to prevent silent green,
+and all three went green while observing nothing. The rewrites now parse the
+YAML, join Dockerfile continuations and require the download to appear twice
+(a retry is repetition, which is a property of the thing rather than its
+spelling), validate the attempt count, and — generalising the sharpest of the
+observations — **fail when they find zero subjects at all**, since in this
+repository zero means the scan broke rather than the tree being clean.
 
 Found in review. Two sibling findings in the same review were the same shape,
 one level down — comments that had gone false:
@@ -491,6 +513,47 @@ So: **derive dependency lists, never hand-maintain them.** A derived list is
 sometimes narrower and sometimes wider than the one you would have written;
 what matters is that it cannot go stale, in either direction. Re-derive on
 every migration, not once.
+
+---
+
+### G4. A separate Claude session as reviewer — worked, with a known limit
+
+Copilot's review quota ran out mid-afternoon, after 13 reviews that had caught
+a great deal (L1's Makefile ldflags, L10's gofmt drift, the stale counts, the
+`|| true` downloads). Replacement: a Claude Code session spawned into the same
+environment with no access to this session's context, told only the repository
+and the PR numbers, and instructed to post findings directly to the PRs.
+
+**Seven findings, all verified against the code, zero false positives.** Four
+were defects in guard scripts written that same afternoon (L12). One found a
+year-long `immutable` cache header on a mutable revocation route. One
+established that the e2e snapshot test now always restores three-week-old state
+and says nothing about it.
+
+What made it work was not cleverness but **where the output goes**. A subagent
+reports back to the author, who then relays — and most of these findings were
+criticisms of that author's own work. Posting straight to the PR removes the
+filter. It also got a clean checkout, so it ran real commands: every mechanical
+claim arrived with a reproduction rather than a suspicion.
+
+Two things worth knowing before relying on it:
+
+- **Correlated blind spots are real and unfixable this way.** Where an error
+  came from carelessness — not grepping for the class, not reading the header
+  nine lines up — a fresh reader catches it. Where it came from how the model
+  reasons, another instance of the same model may reason identically. Copilot
+  being a *different* model was part of its value.
+- **Watching what it investigates is a signal in itself.** Its task summary
+  ("confirming which Docker-dependent tests are untagged") prompted a check
+  that found a wrong claim before the session posted anything at all. That was
+  luck rather than design, but it is worth knowing it happened.
+
+One finding was wrong in its mechanism while right to raise: a warning that a
+digest pin would expire to registry pruning. Investigating it found no pruning
+(no cleanup action, no retention pattern across six org packages) but did find
+that guppy's dependabot auto-merges use `secrets.GITHUB_TOKEN`, which triggers
+no workflow run — so `ghcr.io/fil-forge/guppy:main` does not reflect guppy's
+`main`. A wrong alarm that leads somewhere real is still worth the trip.
 
 ---
 

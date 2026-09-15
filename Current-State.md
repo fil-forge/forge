@@ -158,11 +158,6 @@ project. We build from source and publish
   pin when convenient.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
-- **80 files fail `gofmt`** on `main`, from the original module-path rewrite
-  (64 `sprue`, 12 `piri`). CI cannot see it: `go vet` does not check
-  formatting and nothing else does. Wants fixing together with a `gofmt` step
-  in `ci.yml`, or adding the step turns every branch red.
-  [[Consolidation Findings]] L10.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
