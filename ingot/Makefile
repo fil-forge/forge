@@ -25,7 +25,7 @@ test:
 ## itest: run the integration test suite (boots the Forge stack in Docker; ~6 min)
 ## itest/ is its own module, so it needs no build tag to stay out of `make test`.
 itest:
-	cd itest && GOWORK=off $(GO) test -v -timeout 30m ./...
+	cd itest && GOWORK=off $(GO) test -count=1 -v -timeout 30m ./...
 
 ## gen: regenerate CBOR marshalers (idempotent)
 gen:

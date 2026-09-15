@@ -80,10 +80,17 @@ jobs:
           docker version
           docker compose version
 
+      # -count=1 is load-bearing, not a style choice. setup-go restores GOCACHE,
+      # which holds Go's test-result cache, and a suite whose inputs are
+      # unchanged gets replayed from it -- `ok ... (cached)` in 26 seconds,
+      # without booting anything. The stack is external state Go cannot see, so
+      # a cached pass says nothing about whether it still works. This is the
+      # silent green this workflow exists to remove; it was here on day one.
+      #
       # Never retried, deliberately: a retry here would mask a flaky suite,
       # which is the one thing this job exists to see.
       - name: itest
-        run: go test -v -timeout 25m ./...
+        run: go test -count=1 -v -timeout 25m ./...
 
       - name: dump container state on failure
         if: failure()
