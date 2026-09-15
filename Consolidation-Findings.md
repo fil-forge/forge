@@ -139,8 +139,8 @@ Two habits fall out, and they are cheap:
 ### B7. A suite that boots a stack passed from cache, having booted nothing
 
 The first green run of `itest.yml` — the workflow added *because* `hilt/itest`
-and `ingot/itest` had never been executed — took 26 seconds and started no
-containers:
+and `ingot/itest` were never executed **in the monorepo** (see B8; upstream
+ran them) — took 26 seconds and started no containers:
 
 ```
 ok  github.com/fil-forge/forge/hilt/itest  (cached)
@@ -171,6 +171,42 @@ Nothing guaranteed that.
 The shape worth remembering: this is O2's "skip the build, never the test"
 rule being broken by a tool that had no idea it was making that decision — in
 the workflow written to remove silent green, on its first green run.
+
+### B8. The import brought the suite and left its CI behind
+
+`ci.yml` compiled `hilt/itest` and `ingot/itest` under their build tag and
+discarded the result; only smelt's tagged suite was ever executed, by
+`e2e.yml`. It is tempting to read that as "these suites were never run" — and
+I wrote exactly that in a pull request description, a commit message and B7
+above before checking.
+
+`fil-forge/ingot` ran its suite on every pull request and every push to
+`main`. Its `.github/workflows/go-test.yml`, still readable in this
+repository at `e17437d` before the per-service workflows were pruned, has a
+third job gated behind the unit job:
+
+```yaml
+  itest:
+    needs: unit
+    runs-on: ubuntu-24.04
+    - name: Run integration tests
+      env: { GOWORK: off }
+      run: go test -tags itest -v -timeout 20m ./itest
+```
+
+`git subtree add` brings a directory of files. It does not bring the
+repository's CI, because that lived in `.github/` at the old root and became
+one of the seven inert per-service workflow directories the consolidation
+then deleted as dead. The code arrived; the thing that ran it did not.
+
+This is B3's shape (re-importing upstream silently reverted a downstream fix)
+pointed the other way: the import silently reverted an *upstream* capability.
+Both share a cause — a subtree import moves a subtree, and everything a
+repository is beyond its file tree is left at the door.
+
+**Worth doing once per imported service**: diff what the old repository's
+workflows ran against what the monorepo runs, before deleting the old ones.
+Nobody did, and the loss was invisible for as long as nothing needed it.
 
 ---
 

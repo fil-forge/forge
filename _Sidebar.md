@@ -3,7 +3,7 @@
 - [[Home]]
 - [[Current State]] ← start here
 - [[Consolidation Findings]]
-  - Blind spots (B1–B7)
+  - Blind spots (B1–B8)
   - Latent issues (L1–L12)
   - Went better (G1–G4)
   - Open items (O1–O4)
