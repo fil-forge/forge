@@ -7,7 +7,11 @@ name: ci
 # module (see forge-consolidation-plan.md's Traps section, #1).
 
 on:
+  # Only main: a push to a branch with an open pull request would otherwise
+  # run everything twice, once per event. The pull_request event covers
+  # branches, and workflow_dispatch covers a branch with no PR yet.
   push:
+    branches: [main]
   pull_request:
   # A workflow does not run for the commits that were already present when it
   # first appeared, so this repo's own main arrived unverified. Dispatch makes

@@ -21,7 +21,11 @@ name: images
 # workflow needs no packages: write and works unchanged on fork PRs.
 
 on:
+  # Only main: a push to a branch with an open pull request would otherwise
+  # run everything twice, once per event. The pull_request event covers
+  # branches, and workflow_dispatch covers a branch with no PR yet.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -31,7 +35,7 @@ permissions:
 # Keyed on the ref, not the sha -- see e2e.yml. A per-sha key never shares a
 # group, so cancel-in-progress cannot supersede an obsolete image build.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
