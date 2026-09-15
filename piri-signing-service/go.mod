@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/ethereum/go-ethereum v1.16.7
 	github.com/fil-forge/filecoin-services/go v0.0.0-20260507172456-36ebe4467390
-	github.com/fil-forge/libforge v0.0.0-20260904125112-81372e7200bf
+	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/ipfs/go-cid v0.6.2
 	github.com/ipfs/go-log/v2 v2.9.2

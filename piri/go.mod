@@ -13,7 +13,7 @@ require (
 	github.com/fil-forge/forge/delegator v0.0.0
 	github.com/fil-forge/forge/piri-signing-service v0.0.0
 	github.com/fil-forge/go-ipni-tools v0.0.0-20260820150418-78ca0c16834d
-	github.com/fil-forge/libforge v0.0.0-20260904125112-81372e7200bf
+	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/filecoin-project/curio v1.28.3-0.20260717015646-38ca280c43a2
 	github.com/filecoin-project/go-commp-utils/nonffi v0.0.0-20240802040721-2a04ffc8ffe8
