@@ -406,13 +406,13 @@ var envImageOptions = []struct {
 // builds, alongside the config field it lands in. It is the Go-side twin of
 // .env.published, which says the same thing for `make up` — the Makefile
 // shells out to `docker compose` directly, so it cannot read this table.
-// Neither copy can drift silently: the compose interpolations for these six
-// are required (`${X:?...}`), so a missing entry fails at `compose up`
-// naming the variable rather than quietly booting :main.
+// Neither copy can drift silently: the compose interpolations for these are
+// required (`${X:?...}`), so a missing entry fails at `compose up` naming
+// the variable rather than quietly booting :main.
 //
-// Deliberately only these six. The other images the stack runs (guppy,
-// indexer, swarf, ipni, plc, blockchain, minio) are not built here and keep
-// their `:-` compose defaults, so there is nothing for this to fill in.
+// Only what this repository builds. The other images the stack runs (guppy,
+// indexer, ipni, plc, blockchain, minio) come from elsewhere and keep their
+// `:-` compose defaults, so there is nothing for this to fill in.
 var publishedImages = []struct {
 	ref string
 	get func(*config) *string
@@ -423,6 +423,7 @@ var publishedImages = []struct {
 	{"ghcr.io/fil-forge/sprue:main", func(c *config) *string { return &c.uploadImage }},
 	{"ghcr.io/fil-forge/delegator:main", func(c *config) *string { return &c.delegatorImage }},
 	{"ghcr.io/fil-forge/piri-signing-service:main", func(c *config) *string { return &c.signerImage }},
+	{"ghcr.io/fil-forge/swarf:main", func(c *config) *string { return &c.swarfImage }},
 }
 
 // WithPublishedImages fills in the published :main reference for every image

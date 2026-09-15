@@ -7,12 +7,7 @@
 
 services:
   swarf:
-    # Still a silent fallback, unlike the six services this repository
-    # builds: swarf's source lands on claude/bring-in-swarf, and until
-    # that branch merges nothing here can build it, so e2e never sets
-    # SWARF_IMAGE. Flip this to `:?` with the same message as the others
-    # when the branch that builds swarf lands.
-    image: ${SWARF_IMAGE:-ghcr.io/fil-forge/swarf:main@sha256:9066674b99e6d040e48b2986dd2fd14e9db0d9704e13a8be368a4b26567cb96a}
+    image: ${SWARF_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     ports:
       # Internal port 80 for did:web resolution
@@ -52,7 +47,7 @@ services:
   # Postgres for swarf's revocation store. Swarf runs goose migrations on
   # startup, so the `swarf` database created by POSTGRES_DB is enough.
   swarf-postgres:
-    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    image: postgres:16-alpine
     ports:
       - "${SMELT_SWARF_POSTGRES_PORT:-15141:5432}"
     environment:
