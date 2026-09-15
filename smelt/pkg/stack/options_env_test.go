@@ -87,3 +87,67 @@ func TestOptionsFromEnvOverridesHardcoded(t *testing.T) {
 		t.Errorf("piriImage = %q, want the environment's value", got)
 	}
 }
+
+// WithPublishedImages must fill every image this repository builds, and must
+// fill only those: the rest keep their `:-` compose defaults, and claiming
+// them here would put a reference in buildEnv that nothing asked for.
+func TestWithPublishedImagesFillsUnsetFields(t *testing.T) {
+	c := apply([]Option{WithPublishedImages()})
+
+	want := map[string]string{
+		"PIRI_IMAGE":      "ghcr.io/fil-forge/piri:main",
+		"HILT_IMAGE":      "ghcr.io/fil-forge/hilt:main",
+		"INGOT_IMAGE":     "ghcr.io/fil-forge/ingot:main",
+		"UPLOAD_IMAGE":    "ghcr.io/fil-forge/sprue:main",
+		"DELEGATOR_IMAGE": "ghcr.io/fil-forge/delegator:main",
+		"SIGNER_IMAGE":    "ghcr.io/fil-forge/piri-signing-service:main",
+	}
+
+	env := c.buildEnv()
+	for k, v := range want {
+		if env[k] != v {
+			t.Errorf("%s = %q, want %q", k, env[k], v)
+		}
+	}
+	if len(env) != len(want) {
+		t.Errorf("buildEnv set %d variables, want exactly the %d built here: %v",
+			len(env), len(want), env)
+	}
+}
+
+// Ordering contract: the option is meant to go first, so anything the caller
+// applies afterwards — and anything OptionsFromEnv appends — wins. Applying it
+// to a config that already carries a value must leave that value alone.
+func TestWithPublishedImagesDoesNotOverwrite(t *testing.T) {
+	c := apply([]Option{
+		WithHiltImage("forge/hilt:head"),
+		WithPublishedImages(),
+	})
+
+	if got := c.hiltImage; got != "forge/hilt:head" {
+		t.Errorf("hiltImage = %q, want the caller's own value", got)
+	}
+	// The fields the caller did not set are still filled.
+	if got := c.piriImage; got != "ghcr.io/fil-forge/piri:main" {
+		t.Errorf("piriImage = %q, want the published reference", got)
+	}
+}
+
+// Every entry must reach a distinct field. A copy-paste slip that pointed two
+// refs at the same field would otherwise show up only as a stack booting the
+// wrong image.
+func TestWithPublishedImagesEachEntryHitsADistinctField(t *testing.T) {
+	c := &config{}
+	seen := map[*string]string{}
+	for _, p := range publishedImages {
+		f := p.get(c)
+		if prev, dup := seen[f]; dup {
+			t.Errorf("%s and %s point at the same config field", prev, p.ref)
+		}
+		seen[f] = p.ref
+	}
+	if len(seen) != len(publishedImages) {
+		t.Errorf("publishedImages has %d entries covering %d fields",
+			len(publishedImages), len(seen))
+	}
+}

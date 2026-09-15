@@ -402,6 +402,59 @@ var envImageOptions = []struct {
 	{"PLC_IMAGE", WithPLCImage},
 }
 
+// publishedImages is the published reference for each image this repository
+// builds, alongside the config field it lands in. It is the Go-side twin of
+// .env.published, which says the same thing for `make up` — the Makefile
+// shells out to `docker compose` directly, so it cannot read this table.
+// Neither copy can drift silently: the compose interpolations for these six
+// are required (`${X:?...}`), so a missing entry fails at `compose up`
+// naming the variable rather than quietly booting :main.
+//
+// Deliberately only these six. The other images the stack runs (guppy,
+// indexer, swarf, ipni, plc, blockchain, minio) are not built here and keep
+// their `:-` compose defaults, so there is nothing for this to fill in.
+var publishedImages = []struct {
+	ref string
+	get func(*config) *string
+}{
+	{"ghcr.io/fil-forge/piri:main", func(c *config) *string { return &c.piriImage }},
+	{"ghcr.io/fil-forge/hilt:main", func(c *config) *string { return &c.hiltImage }},
+	{"ghcr.io/fil-forge/ingot:main", func(c *config) *string { return &c.ingotImage }},
+	{"ghcr.io/fil-forge/sprue:main", func(c *config) *string { return &c.uploadImage }},
+	{"ghcr.io/fil-forge/delegator:main", func(c *config) *string { return &c.delegatorImage }},
+	{"ghcr.io/fil-forge/piri-signing-service:main", func(c *config) *string { return &c.signerImage }},
+}
+
+// WithPublishedImages fills in the published :main reference for every image
+// this repository builds that the caller has not already set. It is how a
+// suite that tests one service against the rest of the network says so: pass
+// your own service's image or binary, and take everyone else's from the
+// registry.
+//
+// It exists because the compose files no longer default these images. A
+// missing override used to boot ghcr.io/fil-forge/<svc>:main in silence, so
+// a test that forgot to pass one passed while exercising published code
+// rather than the commit under test. Wanting the published network is now
+// something a caller states out loud.
+//
+// It never overwrites a value already in place, so ordering is what you
+// would want either way: put it first and anything appended after it wins.
+//
+//	opts := []stack.Option{
+//	    stack.WithPublishedImages(),
+//	    stack.WithServiceBinary("hilt", localHiltBinary(t)),
+//	}
+//	opts = append(opts, stack.OptionsFromEnv()...) // still wins
+func WithPublishedImages() Option {
+	return func(c *config) {
+		for _, p := range publishedImages {
+			if field := p.get(c); *field == "" {
+				*field = p.ref
+			}
+		}
+	}
+}
+
 // OptionsFromEnv returns the options implied by the process environment: an
 // image override per service, plus SMELT_WORKSPACE to build every service in
 // the active go.work use-list from local source.

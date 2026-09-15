@@ -5,7 +5,7 @@
 
 services:
   upload:
-    image: ${UPLOAD_IMAGE:-ghcr.io/fil-forge/sprue:main}
+    image: ${UPLOAD_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     command: ["serve", "--config", "/etc/sprue/config.yaml"]
     ports:
       - "${SMELT_UPLOAD_PORT:-15060:80}"
@@ -47,7 +47,7 @@ services:
   # aborted the whole `compose up` with a daemon FailedPrecondition. As its
   # own service the registration also gets ordinary, visible container logs.
   upload-init:
-    image: ${UPLOAD_IMAGE:-ghcr.io/fil-forge/sprue:main}
+    image: ${UPLOAD_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     entrypoint: ["sh", "/register-providers.sh"]
     environment:
       - SPRUE_SERVER_HOST=upload

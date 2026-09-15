@@ -7,7 +7,7 @@
 
 services:
   hilt:
-    image: ${HILT_IMAGE:-ghcr.io/fil-forge/hilt:main}
+    image: ${HILT_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     ports:
       # Internal port 80 for did:web resolution
@@ -71,7 +71,7 @@ services:
   # env lets it sign as the service. Previously a post_start hook on `hilt`
   # (see upload-init for why hooks were retired).
   hilt-init:
-    image: ${HILT_IMAGE:-ghcr.io/fil-forge/hilt:main}
+    image: ${HILT_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     user: "0:0"  # key files are 600
     entrypoint: ["sh", "/register-provider.sh"]
     environment:

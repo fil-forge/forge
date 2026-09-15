@@ -5,7 +5,7 @@
 
 services:
   signing-service:
-    image: ${SIGNER_IMAGE:-ghcr.io/fil-forge/piri-signing-service:main}
+    image: ${SIGNER_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     user: root
     ports:
       - "${SMELT_SIGNING_SERVICE_PORT:-15030:7446}"

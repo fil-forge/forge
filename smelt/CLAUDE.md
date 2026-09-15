@@ -37,7 +37,8 @@ Blockchain-verified storage proofs. Piri (the storage node) periodically proves 
 
 ```
 smelt/
-├── .env                     # Service image defaults (configurable)
+├── .env.published           # Published refs for the images built here (loaded by `make up`)
+├── .env                     # Your own image overrides (all commented out; loaded last, so it wins)
 ├── smelt.yml                # Piri node manifest (count + per-node storage)
 ├── compose.yml              # Root compose file - includes all systems
 ├── Makefile                 # Primary developer interface
@@ -447,7 +448,7 @@ The capability string must match exactly. `space/blob/add` is not `blob/add`. Ch
 
 ## Configurable Service Images
 
-Service images are configurable via environment variables, with defaults in `.env`. Useful for switching registries, testing a PR build, or overriding a specific component:
+Service images are configurable via environment variables. Useful for switching registries, testing a PR build, or overriding a specific component:
 
 ```bash
 # Override one image
@@ -457,7 +458,14 @@ PIRI_IMAGE=ghcr.io/fil-forge/piri:v1.2.3 make up
 PIRI_IMAGE=myregistry/piri:test GUPPY_IMAGE=myregistry/guppy:test make up
 ```
 
-Available variables: `PIRI_IMAGE`, `GUPPY_IMAGE`, `DELEGATOR_IMAGE`, `INDEXER_IMAGE`, `IPNI_IMAGE`, `SIGNER_IMAGE`, `UPLOAD_IMAGE`, `HILT_IMAGE`, `INGOT_IMAGE`, `PLC_IMAGE`, `BLOCKCHAIN_IMAGE`. Defaults live in `.env`.
+Available variables: `PIRI_IMAGE`, `GUPPY_IMAGE`, `DELEGATOR_IMAGE`, `INDEXER_IMAGE`, `IPNI_IMAGE`, `SIGNER_IMAGE`, `UPLOAD_IMAGE`, `HILT_IMAGE`, `INGOT_IMAGE`, `SWARF_IMAGE`, `PLC_IMAGE`, `MINIO_IMAGE`, `BLOCKCHAIN_IMAGE`.
+
+Where the defaults come from depends on whether this repository builds the image:
+
+- **Built here** — `PIRI_IMAGE`, `HILT_IMAGE`, `INGOT_IMAGE`, `UPLOAD_IMAGE`, `DELEGATOR_IMAGE`, `SIGNER_IMAGE`. These have **no compose default**: the interpolation is `${PIRI_IMAGE:?...}`, so compose fails with the variable's name rather than quietly booting `ghcr.io/fil-forge/piri:main`. That silent fallback used to let a test that forgot its overrides pass while exercising published code instead of the commit under test. Published references for these live in `.env.published`, which `make up` loads via `--env-file`; a Go test asks for them with `stack.WithPublishedImages()`.
+- **Not built here** — everything else (guppy, indexer, ipni, swarf, plc, blockchain, minio). These keep an inline `:-` default in their `systems/*/compose.yml`, because nothing in this repository can produce an alternative. `SWARF_IMAGE` joins the required set when the branch that builds swarf lands.
+
+`.env` is yours: every line in it is commented out, and `make up` loads it *after* `.env.published`, so anything you uncomment there wins.
 
 ## Developing Against Sibling Service Repos
 
