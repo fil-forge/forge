@@ -644,14 +644,25 @@ become wrong too.
    dependabot auto-merges use `secrets.GITHUB_TOKEN`, which triggers no
    workflow run, so the tag had not moved in 24 days. Check what the number
    counts, not only when it was taken.
-13. **Don't write counts in prose.** "The other three take their own
+13. **When a list cannot be derived, do not write it down at all.** Principle
+   3 says derive rather than hand-maintain; this is the case where neither is
+   available. One `ci.yml` comment claiming which modules need a Docker daemon
+   was wrong four times running — "No Docker", then "one module", then three
+   named modules plus a grep to re-derive them that found 2 of 22, because the
+   test files reach testcontainers through `internal/testutil` helpers and
+   never name it. Matching importers instead finds 71, most of which call
+   nothing. The set depends on which functions are called, which is a
+   call-graph question no grep answers. The fourth version states the property
+   and explicitly declines to enumerate. An unwritable list is better left
+   unwritten than written wrong.
+14. **Don't write counts in prose.** "The other three take their own
    directory" is a derived value nothing recomputes; state the rule instead
    and let the list below it be the answer (L11).
-14. **A correct edit can invalidate a derived property.** The module-path
+15. **A correct edit can invalidate a derived property.** The module-path
    rewrite was right; import *order* was computed from the old paths and
    nobody recomputed it (L10). Ask what else was derived from what you just
    changed.
-15. **Some defects only change a probability.** They are the hardest to
+16. **Some defects only change a probability.** They are the hardest to
    attribute, because every individual failure already has a complete and
    correct explanation that is not them (L9). "This failure was a transient"
    and "our setup makes transients frequent" are both true at once.
