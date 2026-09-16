@@ -107,6 +107,15 @@ jobs:
         run: go build ${{ matrix.build_flags }} ./...
       - name: vet
         run: go vet ${{ matrix.build_flags }} ./...
+      # staticcheck pins go1.26.x in its own go.mod, and `go install` honours
+      # the *target* module's toolchain -- so a plain install builds it with
+      # 1.26, which then cannot read a go 1.27.0 module. Build it with the
+      # version go.work declares.
+      - name: staticcheck
+        run: |
+          GOTOOLCHAIN=go$(awk '/^go /{print $2; exit}' "$GITHUB_WORKSPACE/go.work") \
+            go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          staticcheck ${{ matrix.build_flags }} ./...
       # tidy is retried separately: it walks the test dependencies of
       # dependencies, which `go mod download` does not fetch, so it can still
       # reach the network after the step above. That is how smelt failed.

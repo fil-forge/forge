@@ -96,6 +96,11 @@ jobs:
         run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
       - name: vet
         run: go vet ./...
+      - name: staticcheck
+        run: |
+          GOTOOLCHAIN=go$(awk '/^go /{print $2; exit}' "$GITHUB_WORKSPACE/go.work") \
+            go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          staticcheck ./...
       - name: tidy (no diff)
         run: |
           $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod tidy
