@@ -1,5 +1,3 @@
-//go:build itest
-
 package itest
 
 import (
@@ -17,7 +15,7 @@ import (
 // in the catalog log and survive the wipe, so only the body read exercises
 // the network tier.
 //
-//	go test -tags itest ./itest -run TestForgeReadAfterEviction -v -timeout 900s
+//	cd itest && go test -count=1 -run TestForgeReadAfterEviction -v -timeout 900s
 func TestForgeReadAfterEviction(t *testing.T) {
 	ctx := t.Context()
 

@@ -102,10 +102,10 @@ jobs:
         # No caching, deliberately -- see images.yml. The whole matrix builds
         # in ~2.5 min wall-clock there, and piri, the slowest, is 2m14s.
         #
-        # piri, hilt and ingot build with the repository root as context
-        # because their go.mod carries a `replace => ../<svc>`; the other
-        # three take their own directory. Each Dockerfile's header explains
-        # its COPY list.
+        # A service builds with the repository root as context when its
+        # go.mod carries a `replace => ../<svc>`, and with its own directory
+        # otherwise -- the build lines below say which is which. Each
+        # Dockerfile's header explains its COPY list.
         env:
           DOCKER_BUILDKIT: "1"
         run: |
@@ -116,7 +116,7 @@ jobs:
             echo "::endgroup::"
           }
           build piri .
-          build hilt .
+          build hilt hilt
           build ingot .
           build sprue sprue
           build delegator delegator
@@ -124,11 +124,17 @@ jobs:
           docker image ls --filter 'reference=forge/*:head'
 
       - name: e2e
+        # -count=1 defeats Go's test-result cache, which setup-go restores
+        # along with GOCACHE. This job's subject is a running stack -- external
+        # state the cache cannot see -- so a replayed `ok ... (cached)` would
+        # be a pass for a stack that never booted. It has not bitten here only
+        # because smelt's own files keep changing; itest.yml caught it live.
+        #
         # -parallel bounds concurrent stacks. Each spins ~20 containers
         # (several postgres, an OpenBao, the JVM-based dynamodb-local), and
         # booting several at once saturates the runner until slow services
         # miss their healthcheck windows.
-        run: go test -tags e2e -v -timeout 20m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
+        run: go test -count=1 -tags e2e -v -timeout 20m -parallel "${SMELT_E2E_MAX_PARALLEL:-1}" ./tests/e2e/...
 
       - name: dump container state on failure
         if: failure()

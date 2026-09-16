@@ -44,19 +44,18 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # context "." means the repo root: these three carry a
-          # `replace => ../<svc>` that Go resolves before it downloads
-          # anything, so a context scoped to the service dir dies in
-          # `go mod download`. Each Dockerfile COPYs only its own derived
-          # module closure -- see the header comment in each.
+          # context "." means the repo root, and is needed exactly when a
+          # service's go.mod carries a `replace => ../<svc>`: Go resolves every
+          # replace target before it downloads anything, so a context scoped to
+          # the service dir dies in `go mod download`. Each such Dockerfile
+          # COPYs only its own derived module closure -- see its header.
           - service: piri
-            context: .
-          - service: hilt
             context: .
           - service: ingot
             context: .
-          # No cross-module replace: the service dir is a sufficient context,
-          # exactly as it was in the polyrepo.
+          # No cross-module replace: the service dir is a sufficient context.
+          - service: hilt
+            context: hilt
           - service: sprue
             context: sprue
           - service: delegator

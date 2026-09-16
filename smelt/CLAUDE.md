@@ -481,7 +481,7 @@ otherwise-published images — no Dockerfiles, no image rebuilds. **Full walkthr
 - **libforge rule:** a service is rebuilt when its module is in the use-list; listing
   `libforge` forces **all** services to rebuild (a published binary would still link the
   published libforge).
-- Run `SMELT_WORKSPACE=1 make up` / `make fresh`, or `SMELT_WORKSPACE=1 go test -tags e2e ./tests/e2e`. The
+- Run `SMELT_WORKSPACE=1 make up` / `make fresh`, or `SMELT_WORKSPACE=1 go test -count=1 -tags e2e ./tests/e2e`. The
   flag runs `smelt workspace build` → binaries in `generated/bin/` + mounts in
   `generated/compose/workspace.override.yml` (chained into `$(COMPOSE)`); a plain `make up`
   removes the override and runs published images.
@@ -523,7 +523,7 @@ repo owns its *behavior* tests. Ingot is the reference implementation
 GitHub Actions run on every PR and push to main (`.github/workflows/`):
 
 - **Go Test** / **Go Checks** — unit tests, vet, lint via the shared unified workflows.
-- **E2E** (`e2e.yml`) — `go test -tags e2e ./tests/e2e/...`: Docker-backed full-stack tests
+- **E2E** (`e2e.yml`) — `go test -count=1 -tags e2e ./tests/e2e/...`: Docker-backed full-stack tests
   (upload/retrieve smoke over the storage-backend permutations, snapshot boot, ingot
   system health). Dumps every container's logs on failure.
 

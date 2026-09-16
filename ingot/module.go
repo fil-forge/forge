@@ -162,13 +162,15 @@ type serverParams struct {
 	GC              registry.GCStore
 	Multipart       registry.MultipartStore
 	Parks           registry.ParkStore
+	PendingReleases registry.PendingReleaseStore
 	Meta            logstore.Meta
 	// Identity is the agent identity (the host-provided libforge identity, the
 	// issuer of every outbound invocation); the listener serves its DID
 	// document at /.well-known/did.json. Required.
 	Identity identity.Identity
-	// IAM authenticates non-root access keys. Required: New rejects a nil
-	// IAM, so the graph fails at validation rather than in OnStart.
+	// IAM authenticates every access key (the gateway has no root account).
+	// Required: New rejects a nil IAM, so the graph fails at validation
+	// rather than in OnStart.
 	IAM       auth.IAMService
 	PreStarts []PreStartHook `group:"ingot_prestart"`
 	EncParams registry.EncryptionParamsStore
@@ -218,6 +220,7 @@ func registerServerLifecycle(lc fx.Lifecycle, p serverParams) {
 				GC:              p.GC,
 				Multipart:       p.Multipart,
 				Parks:           p.Parks,
+				PendingReleases: p.PendingReleases,
 				EncParams:       p.EncParams,
 				RegionKeys:      p.RegionKeys,
 				TenantKeys:      p.TenantKeys,
@@ -398,7 +401,7 @@ func provideTenantCache() *iam.TenantCache {
 }
 
 // provideIAMService adapts the hilt client to versitygw's IAM seam: a request
-// signed with a non-root access key is authorized locally when the caches
+// signed with a hilt-issued access key is authorized locally when the caches
 // hold its verification key + covering delegation chains, else by Hilt's
 // /s3/request/authorize — whose response replenishes the caches. Either way
 // the gateway verifies the signature with the derived key.
@@ -475,6 +478,7 @@ type registryResult struct {
 	GC                registry.GCStore
 	Multipart         registry.MultipartStore
 	Parks             registry.ParkStore
+	PendingReleases   registry.PendingReleaseStore
 	EncParams         registry.EncryptionParamsStore
 	RevocationCursors registry.RevocationCursorStore
 	Meta              logstore.Meta
@@ -489,7 +493,7 @@ type registryResult struct {
 // needs hilt_url/hilt_did configured.
 func provideRegistry(pool *pgxpool.Pool) registryResult {
 	pg := registry.NewPostgres(pool)
-	return registryResult{Registry: pg, Intents: pg, Locations: pg, Inclusions: pg, BlobRefs: pg, GC: pg, Multipart: pg, Parks: pg, EncParams: pg, RevocationCursors: pg, Meta: pg}
+	return registryResult{Registry: pg, Intents: pg, Locations: pg, Inclusions: pg, BlobRefs: pg, GC: pg, Multipart: pg, Parks: pg, PendingReleases: pg, EncParams: pg, RevocationCursors: pg, Meta: pg}
 }
 
 // migrationHookOut feeds the migration PreStartHook into the "ingot_prestart"

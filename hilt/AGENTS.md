@@ -8,9 +8,12 @@ them. It exposes two APIs and talks to one external service:
   access keys, guarded by a pre-shared partner key.
 - **Hilt UCAN RPC API** (`pkg/rpc`, ucantone server mounted at `POST /`) — the
   `/s3/*` commands Ingot (the S3 gateway) invokes: `/s3/request/authorize`,
-  `/s3/bucket/{create,delete,info,list}`.
+  `/s3/bucket/{create,delete,info,list}`; and the self-issued admin commands
+  `/admin/provider/{add,list}` and `/admin/provider/nodes/set` (`hilt client admin`).
 - **Sprue** (the Forge upload service) — Hilt calls it to provision/inspect a
-  bucket's storage space (`pkg/client`).
+  bucket's storage space and to manage routing policies (`pkg/client`): each
+  provider owns a policy whose candidates are its storage nodes, and every
+  bucket's space is pointed at its provider's policy on creation.
 
 Module: `github.com/fil-forge/hilt` (Go 1.27). Sibling repos it builds on:
 `ucantone` (UCAN primitives: `did`, `multikey`, `ucan/delegation`, `binding`,
@@ -26,19 +29,21 @@ and `sprue` (the upload service; mirror its patterns where relevant).
 - Postgres and OpenBao-backed tests use testcontainers and **skip when Docker is
   unavailable** (`internal/testutil`). `go test ./...` passes without Docker but
   only exercises the memory backends; run with Docker for full coverage.
-- Integration tests: `make itest`. The `itest/` package is gated by the `itest`
-  build tag, so `go test ./...` never compiles or runs it. It boots the full
+- Integration tests: `make itest`. `itest/` is its own Go module
+  (`itest/go.mod`), so `go test ./...` here does not reach it and it needs no
+  build tag; `make test` vets it so it cannot rot unnoticed. It boots the full
   Forge stack in Docker via `smelt/pkg/stack` (the working tree's hilt is
   compiled as a static linux binary and mounted over the published
   `ghcr.io/fil-forge/hilt:main` image) and tests against real ingot, sprue,
   piri, plc, and swarf. ~5-10 min; needs Docker; **one itest run per Docker
   host at a time** (TestMain's `CleanupLeaked` sweeps every `smeltery-*`
-  compose project, including another run's live containers). Vet it with
-  `go vet -tags itest ./itest`. Peer services are pulled as mutable `:main`
+  compose project, including another run's live containers). CI runs it as
+  its own job, `itest (hilt)` in `.github/workflows/itest.yml`, one suite per
+  runner for that reason. Peer services are pulled as mutable `:main`
   images Docker never re-pulls — `docker pull` them when the stack misbehaves,
   or override per run with `HILT_ITEST_UPLOAD_IMAGE` / `HILT_ITEST_PIRI_IMAGE`
   / `HILT_ITEST_INGOT_IMAGE` / `HILT_ITEST_SWARF_IMAGE` / `HILT_ITEST_PIRI_BINARY`
-  / `HILT_ITEST_SWARF_BINARY`. CI runs the suite on
+  / `HILT_ITEST_SWARF_BINARY`.
 - Editor/LSP diagnostics can lag after cross-file or cross-package edits —
   `go build` / `go vet` are authoritative, prefer them over stale squiggles.
 
@@ -85,9 +90,12 @@ and `sprue` (the upload service; mirror its patterns where relevant).
   not hand-write command strings with `command.MustParse`.
 - **Authorization**: signature-bearing S3 commands authenticate via the
   `auth.Authorizer` service (SigV4/SigV4a verify + time bounds + issuer == tenant's
-  provider + region served by that provider). Command-specific S3-permission checks
-  stay in each handler. `/s3/bucket/info` is an unauthenticated lookup (no signed
-  request).
+  provider + region served by that provider), which also classifies the operation
+  and resolves every bucket it addresses within the tenant and the key's scope. A
+  copy (`x-amz-copy-source` on a PUT) is two decisions: the write on the
+  destination and `s3:GetObject` on the source, and the header must be a signed
+  header. Command-specific S3-permission checks stay in each handler.
+  `/s3/bucket/info` is an unauthenticated lookup (no signed request).
 - **Identities & keys**: tenants are secp256k1 → did:plc; access keys and buckets
   are ed25519 → did:key. Build issuers with `multikey.NewIssuer(did, signer)`. Bucket
   keys are **ephemeral** — used once to sign the bucket→tenant root delegation, then

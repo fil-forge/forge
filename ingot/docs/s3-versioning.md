@@ -310,10 +310,14 @@ metadata — the Hilt forwarding path (forge-mode create/delete/list) is not inv
 |---|---|---|---|
 | unversioned | omitted | omitted | omitted (no marker; real delete) |
 | enabled | ULID token | resolved version's id | marker's ULID token |
-| suspended | `"null"` | resolved version's id | `"null"` |
+| suspended | omitted | resolved version's id | `"null"` |
 
-(`Versioning_PutObject_suspended_null_versionId_obj` pins the suspended-PUT `"null"` echo.
-`ListObjectVersions` always reports ids — `"null"` for null versions — regardless of state.)
+A suspended bucket stores the object under the `"null"` version id but does not
+echo it in the PUT / CompleteMPU / Copy response: only an enabled bucket returns
+a version id for a write. Verified against AWS S3 (a suspended-bucket PutObject
+and CompleteMultipartUpload return no `x-amz-version-id` header, while the object
+is stored and later listed as version `"null"`). `ListObjectVersions` always
+reports ids — `"null"` for null versions — regardless of state.
 
 ---
 
@@ -597,7 +601,7 @@ Buckets written before versioning store manifests as bare blocks with no union k
 (CLAUDE.md: "reshape migrations in place and reset any persistent dev DB"), there is **no
 migration**: existing dev buckets are reset rather than taught to read the pre-union form.
 
-Out of scope: `UploadPartCopy`, `ListParts`/`ListMultipartUploads`, `GetObjectAttributes`,
+Out of scope: `ListParts`/`ListMultipartUploads`, `GetObjectAttributes`,
 MFA delete, lifecycle expiration, and multi-instance seq arbitration beyond the existing
 `CASRoot` conflict surface. Object lock / retention / legal hold are specified in
 [`s3-object-lock.md`](./s3-object-lock.md); object tagging in
@@ -614,10 +618,10 @@ MFA delete, lifecycle expiration, and multi-instance seq arbitration beyond the 
 | `registry/registry.go`, `postgres.go`, `inmem/store.go` | `State.Versioning`, `VersioningState`, `SetVersioning`, `AllocVersionSeq` (§4.1) |
 | `s3frontend/version.go` (new) | token mint/parse/classify (§3), `revSeqKey`, the value-union dispatch (§2.1), `resolveVersion` (§6.1), the write rule (§5.2), prev-tree helpers |
 | `s3frontend/object.go` | `PutObject` splice → write rule; reads resolve via `resolveVersion`; `GetObject`/`HeadObject` versionId + marker semantics + output ids; `DeleteObject`/`deleteObjectKey`/`DeleteObjects` (§7); `reconcileClaims` call sites carry real version ids (§8); `listWalk` marker skip (§9.1) |
-| `s3frontend/copy.go`, `multipart.go` | `commitManifest` → write rule; source-version resolution; `CopySourceVersionId`; Complete's `versionid` return |
+| `s3frontend/copy.go`, `multipart.go`, `uploadpartcopy.go` | `commitManifest` → write rule; source-version resolution for `CopyObject` and `UploadPartCopy`; `CopySourceVersionId` on both; Complete's `versionid` return |
 | `s3frontend/bucket.go` | `PutBucketVersioning` (new), `GetBucketVersioning` (real states), versioned `DeleteBucket` guard (§7) |
 | `s3frontend/listversions.go` (new) | `ListObjectVersions` (§9.2) |
 | `s3frontend/conditions.go` | `currentObjectETag` resolves the current version via `resolveVersion` |
 | unit tests | token codec + classification; union codec round-trip + unknown-key and pre-union-block rejection; write-rule table tests (all four supersession rows + first-supersession leaf creation + null eviction + non-existent-key marker); promotion; per-version claim add/release on the `refindex_test.go` harness; list pagination |
-| `itest/versity_versioning_test.go` (new) + `versity_test.go` categories | curate upstream `TestVersioning` / `ListObjectVersions_*` / `GetBucketVersioning_*` / `PutBucketVersioning_*` rows into pass/xfail tables (tagging, object-lock, `GetObjectAttributes`, `UploadPartCopy` rows → xfail/omitted; note the teardown-blocked caveat, itest/README.md:40-47) |
+| `itest/versity_versioning_test.go` (new) + `versity_test.go` categories | curate upstream `TestVersioning` / `ListObjectVersions_*` / `GetBucketVersioning_*` / `PutBucketVersioning_*` rows into pass/xfail tables (tagging, object-lock, `GetObjectAttributes` rows → xfail/omitted; the `UploadPartCopy` and cross-bucket `CopyObject` rows pass; note the teardown-blocked caveat, itest/README.md:40-47) |
 | `docs/architecture.md` | point §3 at this doc for versioning |

@@ -110,7 +110,7 @@ SMELT_WORKSPACE=1 make up        # compile selected services + mount over images
 SMELT_WORKSPACE=1 make fresh     # same, from a clean slate
 
 # In the Go test stack (the e2e suite is behind the `e2e` build tag):
-SMELT_WORKSPACE=1 go test -tags e2e ./tests/e2e -run TestUploadAndRetrieve
+SMELT_WORKSPACE=1 go test -count=1 -tags e2e ./tests/e2e -run TestUploadAndRetrieve
 ```
 
 (Run from inside `smelt/` so `go.work` is picked up — verify with `go env GOWORK`.)

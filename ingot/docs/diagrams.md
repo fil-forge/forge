@@ -53,7 +53,7 @@ flowchart LR
     idx["indexing-service"]
 
     client -->|"S3 REST"| ingot
-    ingot -->|"/s3/request/authorize (every non-root request)<br/>/s3/bucket/info (lazy chain completion)<br/>/s3/bucket/create, delete, list"| hilt
+    ingot -->|"/s3/request/authorize (every request on a local-cache miss)<br/>/s3/bucket/info (lazy chain completion)<br/>/s3/bucket/create, delete, list"| hilt
     ingot -->|"/blob/add, /ucan/conclude, GET /receipt/:task<br/>/blob/abort, /blob/remove, /index/add"| sprue
     ingot -->|"HTTP PUT blob bytes (allocated URL)"| piri
     ingot -->|"content/retrieve (UCAN, on read miss)"| piri
@@ -68,9 +68,10 @@ flowchart LR
 
 - Ingot never invokes `/blob/accept`: sprue owns accept (and allocate), which
   is why the conclude call carries no space proof.
-- The root account (versitygw `RootUserConfig`) bypasses hilt and holds no
-  proof store, so it can manage buckets but cannot read through the network
-  tier.
+- Versitygw's root account is disabled (no `WithRootUser` option), so every
+  access key resolves through `iam.Service`. A plain (non-`did:key`) access
+  key, the shape a root credential would have, is rejected there as
+  InvalidAccessKeyId before any hilt round-trip.
 - `ListBuckets` is served entirely from hilt; the local `ingot.buckets` table
   backs every other verb.
 
@@ -296,10 +297,15 @@ sequenceDiagram
   storage shape is the [version tree](#per-key-version-storage-manifest-arm-leaf-arm-prev-tree).
 - The claim ledger and the zero-claims release are the
   [blob lifecycle](#blob-lifecycle-spooled-parked-accepted-released).
-- `CopyObject` runs the same `commitVersion` with a manifest that pins the
-  source's digests: no spool, no upload, claims incremented. Cross-space
-  (today: cross-bucket) copies are rejected `NotImplemented` — the CEK wrap
-  is bound to (space, digest), so they need a rewrap flow.
+- `CopyObject` runs the same `commitVersion`. Within one space its manifest
+  pins the source's digests: no spool, no upload, claims incremented. Across
+  spaces (every bucket has its own) the CEK wrap bound to (space, digest)
+  rules out sharing, so the source's plaintext streams through the decrypting
+  read path into `ingestBody` and the copy gets its own blobs and claims. A
+  source bucket owned by another tenant is `AccessDenied` before any key
+  lookup (hilt refuses it when authorizing the request; ingot compares the
+  tenant on the two bucket rows as well). The copy's ETag is the md5 of its
+  bytes even for a multipart source.
 - Supersession also records each replaced catalog block for future removal:
   the [catalog GC candidates](#catalog-gc-candidates-what-gets-remembered-for-removal)
   diagram shows every entry path.
@@ -307,6 +313,7 @@ sequenceDiagram
 Cross-references: [`architecture.md` §7.1](./architecture.md#71-write-single-shot-putobject).
 
 Sources: `s3frontend/object.go` (PutObject, ingestBody, uploadBlobs),
+`s3frontend/copy.go` (CopyObject, copySourceBucket),
 `s3frontend/version.go` (commitVersion), `bucketop/bucketop.go`,
 `blockstore/staging.go`, `uploader/blob.go`, `uploader/forge.go`. Review when
 these change.
@@ -358,7 +365,7 @@ sequenceDiagram
             else inner block via shard_inclusions
                 LC-->>LY: shard location + inclusive byte range
             end
-            LY->>P: content/retrieve (UCAN, audience = the commitment's provider,<br/>proofs from reqscope.ProofStore, absent for root;<br/>narrowed to the ciphertext span for an encrypted blob)
+            LY->>P: content/retrieve (UCAN, audience = the commitment's provider,<br/>proofs from reqscope.ProofStore;<br/>narrowed to the ciphertext span for an encrypted blob)
             P-->>LY: ranged bytes, length-checked
         end
         opt encrypted blob (FEE)
@@ -371,8 +378,6 @@ sequenceDiagram
 - `OpenBlob` (body blobs) checks spool then network; only `GetBlock`
   (catalog blocks) consults the log tier, and only `GetBlock` is fronted by
   the `Cached` LRU.
-- A root-account read has no request proof store, so it works only while the
-  blocks are local.
 - The indexer-backed locator (`blockstore/locator`) compiles but is never
   injected; `module.go` always wires `LocalLocator`.
 - Manifest coordinates are plaintext: `BlobRef.Start/End`, `Body.Size`,
@@ -412,8 +417,12 @@ sequenceDiagram
     C->>B: CreateMultipartUpload
     B->>R: CreateSession(open) with headers + checksum algorithm
     B-->>C: uploadId
-    C->>B: UploadPart(n)
-    B->>B: openSession (non-open: NoSuchUpload), then splitSpool<br/>(resolve the tenant recipient, then encrypt per piece:<br/>fresh CEK → FEE envelope → spool under the ciphertext<br/>digest + params row, as in the PutObject diagram)
+    C->>B: UploadPart(n) / UploadPartCopy(n)
+    B->>B: openSession (non-open: NoSuchUpload)
+    opt UploadPartCopy
+        B->>B: vet the source: copySourceBucket (tenant), resolveVersionIn,<br/>range within the object, copy-source preconditions (412);<br/>the body is the source's plaintext range through the decrypting reader
+    end
+    B->>B: ingestPart: splitSpool<br/>(resolve the tenant recipient, then encrypt per piece:<br/>fresh CEK → FEE envelope → spool under the ciphertext<br/>digest + params row, as in the PutObject diagram)
     B->>R: PutPart(parked)
     loop each part blob (parkBlobs)
         alt blob_locations already has the digest
@@ -426,11 +435,11 @@ sequenceDiagram
             B->>R: PutPark(AddTask, AcceptTask, PutInvocation), intent parked
         end
     end
-    B-->>C: part ETag (part md5)
+    B-->>C: part ETag (part md5; for a copy, of the copied bytes)
     C->>B: CompleteMultipartUpload(parts)
     B->>B: validate parts (ascending, ETags, checksums, MinPartSize)
     alt session already completed
-        B-->>C: the stored result (idempotent re-Complete)
+        B-->>C: the ETag/version id recorded on the session (idempotent re-Complete)
     else latch won
         B->>R: LatchSession(open to completing), single winner
         B->>R: manifest spans: per blob, plaintext length derived from<br/>the intent's stored size + FEE geometry (blobPlaintextLen)
@@ -455,8 +464,9 @@ sequenceDiagram
 Cross-references: [`architecture.md` §7.2](./architecture.md#72-multipart),
 [§7.3](./architecture.md#73-the-session-latch-the-abortcomplete-race).
 
-Sources: `s3frontend/multipart.go` (all verbs, parkBlobs, concludeBlobs,
-cleanupPartBlobs, SweepStaleMultipartSessions), `registry/stores.go`,
+Sources: `s3frontend/multipart.go` (all verbs, ingestPart, parkBlobs,
+concludeBlobs, cleanupPartBlobs, SweepStaleMultipartSessions),
+`s3frontend/uploadpartcopy.go`, `registry/stores.go`,
 `server.go` (startMultipartSweeper). Review when these change.
 
 ## Session states and the Complete/Abort latch
@@ -476,8 +486,11 @@ stateDiagram-v2
     completed --> [*] : sweeper past TTL
 ```
 
-- There is no wait-for-in-flight: a racing Complete either sees `completed`
-  (and returns the stored result) or loses the latch and gets `NoSuchUpload`.
+- A Complete that loses the latch waits (bounded) for the winner's terminal
+  state: `completed` replays the ETag and version id the winner recorded on
+  the session; `aborting` or a vanished row is `NoSuchUpload`; a winner still
+  running past the wait budget is `OperationAborted`, which the client
+  retries.
 - `ListParts` and `Abort` reject any non-`open` session as `NoSuchUpload`;
   `Complete` alone accepts `completed`, for idempotency.
 - The sweeper also reaps rows stuck in `completing` or `aborting` past the
@@ -656,7 +669,7 @@ flowchart TB
     hilt["hilt did:web:hilt"] -->|"/s3/request/authorize and<br/>/s3/bucket/info responses"| kp
 
     subgraph stores["proof stores"]
-        kp["iam.KeyProofs: one DelegationCache<br/>per access key, 24h idle eviction"]
+        kp["iam.KeyProofs: one DelegationCache<br/>per access key, 24h idle eviction;<br/>also the key's effective S3 action set per bucket"]
         ship["uploader.Forge shipProofs:<br/>per-space store, 1h TTL"]
         static["AuthServiceProofs:<br/>static container from config"]
         tok["tokenstore (tokens.cbor):<br/>empty; dormant login paths only"]
@@ -674,13 +687,23 @@ flowchart TB
 
 - The piri provider DID is never configured: retrieval audiences come from
   the `/assert/location` commitment each read resolves.
-- The root account holds no proof store: bucket administration works, network
-  reads and space-scoped writes do not.
+- Every authenticated S3 request carries a proof store: versitygw's root
+  account is disabled, so no access-key auth path skips the hilt-backed IAM
+  lookup. `/health` and the DID document are outside the S3 auth chain, and a
+  rejected access key never receives one.
 - A bucket whose last write is more than an hour old has an expired ship
   authority; a newly sealed segment then waits for the bucket's next write to
   re-capture it.
 - Each access key gets its own `DelegationCache`, so a proof chain can never
   assemble across keys.
+- The same store holds the effective S3 action set hilt reported for the key
+  on each bucket, expiring with the keys and the tenant (next UTC midnight
+  plus clock skew). One invalidation therefore drops the chains and the set
+  together. The set is what the fast path enforces: several S3 actions map to
+  the same Forge commands, and `s3:PutObject`'s commands are a superset of
+  `s3:GetObject`'s, `s3:ListBucket`'s and `s3:AbortMultipartUpload`'s, so a
+  chain probe alone would let a put-only key read and abort on the bucket, or
+  read a copy's source.
 
 Cross-references: [`architecture.md` §9](./architecture.md#9-the-system-contract-piri--sprue--indexer).
 
@@ -691,9 +714,9 @@ Review when these change.
 
 ## Request authorization and proof capture
 
-Every non-root request is authorized against hilt (or its cached
-delegations), and the proofs captured here are what the rest of the request
-spends.
+Every request is authorized against hilt (or its cached delegations), and
+the proofs captured here are what the rest of the request spends. Versitygw's
+root account is disabled, so no access key bypasses this path.
 
 ```mermaid
 sequenceDiagram
@@ -707,29 +730,35 @@ sequenceDiagram
 
     C->>G: signed S3 request
     G->>G: middleware stashes the raw request on ctx<br/>(reqscope, ahead of auth)
-    alt root access key
-        G->>G: RootUserConfig match, IAM skipped
-        Note over G,B: no proof store: bucket admin works,<br/>network-tier reads fail
-    else non-root key
-        G->>I: GetUserAccountForRequest
-        I->>I: access key ID parsed as a did:key
-        alt local fast path (authorizeLocal)
-            I->>K: cached derived key verifies SigV4,<br/>every command chains to the agent
-        else hilt authorize
-            I->>H: /s3/request/authorize (the signed request)
-            H-->>I: account, derived SigV4 key, fresh delegations
-            I->>K: cacheProofs (re-delegations)
-            opt chain incomplete
-                I->>H: /s3/bucket/info
-                I->>K: cache the bucket chain
-            end
+    G->>I: GetUserAccountForRequest (every access key; root disabled)
+    I->>I: access key ID parsed as a did:key
+    alt local fast path (authorizeLocal)
+        I->>K: cached derived key verifies SigV4,<br/>per bucket: cached action set permits the action,<br/>every command chains to the agent
+        break action outside a cached set
+            I-->>G: AccessDenied, hilt not consulted
+            G-->>C: 403
         end
-        I-->>G: auth.Account with SigningKey (RoleAdmin)
-        G->>G: re-verify the signature with the derived key<br/>(covers streaming per-chunk signatures hilt never sees)
+    else hilt authorize
+        I->>H: /s3/request/authorize (the signed request)
+        H-->>I: account, derived SigV4 key,<br/>effective action set, fresh delegations
+        I->>K: cacheProofs (re-delegations, bucket info<br/>per bucket) + the action set, keyed by each bucket hilt named<br/>(the addressed bucket and a copy's source)
+        opt chain incomplete
+            I->>H: /s3/bucket/info
+            I->>K: cache the bucket chain
+        end
     end
+    I-->>G: auth.Account with SigningKey (RoleAdmin)
+    G->>G: re-verify the signature with the derived key<br/>(covers streaming per-chunk signatures hilt never sees)
     G->>B: handler runs with reqscope.ProofStore on ctx
 ```
 
+- The fast path has three outcomes: authorized, refused, or undecided. It
+  refuses only on a cached action set that excludes the action a bucket
+  needs — hilt's own answer for that key and bucket, so re-asking would
+  repeat it (access keys are immutable; a deleted key's revocations clear
+  the store). Everything else undecided (no cached set for a bucket, an
+  expired one, an operation that maps to no Forge command) goes to hilt,
+  whose response refills the caches.
 - `RoleAdmin` is deliberate: authorization already happened (at hilt or the
   fast path), so versitygw's role and ACL layers must defer entirely.
 - Authorize failures map to S3 errors in `mapAuthError`; unrecognized errors
@@ -738,8 +767,9 @@ sequenceDiagram
   SigV4 key per request (the versitygw fork's `auth.Account.SigningKey`).
 
 Sources: `iam/service.go` (GetUserAccountForRequest, authorizeLocal,
-cacheProofs, mapAuthError), `server.go` (buildS3API middleware). Review when
-`iam/` or the hilt client changes.
+cacheProofs, mapAuthError), `iam/proofcache.go` (PutPermissions, Permits),
+`server.go` (buildS3API middleware). Review when `iam/` or the hilt client
+changes.
 
 ## Postgres schema as migrated
 
@@ -755,6 +785,7 @@ erDiagram
         bytea root_cid "committed MST root"
         bytea forge_root_cid "root durable on Forge"
         text space "Forge space DID"
+        text tenant "owning tenant DID"
         text versioning "unversioned, enabled, suspended"
         bigint next_version_seq
     }

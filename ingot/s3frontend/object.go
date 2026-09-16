@@ -7,9 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/fil-forge/ucantone/did"
@@ -24,6 +27,7 @@ import (
 
 	msbucket "github.com/fil-forge/forge/ingot/bucket"
 	"github.com/fil-forge/forge/ingot/bucketop"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
 	"github.com/fil-forge/forge/ingot/mst"
 	"github.com/fil-forge/forge/ingot/registry"
 )
@@ -34,6 +38,41 @@ const defaultMaxKeys = 1000
 // now (see bucket-metadata.rfc §"Canonical state vs service state"); lock
 // headers stamp the new version's state (docs/s3-object-lock.md §7). ETag is
 // the hex md5 of the body, quoted per S3 wire format.
+// requestsServerSideEncryption reports whether the request carries any
+// server-side-encryption header (SSE-S3, SSE-KMS or SSE-C, including the
+// copy-source SSE-C headers). ingot encrypts every object to the tenant key and
+// does not implement client-directed SSE, so PutObject / CreateMultipartUpload
+// / CopyObject reject such a request rather than silently storing the object
+// under ingot's own scheme. Only header presence is inspected; the (sensitive)
+// SSE-C customer key value is never read or logged.
+func requestsServerSideEncryption(headers map[string]string) bool {
+	for k := range headers {
+		lk := strings.ToLower(k)
+		if strings.HasPrefix(lk, "x-amz-server-side-encryption") ||
+			strings.HasPrefix(lk, "x-amz-copy-source-server-side-encryption") {
+			return true
+		}
+	}
+	return false
+}
+
+// unsupportedObjectACL reports whether a PutObject / CreateMultipartUpload
+// request sets any object ACL. ingot does not model ACLs, so — unlike a bucket,
+// which still accepts the default "private" — it rejects an object request that
+// names any canned ACL or grantee outright. The controller forwards these from
+// the x-amz-acl / x-amz-grant-* headers.
+func unsupportedObjectACL(acl types.ObjectCannedACL, grants ...*string) bool {
+	if acl != "" {
+		return true
+	}
+	for _, g := range grants {
+		if g != nil && *g != "" {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *Backend) PutObject(ctx context.Context, input s3response.PutObjectInput) (s3response.PutObjectOutput, error) {
 	if input.Bucket == nil {
 		return s3response.PutObjectOutput{}, s3err.GetAPIError(s3err.ErrInvalidBucketName)
@@ -43,8 +82,14 @@ func (b *Backend) PutObject(ctx context.Context, input s3response.PutObjectInput
 	}
 	bucketName := *input.Bucket
 	key := *input.Key
-	if !mst.IsValidKey(key) {
-		return s3response.PutObjectOutput{}, s3err.GetAPIError(s3err.ErrInvalidRequest)
+	if err := objectKeyError(key); err != nil {
+		return s3response.PutObjectOutput{}, err
+	}
+	if unsupportedObjectACL(input.ACL, input.GrantFullControl, input.GrantRead, input.GrantReadACP, input.GrantWriteACP) {
+		return s3response.PutObjectOutput{}, s3err.GetAPIError(s3err.ErrNotImplemented)
+	}
+	if req, ok := reqscope.Request(ctx); ok && requestsServerSideEncryption(req.Headers) {
+		return s3response.PutObjectOutput{}, s3err.GetAPIError(s3err.ErrNotImplemented)
 	}
 
 	contentType := backend.GetStringFromPtr(input.ContentType)
@@ -117,7 +162,23 @@ func (b *Backend) PutObject(ctx context.Context, input s3response.PutObjectInput
 	// that references it is committed (docs/architecture.md §7.1).
 	bodyRec, err := b.ingestBody(ctx, bucketState, bodyReader)
 	if err != nil {
-		// A checksum mismatch surfaces as an API error from the HashReader.
+		// A checksum/digest mismatch surfaces from the HashReader. BadDigestError,
+		// InvalidDigestError, and ContentSHA256MismatchError embed APIError but are
+		// distinct concrete types, so errors.As against APIError won't match them;
+		// surface each verbatim so its 400 status and XML body reach the versitygw
+		// renderer (a generic %w wrap degrades it to InternalError).
+		var bd s3err.BadDigestError
+		if errors.As(err, &bd) {
+			return s3response.PutObjectOutput{}, bd
+		}
+		var idg s3err.InvalidDigestError
+		if errors.As(err, &idg) {
+			return s3response.PutObjectOutput{}, idg
+		}
+		var csm s3err.ContentSHA256MismatchError
+		if errors.As(err, &csm) {
+			return s3response.PutObjectOutput{}, csm
+		}
 		var apiErr s3err.APIError
 		if errors.As(err, &apiErr) {
 			return s3response.PutObjectOutput{}, apiErr
@@ -141,7 +202,7 @@ func (b *Backend) PutObject(ctx context.Context, input s3response.PutObjectInput
 		ChecksumAlgorithm:       ckAlgo,
 		Checksum:                ckVal,
 		ChecksumType:            string(types.ChecksumTypeFullObject),
-		ContentEncoding:         backend.GetStringFromPtr(input.ContentEncoding),
+		ContentEncoding:         normalizeContentEncoding(backend.GetStringFromPtr(input.ContentEncoding)),
 		ContentDisposition:      backend.GetStringFromPtr(input.ContentDisposition),
 		ContentLanguage:         backend.GetStringFromPtr(input.ContentLanguage),
 		CacheControl:            backend.GetStringFromPtr(input.CacheControl),
@@ -167,7 +228,10 @@ func (b *Backend) PutObject(ctx context.Context, input s3response.PutObjectInput
 		ETag: etagOf(mf),
 		Size: &size,
 	}
-	if effState.Configured() {
+	// Only an enabled bucket echoes a version id in the response. A suspended
+	// bucket stores the object under the "null" version id but omits it from the
+	// PUT response, matching AWS (docs/s3-versioning.md §4.3).
+	if effState == registry.VersioningEnabled {
 		out.VersionID = node.VersionID
 	}
 	out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(ckAlgo, ckVal, mf.ChecksumType)
@@ -312,77 +376,149 @@ func (b *Backend) uploadBlobs(ctx context.Context, space did.DID, blobs []msbuck
 // the commit. The diff is the crux of safe dedup + delete:
 //
 //   - a digest in new but not old gains a claim (newly referenced);
-//   - a digest in old but not new loses its claim, and when no version anywhere
-//     still references it, is queued for RemoveBlob;
-//   - a digest in BOTH keeps its single claim untouched, so a re-PUT of
-//     identical bytes (or a split object that shares blobs) never churns the row.
-//
-// versionID names the claim rows: the version's ULID token, or "null" for a
-// null version (unversioned buckets thus produce the same rows as before
-// versioning). Callers releasing a DIFFERENT version than the one they created
-// call this once per version id (docs/s3-versioning.md §8).
-//
-// It MUST run only after the catalog/root commit succeeds: it mutates blob_refs
-// in its own (non-transactional) store, so applying it before a commit that then
-// fails would diverge blob_refs from the committed catalog (and a later delete
-// of a shared blob could drop a still-referenced one). Iterates over the
-// DEDUPLICATED digest sets, so a manifest carrying the same digest in two blobs
-// adds/deletes one claim and releases the blob at most once.
-func (b *Backend) reconcileClaims(ctx context.Context, bucketState *registry.State, key, versionID string, oldDigests, newDigests []multihash.Multihash) (toRemove []multihash.Multihash, err error) {
-	oldSet := digestSet(oldDigests)
-	newSet := digestSet(newDigests)
+//   - each generation's claim rows are keyed by a per-generation id
+//     (claimVersionID), so racing writers never touch one shared row;
+//   - the new generation's claims are added UNDER the per-bucket commit lock,
+//     before the root swap — a racing writer that supersedes this generation
+//     always finds the rows to drop, and a failed commit leaves at most a
+//     benign extra claim, never a wrong release;
+//   - the superseded generation's claims drop AFTER the commit is durable,
+//     each drop atomically enqueueing a deferred release when the space's
+//     last claim on the digest goes (blob_release_intents); the release
+//     sweeper re-checks the claim count at drain time, so every remaining
+//     interleave converges.
 
-	for k, d := range newSet {
-		if _, ok := oldSet[k]; ok {
-			continue // unchanged reference
-		}
-		if err := b.blobRefs.AddBlobClaim(ctx, registry.BlobClaim{
-			Digest: d, Bucket: bucketState.Name, ObjectKey: key, VersionID: versionID, Space: bucketState.Space,
-		}); err != nil {
-			return nil, fmt.Errorf("add blob claim: %w", err)
-		}
+// claimVersionID names a generation's blob_refs rows: the version's ULID
+// token for versioned buckets, or "null#<seq>" for a null version — unique
+// per commit, so unversioned generations never share a claim row.
+func claimVersionID(versionID string, seq uint64) string {
+	if versionID == registry.NullVersionID {
+		return fmt.Sprintf("null#%d", seq)
 	}
-	for k, d := range oldSet {
-		if _, ok := newSet[k]; ok {
-			continue // still referenced by the new body
-		}
-		if err := b.blobRefs.DeleteBlobClaim(ctx, d, bucketState.Name, key, versionID); err != nil {
-			return nil, fmt.Errorf("delete blob claim: %w", err)
-		}
-		n, err := b.blobRefs.CountClaims(ctx, bucketState.Space, d)
-		if err != nil {
-			return nil, fmt.Errorf("count claims: %w", err)
-		}
-		if n == 0 {
-			toRemove = append(toRemove, d)
-		}
-	}
-	return toRemove, nil
+	return versionID
 }
 
-// releaseBlobs runs for each digest whose last claim was dropped: it deletes
-// the blob's encryption-params row (the crypto-shred — without the wrapped
-// CEK the region can no longer decrypt the blob, per the encryption RFC's
-// DELETE semantics), drops the location row, and calls RemoveBlob. Run after
-// the commit lands, off the critical section — a 200 is not gated on the
-// (currently no-op) network release. Failures are logged, not fatal: a
-// missed release leaks bytes on Piri but never loses referenced data, and
-// crash recovery reconciles upload_intents × blob_refs (a later phase).
-func (b *Backend) releaseBlobs(ctx context.Context, space did.DID, digests []multihash.Multihash) {
-	for _, d := range digests {
-		if err := b.encParams.DeleteEncryptionParams(ctx, space, d); err != nil {
-			b.logger.Warn("crypto-shred: delete encryption params failed",
-				zap.String("digest", hex.EncodeToString(d)), zap.Error(err))
-		}
-		if err := b.locations.DeleteLocation(ctx, space, d); err != nil {
-			b.logger.Warn("release: delete location failed",
-				zap.String("digest", hex.EncodeToString(d)), zap.Error(err))
-		}
-		if err := b.remover.RemoveBlob(ctx, space, d); err != nil {
-			// best-effort; see method doc.
-			_ = err
+// addClaims records one claim per DEDUPLICATED digest for a new generation.
+// Runs inside the bucket commit lock (see the invariant note above).
+func (b *Backend) addClaims(ctx context.Context, st *registry.State, key, claimID string, digests []multihash.Multihash) error {
+	for _, d := range digestSet(digests) {
+		if err := b.blobRefs.AddBlobClaim(ctx, registry.BlobClaim{
+			Digest: d, Bucket: st.Name, ObjectKey: key, VersionID: claimID, Space: st.Space,
+		}); err != nil {
+			return fmt.Errorf("add blob claim: %w", err)
 		}
 	}
+	return nil
+}
+
+// dropClaims drops a superseded/deleted generation's claims, atomically
+// enqueueing a deferred release for each digest whose last claim goes. Runs
+// after the commit is durable.
+func (b *Backend) dropClaims(ctx context.Context, bucketState *registry.State, key, claimID string, digests []multihash.Multihash) error {
+	if len(digests) == 0 {
+		return nil
+	}
+	notBefore := time.Now().Add(b.releaseGrace)
+	for _, d := range digestSet(digests) {
+		if _, err := b.blobRefs.DropClaimEnqueueRelease(ctx, d, bucketState.Name, key, claimID, bucketState.Space, notBefore); err != nil {
+			return fmt.Errorf("drop blob claim: %w", err)
+		}
+	}
+	return nil
+}
+
+// SweepPendingReleases executes the due deferred releases: for each intent
+// past its not_before, it re-checks the claim count (a digest re-claimed
+// since enqueue self-heals into a dropped intent), then deletes the blob's
+// encryption-params row (the crypto-shred — without the wrapped CEK the
+// region can no longer decrypt the blob, per the encryption RFC's DELETE
+// semantics), drops the location row, and calls RemoveBlob. The intent is
+// deleted only when all three succeed; failures keep it for the next sweep.
+// Returns how many releases were executed. Called periodically by the
+// daemon's release sweeper, and directly by tests as the drain.
+func (b *Backend) SweepPendingReleases(ctx context.Context) (int, error) {
+	due, err := b.pendingReleases.ListDueReleases(ctx, time.Now(), 512)
+	if err != nil {
+		return 0, fmt.Errorf("s3frontend: list due releases: %w", err)
+	}
+	released := 0
+	for _, pr := range due {
+		n, err := b.blobRefs.CountClaims(ctx, pr.Space, pr.Digest)
+		if err != nil {
+			b.logger.Warn("release sweep: count claims failed; retrying next sweep",
+				zap.String("digest", hex.EncodeToString(pr.Digest)), zap.Error(err))
+			continue
+		}
+		if n > 0 {
+			// Re-claimed since enqueue (e.g. a commit that failed after its
+			// drop ran, then retried) — the intent is stale, not the claim.
+			if err := b.pendingReleases.DeleteRelease(ctx, pr.Space, pr.Digest); err != nil {
+				b.logger.Warn("release sweep: delete stale intent failed",
+					zap.String("digest", hex.EncodeToString(pr.Digest)), zap.Error(err))
+			}
+			continue
+		}
+		if !b.executeRelease(ctx, pr.Space, pr.Digest) {
+			continue // retry next sweep
+		}
+		if err := b.pendingReleases.DeleteRelease(ctx, pr.Space, pr.Digest); err != nil {
+			b.logger.Warn("release sweep: delete intent failed",
+				zap.String("digest", hex.EncodeToString(pr.Digest)), zap.Error(err))
+			continue
+		}
+		released++
+	}
+	return released, nil
+}
+
+// drainSpaceReleases executes a space's pending releases immediately,
+// ignoring their grace: DeleteBucket calls it before asking hilt to delete
+// the space, which refuses while blobs remain registered. No reader grace is
+// owed — the bucket is provably empty at that point and its deletion is the
+// operator's explicit intent. The claim recheck still applies (a re-claimed
+// digest drops its stale intent instead).
+func (b *Backend) drainSpaceReleases(ctx context.Context, space did.DID) error {
+	pending, err := b.pendingReleases.ListReleasesBySpace(ctx, space)
+	if err != nil {
+		return fmt.Errorf("list space releases: %w", err)
+	}
+	for _, pr := range pending {
+		if n, err := b.blobRefs.CountClaims(ctx, pr.Space, pr.Digest); err != nil || n > 0 {
+			if err == nil {
+				_ = b.pendingReleases.DeleteRelease(ctx, pr.Space, pr.Digest)
+			}
+			continue
+		}
+		if !b.executeRelease(ctx, pr.Space, pr.Digest) {
+			return fmt.Errorf("release blob %x", pr.Digest)
+		}
+		if err := b.pendingReleases.DeleteRelease(ctx, pr.Space, pr.Digest); err != nil {
+			return fmt.Errorf("delete release intent %x: %w", pr.Digest, err)
+		}
+	}
+	return nil
+}
+
+// executeRelease performs one blob release, reporting whether every step
+// succeeded (failures are logged and retried by the sweeper).
+func (b *Backend) executeRelease(ctx context.Context, space did.DID, digest multihash.Multihash) bool {
+	ok := true
+	if err := b.encParams.DeleteEncryptionParams(ctx, space, digest); err != nil {
+		b.logger.Warn("crypto-shred: delete encryption params failed",
+			zap.String("digest", hex.EncodeToString(digest)), zap.Error(err))
+		ok = false
+	}
+	if err := b.locations.DeleteLocation(ctx, space, digest); err != nil {
+		b.logger.Warn("release: delete location failed",
+			zap.String("digest", hex.EncodeToString(digest)), zap.Error(err))
+		ok = false
+	}
+	if err := b.remover.RemoveBlob(ctx, space, digest); err != nil {
+		b.logger.Warn("release: network remove failed",
+			zap.String("digest", hex.EncodeToString(digest)), zap.Error(err))
+		ok = false
+	}
+	return ok
 }
 
 // bodyDigests returns the digests of a body's blobs in order.
@@ -440,7 +576,10 @@ func partRange(body msbucket.Body, partNumber int32) (start, length int64, isRan
 		// The parts-count is still reported.
 		return start, length, length > 0, &n, nil
 	}
-	// Non-multipart object: a single logical part covering the whole body.
+	// Non-multipart object: a single logical part covering the whole body. A
+	// partNumber past that single part is ErrInvalidPartNumberRange (HTTP 416),
+	// matching AWS (verified: GET ?partNumber=2 on a single-part object returns
+	// 416 InvalidPartNumber).
 	if partNumber != 1 {
 		return 0, 0, false, nil, s3err.GetAPIError(s3err.ErrInvalidPartNumberRange)
 	}
@@ -489,6 +628,15 @@ func (b *Backend) HeadObject(ctx context.Context, input *s3.HeadObjectInput) (*s
 		IfModSince:    input.IfModifiedSince,
 		IfUnmodeSince: input.IfUnmodifiedSince,
 	}); err != nil {
+		// A 304 Not Modified must carry the object's ETag (RFC 7232 §4.1):
+		// return the metadata alongside the not-modified error so the S3 API
+		// layer emits the ETag header. Other precondition failures (e.g. 412
+		// PreconditionFailed) return no metadata.
+		var apiErr s3err.APIError
+		if errors.As(err, &apiErr) && apiErr.HTTPStatusCode == http.StatusNotModified {
+			ifEtag := etagOf(mf)
+			return &s3.HeadObjectOutput{ETag: &ifEtag, LastModified: &lastModified}, err
+		}
 		return nil, err
 	}
 	etag := etagOf(mf)
@@ -541,10 +689,168 @@ func (b *Backend) HeadObject(ctx context.Context, input *s3.HeadObjectInput) (*s
 	}
 	// Echo the stored checksum only for a whole-object HEAD with checksum mode on
 	// (a ranged HEAD's checksum would not match the full object).
-	if input.ChecksumMode == types.ChecksumModeEnabled && !isRange {
-		out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(mf.ChecksumAlgorithm, mf.Checksum, mf.ChecksumType)
+	if input.ChecksumMode == types.ChecksumModeEnabled {
+		switch {
+		case !isRange:
+			// Whole-object checksum (a ranged read's would not match the object).
+			out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(mf.ChecksumAlgorithm, mf.Checksum, mf.ChecksumType)
+		case input.PartNumber != nil:
+			// A ?partNumber read returns that part's own checksum, when the
+			// object recorded per-part checksums (a checksummed multipart upload).
+			if pn := int(*input.PartNumber); pn >= 1 && pn <= len(mf.Body.PartChecksums) {
+				out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(mf.ChecksumAlgorithm, mf.Body.PartChecksums[pn-1], mf.ChecksumType)
+			}
+		}
 	}
 	return out, nil
+}
+
+// GetObjectAttributes reports an object's size, ETag, storage class and
+// checksum. It reads the same metadata as HeadObject; the controller filters
+// the result down to the attributes the client requested. ObjectParts is left
+// nil: the manifest stores per-part sizes but no per-part checksums/etags, so
+// there is nothing faithful to report, and the shipped posix/azure backends
+// likewise omit it.
+func (b *Backend) GetObjectAttributes(ctx context.Context, input *s3.GetObjectAttributesInput) (s3response.GetObjectAttributesResponse, error) {
+	data, err := b.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket:       input.Bucket,
+		Key:          input.Key,
+		VersionId:    input.VersionId,
+		ChecksumMode: types.ChecksumModeEnabled,
+	})
+	if err != nil {
+		// A version-scoped delete marker surfaces as ErrMethodNotAllowed with a
+		// populated head output; GetObjectAttributes on such a version returns
+		// 405 MethodNotAllowed (matching AWS), carrying the marker and version so
+		// the controller still emits those headers. The current-marker case
+		// (no versionId) surfaces as ErrNoSuchKey from HeadObject and falls
+		// through below as a 404.
+		if errors.Is(err, s3err.GetAPIError(s3err.ErrMethodNotAllowed)) && data != nil {
+			return s3response.GetObjectAttributesResponse{
+				DeleteMarker: data.DeleteMarker,
+				VersionId:    data.VersionId,
+			}, s3err.GetAPIError(s3err.ErrMethodNotAllowed)
+		}
+		return s3response.GetObjectAttributesResponse{}, err
+	}
+
+	// A completed multipart object reports its part count. HeadObject only
+	// surfaces the count for a ?partNumber request, so read it from the
+	// manifest here. The per-part list is left unpopulated: the manifest stores
+	// per-part sizes but no per-part checksums, and AWS only returns the Parts
+	// list for checksummed multipart uploads — so TotalPartsCount is the
+	// faithful subset, matching AWS for a non-checksummed multipart object.
+	var objectParts *s3response.ObjectParts
+	if rv, rerr := b.resolveVersion(ctx, *input.Bucket, *input.Key, backend.GetStringFromPtr(input.VersionId)); rerr == nil && !rv.mf.DeleteMarker {
+		sizes := rv.mf.Body.PartSizes
+		sums := rv.mf.Body.PartChecksums
+		if n := len(sizes); n > 0 {
+			op := &s3response.ObjectParts{PartsCount: n}
+			// The per-part list (and its pagination) is populated only for a
+			// checksummed multipart object; AWS returns just the count otherwise.
+			if len(sums) == n {
+				marker := 0
+				if input.PartNumberMarker != nil {
+					if m, err := strconv.Atoi(*input.PartNumberMarker); err == nil {
+						marker = m
+					}
+				}
+				maxParts := 1000
+				if input.MaxParts != nil {
+					maxParts = int(*input.MaxParts)
+				}
+				algo := types.ChecksumAlgorithm(rv.mf.ChecksumAlgorithm)
+				next := 0
+				truncated := false
+				for i := 0; i < n; i++ {
+					pn := i + 1
+					if pn <= marker {
+						continue
+					}
+					if len(op.Parts) >= maxParts {
+						truncated = true
+						break
+					}
+					sz := sizes[i]
+					part := types.ObjectPart{PartNumber: aws.Int32(int32(pn)), Size: aws.Int64(sz)}
+					setObjectPartChecksum(&part, algo, sums[i])
+					op.Parts = append(op.Parts, part)
+					next = pn
+				}
+				op.PartNumberMarker = &marker
+				op.MaxParts = &maxParts
+				op.NextPartNumberMarker = &next
+				op.IsTruncated = &truncated
+			}
+			objectParts = op
+		}
+	}
+
+	return s3response.GetObjectAttributesResponse{
+		ETag:         backend.TrimEtag(data.ETag),
+		ObjectSize:   data.ContentLength,
+		StorageClass: data.StorageClass,
+		LastModified: data.LastModified,
+		VersionId:    data.VersionId,
+		DeleteMarker: data.DeleteMarker,
+		ObjectParts:  objectParts,
+		// GetObjectAttributes reports a composite (multipart) checksum without
+		// the "-N" part-count suffix that the CompleteMPU response and the
+		// checksum headers carry; strip it here to match AWS.
+		Checksum: &types.Checksum{
+			ChecksumCRC32:     stripCompositeChecksumSuffix(data.ChecksumCRC32),
+			ChecksumCRC32C:    stripCompositeChecksumSuffix(data.ChecksumCRC32C),
+			ChecksumSHA1:      stripCompositeChecksumSuffix(data.ChecksumSHA1),
+			ChecksumSHA256:    stripCompositeChecksumSuffix(data.ChecksumSHA256),
+			ChecksumCRC64NVME: stripCompositeChecksumSuffix(data.ChecksumCRC64NVME),
+			ChecksumSHA512:    stripCompositeChecksumSuffix(data.ChecksumSHA512),
+			ChecksumMD5:       data.ChecksumMD5,
+			ChecksumXXHASH64:  stripCompositeChecksumSuffix(data.ChecksumXXHASH64),
+			ChecksumXXHASH3:   stripCompositeChecksumSuffix(data.ChecksumXXHASH3),
+			ChecksumXXHASH128: stripCompositeChecksumSuffix(data.ChecksumXXHASH128),
+			ChecksumType:      data.ChecksumType,
+		},
+	}, nil
+}
+
+// stripCompositeChecksumSuffix removes the "-N" multipart part-count suffix from
+// a composite checksum value. GetObjectAttributes returns the bare digest while
+// the CompleteMPU response and x-amz-checksum-* headers keep the suffix. A plain
+// (single-part) checksum has no such suffix and is returned unchanged.
+// setObjectPartChecksum sets the checksum field matching algo on a per-part
+// GetObjectAttributes entry.
+func setObjectPartChecksum(p *types.ObjectPart, algo types.ChecksumAlgorithm, value string) {
+	v := value
+	switch algo {
+	case types.ChecksumAlgorithmCrc32:
+		p.ChecksumCRC32 = &v
+	case types.ChecksumAlgorithmCrc32c:
+		p.ChecksumCRC32C = &v
+	case types.ChecksumAlgorithmSha1:
+		p.ChecksumSHA1 = &v
+	case types.ChecksumAlgorithmSha256:
+		p.ChecksumSHA256 = &v
+	case types.ChecksumAlgorithmCrc64nvme:
+		p.ChecksumCRC64NVME = &v
+	}
+}
+
+func stripCompositeChecksumSuffix(v *string) *string {
+	if v == nil {
+		return nil
+	}
+	s := *v
+	i := strings.LastIndexByte(s, '-')
+	if i < 0 || i == len(s)-1 {
+		return v
+	}
+	for _, r := range s[i+1:] {
+		if r < '0' || r > '9' {
+			return v
+		}
+	}
+	t := s[:i]
+	return &t
 }
 
 // GetObject returns an object body — the current version or the one named by
@@ -577,12 +883,22 @@ func (b *Backend) GetObject(ctx context.Context, input *s3.GetObjectInput) (*s3.
 		}
 		return mout, s3err.GetAPIError(s3err.ErrMethodNotAllowed)
 	}
-	if err := backend.EvaluatePreconditions(etagOf(mf), time.Unix(mf.Created, 0), backend.PreConditions{
+	getLastModified := time.Unix(mf.Created, 0)
+	if err := backend.EvaluatePreconditions(etagOf(mf), getLastModified, backend.PreConditions{
 		IfMatch:       input.IfMatch,
 		IfNoneMatch:   input.IfNoneMatch,
 		IfModSince:    input.IfModifiedSince,
 		IfUnmodeSince: input.IfUnmodifiedSince,
 	}); err != nil {
+		// A 304 Not Modified must carry the object's ETag (RFC 7232 §4.1):
+		// return the metadata alongside the not-modified error so the S3 API
+		// layer emits the ETag header. Other precondition failures (e.g. 412
+		// PreconditionFailed) return no metadata.
+		var apiErr s3err.APIError
+		if errors.As(err, &apiErr) && apiErr.HTTPStatusCode == http.StatusNotModified {
+			ifEtag := etagOf(mf)
+			return &s3.GetObjectOutput{ETag: &ifEtag, LastModified: &getLastModified}, err
+		}
 		return nil, err
 	}
 
@@ -648,8 +964,18 @@ func (b *Backend) GetObject(ctx context.Context, input *s3.GetObjectInput) (*s3.
 	}
 	// Echo the stored checksum only for a whole-object GET with checksum mode on
 	// (a ranged GET's checksum would not match the full object).
-	if input.ChecksumMode == types.ChecksumModeEnabled && !isRange {
-		out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(mf.ChecksumAlgorithm, mf.Checksum, mf.ChecksumType)
+	if input.ChecksumMode == types.ChecksumModeEnabled {
+		switch {
+		case !isRange:
+			// Whole-object checksum (a ranged read's would not match the object).
+			out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(mf.ChecksumAlgorithm, mf.Checksum, mf.ChecksumType)
+		case input.PartNumber != nil:
+			// A ?partNumber read returns that part's own checksum, when the
+			// object recorded per-part checksums (a checksummed multipart upload).
+			if pn := int(*input.PartNumber); pn >= 1 && pn <= len(mf.Body.PartChecksums) {
+				out.ChecksumCRC32, out.ChecksumCRC32C, out.ChecksumSHA1, out.ChecksumSHA256, out.ChecksumCRC64NVME, out.ChecksumSHA512, out.ChecksumMD5, out.ChecksumXXHASH64, out.ChecksumXXHASH3, out.ChecksumXXHASH128, out.ChecksumType = checksumFields(mf.ChecksumAlgorithm, mf.Body.PartChecksums[pn-1], mf.ChecksumType)
+			}
+		}
 	}
 	return out, nil
 }
@@ -749,6 +1075,7 @@ func (b *Backend) insertDeleteMarker(ctx context.Context, bucketState *registry.
 func (b *Backend) deleteObjectKey(ctx context.Context, bucketState *registry.State, key string, preconds *backend.ObjectDeletePreconditions) error {
 	var oldDigests []multihash.Multihash
 	var oldVersionID string
+	var oldSeq uint64
 	err := b.txns.WithTx(ctx, bucketState.Name, func(ctx context.Context, tx *bucketop.Tx) (cid.Cid, error) {
 		// Empty bucket: nothing to delete. Returning cid.Undef tells WithTx to
 		// discard with no commit — the equivalent of "no-op success."
@@ -804,22 +1131,22 @@ func (b *Backend) deleteObjectKey(ctx context.Context, bucketState *registry.Sta
 		}
 		oldDigests = bodyDigests(oldMf.Body)
 		oldVersionID = oldMf.VersionID
+		oldSeq = oldMf.Seq
 		return t2.GetPointer(ctx, tx)
 	})
 	if err != nil {
 		return mapCommitError(err, "delete")
 	}
-	// Release the removed version's blobs through the reference index AFTER the
-	// commit is durable (so a commit failure can't diverge blob_refs). When the
-	// key was absent, oldDigests is nil and this is a no-op.
+	// Drop the removed version's claims through the reference index AFTER the
+	// commit is durable (so a commit failure can't diverge blob_refs); each
+	// last-claim drop enqueues a deferred release. When the key was absent,
+	// oldDigests is nil and this is a no-op.
 	if oldVersionID == "" {
 		oldVersionID = registry.NullVersionID
 	}
-	toRemove, err := b.reconcileClaims(ctx, bucketState, key, oldVersionID, oldDigests, nil)
-	if err != nil {
+	if err := b.dropClaims(ctx, bucketState, key, claimVersionID(oldVersionID, oldSeq), oldDigests); err != nil {
 		return fmt.Errorf("s3frontend: delete reconcile: %w", err)
 	}
-	b.releaseBlobs(ctx, bucketState.Space, toRemove)
 	return nil
 }
 
@@ -858,6 +1185,24 @@ func (b *Backend) DeleteObjects(ctx context.Context, input *s3.DeleteObjectsInpu
 		versionID := backend.GetStringFromPtr(obj.VersionId)
 		entry := types.DeletedObject{Key: &key}
 		var derr error
+		// Per-key ETag precondition (conditional delete): the object is removed
+		// only if its current version's ETag matches; otherwise the entry fails
+		// with PreconditionFailed, matching AWS. Applies to the current version.
+		if obj.ETag != nil && versionID == "" {
+			etag, exists, cerr := b.currentObjectETag(ctx, bucketName, key)
+			switch {
+			case cerr != nil:
+				derr = cerr
+			case !exists || !etagsEqual(*obj.ETag, etag):
+				derr = s3err.GetAPIError(s3err.ErrPreconditionFailed)
+			}
+		}
+		if derr != nil {
+			k := key
+			code, msg := deleteErrorFields(derr)
+			res.Error = append(res.Error, types.Error{Key: &k, Code: &code, Message: &msg})
+			continue
+		}
 		switch {
 		case versionID != "":
 			// Version-scoped: permanently remove that one version. DeleteMarker
@@ -931,7 +1276,9 @@ func (b *Backend) ListObjects(ctx context.Context, input *s3.ListObjectsInput) (
 		maxKeys = *input.MaxKeys
 	}
 	limit := int(maxKeys)
-	if limit <= 0 {
+	// Default only when max-keys is unset; an explicit max-keys=0 must return an
+	// empty page (handled in listWalk), not be promoted to the default.
+	if input.MaxKeys == nil {
 		limit = defaultMaxKeys
 	}
 
@@ -941,7 +1288,7 @@ func (b *Backend) ListObjects(ctx context.Context, input *s3.ListObjectsInput) (
 		from = marker + "\x01"
 	}
 
-	res, err := b.listWalk(ctx, bucketName, prefix, delimiter, from, limit)
+	res, err := b.listWalk(ctx, bucketName, prefix, delimiter, from, marker, limit)
 	if err != nil {
 		return s3response.ListObjectsResult{}, err
 	}
@@ -949,7 +1296,7 @@ func (b *Backend) ListObjects(ctx context.Context, input *s3.ListObjectsInput) (
 	out := s3response.ListObjectsResult{
 		Name:           &bucketName,
 		Prefix:         &prefix,
-		Delimiter:      &delimiter,
+		Delimiter:      strPtrOrNil(delimiter),
 		MaxKeys:        &maxKeys,
 		IsTruncated:    &res.truncated,
 		Contents:       res.contents,
@@ -991,7 +1338,9 @@ func (b *Backend) ListObjectsV2(ctx context.Context, input *s3.ListObjectsV2Inpu
 		maxKeys = *input.MaxKeys
 	}
 	limit := int(maxKeys)
-	if limit <= 0 {
+	// Default only when max-keys is unset; an explicit max-keys=0 must return an
+	// empty page (handled in listWalk), not be promoted to the default.
+	if input.MaxKeys == nil {
 		limit = defaultMaxKeys
 	}
 
@@ -1001,16 +1350,29 @@ func (b *Backend) ListObjectsV2(ctx context.Context, input *s3.ListObjectsV2Inpu
 		from = startAfter + "\x01"
 	}
 
-	res, err := b.listWalk(ctx, bucketName, prefix, delimiter, from, limit)
+	res, err := b.listWalk(ctx, bucketName, prefix, delimiter, from, startAfter, limit)
 	if err != nil {
 		return s3response.ListObjectsV2Result{}, err
+	}
+
+	// FetchOwner attaches the bucket owner to each listed object. Ingot models
+	// ownership by the Forge space DID rather than an S3 canonical user id, so
+	// that DID is reported as the owner id.
+	if input.FetchOwner != nil && *input.FetchOwner && len(res.contents) > 0 {
+		if st, gerr := b.reg.Get(ctx, bucketName); gerr == nil {
+			ownerID := st.Space.String()
+			owner := &types.Owner{ID: &ownerID}
+			for i := range res.contents {
+				res.contents[i].Owner = owner
+			}
+		}
 	}
 
 	keyCount := int32(len(res.contents) + len(res.commonPrefixes))
 	out := s3response.ListObjectsV2Result{
 		Name:           &bucketName,
 		Prefix:         &prefix,
-		Delimiter:      &delimiter,
+		Delimiter:      strPtrOrNil(delimiter),
 		MaxKeys:        &maxKeys,
 		KeyCount:       &keyCount,
 		IsTruncated:    &res.truncated,
@@ -1045,10 +1407,14 @@ type listWalkResult struct {
 // ContinuationToken / StartAfter, NextMarker vs.
 // NextContinuationToken) live in the callers; this helper only
 // understands prefix, delimiter, and the [from, ...) starting key.
-func (b *Backend) listWalk(ctx context.Context, bucketName, prefix, delimiter, from string, limit int) (listWalkResult, error) {
+func (b *Backend) listWalk(ctx context.Context, bucketName, prefix, delimiter, from, marker string, limit int) (listWalkResult, error) {
 	out := listWalkResult{
 		contents:       []s3response.Object{},
 		commonPrefixes: []types.CommonPrefix{},
+	}
+	// An explicit max-keys=0 lists nothing and is never truncated.
+	if limit <= 0 {
+		return out, nil
 	}
 
 	st, err := b.reg.Get(ctx, bucketName)
@@ -1095,20 +1461,34 @@ func (b *Backend) listWalk(ctx context.Context, bucketName, prefix, delimiter, f
 			tail := k[len(prefix):]
 			if i := strings.Index(tail, delimiter); i >= 0 {
 				cp := prefix + tail[:i+len(delimiter)]
+				// A common prefix rolled up on an earlier page (its value <= the
+				// resume marker) is already returned: skip its keys entirely so
+				// the marker advances past the whole group, not just past the
+				// prefix string. Mirrors ListObjectVersions' keyMarker handling.
+				if marker != "" && cp <= marker {
+					return nil
+				}
 				if _, dup := seenPrefix[cp]; !dup {
+					// Look-ahead: a new, non-dup element found while the page is
+					// already full proves there is more — truncate here and stop,
+					// leaving nextKey at the already-emitted limit-th element.
+					if len(out.contents)+len(out.commonPrefixes) >= limit {
+						out.truncated = true
+						return mst.ErrStopWalk
+					}
 					seenPrefix[cp] = struct{}{}
 					cpCopy := cp
 					out.commonPrefixes = append(out.commonPrefixes, types.CommonPrefix{Prefix: &cpCopy})
-					if len(out.contents)+len(out.commonPrefixes) >= limit {
-						out.truncated = true
-						out.nextKey = cp
-						return mst.ErrStopWalk
-					}
+					out.nextKey = cp
 				}
 				return nil
 			}
 		}
 
+		if len(out.contents)+len(out.commonPrefixes) >= limit {
+			out.truncated = true
+			return mst.ErrStopWalk
+		}
 		key := k
 		etag := etagOf(&mf)
 		size := mf.Body.Size
@@ -1120,11 +1500,7 @@ func (b *Backend) listWalk(ctx context.Context, bucketName, prefix, delimiter, f
 			LastModified: &lastModified,
 			StorageClass: types.ObjectStorageClassStandard,
 		})
-		if len(out.contents)+len(out.commonPrefixes) >= limit {
-			out.truncated = true
-			out.nextKey = k
-			return mst.ErrStopWalk
-		}
+		out.nextKey = k
 		return nil
 	})
 	if walkErr != nil {
@@ -1153,4 +1529,37 @@ func strPtrOrNil(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// objectKeyError validates an object key for storage and returns the S3 error
+// to surface, or nil when the key is acceptable. A key over the size limit is
+// reported as KeyTooLongError (matching AWS); other invalid keys (empty,
+// non-UTF-8, NUL) are InvalidRequest.
+func objectKeyError(key string) error {
+	if len(key) > mst.MaxKeyBytes {
+		return s3err.GetAPIError(s3err.ErrKeyTooLong)
+	}
+	if !mst.IsValidKey(key) {
+		return s3err.GetAPIError(s3err.ErrInvalidRequest)
+	}
+	return nil
+}
+
+// normalizeContentEncoding drops the aws-chunked transfer token(s) from a
+// Content-Encoding value. aws-chunked marks a SigV4 streaming payload, not a
+// real content encoding, so S3 does not persist it; a value consisting only of
+// aws-chunked tokens normalizes to "" and is stored as no encoding.
+func normalizeContentEncoding(enc string) string {
+	if enc == "" {
+		return ""
+	}
+	var kept []string
+	for _, tok := range strings.Split(enc, ",") {
+		tok = strings.TrimSpace(tok)
+		if tok == "" || strings.EqualFold(tok, "aws-chunked") {
+			continue
+		}
+		kept = append(kept, tok)
+	}
+	return strings.Join(kept, ", ")
 }

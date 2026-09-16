@@ -1,6 +1,8 @@
 # Integration tests (itest)
 
-Docker-backed integration tests behind the `itest` build tag. Everything here
+Docker-backed integration tests. This directory is its own Go module
+(`go.mod` here), which is what keeps it out of `go test ./...` one level up —
+it used to be a build tag. Everything here
 runs against a **forge-mode ingot deployed in the smelt Forge stack** (sprue,
 piri, indexing-service, postgres, ...) with a build of **this working tree**
 bind-mounted over the published image — what you just edited is what runs.
@@ -8,13 +10,13 @@ There is no in-memory ingot anywhere: the deployment under test is the real
 one. No smelt checkout needed; compose files travel with the Go import.
 
 The pattern: `make test` while iterating (seconds, no Docker), `make itest`
-when you're ready to wait for the real thing. CI does the same — unit tests
-first, integration only after they pass.
+when you're ready to wait for the real thing. CI runs this suite as its own
+job (`.github/workflows/itest.yml`), in parallel with the unit matrix.
 
 ```bash
-make itest                                                  # everything (~10 min)
-go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v          # one category
-go test -tags itest ./itest -run 'TestForgeVersity/PutObject/success' -v  # one case
+make itest                                              # everything (~10 min)
+cd itest && go test -count=1 -run 'TestForgeVersity/PutObject' -v         # one category
+cd itest && go test -count=1 -run 'TestForgeVersity/PutObject/success' -v # one case
 ```
 
 ## Hilt-era provisioning and credentials
@@ -26,10 +28,17 @@ tenant + all-permission access key through hilt's Tenant API (curl inside the
 hilt container, local-dev partner key) and returns the SigV4 credentials.
 The old `ingot login` / `ingot space generate` self-provisioning CLI is gone.
 
-The stack's service images are mutable `:main` tags that Docker never
-re-pulls — if hilt errors with "unsupported DID method in did:web" or sprue
-with "handler not found" (did:plc resolution and `/blob/list` landed on
+**Locally**, the stack's peer images are mutable `:main` tags that Docker
+never re-pulls — if hilt errors with "unsupported DID method in did:web" or
+sprue with "handler not found" (did:plc resolution and `/blob/list` landed on
 sprue main 2026-07-17), re-pull `ghcr.io/fil-forge/{hilt,sprue,...}:main`.
+That is the local default because it is fast: no image builds at all.
+
+**In CI this does not apply.** `itest.yml` builds every in-repo service from
+the commit under test and passes it through `*_IMAGE`, so a run is
+reproducible and a red means this service regressed rather than that somebody
+else merged. Whether we still work against the *deployed* network is a
+separate question, for Phase 1's compat suite.
 To run against an upload-service (sprue) image the registry doesn't have
 yet — e.g. one built from an unmerged branch — point the stack at it:
 
@@ -67,9 +76,14 @@ here and add new cases to the pass table (demote to xfail if they fail).
 
 | Test | Covers | ~time |
 |---|---|---|
-| `TestForgeScenarios` | Ingot-unique behaviors upstream can't assert, on a stack whose ingot config lowers `max_blob_size` to 64 KiB (`testdata/config-smallblob.yaml`): coarse blob-split round-trip with spooled-by-digest proof (spool counted inside the container), zero-byte objects, a multipart part spanning multiple internal blobs, abort deleting the parts' spooled blobs, and failed-Complete session recovery. | ~3 min |
+| `TestForgeScenarios` | Ingot-unique behaviors upstream can't assert, on a stack whose ingot config lowers `max_blob_size` to 64 KiB (`testdata/config-smallblob.yaml`): coarse blob-split round-trip with spooled-by-digest proof (spool counted inside the container), zero-byte objects, a multipart part spanning multiple internal blobs, parts uploaded out of order (ListParts, ETag, body and `?partNumber` follow part number, not arrival), HEAD/GET/List sizes and ETags being the plaintext values (the spooled envelopes are measured to prove the difference), abort deleting the parts' spooled blobs, and failed-Complete session recovery. | ~3 min |
 | `TestForgeNativeProvision` | Hilt onboarding end-to-end on a fresh stack: tenant + access key via hilt's Tenant API, then a PUT/GET round-trip over the real ship path. | ~1.7 min |
 | `TestForgeReadAfterEviction` | The appliance read tier: PUT, wipe `/data/spool`, GET must re-fetch body blobs from piri via the local locator + `/content/retrieve`. | ~1.3 min |
+| `TestForgeEncryption` | The end-to-end encryption suite, on a default-config stack (~254 MiB blobs, 256 KiB chunks): tampered-ciphertext rejection on whole and ranged GETs (corrupt the spooled envelope's final chunk — the failure is a mid-body stream error, headers are already out), DELETE of a multipart-created object releasing every part blob through piri, and the 5 GiB+1 `EntityTooLarge` probe (sent head-only, so the declared length is checked without a byte of payload). Also the crypto-shred assertions against ingot's Postgres: DELETE destroys every blob's region-wrap row while the spooled envelope's tenant recipient survives (`ShredThenRead`), and abort/part-supersede shred the orphaned parts' key rows (`AbortShredsKeyRows`, `SupersededPartShredsKeyRow`). `OverwriteRace` pins overwrite atomicity: concurrent GETs during an overwrite each see exactly the old or the new object, and the superseded generation's rows shred after the deferred-release grace (`release_grace`, default 60s). | ~7 min |
+| `TestForgeMultipartExpiryShred` | The abandoned-session sweeper as a full abort: a 30s `multipart_session_ttl` (`testdata/config-mpttl.yaml`, dedicated stack — the low TTL also reaps completed sessions) reaps an unfinished upload, shredding its parts' key rows, intents, and parks. | ~2 min |
+| `TestForgeMaxSizePart` | Exactly 5 GiB — the AWS-matching max part size — as one multipart part (21 internal blobs at the default `max_blob_size`): HEAD, ranged spot checks across chunk and blob boundaries, full stream-compared read-back. The end-to-end regression gate for `bucket.DefaultMaxBlobSize`'s envelope allowance under piri's 266338304-byte piece cap. **Skipped unless `INGOT_ITEST_BIG=1`**, which nothing in CI sets: ~10–15 GiB of disk churn, several minutes. | minutes (gated) |
+| `TestForgeAWSCLI` | A real, unmodified AWS CLI v2 (`amazon/aws-cli`, pinned in `forge_awscli_test.go`) round-trips a 20 MiB object with `aws s3 cp` on a default-config stack. The CLI picks multipart itself at its 8 MiB switchover and sends its default request checksums (CRC64NVME, declared on CreateMultipartUpload and carried per part); the bytes come back exact, HEAD shows a 3-part ETag and the full-object checksum. The CLI runs in its own container and reaches ingot's host-mapped port via `host.docker.internal`. | ~2 min |
+| `TestForgeS3Compat` | Runs the `cloud-portable/s3vectors` compatibility corpus (via the `alanshaw/s3tests` runner) against the stack. Reports each vector live through Go's test output (one `t.Run` subtest per vector, via the `gotest` reporter) **and** writes an HTML report from the same run. Because a failing vector is a failing subtest, the test reports FAIL when the target is incomplete — expected for ingot; the failures are the compatibility signal, and the HTML report is written regardless. **Skipped unless `INGOT_S3COMPAT=1`.** Env: `INGOT_S3COMPAT_OUT` (report path, default `itest/ingot-s3compat.html`), `INGOT_S3COMPAT_GROUPS` / `INGOT_S3COMPAT_TAGS` (restrict vectors), `INGOT_S3COMPAT_CONCURRENCY` (default 4). `$credential` vectors run against a second hilt tenant provisioned per handle (`ProvisionCredential`); ACL-grant vectors that need an S3 canonical user id still won't pass (ingot models ownership as a did:plc). | minutes (gated) |
 
 Notes:
 
@@ -79,5 +93,12 @@ Notes:
   every `smeltery-*` container, including another suite's live stack.
 - The other services run their published `:main` images — `docker pull` them
   occasionally; compose won't refresh an existing tag.
-- CI runs this suite on every PR after unit tests pass
-  (`.github/workflows/go-test.yml`, job `itest`).
+- CI runs this suite on every pull request as `itest (ingot)`
+  (`.github/workflows/itest.yml`), in parallel with the unit matrix rather
+  than gated behind it. On failure it uploads `docker ps` and container logs
+  as `itest-ingot-container-logs`; on success it uploads nothing.
+- **The S3 compatibility report is a local-only thing.** `make s3compat`
+  writes it, and no workflow generates, uploads or publishes it. Upstream
+  `fil-forge/ingot` did both from its `go-test.yml`, which the consolidation
+  dropped along with the rest of the per-service workflows; `itest.yml`
+  restores the suite but not the report. Wiring it back up is open work.

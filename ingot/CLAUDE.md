@@ -13,7 +13,7 @@ a per-bucket MST, uploads object bodies to Forge as content-addressed blobs
 before a write is acked, journals the catalog (MST nodes + manifests) to a
 local **per-bucket** log (`logstore`), and ships sealed catalog segments to
 Forge (sprue → piri) as a guppy-style edge client, with **hilt** authorizing
-every non-root request and owning tenancy. See DESIGN_NOTES for the current
+every request and owning tenancy (versitygw's root account is disabled). See DESIGN_NOTES for the current
 architecture, `docs/architecture.md` for the target, and `docs/diagrams.md`
 for the as-built diagrams.
 
@@ -29,7 +29,7 @@ make test       # unit tests: GOWORK=off go test ./... (fast, no Docker)
 make itest      # integration tests: boots the Forge stack in Docker (~6 min)
 make gen        # regenerate bucket/cbor_gen.go after changing bucket types
 GOWORK=off go vet ./...
-GOWORK=off go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v  # one S3 category
+cd itest && GOWORK=off go test -count=1 -run 'TestForgeVersity/PutObject' -v         # one S3 category
 GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 ```
 
@@ -37,12 +37,13 @@ GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 
 **The test pattern — unit first, integration when you're ready to wait.**
 `make test` runs library/unit tests in seconds with no Docker. `make itest`
-runs `itest/` (build tag `itest`): it boots the full smelt Forge stack in
-Docker, mounts THIS working tree's binary over the published ingot image, and
-validates the real network path — including the curated S3 conformance
-partition (`itest/versity_*_test.go`); see `itest/README.md`. CI mirrors the
-same ordering: the `itest` job only runs after the unit job passes
-(`.github/workflows/go-test.yml`).
+runs `itest/`, which is its own Go module rather than a build-tagged package:
+it boots the full smelt Forge stack in Docker, mounts THIS working tree's
+binary over the published ingot image, and validates the real network path —
+including the curated S3 conformance partition (`itest/versity_*_test.go`);
+see `itest/README.md`. CI runs it as `itest (ingot)` in its own workflow,
+alongside the unit matrix rather than gated behind it
+(`.github/workflows/itest.yml`).
 
 ## Dependency stack
 
@@ -116,8 +117,8 @@ Internal:
   DeleteBucket / ListBuckets to `/s3/bucket/*`, recovering the signed S3
   request from ctx.
 - **`iam/`** — the hilt IAM integration over `fil-forge/hilt/pkg/client`:
-  versitygw `IAMService`/`RequestIAMService` authorizing each non-root
-  request via `/s3/request/authorize` (derived SigV4 key, with a local fast
+  versitygw `IAMService`/`RequestIAMService` authorizing each request via
+  `/s3/request/authorize` (derived SigV4 key, with a local fast
   path over cached delegations), plus `KeyProofs`/`DelegationCache` — per-
   access-key TTL caches of hilt-issued delegations that the uploader and the
   network read tier consume via `internal/reqscope`.
@@ -149,7 +150,7 @@ Internal:
 | Contract | Production | Test |
 |---|---|---|
 | `versitygw/backend.Backend` | `s3frontend.Backend` | (same) |
-| versitygw `auth.IAMService` + `middlewares.RequestIAMService` | `iam.Service` (the root account is checked before IAM) | root account only |
+| versitygw `auth.IAMService` + `middlewares.RequestIAMService` | `iam.Service` (versitygw's root account is disabled; every key resolves here) | (same; hilt-issued credentials) |
 | `blockstore.Log` | `logstore.Manager` (one `Store` per bucket) | in-memory fake |
 | `blockstore.BlockReader` | `blockstore.Forge` (in `Cached`) | `inmem.NopBaseReader` |
 | `registry.Registry` + the store seams + `logstore.Meta` | `*registry.Postgres` (all of them) | `inmem.MemStore` |
@@ -180,8 +181,7 @@ agent) and sets `Config.UploadServiceURL`/`UploadServiceDID` (sprue) +
 ## Configuration (`config.Config`)
 
 Viper/yaml-bindable (env prefix `INGOT_`, `.` → `_`). Key fields: `Enabled`,
-`Addr` (default `0.0.0.0:8080`), `DataDir`, `Region`, `RootAccess`/`RootSecret`
-(the versitygw root account), `MaxBlobSize`, top-level
+`Addr` (default `0.0.0.0:8080`), `DataDir`, `Region`, `MaxBlobSize`, top-level
 `SealBytes`/`SealAge`/`Retain` with a `CatalogPlane` `{SealBytes, SealAge,
 Ship, Retain}` override block (the only plane), `ReadCacheBytes` (0 → 256 MiB,
 <0 → off), `UploadServiceURL`/`UploadServiceDID`/`UploadReceiptsURL` (sprue),
@@ -206,7 +206,7 @@ forge-mode daemon. Two tiers:
 - **`make test` — unit** (seconds, no Docker): library/unit tests across the
   packages, plus the thin S3-client glue in `testing/` (`Config`/`NewS3Conf`,
   roundtrip helpers).
-- **`make itest` — integration** (`itest/`, build tag `itest`, Docker):
+- **`make itest` — integration** (`itest/`, its own module, Docker):
   boots the smelt Forge stack with THIS working tree's binary mounted over
   the published image.
   - **`versity_{bucket,object,multipart,versioning}_test.go`** — the S3
@@ -221,8 +221,9 @@ forge-mode daemon. Two tiers:
   - **`forge_*_test.go`** — forge-native behaviors on dedicated stacks:
     provisioning (`forge_native`), delete/release (`forge_delete`), deferred
     multipart accept (`forge_multipart_deferred`), catalog retention
-    (`forge_retention`), and the read-after-eviction network tier
-    (`forge_eviction`).
+    (`forge_retention`), the read-after-eviction network tier
+    (`forge_eviction`), and a real `aws s3 cp` multipart round trip from the
+    official CLI image (`forge_awscli`).
 - **Suite-composition-sensitive upstream cases** — a few versitygw cases
   depend on run position rather than S3 semantics: `ListBuckets_truncated`
   names buckets from a process-global counter and asserts *creation-order*

@@ -1,5 +1,3 @@
-//go:build itest
-
 package itest
 
 import (
@@ -36,8 +34,8 @@ type forgeCase struct {
 //
 // Run one category or one case:
 //
-//	go test -tags itest ./itest -run 'TestForgeVersity/PutObject' -v
-//	go test -tags itest ./itest -run 'TestForgeVersity/PutObject/success' -v
+//	cd itest && go test -count=1 -run 'TestForgeVersity/PutObject' -v
+//	cd itest && go test -count=1 -run 'TestForgeVersity/PutObject/success' -v
 func TestForgeVersity(t *testing.T) {
 	s, endpoint := forgeStack(t)
 	accessKey, secretKey := hiltProvisionTenant(t, t.Context(), s, "versity")

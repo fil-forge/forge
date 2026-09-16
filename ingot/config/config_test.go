@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/fil-forge/forge/ingot/bucket"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"
@@ -26,8 +27,6 @@ func validConfig(t *testing.T) Config {
 	return Config{
 		Addr:              "127.0.0.1:9000",
 		DataDir:           "/data",
-		RootAccess:        "root-access",
-		RootSecret:        "root-secret",
 		PostgresDSN:       "postgres://ingot@127.0.0.1:5432/ingot",
 		Identity:          IdentityConfig{KeyFile: keyFile},
 		UploadServiceURL:  "http://127.0.0.1:8000",
@@ -95,6 +94,7 @@ func TestValidate_RequiredFields(t *testing.T) {
 		{"revocation url without did", func(c *Config) { c.RevocationServiceURL = "http://127.0.0.1:6000" }, "revocation_service_url and revocation_service_did must be set together"},
 		{"revocation did without url", func(c *Config) { c.RevocationServiceDID = "did:web:swarf.example" }, "revocation_service_url and revocation_service_did must be set together"},
 		{"bad seal_age", func(c *Config) { c.SealAge = "not-a-duration" }, "parse seal_age"},
+		{"bad release_grace", func(c *Config) { c.ReleaseGrace = "soon" }, "parse release_grace"},
 		{"bad cors origin", func(c *Config) { c.CORSAllowedOrigins = []string{"app.example"} }, "cors_allowed_origins"},
 		{"regionkey provider unset", func(c *Config) { c.RegionKey.Provider = "" }, "regionkey.provider is required"},
 		{"tenantkey url unset", func(c *Config) { c.TenantKey.PLCDirectoryURL = "" }, "tenantkey.plc_directory_url is required"},
@@ -157,6 +157,24 @@ func TestValidate_RegionKey(t *testing.T) {
 	cfg.RegionKey.Provider = "inprocess" // empty KEK: generated at startup
 	if err := cfg.Validate(); err != nil {
 		t.Fatalf("expected valid inprocess config with no KEK, got: %v", err)
+	}
+}
+
+// TestValidate_MaxBlobSize: a max_blob_size whose encrypted envelope cannot
+// ship to a default-configured piri fails at startup, not at the first PUT's
+// BlobSizeLimitExceeded. The default (and zero) pass.
+func TestValidate_MaxBlobSize(t *testing.T) {
+	cfg := validConfig(t)
+	cfg.MaxBlobSize = bucket.DefaultMaxBlobSize
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected the default max_blob_size to validate, got: %v", err)
+	}
+
+	cfg = validConfig(t)
+	cfg.MaxBlobSize = 256 << 20 // over the ceiling once the envelope framing is added
+	err := cfg.Validate()
+	if err == nil || !strings.Contains(err.Error(), "piece cap") {
+		t.Fatalf("expected a piece-cap error for a 256 MiB max_blob_size, got: %v", err)
 	}
 }
 

@@ -88,9 +88,10 @@ The design is shaped by how the Forge upload pipeline works and by a handful of 
   with no off-chain work. Removing one blob from a multi-blob aggregate has no on-chain primitive:
   the whole piece is removed, the survivors are re-hashed off-chain into a new aggregate, and that is
   re-registered. This asymmetry is why the size knobs ([§6](#6-the-forgechain-layer)) matter.
-- **The 256 MiB blob ceiling is a knob, not a wall.** Piri currently caps a blob at 256 MiB because
-  it builds the commP Merkle tree in RAM; known improvements (streaming commP) lift this. Ingot
-  treats it as a tunable maximum and splits larger objects.
+- **The blob ceiling is a knob, not a wall.** Piri currently caps a blob at 266338304 raw bytes
+  (~254 MiB — a 256 MiB padded piece minus Fr32 padding) because it builds the commP Merkle tree in
+  RAM; known improvements (streaming commP) lift this. Ingot treats it as a tunable maximum and
+  splits larger objects, defaulting just under the cap so the encryption envelope still fits.
 - **The delete primitives are built.** `/blob/remove` is handled end-to-end (Sprue forwards
   `/blob/release` to the nodes and deregisters; Piri releases the space's claim and defers physical
   deletion until the aggregate root retires on-chain via the signed `schedulePieceDeletions`
@@ -145,11 +146,15 @@ under the MST critical section, not only at read, so it is race-safe.
 **Multipart.** `CreateMultipartUpload` / `UploadPart` / `CompleteMultipartUpload` /
 `AbortMultipartUpload` are first-class. The mechanism lives in [§7](#7-cross-cutting-durability-concurrency-retrieval).
 
-**Copy.** `CopyObject` and `UploadPartCopy` are metadata-only operations under dedup: they resolve
-the source manifest, write a new version manifest pinning the **same** digest(s), and increment the
-reference index — no bytes move, no Piri upload. They honor `MetadataDirective`, cross-bucket sources
-(same space), `x-amz-copy-source-if-*`, and (for `UploadPartCopy`) a copy-source range; a multipart
-source copies its ordered part-digest list.
+**Copy.** `CopyObject` within a space is a metadata-only operation: it resolves the source manifest,
+writes a new version manifest pinning the **same** digests, and increments the reference index — no
+bytes move, no Piri upload. Across spaces (every bucket has its own, and each blob's key is wrapped
+bound to its space) the source's plaintext streams through the decrypting read path into new blobs
+under the destination's space, as a PUT of those bytes would. `UploadPartCopy` always re-ingests: the
+source's plaintext range becomes new parked blobs, exactly like an uploaded part. The source may be
+any bucket of the tenant. Both honor `x-amz-copy-source-if-*` (every failure
+a 412), require the source bucket to be the destination tenant's, and `CopyObject` honors
+`MetadataDirective`.
 
 **Multi-object delete.** `DeleteObjects` mixes delete-marker insertions and specific-version deletes
 (each driving the reference path), caps at 1000 keys, supports Quiet mode, and returns a per-entry
@@ -222,7 +227,7 @@ MST (bucket)
    each blob: its own on-chain PIECE if ≥ min, else a subroot in an aggregate
 ```
 
-*Example: a 600 MiB object split at `max_blob_size` = 256 MiB into three blobs. This is the manifest
+*Example: a 600 MiB object split at the default `max_blob_size` (~254 MiB) into three blobs. This is the manifest
 shape `bucket/manifest.go` now implements (`Body.Blobs[]`, a stored S3 `etag`, an additional-checksum
 field, and a reserved nullable `IndexRoot`); a `deleteMarker` field is reserved for versioning, which
 is deferred ([§12](#12-implementation-status--postponed-items)).*
@@ -312,8 +317,10 @@ composition (not storage — every blob is stored whole regardless):
 - **`min_aggregate_size`** — the deletion-granularity knob (today a hardcoded 128 MiB). A blob
   **≥ min** becomes its **own** on-chain piece. A blob **< min** is folded with other small blobs
   into a shared aggregate piece (built up to ~min).
-- **`max_blob_size`** — the largest blob Piri accepts (currently 256 MiB, liftable). Larger objects
-  are split into `≤ max` blobs by the data layer.
+- **`max_blob_size`** — bounded by the largest blob Piri accepts (266338304 raw bytes ≈ 254 MiB —
+  127/128 of its 256 MiB padded memtree ceiling — liftable). Ingot's default sits an envelope
+  allowance under it (`bucket.DefaultMaxBlobSize`); larger objects are split into `≤ max` blobs by
+  the data layer.
 
 `min` is the central lever because on-chain cost is **count-driven, not size-driven** (pdp-sim). A
 small `min` means most objects are their own piece, so most deletes are O(1) (below); the price is
@@ -452,7 +459,7 @@ a walk over sub-blocks.
 The only serialized work is the commit critical section, and under versioning two writes to the same
 key produce distinct versionIds — they contend only on the guarded root swap, which retries cheaply.
 Across processes, the swap (a Postgres conditional update) is the cross-instance guard; `blob_refs`
-updates are transactional with the commit.
+updates land after the commit, best-effort — not inside the transaction.
 
 | Case | Handling |
 |---|---|
@@ -641,6 +648,7 @@ CREATE TABLE ingot.buckets (
     forge_root_cid   bytea,                              -- MST root durable on Forge (lags root_cid)
     created_at       timestamptz NOT NULL DEFAULT now(),
     space            text NOT NULL,                      -- Forge space DID (minted by Hilt)
+    tenant           text NOT NULL,                      -- owning tenant DID; copy paths refuse a foreign source
     versioning       text NOT NULL DEFAULT 'unversioned'
                          CHECK (versioning IN ('unversioned','enabled','suspended')),
     next_version_seq bigint NOT NULL DEFAULT 0           -- per-bucket version ordinal (§3)
@@ -882,9 +890,9 @@ paths below are exercised against the real stack by the smelt-based `itest/` har
 - **Crash recovery for the spool is not built.** The `upload_intents` × `blob_refs` reconciliation
   the failure-mode table in [§7.5](#75-concurrency-durability-and-failure-modes) describes (resume/`abort` parked, `remove` accepted-but-unreferenced)
   is a later phase; a partial post-commit reference-index write currently relies on retry/idempotency.
-- **`UploadPartCopy` and indexer retraction on delete** are unimplemented
-  (`ErrNotImplemented` / no-op). `ListParts` and `ListMultipartUploads` are implemented
-  (paginated, prefix/delimiter/marker semantics; in-flight sessions only).
+- **Indexer retraction on delete** is unimplemented (no-op). `ListParts` and
+  `ListMultipartUploads` are implemented (paginated, prefix/delimiter/marker semantics;
+  in-flight sessions only).
 - **Multipart hygiene (spool-model edition).** Abort and part re-upload delete the
   now-unreferenced spooled blobs (guarded against content-addressed sharing with other
   sessions and committed objects), and a background sweeper aborts open sessions older

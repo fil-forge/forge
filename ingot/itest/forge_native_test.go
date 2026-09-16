@@ -1,5 +1,3 @@
-//go:build itest
-
 package itest
 
 import (
@@ -7,9 +5,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"github.com/filecoin-project/go-fee/cose"
 
@@ -25,7 +26,7 @@ import (
 // (This replaced the retired `ingot login` + `ingot space generate`
 // self-provisioning flow when hilt took ownership of tenancy.)
 //
-//	go test -tags itest ./itest -run TestForgeNativeProvision -v -timeout 900s
+//	cd itest && go test -count=1 -run TestForgeNativeProvision -v -timeout 900s
 func TestForgeNativeProvision(t *testing.T) {
 	ctx := t.Context()
 
@@ -70,6 +71,39 @@ func TestForgeNativeProvision(t *testing.T) {
 		t.Fatalf("envelope recipient kid = %q, want the tenant's active wrap key %q", kid, wantKID)
 	}
 	t.Logf("stored envelope carries the tenant recipient %s", wantKID)
+
+	// 4. A second tenant cannot use the first tenant's bucket as a copy
+	// source, nor reach it directly: hilt refuses another tenant's bucket as
+	// AccessDenied on both paths (S3's answer for another account's bucket),
+	// and ingot's own tenant comparison on the bucket rows backs the copy
+	// path up. A bucket that exists nowhere is still NoSuchBucket.
+	accessKeyB, secretKeyB := hiltProvisionTenant(t, ctx, s, "native-b")
+	clientB := bigObjectClient(t, ingotEndpoint, accessKeyB, secretKeyB)
+	const bucketB = "native-provision-b"
+	if _, err := clientB.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(bucketB)}); err != nil {
+		t.Fatalf("tenant B create bucket: %v", err)
+	}
+	copyInto := func(source string) error {
+		_, err := clientB.CopyObject(ctx, &s3.CopyObjectInput{
+			Bucket: aws.String(bucketB), Key: aws.String("copied"), CopySource: aws.String(source),
+		})
+		return err
+	}
+	if code, status := apiErrorOf(t, copyInto(bucket+"/"+key)); code != "AccessDenied" || status != http.StatusForbidden {
+		t.Fatalf("cross-tenant copy of an existing key: %s/%d, want AccessDenied/403", code, status)
+	}
+	if code, status := apiErrorOf(t, copyInto(bucket+"/no-such-key")); code != "AccessDenied" || status != http.StatusForbidden {
+		t.Fatalf("cross-tenant copy of a missing key: %s/%d, want AccessDenied/403 (key existence must not leak)", code, status)
+	}
+	if code, status := apiErrorOf(t, copyInto("native-provision-nowhere/"+key)); code != "NoSuchBucket" || status != http.StatusNotFound {
+		t.Fatalf("copy from a nonexistent bucket: %s/%d, want NoSuchBucket/404", code, status)
+	}
+	if _, err := clientB.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(bucket)}); err == nil {
+		t.Fatalf("tenant B could HEAD tenant A's bucket %q", bucket)
+	} else if _, status := apiErrorOf(t, err); status != http.StatusForbidden {
+		t.Fatalf("tenant B HEAD of tenant A's bucket: status %d, want 403", status)
+	}
+	t.Logf("cross-tenant copy source refused")
 }
 
 // hiltActiveWrapKID reads the active wrap-key fingerprint hilt registered for

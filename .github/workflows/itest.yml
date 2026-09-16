@@ -1,0 +1,160 @@
+name: itest
+
+# Runs hilt's and ingot's integration suites, which boot the Forge stack in
+# Docker through smelt and drive the service under test through it.
+#
+# They existed before this workflow and were never run. ci.yml compiled them
+# behind the `itest` build tag and discarded the result -- its own comment said
+# so -- which meant a suite could rot for weeks without anything going red. Each
+# is now its own Go module, so it gets a job instead of a build tag.
+#
+# What a run actually proves is worth naming, because it is not what e2e.yml
+# proves. Each suite compiles the working tree's service to a static binary,
+# mounts it over that service's published image, and takes every *other*
+# service from the registry -- which is what stack.WithPublishedImages() states.
+# So this is HEAD-of-one-service against the published network: a compatibility
+# check. e2e.yml is the whole-stack check, where every in-repo image is built
+# from the commit under test.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # See ci.yml: the default comma separator falls back to the origin only on
+  # 404/410, so a dropped proxy stream fails the job outright.
+  GOPROXY: "https://proxy.golang.org|direct"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  itest:
+    strategy:
+      fail-fast: false
+      # One suite per runner, and it must stay that way: each TestMain calls
+      # stack.CleanupLeaked, which removes every container and volume whose
+      # compose project starts `smeltery-` -- including another suite's live
+      # ones. pkg/stack/cleanup.go says as much ("For single-suite test
+      # machines this is safe"). A matrix gives each job its own Docker host;
+      # folding these into one job would have them tear each other down.
+      matrix:
+        service: [hilt, ingot]
+    name: itest ${{ matrix.service }}
+    # Pinned rather than -latest so the Docker version cannot drift underneath
+    # the harness, which requires 25+. Same reason as e2e.yml.
+    runs-on: ubuntu-24.04
+    # 45, not 30, because this job now builds six images before it tests: the
+    # hilt suite went 1m50s -> 8m12s on that step alone, so ingot's ~21m30s
+    # run lands near 28m and 30 left about two minutes of margin. The Go
+    # timeout below stays 25m and still fires first on a hang, which is the
+    # point of the ordering -- it dumps goroutines, where a runner kill gives
+    # nothing. Upstream runs 60 for a suite that also does the 5 GiB case.
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}/itest
+    env:
+      # Each itest module resolves its service and smelt through its own
+      # `replace`, so it stands alone exactly as ci.yml requires of every other
+      # module -- and so the binary it builds is the one the Dockerfile would.
+      GOWORK: "off"
+      # Consumed by pkg/stack.OptionsFromEnv, which the suites append after
+      # WithPublishedImages so these win. Every one is built by the step below.
+      #
+      # The suite's subject is one service's own contract; the rest of the
+      # stack is scaffolding. Scaffolding on a mutable tag makes a red
+      # ambiguous -- it happened, and it cost an investigation to establish
+      # that nothing in the tree had changed and hilt:main had moved instead.
+      # Whether we still work against what is *deployed* is a real question,
+      # but a different one, and Phase 1's compat suite is where it belongs.
+      PIRI_IMAGE: forge/piri:head
+      HILT_IMAGE: forge/hilt:head
+      INGOT_IMAGE: forge/ingot:head
+      UPLOAD_IMAGE: forge/sprue:head
+      DELEGATOR_IMAGE: forge/delegator:head
+      SIGNER_IMAGE: forge/piri-signing-service:head
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.service }}/itest/go.mod
+          cache-dependency-path: ${{ matrix.service }}/itest/go.sum
+
+      - name: download modules
+        run: $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod download
+      - name: vet
+        run: go vet ./...
+      - name: tidy (no diff)
+        run: |
+          $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: docker version
+        run: |
+          docker version
+          docker compose version
+
+      - name: build service images from HEAD
+        working-directory: .
+        # Same build lines as e2e.yml -- a service builds with the repository
+        # root as context when its go.mod carries a `replace => ../<svc>`, and
+        # with its own directory otherwise. ~2.5 min for the matrix there.
+        #
+        # The service under test keeps its bind-mounted binary as well
+        # (WithServiceBinary in stack_test.go): same code either way, and it
+        # is what makes a local `make itest` fast, with no image build at all.
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: |
+          set -euo pipefail
+          build() {
+            echo "::group::build $1"
+            docker build -f "$1/Dockerfile" --target prod -t "forge/$1:head" "$2"
+            echo "::endgroup::"
+          }
+          build piri .
+          build hilt hilt
+          build ingot .
+          build sprue sprue
+          build delegator delegator
+          build piri-signing-service piri-signing-service
+          docker image ls --filter 'reference=forge/*:head'
+
+      # -count=1 is load-bearing, not a style choice. setup-go restores GOCACHE,
+      # which holds Go's test-result cache, and a suite whose inputs are
+      # unchanged gets replayed from it -- `ok ... (cached)` in 26 seconds,
+      # without booting anything. The stack is external state Go cannot see, so
+      # a cached pass says nothing about whether it still works. This is the
+      # silent green this workflow exists to remove; it was here on day one.
+      #
+      # Never retried, deliberately: a retry here would mask a flaky suite,
+      # which is the one thing this job exists to see.
+      - name: itest
+        run: go test -count=1 -v -timeout 25m ./...
+
+      - name: dump container state on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/container-logs
+          {
+            echo "=== docker ps -a ==="; docker ps -a
+            echo; echo "=== docker volume ls ==="; docker volume ls
+          } | tee /tmp/container-logs/_overview.txt
+          for c in $(docker ps -aq); do
+            echo "::group::$c"
+            docker logs "$c" 2>&1 | tail -200 | tee "/tmp/container-logs/$c.log"
+            echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: itest-${{ matrix.service }}-container-logs
+          path: /tmp/container-logs
+          retention-days: 7

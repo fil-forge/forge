@@ -66,8 +66,9 @@ func (b *Backend) ListBuckets(ctx context.Context, input s3response.ListBucketsI
 // BackendUnsupported default (ErrNotImplemented) propagates as
 // "header you provided implies functionality that is not implemented"
 // for *every* PUT/GET/DELETE. Returning empty bytes for a known
-// bucket lets ParseACL produce ACL{}, after which the middleware
-// substitutes the configured root access key as the owner.
+// bucket lets ParseACL produce ACL{} with an empty owner (no root
+// account is configured to substitute), so the ACL layer has nothing to
+// deny on and hilt's per-request authorization stands alone.
 func (b *Backend) GetBucketAcl(ctx context.Context, input *s3.GetBucketAclInput) ([]byte, error) {
 	if input.Bucket == nil {
 		return nil, s3err.GetAPIError(s3err.ErrInvalidBucketName)
@@ -154,11 +155,11 @@ func (b *Backend) PutObjectLockConfiguration(ctx context.Context, bucket string,
 	return nil
 }
 
-// GetBucketPolicy is called from auth.VerifyAccess (access-control.go:103)
-// for non-root requests and from auth.VerifyPublicAccess for anonymous
-// ones. Authenticated root requests short-circuit before this is hit
-// today, but stubbing it now keeps non-root authz paths from tripping
-// the same NotImplemented trap.
+// GetBucketPolicy is called from auth.VerifyAccess (access-control.go)
+// for authenticated accounts below the admin role and from
+// auth.VerifyPublicAccess for anonymous ones. Hilt-authorized accounts
+// carry the admin role and short-circuit before this is hit, but stubbing
+// it keeps the anonymous path from tripping the same NotImplemented trap.
 func (b *Backend) GetBucketPolicy(ctx context.Context, bucket string) ([]byte, error) {
 	if _, err := b.reg.Get(ctx, bucket); err != nil {
 		if errors.Is(err, registry.ErrNotFound) {
@@ -240,6 +241,23 @@ func (b *Backend) HeadBucket(ctx context.Context, input *s3.HeadBucketInput) (*s
 	return &s3.HeadBucketOutput{}, nil
 }
 
+// unsupportedBucketACL reports whether the request asks for a bucket ACL ingot
+// cannot honor: any canned ACL other than the default "private", or any grant
+// header. An absent canned ACL (the default) and an explicit "private" pass.
+// The controller forwards these from the x-amz-acl / x-amz-grant-* headers.
+func unsupportedBucketACL(input *s3.CreateBucketInput) bool {
+	if input.ACL != "" && input.ACL != types.BucketCannedACLPrivate {
+		return true
+	}
+	return grantSet(input.GrantFullControl) ||
+		grantSet(input.GrantRead) ||
+		grantSet(input.GrantReadACP) ||
+		grantSet(input.GrantWrite) ||
+		grantSet(input.GrantWriteACP)
+}
+
+func grantSet(g *string) bool { return g != nil && *g != "" }
+
 func (b *Backend) CreateBucket(ctx context.Context, input *s3.CreateBucketInput, _ []byte) error {
 	if input.Bucket == nil {
 		return s3err.GetAPIError(s3err.ErrInvalidBucketName)
@@ -251,6 +269,12 @@ func (b *Backend) CreateBucket(ctx context.Context, input *s3.CreateBucketInput,
 	name := strings.Clone(*input.Bucket)
 	if !validBucketName(name) {
 		return s3err.GetAPIError(s3err.ErrInvalidBucketName)
+	}
+	// ingot does not model ACLs, so the only bucket ACL it accepts is the
+	// default: no ACL header, or a "private" canned ACL. Any other canned ACL,
+	// or an explicit grant header, asks for functionality we do not implement.
+	if unsupportedBucketACL(input) {
+		return s3err.GetAPIError(s3err.ErrNotImplemented)
 	}
 	// x-amz-bucket-object-lock-enabled: the bucket is born versioned and
 	// locked in one Create, so there is no window in which it exists
@@ -269,8 +293,20 @@ func (b *Backend) CreateBucket(ctx context.Context, input *s3.CreateBucketInput,
 	if !ok {
 		return errors.New("s3frontend: create bucket: no request in context")
 	}
+	// The owning tenant is the caller's: iam stashes it from hilt's authorize
+	// response on every request, and the same access key is about to create
+	// the bucket through hilt. (hilt's create reply does not carry the
+	// tenant.)
+	tenant, ok := reqscope.Tenant(ctx)
+	if !ok {
+		return errors.New("s3frontend: create bucket: no tenant in context")
+	}
+	init.Tenant = tenant
 	id, err := b.authority.CreateBucket(ctx, req)
 	if err != nil {
+		if errors.Is(err, bucketauthority.ErrAlreadyOwned) {
+			return s3err.GetAPIError(s3err.ErrBucketAlreadyOwnedByYou)
+		}
 		if errors.Is(err, bucketauthority.ErrExists) {
 			return s3err.GetAPIError(s3err.ErrBucketAlreadyExists)
 		}
@@ -373,6 +409,15 @@ func (b *Backend) DeleteBucket(ctx context.Context, name string) error {
 			}
 		}
 
+		// Deleted objects' blobs may still be registered in the space: their
+		// releases sit in the deferred queue behind the reader grace, and
+		// hilt refuses to delete a space that still holds registrations.
+		// The bucket is provably empty here and its deletion explicit, so
+		// no grace is owed — execute the space's pending releases now.
+		if err := b.drainSpaceReleases(ctx, st.Space); err != nil {
+			return fmt.Errorf("s3frontend: delete bucket: %w", err)
+		}
+
 		req, ok := reqscope.Request(ctx)
 		if !ok {
 			return errors.New("s3frontend: delete bucket: no request in context")
@@ -410,23 +455,71 @@ func (b *Backend) DeleteBucket(ctx context.Context, name string) error {
 	})
 }
 
-// validBucketName mirrors the rules from the prior bucket.Service:
-// 3-63 chars, lowercase letters, digits, dots, dashes; cannot begin
-// with a dot or dash. This is the S3 DNS-compliant subset.
+// validBucketName enforces AWS's general-purpose bucket naming rules
+// (https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html):
+// 3-63 characters; only lowercase letters, digits, dots and hyphens; must
+// begin and end with a letter or digit; no consecutive dots and no dot
+// adjacent to a hyphen (every dot-separated label begins and ends
+// alphanumeric); not formatted as an IPv4 address; and none of the reserved
+// prefixes/suffixes. A false result maps to S3 InvalidBucketName.
 func validBucketName(s string) bool {
 	if len(s) < 3 || len(s) > 63 {
 		return false
 	}
+	// Reserved prefixes and suffixes (AWS).
+	if strings.HasPrefix(s, "xn--") || strings.HasPrefix(s, "sthree-") {
+		return false
+	}
+	if strings.HasSuffix(s, "-s3alias") || strings.HasSuffix(s, "--ol-s3") {
+		return false
+	}
+	last := len(s) - 1
 	for i, r := range s {
 		switch {
-		case r >= 'a' && r <= 'z':
-		case r >= '0' && r <= '9':
-		case r == '-' || r == '.':
-			if i == 0 {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			// alphanumeric always allowed
+		case r == '-':
+			// hyphen may not be first or last, nor adjacent to a dot
+			if i == 0 || i == last || s[i-1] == '.' || s[i+1] == '.' {
+				return false
+			}
+		case r == '.':
+			// dot may not be first or last, nor adjacent to a dot or hyphen
+			if i == 0 || i == last {
+				return false
+			}
+			if next := s[i+1]; next == '.' || next == '-' {
+				return false
+			}
+			if prev := s[i-1]; prev == '-' {
 				return false
 			}
 		default:
 			return false
+		}
+	}
+	// Must not be formatted as an IPv4 address (e.g. 192.168.1.1).
+	if isIPv4(s) {
+		return false
+	}
+	return true
+}
+
+// isIPv4 reports whether s is four dot-separated groups of 1-3 digits — the
+// IP-address form S3 forbids as a bucket name.
+func isIPv4(s string) bool {
+	parts := strings.Split(s, ".")
+	if len(parts) != 4 {
+		return false
+	}
+	for _, p := range parts {
+		if len(p) < 1 || len(p) > 3 {
+			return false
+		}
+		for _, r := range p {
+			if r < '0' || r > '9' {
+				return false
+			}
 		}
 	}
 	return true
