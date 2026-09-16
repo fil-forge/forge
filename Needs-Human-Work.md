@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 14:40Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 14:30Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,7 +15,7 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | Head `3caffaa6`. #6 moved `main` under it; **rebuilt** onto the new base per rule 7 (the earlier merge-of-main is gone). Tree is identical to the head that went 17/17, CI re-running. |
+| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | **17/17 green at `da699f7a`.** Rebuilt onto the new base per rule 7 after #6 moved `main` under it, plus one commit adding `MAJOR_DECISIONS.md`. Blocked on review alone. |
 | 2 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
 
 #3's rebuild, verified twice: `git subtree add -P swarf c43af97be79883bd74b20a1df2dab46e09605b0a`

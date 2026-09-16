@@ -211,6 +211,12 @@ project. We build from source and publish
   ours is not a reckless trim of theirs, it is a budget for a smaller
   workload. The two questions are one question: wiring that test in needs the
   larger budget *and* upstream's "Free runner disk space" step.
+
+  **Correction.** On two runs (21m04s, then 21m24s) this was written up as
+  narrowing, and upgraded from "watch" to "decide". A third says otherwise:
+  21m11s. Mean ~21m13s, spread 20 seconds — variance, not drift. Two points
+  were never enough to have a direction, and reading one into them was wrong.
+  Back to: revisit on the first red, which will name itself.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
