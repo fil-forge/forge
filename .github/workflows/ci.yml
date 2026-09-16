@@ -45,17 +45,16 @@ jobs:
           cache-dependency-path: smelt/go.sum
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
-      # go vet does not check formatting, so nothing else here would.
       - name: gofmt
         run: |
-          unformatted=$(gofmt -l .)
+          unformatted=$(gofmt -s -l .)
           if [ -n "$unformatted" ]; then
-            echo "::error::these files are not gofmt-clean:"
+            echo "::error::these files are not gofmt -s clean:"
             echo "$unformatted" | sed 's/^/  /'
-            echo "Run: gofmt -l . | xargs gofmt -w"
+            echo "Run: gofmt -s -l . | xargs gofmt -s -w"
             exit 1
           fi
-          echo "All Go files are gofmt-clean."
+          echo "All Go files are gofmt -s clean."
 
   unit:
     strategy:
@@ -108,6 +107,15 @@ jobs:
         run: go build ${{ matrix.build_flags }} ./...
       - name: vet
         run: go vet ${{ matrix.build_flags }} ./...
+      # staticcheck pins go1.26.x in its own go.mod, and `go install` honours
+      # the *target* module's toolchain -- so a plain install builds it with
+      # 1.26, which then cannot read a go 1.27.0 module. Build it with the
+      # version go.work declares.
+      - name: staticcheck
+        run: |
+          GOTOOLCHAIN=go$(awk '/^go /{print $2; exit}' "$GITHUB_WORKSPACE/go.work") \
+            go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          staticcheck ${{ matrix.build_flags }} ./...
       # tidy is retried separately: it walks the test dependencies of
       # dependencies, which `go mod download` does not fetch, so it can still
       # reach the network after the step above. That is how smelt failed.
@@ -115,8 +123,13 @@ jobs:
         run: |
           $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod tidy
           git diff --exit-code -- go.mod go.sum
+      # -race and -shuffle=on, both of which each service's own CI ran.
+      # -race requires cgo, so CGO_ENABLED is 1 here regardless of the
+      # matrix's value for the build steps above.
       - name: test
-        run: go test ${{ matrix.build_flags }} ./...
+        env:
+          CGO_ENABLED: "1"
+        run: go test ${{ matrix.build_flags }} -race -shuffle=on ./...
       # Tag-gated packages are invisible to every step above, so a broken
       # import path in them stays green until someone runs the suite by hand.
       # Compiling them (not running them — they need Docker and a live stack)
