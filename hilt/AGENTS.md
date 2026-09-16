@@ -8,9 +8,12 @@ them. It exposes two APIs and talks to one external service:
   access keys, guarded by a pre-shared partner key.
 - **Hilt UCAN RPC API** (`pkg/rpc`, ucantone server mounted at `POST /`) — the
   `/s3/*` commands Ingot (the S3 gateway) invokes: `/s3/request/authorize`,
-  `/s3/bucket/{create,delete,info,list}`.
+  `/s3/bucket/{create,delete,info,list}`; and the self-issued admin commands
+  `/admin/provider/{add,list}` and `/admin/provider/nodes/set` (`hilt client admin`).
 - **Sprue** (the Forge upload service) — Hilt calls it to provision/inspect a
-  bucket's storage space (`pkg/client`).
+  bucket's storage space and to manage routing policies (`pkg/client`): each
+  provider owns a policy whose candidates are its storage nodes, and every
+  bucket's space is pointed at its provider's policy on creation.
 
 Module: `github.com/fil-forge/hilt` (Go 1.27). Sibling repos it builds on:
 `ucantone` (UCAN primitives: `did`, `multikey`, `ucan/delegation`, `binding`,
@@ -87,9 +90,12 @@ and `sprue` (the upload service; mirror its patterns where relevant).
   not hand-write command strings with `command.MustParse`.
 - **Authorization**: signature-bearing S3 commands authenticate via the
   `auth.Authorizer` service (SigV4/SigV4a verify + time bounds + issuer == tenant's
-  provider + region served by that provider). Command-specific S3-permission checks
-  stay in each handler. `/s3/bucket/info` is an unauthenticated lookup (no signed
-  request).
+  provider + region served by that provider), which also classifies the operation
+  and resolves every bucket it addresses within the tenant and the key's scope. A
+  copy (`x-amz-copy-source` on a PUT) is two decisions: the write on the
+  destination and `s3:GetObject` on the source, and the header must be a signed
+  header. Command-specific S3-permission checks stay in each handler.
+  `/s3/bucket/info` is an unauthenticated lookup (no signed request).
 - **Identities & keys**: tenants are secp256k1 → did:plc; access keys and buckets
   are ed25519 → did:key. Build issuers with `multikey.NewIssuer(did, signer)`. Bucket
   keys are **ephemeral** — used once to sign the bucket→tenant root delegation, then

@@ -35,7 +35,9 @@ import (
 type AuthorizedRequest struct {
 	AccessKey accesskey.Record
 	Tenant    tenant.Record
-	Region    string
+	// Provider is the tenant's regional provider, confirmed to serve Region.
+	Provider provider.Record
+	Region   string
 	// Operation is the S3 operation the (signature-verified) request performs. The
 	// access key is confirmed to hold its permission; handlers check it matches the
 	// operation they serve.
@@ -46,6 +48,13 @@ type AuthorizedRequest struct {
 	// on an existing bucket. It is confirmed to belong to the tenant and to be
 	// within the access key's bucket scope. Nil for ListBuckets and CreateBucket.
 	Bucket *bucket.Record
+	// SourceBucketName and SourceBucket are the copy source's bucket, for the copy
+	// operations (Operation.CopiesSource()): resolved, tenant-checked and
+	// scope-checked like Bucket, with the access key confirmed to hold
+	// SourcePermission. Empty and nil for every other operation. SourceBucket is
+	// Bucket itself when the copy stays within one bucket.
+	SourceBucketName string
+	SourceBucket     *bucket.Record
 	// Signed is the parsed, verified request signature. Handlers use it to derive
 	// the verification key and to inspect the requested action.
 	Signed *sigv4.SignedRequest
@@ -166,7 +175,7 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	}
 
 	// The request must be scoped to a region served by the tenant's provider.
-	region, err := validateRegion(ctx, a.providers, sr.Regions, tenantRec.Provider)
+	prov, region, err := validateRegion(ctx, a.providers, sr.Regions, tenantRec.Provider)
 	if err != nil {
 		log.Debug("rejecting request region", zap.Error(err))
 		return nil, err
@@ -176,11 +185,12 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	// Determine the S3 operation the (verified) request performs and confirm the
 	// access key is permitted to perform it. The operation is returned so the
 	// handler can check it matches the operation it serves.
-	op, bucketName, _, err := classifyRequest(req)
+	c, err := classifyRequest(req)
 	if err != nil {
 		log.Debug("rejecting unsupported operation", zap.Error(err))
 		return nil, ErrUnsupportedOperation
 	}
+	op, bucketName := c.op, c.bucket
 	if !slices.Contains(akRec.Permissions, op.Permission()) {
 		log.Debug("rejecting operation the access key lacks permission for", zap.Stringer("operation", op))
 		return nil, ErrOperationNotPermitted
@@ -190,31 +200,70 @@ func (a *Authorizer) Authorize(ctx context.Context, issuer did.DID, req s3.Reque
 	// confirm it is within the access key's bucket scope (empty scope = all buckets).
 	var resolved *bucket.Record
 	if op.addressesExistingBucket() {
-		b, err := a.buckets.GetByName(ctx, bucketName)
-		if errors.Is(err, store.ErrRecordNotFound) || (err == nil && b.Tenant != tenantRec.ID) {
-			log.Debug("rejecting unknown bucket", zap.String("bucket", bucketName))
-			return nil, ErrUnknownBucket
-		} else if err != nil {
-			log.Error("looking up bucket", zap.Error(err))
-			return nil, fmt.Errorf("looking up bucket: %w", err)
+		if resolved, err = a.resolveBucket(ctx, log, akRec, tenantRec, bucketName); err != nil {
+			return nil, err
 		}
-		if len(akRec.Buckets) > 0 && !slices.Contains(akRec.Buckets, b.ID) {
-			log.Debug("rejecting bucket the access key is not scoped to", zap.String("bucket", bucketName))
-			return nil, ErrBucketNotPermitted
+	}
+
+	// A copy also reads its source: the header naming it must be covered by the
+	// signature (the path is always signed; a header only when listed), the key
+	// must hold the read permission, and the source bucket resolves under the
+	// same tenant and scope rules as the destination.
+	var source *bucket.Record
+	if op.CopiesSource() {
+		if !sr.HeaderSigned(copySourceHeader) {
+			log.Debug("rejecting copy whose source header is not signed", zap.Stringer("operation", op))
+			return nil, ErrUnsignedCopySource
 		}
-		resolved = &b
+		if !slices.Contains(akRec.Permissions, SourcePermission) {
+			log.Debug("rejecting copy by a key lacking the source permission", zap.Stringer("operation", op))
+			return nil, ErrOperationNotPermitted
+		}
+		if c.srcBucket == bucketName {
+			source = resolved
+		} else if source, err = a.resolveBucket(ctx, log, akRec, tenantRec, c.srcBucket); err != nil {
+			return nil, err
+		}
 	}
 
 	log.Debug("request authorized", zap.Stringer("operation", op))
 	return &AuthorizedRequest{
-		AccessKey:  akRec,
-		Tenant:     tenantRec,
-		Region:     region,
-		Operation:  op,
-		BucketName: bucketName,
-		Bucket:     resolved,
-		Signed:     sr,
+		AccessKey:        akRec,
+		Tenant:           tenantRec,
+		Provider:         prov,
+		Region:           region,
+		Operation:        op,
+		BucketName:       bucketName,
+		Bucket:           resolved,
+		SourceBucketName: c.srcBucket,
+		SourceBucket:     source,
+		Signed:           sr,
 	}, nil
+}
+
+// resolveBucket looks up an existing bucket the request addresses and confirms
+// it belongs to the caller's tenant and lies within the access key's bucket
+// scope (an empty scope admits every bucket). A missing bucket and a bucket of
+// another tenant are distinct rejections: names are global, so S3 answers the
+// latter with AccessDenied, and the gateway needs to tell them apart.
+func (a *Authorizer) resolveBucket(ctx context.Context, log *zap.Logger, akRec accesskey.Record, tenantRec tenant.Record, name string) (*bucket.Record, error) {
+	b, err := a.buckets.GetByName(ctx, name)
+	if errors.Is(err, store.ErrRecordNotFound) {
+		log.Debug("rejecting unknown bucket", zap.String("bucket", name))
+		return nil, ErrUnknownBucket
+	} else if err != nil {
+		log.Error("looking up bucket", zap.Error(err))
+		return nil, fmt.Errorf("looking up bucket: %w", err)
+	}
+	if b.Tenant != tenantRec.ID {
+		log.Debug("rejecting another tenant's bucket", zap.String("bucket", name))
+		return nil, ErrForeignBucket
+	}
+	if len(akRec.Buckets) > 0 && !slices.Contains(akRec.Buckets, b.ID) {
+		log.Debug("rejecting bucket the access key is not scoped to", zap.String("bucket", name))
+		return nil, ErrBucketNotPermitted
+	}
+	return &b, nil
 }
 
 // TenantIssuer loads the tenant's secp256k1 signing key from the vault and
@@ -256,19 +305,19 @@ func EncodeSecret(signer multikey.Signer) (string, error) {
 }
 
 // validateRegion confirms the tenant's provider serves one of the regions the
-// request is scoped to, returning the matched region.
-func validateRegion(ctx context.Context, providers provider.Store, regions []string, tenantProvider did.DID) (string, error) {
+// request is scoped to, returning the provider record and the matched region.
+func validateRegion(ctx context.Context, providers provider.Store, regions []string, tenantProvider did.DID) (provider.Record, string, error) {
 	for _, r := range regions {
 		prov, err := providers.GetByRegion(ctx, r)
 		if errors.Is(err, store.ErrRecordNotFound) {
 			continue // no provider serves this region
 		}
 		if err != nil {
-			return "", fmt.Errorf("looking up provider for region %q: %w", r, err)
+			return provider.Record{}, "", fmt.Errorf("looking up provider for region %q: %w", r, err)
 		}
 		if prov.ID == tenantProvider {
-			return r, nil
+			return prov, r, nil
 		}
 	}
-	return "", ErrRegionNotServed
+	return provider.Record{}, "", ErrRegionNotServed
 }
