@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-14.** Replace this page as things change; do not
+**Snapshot as of 2026-09-16 16:00Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -118,73 +118,56 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-Four guards now run in `ci.yml`: `check-replaces.sh`,
-`check-image-lists.sh`, `check-setup-go-cache.sh` and
-`check-dockerfile-retry.sh` — each written after a defect that CI could not
-see.
+**`main` is at `c6a7ebdc`.** Phase 0 complete and then some: 7 services
+subtree-merged with history, module paths rewritten, `go.work`, per-module CI,
+library pins unified, every subtree resynced to its upstream head, 18 images
+pinned by digest, and the stack booting in CI from images built at HEAD.
 
-**`forge-2` `main` is at `046807f`** — Phase 0 complete: 7 services
-subtree-merged with history, module paths rewritten, `go.work`, per-module
-CI, library pins unified.
+Merged since the last snapshot: **#1** (stack from HEAD images), **#5** (the
+six-subtree resync, into #4's branch), **#6** (image pins + `renovate.json`),
+**#7** (`MONOREPO_TODO.md`). **#2** was closed unmerged — guppy is being
+archived, so its tag cannot move under us in the window that mattered.
 
-Two open PRs, **both green on `ci` / `images` / `e2e`, neither merged**.
-#3 stacks on #1:
+Two open, as a stack:
 
 | PR | branch | what |
 |---|---|---|
-| [#1](https://github.com/fil-forge/forge-2/pull/1) | `claude/images-from-head` | stack runs on images built from HEAD, not the polyrepos' daily builds; fixes 2 Dockerfiles unbuildable since consolidation; minio repoint; restores the Go module cache, which had never worked |
-| [#3](https://github.com/fil-forge/forge-2/pull/3) | `claude/bring-in-swarf` | swarf subtree-merged — the 8th module |
+| [#4](https://github.com/fil-forge/forge-2/pull/4) | `claude/itest-modules` | each `itest/` its own module and actually run in CI; carries #5's resync; `itest` peers now built from HEAD; `MAJOR_DECISIONS.md` |
+| [#3](https://github.com/fil-forge/forge-2/pull/3) | `claude/bring-in-swarf` | swarf as the 8th module, stacked on #4 |
 
-#3 is rebased onto #1 (rule 6) rather than carrying merges from it.
+#3 is **rebuilt** onto #4 rather than merging it (rule 7), and has been twice
+now — each #4 push costs a #3 rebuild, which is the price of the stack.
 
-**#2 (pin guppy by digest) was closed unmerged.** guppy is being dismantled
-and archived and the remaining phases are expected to complete within the
-week, so the tag cannot move under us in that window. Two claims on it were
-also wrong on inspection: the reviewer's warning that registry pruning would
-break the pin (no cleanup action, no retention pattern across the org), and
-the PR's own "republished on every push to main — 39 in 90 days". guppy's
-dependabot auto-merges use `secrets.GITHUB_TOKEN`, which does not trigger
-workflow runs, so those commits publish nothing: `:main-dev` last moved
-2026-08-21. A side effect, left alone deliberately: `ghcr.io/fil-forge/guppy:main`
-does not reflect guppy's `main`.
+**One interaction to watch.** #4 narrows hilt's Docker context to `hilt/`
+because its only sibling dependency was test-only. #3 gives hilt a *linked*
+dependency on swarf, widening it back to the repository root — hilt plus
+swarf, and still not smelt. #4's own "2.1 MB" figure is true of #4 and does
+not survive #3.
 
-**Every CI red so far was one external fault.** Seven `proxy.golang.org`
-`INTERNAL_ERROR` stream drops, across build, `go mod tidy` and test-compile —
-no code failure among them. #1 now sets `cache-dependency-path` (the cache had
-silently never been on) and retries dependency resolution, which is the part
-that actually stops the red. All three branches are green, and the cache saved
-440 MB for the first time in the repository's life. The Docker-side fetch was
-left unretried as "residual"; it failed twenty minutes later and is now
-retried too. See [[Consolidation Findings]] L9.
-
-`bring-in-swarf` merges once `images-from-head` lands.
-
-**[`fil-forge/minio`](https://github.com/fil-forge/minio)** — our fork.
-Upstream withdrew every image from Docker Hub on 2026-09-11 and archived the
-project. We build from source and publish
-`ghcr.io/fil-forge/minio:<upstream tag>`, currently
-`RELEASE.2025-10-15T17-29-55Z`, via a dispatch-only workflow. See
-[[MinIO Image Removal]].
-
-**Polyrepos**, repointed at that image: `smelt` **merged**;
+**Polyrepo MinIO repoints are all merged**: `smelt`,
 [indexing-service#96](https://github.com/fil-forge/indexing-service/pull/96),
 [piri#123](https://github.com/fil-forge/piri/pull/123),
-[sprue#97](https://github.com/fil-forge/sprue/pull/97) open and green.
+[sprue#97](https://github.com/fil-forge/sprue/pull/97).
 
 ## Next
 
-1. **Merge the three `forge-2` branches.** Everything else builds on them.
-2. **Merge the three open polyrepo PRs.**
-3. **Bring in `indexing-service`.** Scouted: one consumer (`ingot`), no
-   in-repo dependencies, single module, single Dockerfile. Wants #96 merged
-   first so the subtree does not import a dead MinIO reference. Re-derive
-   `ingot`'s closure — its docs suggest the indexer client may be
-   test-only, which changes whether its Docker context needs source or only
-   a `go.mod` stub.
-4. **`forgectl`** — in scope, a CLI rather than a stack service, so it
-   touches none of the image work. Any time.
-5. **Phase 1** — release tags, `compat.yml`, publishing. Closer than it was;
-   the image machinery now exists.
+1. **Merge #4, then #3.** Everything else stacks behind them.
+2. **Bring in `indexing-service`.** One question the plan left open is now
+   answered: **its client is not test-only.** Derived rather than assumed —
+   `GOWORK=off go list -deps ./cmd/...` in `ingot` reaches
+   `indexing-service/pkg/{client,types,service/queryresult}`, and the imports
+   live in `blockstore/forge.go` and `blockstore/locator/indexlocator.go`,
+   with no `_test.go` importing it at all. So ingot's Docker build needs
+   indexing-service **source**, not a `go.mod` stub. Cheaper than it sounds:
+   ingot already builds with the repository root as context for its `hilt`
+   edge, so this adds a `COPY indexing-service/` line rather than changing the
+   context. ingot is its only consumer.
+3. **`forgectl`** — in scope, a CLI, touches none of the image machinery.
+4. **Phase 1** — release tags, `compat.yml`, publishing. `compat.yml` matters
+   more than it did: moving `itest` to HEAD images removed the only thing that
+   was accidentally testing compatibility against the deployed network.
+5. **`libforge`'s dissolution** is what first exercises the audience rule
+   (rule 1). Nothing currently in the repository is a pure library.
 
 ## Known debt
 
@@ -196,6 +179,11 @@ project. We build from source and publish
   pin when convenient.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
+- **This repository has two guard scripts**, `check-replaces.sh` and
+  `retry.sh`. The `check-image-lists.sh`, `check-setup-go-cache.sh` and
+  `check-dockerfile-retry.sh` written during the first attempt live in the
+  old `fil-forge/forge` and were never carried across. Worth porting the
+  ones whose defect can recur here.
 - **`itest ingot` is within four minutes of its timeout.** `itest.yml` runs
   `-timeout 25m` inside `timeout-minutes: 30`; observed 21m04s and 21m24s.
   The ordering is deliberate and the failure is loud: Go's timeout fires
