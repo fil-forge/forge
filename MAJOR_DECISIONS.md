@@ -95,6 +95,30 @@ So `-count=1` is on the CI invocations *and* on the commands the docs tell
 people to paste. The CI paths cannot produce a silent green build; the
 documented ones can produce a silent green developer.
 
+## The 5 GiB max-part test is left to manual runs
+
+`ingot/itest`'s `TestForgeMaxSizePart` skips unless `INGOT_ITEST_BIG=1`, and
+nothing in CI sets it. That reads like an oversight, and the suite's README
+used to say "(CI sets it)" — which was true of `fil-forge/ingot` and stopped
+being true here when consolidation pruned the per-service workflows.
+
+Turning it on is not one line. Upstream pairs the variable with `-timeout 40m`
+inside `timeout-minutes: 60` **and** a step that deletes dotnet, android and
+CodeQL from the runner, because the case churns 10–15 GiB moving 5 GiB through
+the stack twice. Set the variable alone and the job fails on disk, not on a
+test. All three move together or none do.
+
+Decided: none do. It runs on demand —
+
+```bash
+cd ingot/itest && INGOT_ITEST_BIG=1 go test -count=1 -run TestForgeMaxSizePart -v
+```
+
+— and the gate it guards, `bucket.DefaultMaxBlobSize`'s envelope allowance
+under piri's piece cap, is a slow-moving property rather than something a
+pull request is likely to break. Revisit when it does break, or when someone
+wants the assurance on every PR enough to pay ~15 GiB of runner churn for it.
+
 ## MinIO comes from our own fork
 
 `minio/minio` images were **deleted from Docker Hub** on 2026-09-11 and the

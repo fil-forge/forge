@@ -50,7 +50,13 @@ jobs:
     # Pinned rather than -latest so the Docker version cannot drift underneath
     # the harness, which requires 25+. Same reason as e2e.yml.
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # 45, not 30, because this job now builds six images before it tests: the
+    # hilt suite went 1m50s -> 8m12s on that step alone, so ingot's ~21m30s
+    # run lands near 28m and 30 left about two minutes of margin. The Go
+    # timeout below stays 25m and still fires first on a hang, which is the
+    # point of the ordering -- it dumps goroutines, where a runner kill gives
+    # nothing. Upstream runs 60 for a suite that also does the 5 GiB case.
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: ${{ matrix.service }}/itest
