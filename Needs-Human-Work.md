@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 21:25Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 22:20Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,13 +19,15 @@ with their histories.
 
 ## Open pull requests
 
-None blocks anything. #10 is stacked on #9.
+A stack of three plus a docs PR. None blocks anything. Merge order:
+#9 → #10 → #11, or #9 and #8 in either order.
 
 | | what | state |
 |---|---|---|
-| [#10](https://github.com/fil-forge/forge-2/pull/10) | **Bring `indexing-service` into the monorepo** — the ninth module and the last service. Stacked on #9. | Rebuilt (not rebased) when #9 changed, per rule 7; trees verified byte-identical. CI running. |
-| [#9](https://github.com/fil-forge/forge-2/pull/9) | **Restore the dropped checks**: `staticcheck`, `gofmt -s`, `-race`, `-shuffle=on`. | Rebuilt to Petra's 20:57Z review — comments cut, `stress-tester` moved to the TODO, tests are one run not two. All five threads answered. CI running. |
-| [#8](https://github.com/fil-forge/forge-2/pull/8) | **`MONOREPO_TODO.md`** — four swarf findings, plus hilt's build context, the macOS run and `stress-tester`'s coverage. Docs only. | Asks one question: should upstream findings and whole-repo questions share the file? |
+| [#11](https://github.com/fil-forge/forge-2/pull/11) | **Build the indexer from HEAD** — the stack was still pulling a published digest for a service now in-repo, so `e2e`/`itest` tested a different indexer than the tree. Stacked on #10. Six files. | CI running. This is the first run where the stack boots an indexer built from this tree. |
+| [#10](https://github.com/fil-forge/forge-2/pull/10) | **Bring `indexing-service` in** — the ninth module, last service. Stacked on #9. | **Green, 20/20**, `itest ingot` and `e2e` included. |
+| [#9](https://github.com/fil-forge/forge-2/pull/9) | **Restore the dropped checks** — `staticcheck`, `gofmt -s`, `-race`, `-shuffle=on`. | **Green, 19/19.** No data races and no order-dependent tests anywhere. Rebuilt to Petra's review; all five threads answered. |
+| [#8](https://github.com/fil-forge/forge-2/pull/8) | **`MONOREPO_TODO.md`** — four swarf findings, plus hilt's build context, the macOS run and `stress-tester`. Docs only. | Asks one question: should upstream findings and whole-repo questions share the file? |
 
 ## Decisions waiting
 
