@@ -1,34 +1,14 @@
 name: ci
 
-# Minimal Phase 0 check: each module builds, vets, is tidy, and its tests
-# pass, standalone (GOWORK=off). No release/publish -- that's later-phase
-# work.
+# Per-module build, vet, tidy and test, standalone (GOWORK=off), plus a
+# repo-wide gofmt and replace-directive check. No release or publish.
 #
-# Unfiltered on purpose: with only one job covering every module, there's no
-# path-filter list to fall out of sync with a new shared module (see
-# forge-consolidation-plan.md's Traps section, #1).
+# Unfiltered by path on purpose: one job per module and no filter list means
+# a new shared module cannot fall out of one and go silently green.
 #
-# It does need a Docker daemon, and this comment deliberately does not tell
-# you which modules, because every attempt to say so has been wrong.
-#
-# Tests across several modules start containers, and most reach testcontainers
-# through an internal helper -- hilt/internal/testutil, piri/pkg/internal/testutil,
-# sprue/internal/testutil and friends -- so the test file itself never mentions
-# it. None of them carry a build tag, so plain `go test ./...` runs them. They
-# do not all degrade the same way either: piri's minio store test panics in
-# TestMain when the container will not start, while smelt's pkg/stack tests
-# skip cleanly.
-#
-# The exact set is a call-graph question, not a grep: matching test files for
-# "testcontainers" finds 2 of them, and matching every test file that imports a
-# package which imports testcontainers finds 71, most of which never call it.
-# If you need the real answer, ask the compiler, not this comment.
-#
-# Three earlier versions of these lines claimed otherwise. "No Docker" was
-# already false before swarf arrived. "For one module: swarf" was false when
-# written. The third named three modules and supplied a grep to re-derive them
-# -- a grep that finds two of twenty-two. Each was written without running
-# anything.
+# The matrix needs a Docker daemon. Tests in several modules start containers
+# through testcontainers, usually via an internal testutil helper rather than
+# naming it directly, and none are behind a build tag.
 
 on:
   # Only main: a push to a branch with an open pull request would otherwise
@@ -94,11 +74,6 @@ jobs:
             tagged_suites: e2e
           - service: delegator
           - service: piri-signing-service
-          # No tagged_suites: unlike hilt and ingot, swarf's itest carries no
-          # build tag, so `go test ./...` runs it. It boots one postgres via
-          # testcontainers and runs swarf in-process -- not a full stack -- and
-          # it deliberately fails rather than skips when Docker is missing in
-          # CI, so it cannot go quietly green.
           - service: swarf
     name: unit ${{ matrix.service }}
     runs-on: ubuntu-latest
