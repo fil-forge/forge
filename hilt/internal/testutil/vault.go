@@ -25,7 +25,7 @@ func CreateVault(t *testing.T) (address, token string) {
 
 	ctx := t.Context()
 	req := testcontainers.ContainerRequest{
-		Image:        "openbao/openbao:2.6",
+		Image:        "openbao/openbao:2.6@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641",
 		ExposedPorts: []string{"8200/tcp"},
 		Cmd:          []string{"server", "-dev"},
 		Env: map[string]string{

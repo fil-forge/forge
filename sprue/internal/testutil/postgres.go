@@ -27,7 +27,7 @@ func CreatePostgres(t *testing.T) *pgxpool.Pool {
 
 	ctx := t.Context()
 	container, err := tcpostgres.Run(ctx,
-		"postgres:16-alpine",
+		"postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
 		tcpostgres.WithDatabase(testPostgresDB),
 		tcpostgres.WithUsername(testPostgresUser),
 		tcpostgres.WithPassword(testPostgresPass),

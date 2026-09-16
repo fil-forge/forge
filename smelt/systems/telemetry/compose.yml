@@ -13,7 +13,7 @@
 services:
   # OpenTelemetry Collector - Central telemetry pipeline
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.96.0
+    image: otel/opentelemetry-collector-contrib:0.96.0@sha256:7ef2a2ff46b9e432321fdd63df104bfeedaf7b4e276950f42c634d0f23521fc4
     profiles: ["telemetry"]
     ports:
       - "4317:4317"   # OTLP gRPC receiver
@@ -31,7 +31,7 @@ services:
 
   # Prometheus - Metrics storage
   prometheus:
-    image: prom/prometheus:v2.50.1
+    image: prom/prometheus:v2.50.1@sha256:bc1794e85c9e00293351b967efa267ce6af1c824ac875a9d0c7ac84700a8b53e
     profiles: ["telemetry"]
     ports:
       - "9090:9090"
@@ -54,7 +54,7 @@ services:
 
   # Tempo - Distributed tracing
   tempo:
-    image: grafana/tempo:2.4.0
+    image: grafana/tempo:2.4.0@sha256:50fec6c2cf621141218edee9e23e8860b6158088d18fac54cf0c29df7fdf29db
     profiles: ["telemetry"]
     ports:
       - "3200:3200"   # Tempo HTTP API
@@ -74,7 +74,7 @@ services:
 
   # Grafana - Visualization
   grafana:
-    image: grafana/grafana:10.4.1
+    image: grafana/grafana:10.4.1@sha256:753bbb971071480d6630d3aa0d55345188c02f39456664f67c1ea443593638d0
     profiles: ["telemetry"]
     ports:
       - "3001:3000"

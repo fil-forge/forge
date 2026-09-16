@@ -19,7 +19,7 @@ import (
 // underneath us.
 //
 // MINIO_IMAGE overrides it, for pointing at a local build.
-const defaultMinioImage = "ghcr.io/fil-forge/minio:RELEASE.2025-10-15T17-29-55Z"
+const defaultMinioImage = "ghcr.io/fil-forge/minio:RELEASE.2025-10-15T17-29-55Z@sha256:2c4349a1a8dcb3549896109a5363250f77ee90b51f706dc8ceac2b88732a95e7"
 
 func minioImage() string {
 	if img := os.Getenv("MINIO_IMAGE"); img != "" {

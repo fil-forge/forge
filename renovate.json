@@ -1,0 +1,60 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "timezone": "Etc/UTC",
+  "schedule": [
+    "before 6am on monday"
+  ],
+  "prConcurrentLimit": 10,
+  "postUpdateOptions": [
+    "gomodTidy"
+  ],
+  "packageRules": [
+    {
+      "description": "In-repo libraries must hold the same version in every module. ci.yml does not check that; a split is only visible as a build failure somewhere else, so keep each bump to a single PR that moves every module's go.mod together rather than one PR per module landing at a different time. Everything else in Go is left to the default of one PR per dependency, which is the cadence the per-service dependabot configs used before the consolidation dropped them.",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchPackageNames": [
+        "github.com/fil-forge/libforge",
+        "github.com/fil-forge/ucantone",
+        "github.com/fil-forge/swarf",
+        "github.com/fil-forge/versitygw",
+        "github.com/fil-forge/go-ipni-tools"
+      ],
+      "groupName": "fil-forge libraries"
+    },
+    {
+      "description": "Actions as one grouped PR, as the per-service dependabot configs did.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Images the stack pulls rather than builds. Pinning them by digest is the point of this config: without it a CI result is a function of the registry as well as the commit, so an old commit re-run later can go red with nothing to bisect. The tag is kept alongside the digest so the file still says what it is running.",
+      "matchManagers": [
+        "docker-compose",
+        "custom.regex"
+      ],
+      "pinDigests": true,
+      "groupName": "stack images"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Images named from Go rather than from compose: testcontainers constants in hilt, piri and sprue, the busybox helper in pkg/snapshot, and smelt's compose generator, whose output is gitignored and so has no file for the docker-compose manager to read. Two forms are matched: a bare quoted reference, and one wrapped in a ${VAR:-...} compose default, which the generator emits and the first pattern cannot reach. Both REQUIRE an @sha256 digest, which fences this manager by construction: it sees exactly the references this repository has already pinned, and cannot touch the six ghcr.io/fil-forge/<service>:main entries in smelt/pkg/stack/options.go. Those are the published peers an itest run is meant to be tested against, and pinning them would turn that compatibility check into a slower copy of e2e.",
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.go$/"
+      ],
+      "matchStrings": [
+        "\"(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[\\w][\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})\"",
+        "\"\\$\\{[A-Z_]+:-(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[\\w][\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})\\}\""
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ]
+}

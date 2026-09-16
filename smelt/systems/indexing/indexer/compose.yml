@@ -6,7 +6,7 @@
 services:
   # Redis - Cache backend for indexing service
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
     ports:
       - "${SMELT_REDIS_PORT:-15020:6379}"
     healthcheck:
@@ -22,7 +22,7 @@ services:
 
   # Indexing Service - Forge's caching layer for content claims
   indexer:
-    image: ${INDEXER_IMAGE:-ghcr.io/fil-forge/indexing-service:main}
+    image: ${INDEXER_IMAGE:-ghcr.io/fil-forge/indexing-service:main@sha256:f3ef45100e91a474bd8a219a9c2bbe73810a96a2e633741ab4676e57536a826a}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     ports:
       - "${SMELT_INDEXER_PORT:-15050:80}"  # Host 15050 -> container 80

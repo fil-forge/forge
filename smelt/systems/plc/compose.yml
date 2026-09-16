@@ -9,7 +9,7 @@
 
 services:
   plc:
-    image: ${PLC_IMAGE:-ghcr.io/fil-forge/did-method-plc:main}
+    image: ${PLC_IMAGE:-ghcr.io/fil-forge/did-method-plc:main@sha256:ebb12470f6fc50906c0ed867d009a056e131db1a994b45d7c3f1c8d2eb26dee9}
     ports:
       - "${SMELT_PLC_PORT:-15120:3000}"
     environment:
@@ -38,7 +38,7 @@ services:
   # Postgres for the PLC operation log. The server runs kysely migrations on
   # startup, so the empty `plc` database created by POSTGRES_DB is enough.
   plc-postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     ports:
       - "${SMELT_PLC_POSTGRES_PORT:-15121:5432}"
     environment:
