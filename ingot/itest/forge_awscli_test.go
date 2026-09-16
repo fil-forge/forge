@@ -28,7 +28,7 @@ import (
 // 8 MiB multipart switchover and the request checksums it sends unasked
 // (CRC64NVME declared on CreateMultipartUpload and carried per part, as of
 // this version; earlier 2.23+ releases sent CRC32).
-const awsCLIImage = "amazon/aws-cli:2.36.44"
+const awsCLIImage = "amazon/aws-cli:2.36.44@sha256:e8467f2c319f9bc9a1471808a69949a76915e9c95eaf4a09ece9f9e85fd32747"
 
 // TestForgeAWSCLI drives a real, unmodified `aws s3 cp` against the
 // forge-mode ingot: a 20 MiB object crosses the CLI's 8 MiB multipart

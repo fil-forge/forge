@@ -25,7 +25,7 @@ import (
 // retired segment) and the bucket must still list without a delimiter (the
 // walk fetches every leaf's manifest).
 //
-//	go test -tags itest ./itest -run TestForgeReadAfterCatalogRetention -v -timeout 900s
+//	cd itest && go test -count=1 -run TestForgeReadAfterCatalogRetention -v -timeout 900s
 func TestForgeReadAfterCatalogRetention(t *testing.T) {
 	ctx := t.Context()
 

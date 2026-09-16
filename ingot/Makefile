@@ -44,7 +44,7 @@ endif
 s3compat:
 	@rm -f "$(S3COMPAT_OUT)"
 	@echo "s3compat: running the corpus (vector failures are expected — the report is the output)"
-	-$(S3COMPAT_ENV) $(GO) test -tags itest -v -timeout 30m -run TestForgeS3Compat ./itest
+	-cd itest && $(S3COMPAT_ENV) $(GO) test -count=1 -v -timeout 30m -run TestForgeS3Compat ./...
 	@test -f "$(S3COMPAT_OUT)" || { echo "s3compat: no report produced — the run failed before writing it"; exit 1; }
 	@echo "s3compat: report written to $(S3COMPAT_OUT)"
 

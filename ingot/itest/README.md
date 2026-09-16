@@ -15,8 +15,8 @@ job (`.github/workflows/itest.yml`), in parallel with the unit matrix.
 
 ```bash
 make itest                                              # everything (~10 min)
-cd itest && go test -run 'TestForgeVersity/PutObject' -v         # one category
-cd itest && go test -run 'TestForgeVersity/PutObject/success' -v # one case
+cd itest && go test -count=1 -run 'TestForgeVersity/PutObject' -v         # one category
+cd itest && go test -count=1 -run 'TestForgeVersity/PutObject/success' -v # one case
 ```
 
 ## Hilt-era provisioning and credentials
@@ -74,7 +74,7 @@ here and add new cases to the pass table (demote to xfail if they fail).
 | `TestForgeReadAfterEviction` | The appliance read tier: PUT, wipe `/data/spool`, GET must re-fetch body blobs from piri via the local locator + `/content/retrieve`. | ~1.3 min |
 | `TestForgeEncryption` | The end-to-end encryption suite, on a default-config stack (~254 MiB blobs, 256 KiB chunks): tampered-ciphertext rejection on whole and ranged GETs (corrupt the spooled envelope's final chunk — the failure is a mid-body stream error, headers are already out), DELETE of a multipart-created object releasing every part blob through piri, and the 5 GiB+1 `EntityTooLarge` probe (sent head-only, so the declared length is checked without a byte of payload). Also the crypto-shred assertions against ingot's Postgres: DELETE destroys every blob's region-wrap row while the spooled envelope's tenant recipient survives (`ShredThenRead`), and abort/part-supersede shred the orphaned parts' key rows (`AbortShredsKeyRows`, `SupersededPartShredsKeyRow`). `OverwriteRace` pins overwrite atomicity: concurrent GETs during an overwrite each see exactly the old or the new object, and the superseded generation's rows shred after the deferred-release grace (`release_grace`, default 60s). | ~7 min |
 | `TestForgeMultipartExpiryShred` | The abandoned-session sweeper as a full abort: a 30s `multipart_session_ttl` (`testdata/config-mpttl.yaml`, dedicated stack — the low TTL also reaps completed sessions) reaps an unfinished upload, shredding its parts' key rows, intents, and parks. | ~2 min |
-| `TestForgeMaxSizePart` | Exactly 5 GiB — the AWS-matching max part size — as one multipart part (21 internal blobs at the default `max_blob_size`): HEAD, ranged spot checks across chunk and blob boundaries, full stream-compared read-back. The end-to-end regression gate for `bucket.DefaultMaxBlobSize`'s envelope allowance under piri's 266338304-byte piece cap. **Skipped unless `INGOT_ITEST_BIG=1`** (CI sets it): ~10–15 GiB of disk churn, several minutes. | minutes (gated) |
+| `TestForgeMaxSizePart` | Exactly 5 GiB — the AWS-matching max part size — as one multipart part (21 internal blobs at the default `max_blob_size`): HEAD, ranged spot checks across chunk and blob boundaries, full stream-compared read-back. The end-to-end regression gate for `bucket.DefaultMaxBlobSize`'s envelope allowance under piri's 266338304-byte piece cap. **Skipped unless `INGOT_ITEST_BIG=1`**, which nothing in CI sets: ~10–15 GiB of disk churn, several minutes. | minutes (gated) |
 | `TestForgeAWSCLI` | A real, unmodified AWS CLI v2 (`amazon/aws-cli`, pinned in `forge_awscli_test.go`) round-trips a 20 MiB object with `aws s3 cp` on a default-config stack. The CLI picks multipart itself at its 8 MiB switchover and sends its default request checksums (CRC64NVME, declared on CreateMultipartUpload and carried per part); the bytes come back exact, HEAD shows a 3-part ETag and the full-object checksum. The CLI runs in its own container and reaches ingot's host-mapped port via `host.docker.internal`. | ~2 min |
 | `TestForgeS3Compat` | Runs the `cloud-portable/s3vectors` compatibility corpus (via the `alanshaw/s3tests` runner) against the stack. Reports each vector live through Go's test output (one `t.Run` subtest per vector, via the `gotest` reporter) **and** writes an HTML report from the same run. Because a failing vector is a failing subtest, the test reports FAIL when the target is incomplete — expected for ingot; the failures are the compatibility signal, and the HTML report is written regardless. **Skipped unless `INGOT_S3COMPAT=1`.** Env: `INGOT_S3COMPAT_OUT` (report path, default `itest/ingot-s3compat.html`), `INGOT_S3COMPAT_GROUPS` / `INGOT_S3COMPAT_TAGS` (restrict vectors), `INGOT_S3COMPAT_CONCURRENCY` (default 4). `$credential` vectors run against a second hilt tenant provisioned per handle (`ProvisionCredential`); ACL-grant vectors that need an S3 canonical user id still won't pass (ingot models ownership as a did:plc). | minutes (gated) |
 
@@ -86,8 +86,12 @@ Notes:
   every `smeltery-*` container, including another suite's live stack.
 - The other services run their published `:main` images — `docker pull` them
   occasionally; compose won't refresh an existing tag.
-- CI runs this suite on every PR after unit tests pass
-  (`.github/workflows/go-test.yml`, job `itest`). The same job generates the
-  S3 compatibility report and uploads it as the `s3-compat-report` build
-  artifact; on main it is also published to GitHub Pages at
-  <https://fil-forge.github.io/ingot/> (job `pages`).
+- CI runs this suite on every pull request as `itest (ingot)`
+  (`.github/workflows/itest.yml`), in parallel with the unit matrix rather
+  than gated behind it. On failure it uploads `docker ps` and container logs
+  as `itest-ingot-container-logs`; on success it uploads nothing.
+- **The S3 compatibility report is a local-only thing.** `make s3compat`
+  writes it, and no workflow generates, uploads or publishes it. Upstream
+  `fil-forge/ingot` did both from its `go-test.yml`, which the consolidation
+  dropped along with the rest of the per-service workflows; `itest.yml`
+  restores the suite but not the report. Wiring it back up is open work.

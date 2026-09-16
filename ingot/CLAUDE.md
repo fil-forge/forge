@@ -29,7 +29,7 @@ make test       # unit tests: GOWORK=off go test ./... (fast, no Docker)
 make itest      # integration tests: boots the Forge stack in Docker (~6 min)
 make gen        # regenerate bucket/cbor_gen.go after changing bucket types
 GOWORK=off go vet ./...
-cd itest && GOWORK=off go test -run 'TestForgeVersity/PutObject' -v         # one S3 category
+cd itest && GOWORK=off go test -count=1 -run 'TestForgeVersity/PutObject' -v         # one S3 category
 GOWORK=off go build -o /tmp/ingot ./cmd/ingot               # the daemon binary
 ```
 
@@ -43,7 +43,7 @@ binary over the published ingot image, and validates the real network path —
 including the curated S3 conformance partition (`itest/versity_*_test.go`);
 see `itest/README.md`. CI runs it as `itest (ingot)` in its own workflow,
 alongside the unit matrix rather than gated behind it
-(`.github/workflows/go-test.yml`).
+(`.github/workflows/itest.yml`).
 
 ## Dependency stack
 

@@ -26,7 +26,7 @@ import (
 // (This replaced the retired `ingot login` + `ingot space generate`
 // self-provisioning flow when hilt took ownership of tenancy.)
 //
-//	go test -tags itest ./itest -run TestForgeNativeProvision -v -timeout 900s
+//	cd itest && go test -count=1 -run TestForgeNativeProvision -v -timeout 900s
 func TestForgeNativeProvision(t *testing.T) {
 	ctx := t.Context()
 

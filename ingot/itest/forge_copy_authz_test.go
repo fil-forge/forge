@@ -24,7 +24,7 @@ import (
 // then asserted twice: the second request runs against those caches, so the
 // local fast path must refuse what hilt refuses.
 //
-//	go test -tags itest ./itest -run TestForgeCopyAuthorization -v -timeout 900s
+//	cd itest && go test -count=1 -run TestForgeCopyAuthorization -v -timeout 900s
 func TestForgeCopyAuthorization(t *testing.T) {
 	ctx := t.Context()
 	s, endpoint := forgeStack(t)

@@ -599,8 +599,9 @@ func TestForgeEncryption(t *testing.T) {
 //
 // Gated behind INGOT_ITEST_BIG=1: it moves ~10-15 GiB through the Docker
 // stack (spool copy + piri copy; nothing reclaims the spool) and takes
-// minutes. CI sets the gate (.github/workflows/go-test.yml); a plain local
-// `make itest` skips it.
+// minutes. Nothing sets the gate in CI -- itest.yml passes no env to the
+// test step -- so this is a deliberate manual run, and a plain local
+// `make itest` skips it too.
 func TestForgeMaxSizePart(t *testing.T) {
 	if os.Getenv("INGOT_ITEST_BIG") == "" {
 		t.Skip("set INGOT_ITEST_BIG=1 to run the 5 GiB max-part test (~10-15 GiB of disk churn)")

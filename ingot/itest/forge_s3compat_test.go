@@ -41,7 +41,7 @@ import (
 //	INGOT_S3COMPAT_TAGS=tier-1       restrict to vectors carrying a tag
 //	INGOT_S3COMPAT_CONCURRENCY=8     vectors run in parallel (default 4)
 //
-//	INGOT_S3COMPAT=1 GOWORK=off go test -tags itest ./itest \
+//	INGOT_S3COMPAT=1 GOWORK=off cd itest && go test -count=1 \
 //	  -run TestForgeS3Compat -v -timeout 1800s
 func TestForgeS3Compat(t *testing.T) {
 	if os.Getenv("INGOT_S3COMPAT") == "" {
