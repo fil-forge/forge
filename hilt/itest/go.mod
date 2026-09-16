@@ -15,6 +15,8 @@ replace github.com/fil-forge/forge/hilt => ../
 
 replace github.com/fil-forge/forge/smelt => ../../smelt
 
+replace github.com/fil-forge/forge/swarf => ../../swarf
+
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.5
@@ -23,7 +25,7 @@ require (
 	github.com/aws/smithy-go v1.28.1
 	github.com/fil-forge/forge/hilt v0.0.0
 	github.com/fil-forge/forge/smelt v0.0.0
-	github.com/fil-forge/swarf v0.0.1-0.20260821142121-d5d1a0a56f00
+	github.com/fil-forge/forge/swarf v0.0.0
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/stretchr/testify v1.12.1
 )
