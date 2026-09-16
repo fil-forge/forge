@@ -45,17 +45,16 @@ jobs:
           cache-dependency-path: smelt/go.sum
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
-      # go vet does not check formatting, so nothing else here would.
       - name: gofmt
         run: |
-          unformatted=$(gofmt -l .)
+          unformatted=$(gofmt -s -l .)
           if [ -n "$unformatted" ]; then
-            echo "::error::these files are not gofmt-clean:"
+            echo "::error::these files are not gofmt -s clean:"
             echo "$unformatted" | sed 's/^/  /'
-            echo "Run: gofmt -l . | xargs gofmt -w"
+            echo "Run: gofmt -s -l . | xargs gofmt -s -w"
             exit 1
           fi
-          echo "All Go files are gofmt-clean."
+          echo "All Go files are gofmt -s clean."
 
   unit:
     strategy:
