@@ -60,8 +60,10 @@ jobs:
             context: .
           - service: sprue
             context: sprue
+          # forgectl is linked into delegator's binary, so its source must be
+          # in the context.
           - service: delegator
-            context: delegator
+            context: .
           - service: piri-signing-service
             context: piri-signing-service
           - service: swarf

@@ -6,10 +6,10 @@ import (
 	"math/big"
 
 	"github.com/dustin/go-humanize"
-	"github.com/fil-forge/forgectl/cli/printer"
-	"github.com/fil-forge/forgectl/pkg/services/inspector"
+	"github.com/fil-forge/forge/forgectl/cli/printer"
+	"github.com/fil-forge/forge/forgectl/pkg/services/inspector"
 
-	"github.com/fil-forge/forgectl/cli/config"
+	"github.com/fil-forge/forge/forgectl/cli/config"
 	"github.com/spf13/cobra"
 )
 

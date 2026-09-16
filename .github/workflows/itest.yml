@@ -134,7 +134,7 @@ jobs:
           build hilt .
           build ingot .
           build sprue sprue
-          build delegator delegator
+          build delegator .
           build piri-signing-service piri-signing-service
           build swarf swarf
           build indexing-service indexing-service

@@ -19,7 +19,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"
 
-	forgetypes "github.com/fil-forge/forgectl/pkg/services/types"
+	forgetypes "github.com/fil-forge/forge/forgectl/pkg/services/types"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
 	"github.com/fil-forge/libforge/commands/claim"

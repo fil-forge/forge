@@ -1,4 +1,4 @@
-module github.com/fil-forge/forgectl
+module github.com/fil-forge/forge/forgectl
 
 go 1.25.3
 

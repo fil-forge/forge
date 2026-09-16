@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/fil-forge/forgectl/pkg/services/types"
+	"github.com/fil-forge/forge/forgectl/pkg/services/types"
 )
 
 const (

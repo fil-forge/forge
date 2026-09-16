@@ -79,6 +79,7 @@ jobs:
           - service: piri-signing-service
           - service: swarf
           - service: indexing-service
+          - service: forgectl
     name: unit ${{ matrix.service }}
     runs-on: ubuntu-latest
     env:

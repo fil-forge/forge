@@ -11,10 +11,10 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	"github.com/fil-forge/forgectl/cli/config"
-	"github.com/fil-forge/forgectl/pkg/services/inspector"
-	"github.com/fil-forge/forgectl/pkg/telemetry"
-	"github.com/fil-forge/forgectl/pkg/telemetry/metrics"
+	"github.com/fil-forge/forge/forgectl/cli/config"
+	"github.com/fil-forge/forge/forgectl/pkg/services/inspector"
+	"github.com/fil-forge/forge/forgectl/pkg/telemetry"
+	"github.com/fil-forge/forge/forgectl/pkg/telemetry/metrics"
 )
 
 var (
