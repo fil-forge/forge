@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 13:45Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 14:05Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -40,16 +40,24 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
   `claude/subtree-resync` (contained in #4's branch). `claude/pin-guppy` is
   [#2](https://github.com/fil-forge/forge-2/pull/2), closed unmerged — keep or
   drop as you prefer.
-- **A stuck review session.** `session_01GXUttS5N775eQ7QXboRAxe` (round-1
-  review of #4 and #6) is blocked on a permission prompt to post its comments
-  and cannot be reached from the session doing the work. Its findings were
-  independently re-derived in round 2, so nothing is lost by abandoning it.
 - **The `forge-2` → `forge` rename**, whenever this path is judged correct.
   Module paths are already `github.com/fil-forge/forge/*` and are wrong only
   in the interim.
 
 ## Recently cleared
 
+- **The round-1 review session has nothing left to post.**
+  `session_01GXUttS5N775eQ7QXboRAxe` never got repo access, so it could not
+  post to GitHub — but its findings did reach us, and both are in merged #6:
+  the `matchPackageNames` collision in `renovate.json` (the offending rule was
+  deleted; `main` now has no `excludePackageNames` and no rule combining `*`
+  with another matcher), and the images its sweep counted as missing, which is
+  what `36d3c5dd` fixed — `amazon/dynamodb-local:latest` is pinned by digest
+  in `smelt/systems/common/compose.yml`, and `main` carries 18 distinct images
+  across 37 pinned references. Its #4 review was a clean pass. An earlier
+  version of this page said round 2 "re-derived" its findings; that was an
+  assumption and it was wrong — they arrived directly, which is why
+  `36d3c5dd` exists at all.
 - **`itest.yml`'s timeout budget is a note, not a decision.** The failure mode
   is loud and self-labelling, so it moved to Known debt in [[Current State]]
   to be revisited on the first red rather than pre-emptively.
