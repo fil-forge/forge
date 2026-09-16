@@ -75,6 +75,7 @@ jobs:
       DELEGATOR_IMAGE: forge/delegator:head
       SIGNER_IMAGE: forge/piri-signing-service:head
       SWARF_IMAGE: forge/swarf:head
+      INDEXER_IMAGE: forge/indexing-service:head
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -124,6 +125,7 @@ jobs:
           build delegator delegator
           build piri-signing-service piri-signing-service
           build swarf swarf
+          build indexing-service indexing-service
           docker image ls --filter 'reference=forge/*:head'
 
       - name: e2e

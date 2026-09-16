@@ -22,7 +22,7 @@ services:
 
   # Indexing Service - Forge's caching layer for content claims
   indexer:
-    image: ${INDEXER_IMAGE:-ghcr.io/fil-forge/indexing-service:main@sha256:f3ef45100e91a474bd8a219a9c2bbe73810a96a2e633741ab4676e57536a826a}
+    image: ${INDEXER_IMAGE:?must be set (stack.WithPublishedImages() for the published image); the stack never silently runs a published in-repo image}
     user: "0:0"  # Run as root for volume permissions (key files are 600)
     ports:
       - "${SMELT_INDEXER_PORT:-15050:80}"  # Host 15050 -> container 80
