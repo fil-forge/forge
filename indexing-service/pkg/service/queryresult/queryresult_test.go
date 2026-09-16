@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/fil-forge/libforge/bytemap"
 	"github.com/fil-forge/libforge/commands"

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/bytemap"
 	"github.com/ipfs/go-cid"
 	"github.com/ipld/go-ipld-prime"

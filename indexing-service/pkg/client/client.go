@@ -16,8 +16,8 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/fil-forge/indexing-service/pkg/service/queryresult"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/queryresult"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	assertcaps "github.com/fil-forge/libforge/commands/assert"
 	claimcaps "github.com/fil-forge/libforge/commands/claim"
 	"github.com/fil-forge/libforge/digestutil"

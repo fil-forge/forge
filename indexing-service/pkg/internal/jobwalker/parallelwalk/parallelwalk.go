@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/jobwalker"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/jobwalker"
 )
 
 type threadSafeState[State any] struct {

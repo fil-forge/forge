@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/ipfs/go-cid"
 )

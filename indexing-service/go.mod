@@ -1,6 +1,6 @@
-module github.com/fil-forge/indexing-service
+module github.com/fil-forge/forge/indexing-service
 
-go 1.25.7
+go 1.27.0
 
 require (
 	github.com/alanshaw/dag-json-gen v0.0.9
@@ -18,8 +18,8 @@ require (
 	github.com/benbjohnson/clock v1.3.5
 	github.com/fil-forge/automobile v0.0.1
 	github.com/fil-forge/go-ipni-tools v0.0.0-20260820150418-78ca0c16834d
-	github.com/fil-forge/libforge v0.0.0-20260807225550-3e6895b41be5
-	github.com/fil-forge/ucantone v0.0.0-20260817170631-3a20cd59fabc
+	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
+	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/getsentry/sentry-go v0.48.0
 	github.com/google/uuid v1.6.0
 	github.com/ipfs/go-cid v0.6.2
@@ -103,7 +103,7 @@ require (
 	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260330125221-c963978e514e // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mdelapenya/tlscert v0.2.0 // indirect
 	github.com/minio/minio-go/v7 v7.0.94 // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
@@ -148,7 +148,7 @@ require (
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.55.0 // indirect
-	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
+	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect

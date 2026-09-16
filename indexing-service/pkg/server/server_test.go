@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/service/contentclaims"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/contentclaims"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/multikey"
 	"github.com/ipfs/go-datastore"

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/go-ipni-tools/pkg/store"
-	"github.com/fil-forge/indexing-service/pkg/types"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/ipfs/go-cid"

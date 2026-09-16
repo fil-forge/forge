@@ -17,8 +17,8 @@ import (
 	"os"
 
 	"github.com/fil-forge/automobile"
-	"github.com/fil-forge/indexing-service/pkg/service/queryresult"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/queryresult"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/fil-forge/libforge/bytemap"
 	ctypes "github.com/fil-forge/libforge/commands"

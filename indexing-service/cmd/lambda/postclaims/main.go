@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
-	"github.com/fil-forge/indexing-service/cmd/lambda"
-	"github.com/fil-forge/indexing-service/pkg/aws"
-	"github.com/fil-forge/indexing-service/pkg/server"
+	"github.com/fil-forge/forge/indexing-service/cmd/lambda"
+	"github.com/fil-forge/forge/indexing-service/pkg/aws"
+	"github.com/fil-forge/forge/indexing-service/pkg/server"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/ucantone/did/key"
 	"github.com/fil-forge/ucantone/did/resolver"

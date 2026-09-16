@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/require"

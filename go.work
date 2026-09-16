@@ -4,6 +4,7 @@ use (
 	./delegator
 	./hilt
 	./hilt/itest
+	./indexing-service
 	./ingot
 	./ingot/itest
 	./piri

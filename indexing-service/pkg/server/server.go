@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/fil-forge/automobile"
-	"github.com/fil-forge/indexing-service/pkg/build"
-	"github.com/fil-forge/indexing-service/pkg/service/contentclaims"
-	"github.com/fil-forge/indexing-service/pkg/telemetry"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/build"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/contentclaims"
+	"github.com/fil-forge/forge/indexing-service/pkg/telemetry"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	assertcaps "github.com/fil-forge/libforge/commands/assert"
 	"github.com/fil-forge/libforge/identity"
 	"github.com/fil-forge/libforge/ucan/retrieval"
@@ -184,7 +184,7 @@ func withGzip(handler http.HandlerFunc) http.HandlerFunc {
 func GetRootHandler(id ucan.Issuer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("🔥 indexing-service %s\n", build.Version)))
-		w.Write([]byte("- https://github.com/fil-forge/indexing-service\n"))
+		w.Write([]byte("- https://github.com/fil-forge/forge\n"))
 		w.Write([]byte(fmt.Sprintf("- %s\n", id)))
 	}
 }

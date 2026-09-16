@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/redis/go-redis/v9"
 )
 

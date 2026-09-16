@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/commands"
 	assertcaps "github.com/fil-forge/libforge/commands/assert"
 	claimcaps "github.com/fil-forge/libforge/commands/claim"

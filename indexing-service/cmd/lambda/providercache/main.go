@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/fil-forge/indexing-service/cmd/lambda"
-	"github.com/fil-forge/indexing-service/pkg/aws"
-	"github.com/fil-forge/indexing-service/pkg/redis"
-	"github.com/fil-forge/indexing-service/pkg/service/providercacher"
-	"github.com/fil-forge/indexing-service/pkg/telemetry"
+	"github.com/fil-forge/forge/indexing-service/cmd/lambda"
+	"github.com/fil-forge/forge/indexing-service/pkg/aws"
+	"github.com/fil-forge/forge/indexing-service/pkg/redis"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/providercacher"
+	"github.com/fil-forge/forge/indexing-service/pkg/telemetry"
 	logging "github.com/ipfs/go-log/v2"
 	goredis "github.com/redis/go-redis/v9"
 )

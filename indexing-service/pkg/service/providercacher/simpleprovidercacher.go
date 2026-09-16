@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/fil-forge/indexing-service/pkg/telemetry"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/telemetry"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/ipni/go-libipni/find/model"
 	"go.opentelemetry.io/otel/attribute"

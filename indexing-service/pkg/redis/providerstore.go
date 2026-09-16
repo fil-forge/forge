@@ -4,8 +4,8 @@ import (
 	// imported for embedding
 	_ "embed"
 
-	"github.com/fil-forge/indexing-service/pkg/providerresults"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/providerresults"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/ipni/go-libipni/find/model"
 	multihash "github.com/multiformats/go-multihash"
 )

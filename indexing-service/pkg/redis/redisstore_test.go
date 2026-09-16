@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/redis"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/redis"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/fil-forge/indexing-service/pkg/aws"
-	"github.com/fil-forge/indexing-service/pkg/telemetry"
+	"github.com/fil-forge/forge/indexing-service/pkg/aws"
+	"github.com/fil-forge/forge/indexing-service/pkg/telemetry"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 

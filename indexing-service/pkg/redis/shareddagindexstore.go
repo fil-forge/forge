@@ -3,7 +3,7 @@ package redis
 import (
 	"bytes"
 
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
 )
 

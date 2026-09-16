@@ -18,9 +18,9 @@ import (
 	"github.com/multiformats/go-multihash"
 	"github.com/urfave/cli/v2"
 
-	"github.com/fil-forge/indexing-service/pkg/client"
-	"github.com/fil-forge/indexing-service/pkg/telemetry"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/client"
+	"github.com/fil-forge/forge/indexing-service/pkg/telemetry"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 )
 
 var queryCmd = &cli.Command{

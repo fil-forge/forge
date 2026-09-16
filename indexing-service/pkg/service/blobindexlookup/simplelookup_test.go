@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/service/blobindexlookup"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/blobindexlookup"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/fil-forge/libforge/commands/content"
 	"github.com/fil-forge/libforge/ucan/retrieval"

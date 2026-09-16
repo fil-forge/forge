@@ -30,11 +30,11 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 	"github.com/urfave/cli/v2"
 
-	"github.com/fil-forge/indexing-service/pkg/aws"
-	"github.com/fil-forge/indexing-service/pkg/construct"
-	"github.com/fil-forge/indexing-service/pkg/presets"
-	"github.com/fil-forge/indexing-service/pkg/redis"
-	"github.com/fil-forge/indexing-service/pkg/server"
+	"github.com/fil-forge/forge/indexing-service/pkg/aws"
+	"github.com/fil-forge/forge/indexing-service/pkg/construct"
+	"github.com/fil-forge/forge/indexing-service/pkg/presets"
+	"github.com/fil-forge/forge/indexing-service/pkg/redis"
+	"github.com/fil-forge/forge/indexing-service/pkg/server"
 )
 
 var serverCmd = &cli.Command{

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fil-forge/forge/indexing-service/pkg/service/providercacher"
 	"github.com/fil-forge/go-ipni-tools/pkg/queue"
-	"github.com/fil-forge/indexing-service/pkg/service/providercacher"
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/libp2p/go-libp2p/core/peer"

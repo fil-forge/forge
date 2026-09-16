@@ -23,11 +23,12 @@
 # which is wider:
 #
 #   cd ingot && GOWORK=off go list -deps ./cmd/ingot | grep fil-forge/forge/
-#   -> hilt, ingot, swarf
+#   -> hilt, indexing-service, ingot, swarf
 #
 # hilt is linked into the binary (bucketauthority, iam, inmem, s3frontend,
-# module.go) and swarf is too (the revocation firehose consumer), so both have
-# their source copied. smelt is absent entirely: that dependency belongs to
+# module.go), swarf is too (the revocation firehose consumer), and so is
+# indexing-service (pkg/client and pkg/types, through blockstore), so all
+# three have their source copied. smelt is absent entirely: that dependency belongs to
 # ingot/itest, a separate module this image does not build, so nothing here
 # references it -- not even its go.mod.
 #
@@ -50,6 +51,7 @@ WORKDIR /src
 COPY ingot/go.mod ingot/go.sum ./ingot/
 COPY hilt/go.mod hilt/go.sum ./hilt/
 COPY swarf/go.mod swarf/go.sum ./swarf/
+COPY indexing-service/go.mod indexing-service/go.sum ./indexing-service/
 # proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR) and the
 # go command does not retry, so one bad fetch out of several hundred fails the
 # image build.
@@ -58,6 +60,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY ingot/ ./ingot/
 COPY hilt/ ./hilt/
 COPY swarf/ ./swarf/
+COPY indexing-service/ ./indexing-service/
 WORKDIR /src/ingot
 
 # ---- production binary: stripped + static ----

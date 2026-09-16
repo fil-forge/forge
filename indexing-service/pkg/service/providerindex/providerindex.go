@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+	"github.com/fil-forge/forge/indexing-service/pkg/telemetry"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/go-ipni-tools/pkg/metadata"
 	"github.com/fil-forge/go-ipni-tools/pkg/publisher"
-	"github.com/fil-forge/indexing-service/pkg/telemetry"
-	"github.com/fil-forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/digestutil"
 	"github.com/fil-forge/ucantone/did"
 	logging "github.com/ipfs/go-log/v2"

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/redis"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/redis"
 	"github.com/ipni/go-libipni/find/model"
 	"github.com/multiformats/go-multihash"
 	"github.com/stretchr/testify/require"

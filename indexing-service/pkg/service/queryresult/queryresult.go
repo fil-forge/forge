@@ -10,7 +10,7 @@ import (
 	"slices"
 
 	"github.com/fil-forge/automobile"
-	"github.com/fil-forge/indexing-service/pkg/types"
+	"github.com/fil-forge/forge/indexing-service/pkg/types"
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/fil-forge/libforge/bytemap"
 	"github.com/fil-forge/libforge/commands/assert"

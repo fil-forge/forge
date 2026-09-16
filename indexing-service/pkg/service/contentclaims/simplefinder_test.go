@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/testutil"
-	"github.com/fil-forge/indexing-service/pkg/service/contentclaims"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/testutil"
+	"github.com/fil-forge/forge/indexing-service/pkg/service/contentclaims"
 	"github.com/fil-forge/ucantone/ucan"
 	"github.com/stretchr/testify/require"
 )

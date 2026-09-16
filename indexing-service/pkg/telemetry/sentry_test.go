@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/fil-forge/indexing-service/pkg/internal/extmocks"
+	"github.com/fil-forge/forge/indexing-service/pkg/internal/extmocks"
 	"github.com/getsentry/sentry-go"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/stretchr/testify/mock"
