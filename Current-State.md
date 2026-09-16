@@ -88,9 +88,33 @@ Seven rules that have actually decided things:
    `git subtree pull` adds that service's new commits behind a merge. That is
    the feature.
 
-   The corollary that actually bites: because the modes are not
-   interchangeable, a branch that carries subtree merges is *merged* when its
-   base moves, not rebased — the one place rule 6 inverts.
+   When the base moves under such a branch, it is **rebuilt**: replay it onto
+   the new base, re-running each `git subtree pull` so the merge is recreated
+   rather than flattened or imported as content. Not merged — merging the base
+   in buries the branch's own commits exactly as rule 6 says. Not plainly
+   rebased either, which is rule 6's stated exception.
+
+   **`git rebase --rebase-merges` does not do this**, and fails in a way that
+   can look like success. It recreates the merge *topology* but re-runs a
+   plain recursive merge, with no idea that the second parent's paths need the
+   subtree prefix. Tried on the itest branch, it reported
+   `pkg/generate/keys_test.go added in ... inside a directory that was
+   renamed in HEAD, suggesting it should perhaps be moved to
+   smelt/pkg/generate/keys_test.go` — rename detection *guessing* its way to
+   the right place, which on a different set of changes guesses wrong and
+   says nothing. A single `-Xsubtree=<prefix>` cannot rescue it either: one
+   branch carries pulls at six different prefixes.
+
+   So the rebuild is manual, and its cost is the sweep. Re-running a pull
+   reproduces upstream's side faithfully and therefore reproduces its blind
+   spot: files upstream *added* merge cleanly and arrive carrying old module
+   paths, `//go:build` tags this repo has retired, and — the one that nearly
+   escaped — pre-existing resolutions taken from the original pull commits,
+   which predate whatever has landed on the base since. Finish with a sweep,
+   then check the tree against the head being replaced. On the itest branch
+   that check was the whole point: the rebuilt tree had to equal
+   `d64a71eb`, and four separate classes of loss had to be fixed before it
+   did.
 
 ## Where it stands
 

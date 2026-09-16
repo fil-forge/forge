@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 13:10Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 13:40Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,7 +15,7 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | **17/17 green at `4dd620cf`, `mergeable_state: clean`.** Blocked on review alone. `main` moved under it when #6 merged; that conflict is resolved. |
+| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | Head `3caffaa6`. #6 moved `main` under it; **rebuilt** onto the new base per rule 7 (the earlier merge-of-main is gone). Tree is identical to the head that went 17/17, CI re-running. |
 | 2 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
 
 #3's rebuild, verified twice: `git subtree add -P swarf c43af97be79883bd74b20a1df2dab46e09605b0a`
@@ -32,18 +32,8 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
   runner killing the job blind. Two full runs observed: **21m04s**
   (2026-09-16 01:16Z) and **21m24s** (12:56Z). Under four minutes of headroom,
   and it narrowed between them — worth a decision rather than a watch.
-- **Restore the s3-compat report pipeline.** ingot's `2365944c`
-  ([ingot#131](https://github.com/fil-forge/ingot/pull/131), publish the
-  compatibility report to GitHub Pages) arrived with the resync; no equivalent
-  job exists here.
 - **Wire `INGOT_ITEST_BIG` into CI**, or leave the large-object cases to
   manual runs.
-- **Does `swarf` stay pinned** once #3 lands, or does moving in retire its pin
-  the way approach rule 2 says it should?
-- **Turn Renovate on.** `renovate.json` is on `main` as of #6, but it does
-  nothing until the GitHub App is installed on the org — an admin action,
-  deliberately not attempted. Until then the 18 pinned images are frozen
-  rather than maintained, which is the trade #6 made knowingly.
 
 ## Needs access the agent does not have
 
@@ -65,6 +55,12 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **`swarf` will not stay pinned** — decided 2026-09-16. Rule 2 applies as
+  written: moving into the monorepo retires the pin, no exception.
+- **The s3-compat report pipeline and turning Renovate on** moved to
+  `MONOREPO_TODO.md` at the repository root (branch `claude/monorepo-todo`,
+  no PR opened). Both need the monorepo looked at whole, so they are not
+  blocking anything and should not be answered early.
 - **Subtree history is never squashed** — decided 2026-09-16, and now rule 7
   in [[Current State]] rather than an open question. `--squash` is off the
   table on every prefix, so the commit and merge counts `main` carries are
