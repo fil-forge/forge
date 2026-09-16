@@ -116,6 +116,25 @@ Seven rules that have actually decided things:
    `d64a71eb`, and four separate classes of loss had to be fixed before it
    did.
 
+8. **A PR containing a `git subtree add` links the non-subtree commits for
+   review.** Near the top of the body, one link to the Files Changed view per
+   contiguous range of commits that are not the import — because the PR's own
+   headline numbers describe the wrong thing. #3 reads as 65 files and +4730;
+   the work in it is 55 files and +236/−447, and the rest is swarf's source
+   arriving with its history, which is the point of subtree and not something
+   anyone should read as a diff.
+
+   The form is the PR's own files view over a commit range,
+   `/pull/<n>/files/<sha>..<sha>`, so the link keeps the review context rather
+   than dropping into a bare compare. Ranges are read off the first-parent
+   history: `git log --first-parent --oneline --reverse <merge-base>..HEAD`
+   shows the subtree merges as single commits, and everything between them is
+   a range. Where the subtree add is the branch's first commit, as on #3,
+   there is exactly one.
+
+   It pins the head sha, so it goes stale on every push and is **refreshed as
+   part of pushing**, not left to rot. Policy set by Petra, 2026-09-16.
+
 ## Where it stands
 
 **`main` is at `edf25236`.** Phase 0 complete and then some: 7 services
