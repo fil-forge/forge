@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 12:45Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 12:58Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,7 +15,7 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | Head `4dd620cf`. `main` moved under it when #6 merged; the resulting conflict is resolved and pushed, CI re-running. |
+| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | **17/17 green at `4dd620cf`, `mergeable_state: clean`.** Blocked on review alone. `main` moved under it when #6 merged; that conflict is resolved. |
 | 2 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
 
 #3's rebuild, verified twice: `git subtree add -P swarf c43af97be79883bd74b20a1df2dab46e09605b0a`
@@ -36,8 +36,9 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
   modes on one prefix is the thing to avoid.
 - **`itest.yml`'s timeout budget.** `-timeout 25m` sits inside
   `timeout-minutes: 30` so Go fires first and dumps goroutines rather than the
-  runner killing the job blind. Observed run: 21m04s. The margin is thin, and
-  widening it is a CI spend question.
+  runner killing the job blind. Two full runs observed: **21m04s**
+  (2026-09-16 01:16Z) and **21m24s** (12:56Z). Under four minutes of headroom,
+  and it narrowed between them — worth a decision rather than a watch.
 - **Restore the s3-compat report pipeline.** ingot's `2365944c`
   ([ingot#131](https://github.com/fil-forge/ingot/pull/131), publish the
   compatibility report to GitHub Pages) arrived with the resync; no equivalent
