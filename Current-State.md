@@ -196,6 +196,16 @@ project. We build from source and publish
   pin when convenient.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
+- **`itest ingot` is within four minutes of its timeout.** `itest.yml` runs
+  `-timeout 25m` inside `timeout-minutes: 30`; observed 21m04s and 21m24s.
+  The ordering is deliberate and the failure is loud: Go's timeout fires
+  first and dumps every goroutine stack, so a red run says `test timed out
+  after 25m0s` and shows what was stuck. If GitHub's fired first the runner
+  would kill the job with no Go output at all. Left alone deliberately —
+  revisit on the first red, which will name itself. Note that a timeout here
+  is ambiguous between "genuinely slower" and "a container never came up";
+  the goroutine dump is what tells them apart, which is the whole reason
+  Go's limit is the inner one.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13

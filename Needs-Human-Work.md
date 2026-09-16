@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 13:40Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 13:45Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -27,11 +27,6 @@ then repoint the PR base to `main`.
 
 Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
-- **`itest.yml`'s timeout budget.** `-timeout 25m` sits inside
-  `timeout-minutes: 30` so Go fires first and dumps goroutines rather than the
-  runner killing the job blind. Two full runs observed: **21m04s**
-  (2026-09-16 01:16Z) and **21m24s** (12:56Z). Under four minutes of headroom,
-  and it narrowed between them — worth a decision rather than a watch.
 - **Wire `INGOT_ITEST_BIG` into CI**, or leave the large-object cases to
   manual runs.
 
@@ -55,6 +50,9 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **`itest.yml`'s timeout budget is a note, not a decision.** The failure mode
+  is loud and self-labelling, so it moved to Known debt in [[Current State]]
+  to be revisited on the first red rather than pre-emptively.
 - **`swarf` will not stay pinned** — decided 2026-09-16. Rule 2 applies as
   written: moving into the monorepo retires the pin, no exception.
 - **The s3-compat report pipeline and turning Renovate on** moved to
