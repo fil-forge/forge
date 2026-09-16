@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 15:10Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 15:40Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,13 +15,8 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | **17/17 green at `20142aa3`.** Rebuilt onto the new base per rule 7 after #6 moved `main` under it, plus `MAJOR_DECISIONS.md`. Blocked on review alone. |
-| 2 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
-
-#3's rebuild, verified twice: `git subtree add -P swarf c43af97be79883bd74b20a1df2dab46e09605b0a`
-onto the new base, cherry-pick the ten commits, check `git diff <old head> HEAD -- swarf/`
-is empty and the upstream root is still an ancestor, `push --force-with-lease`,
-then repoint the PR base to `main`.
+| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | Head `0d455123`, CI running. Also moves `itest`'s peer images to HEAD, so a red means this service regressed rather than that somebody else merged. |
+| 2 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. | **Rebuilt onto #4** and base repointed there; head `76204d40`. `swarf/` is byte-identical to the frozen `1ede102`, the upstream root is still an ancestor, and swarf/hilt/ingot all build, vet, tidy and gofmt clean. |
 
 ## Decisions waiting
 
@@ -82,6 +77,12 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **#3's rebuild is done.** Replayed onto #4 per rule 7 — fresh
+  `git subtree add` at `c43af97b`, then the ten commits. Three conflicts, all
+  real rather than textual: hilt's `go.mod`/`Dockerfile` (see below), the
+  workflow comments #4 had already reworded, and swarf's compose image, where
+  #4's own comment said to flip the pin to `:?` once this branch landed —
+  which is the rule-2 outcome already settled.
 - **The round-1 review session has nothing left to post.**
   `session_01GXUttS5N775eQ7QXboRAxe` never got repo access, so it could not
   post to GitHub — but its findings did reach us, and both are in merged #6:
