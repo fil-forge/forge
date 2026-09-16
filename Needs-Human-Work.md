@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 15:40Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 16:15Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -22,38 +22,7 @@ Nothing else proceeds until these do.
 
 Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
-- **What should `itest`'s peer images be, now that all six are in-repo?** Stay
-  on mutable `:main`, pin by digest, or build from HEAD as `e2e` does. This
-  reopened when the justification I had written for the status quo did not
-  survive checking: nothing documents `itest` as a compatibility gate against
-  the published network. `ingot/itest/README.md` frames the suite as testing a
-  *real deployed* ingot rather than an in-memory one, and treats the mutable
-  tags as a hazard — "images … that Docker never re-pulls", with instructions
-  to re-pull by hand. The likeliest reason peers came from the registry is
-  that in the polyrepo ingot's repository had no sibling source, so there was
-  no other option. The monorepo removes that constraint.
-
-  Bearing on it: a red `itest ingot` should mean ingot's own contract
-  regressed, and once already it meant `hilt:main` moved instead. Against it:
-  building six images per itest job costs time (`e2e` records the whole matrix
-  at ~2.5 min, piri slowest at 2m14s). The "do we still work with what is
-  deployed?" question is real but belongs to a third suite — `compat.yml`,
-  already in the plan's Phase 1. Until this is settled the peer-image entry in
-  `MAJOR_DECISIONS.md` is defending a status quo whose original reason has
-  expired.
-- **Wire `INGOT_ITEST_BIG` into CI**, or leave the 5 GiB max-part case to
-  manual runs. Note what this actually costs, which is more than an env var:
-  upstream's `go-test.yml` sets it alongside `-timeout 40m` inside
-  `timeout-minutes: 60`, *and* a "Free runner disk space" step that deletes
-  dotnet, android and CodeQL because the test churns 10-15 GiB. Our
-  `itest.yml` runs `-timeout 25m` inside `timeout-minutes: 30` and frees
-  nothing — a budget sized for the suite *without* this test. So the three
-  move together or not at all.
-
-  The docs here that describe it were **correct upstream** and were
-  invalidated by us: `itest/README.md` says "(CI sets it)", which was true of
-  `fil-forge/ingot` and stopped being true when consolidation pruned the
-  per-service workflows.
+*Nothing waiting.*
 
 ## Needs access the agent does not have
 
@@ -77,6 +46,18 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **`itest`'s peers come from HEAD** — decided, implemented and pushed on #4.
+  The suites append `pkg/stack.OptionsFromEnv` after `WithPublishedImages`, and
+  `itest.yml` builds the six services from the commit under test, so a red
+  means this service regressed rather than that somebody else merged.
+  `WithPublishedImages` stays the local default. I had briefly reopened this
+  here after finding my own justification for the old behaviour unsupported;
+  it was settled the same hour and should not have stayed on the list.
+- **`INGOT_ITEST_BIG` stays manual** — decided. The 5 GiB max-part case runs on
+  demand, not in CI; enabling it is a three-part change (the variable, a
+  40m/60m budget, and a step freeing 10–15 GiB of runner disk). Written up in
+  `MAJOR_DECISIONS.md` rather than here, because "a gated test CI never
+  enables" reads as an oversight to anyone who finds it cold.
 - **#3's rebuild is done.** Replayed onto #4 per rule 7 — fresh
   `git subtree add` at `c43af97b`, then the ten commits. Three conflicts, all
   real rather than textual: hilt's `go.mod`/`Dockerfile` (see below), the
