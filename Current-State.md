@@ -260,7 +260,15 @@ not survive #3.
   `check-dockerfile-retry.sh` written during the first attempt live in the
   old `fil-forge/forge` and were never carried across. Worth porting the
   ones whose defect can recur here.
-- **`itest ingot` now runs 29m03s and the job cap is 45 minutes.** Taking the
+- **`itest ingot` is drifting toward its 45-minute cap, one image build at a
+  time.** 21m30s standalone before the peers came from HEAD; 29m03s once six
+  images were built in-job; 30m15s on #11, which adds the indexer as the
+  eighth. Each service brought in-repo adds a build to this job, so the
+  margin shrinks as the monorepo grows rather than staying put. About
+  fifteen minutes left. The ordering still holds: Go's `-timeout 25m`
+  covers the test portion only and fires first on a hang, dumping
+  goroutines, where a runner kill at the cap gives nothing.
+- **`itest ingot` was 29m03s and the job cap is 45 minutes.** Taking the
   peers from HEAD added a six-image build to the job — measured at 6m27s and
   8m12s on two runs — and the total went from ~21m30s to **29m03s**. The cap
   was 30. It was raised to 45 in the same change, on an estimate; the first
