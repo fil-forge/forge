@@ -59,6 +59,44 @@ conformance test.
 (Dependabot covers Docker and Go but reads `docker-compose` files less
 willingly), or keep bumping by hand and accept the drift.
 
+## Narrow hilt's Docker build context again
+
+`hilt/Dockerfile` builds from the repository root, because hilt links swarf
+through `replace => ../swarf` and Go resolves every replace target before it
+downloads anything — a context scoped to `hilt/` dies in `go mod download`.
+piri and ingot are the same. Recorded in the Dockerfile itself.
+
+**Why it waits.** Narrowing it is not a Dockerfile change. An in-repo module
+reached by a `replace` always lives outside `hilt/`, so no restructuring
+helps — not even extracting an `internal/client/swarf`, which would just be a
+different sibling directory. The only thing that narrows the context is
+consuming swarf as a published, tagged module through the proxy, which is
+Phase 1 work and gives up same-commit co-development in exchange.
+
+**Agreed 2026-09-16**: keep it as it is for now, resolve before the
+consolidation is finished. So this one has a decision already; what it needs
+is Phase 1 to happen.
+
+## Decide what to do about the macOS test run
+
+Each service's own CI ran its tests on macOS as well as ubuntu: the shared
+go-test workflow defaults to `["ubuntu", "windows", "macos"]` and every
+service's config skipped only Windows. The monorepo runs ubuntu only, and
+[#9](https://github.com/fil-forge/forge-2/pull/9) restored the other four
+lost checks while deliberately leaving this one alone.
+
+**Why it waits.** It is not clear the macOS jobs were ever green. Several
+modules' tests boot containers through testcontainers, and GitHub's macOS
+runners have no Docker daemon — so either those jobs were failing upstream,
+or something not visible from here supplied one. Reproducing a job that was
+already red buys nothing, and macOS runners bill at a higher multiplier than
+ubuntu, so this is not free to find out by trying.
+
+**The choice.** Establish what those runs actually did — one look at a recent
+`Go Test` run on any of the eight upstream repositories settles it — then
+restore macOS, restore it only for the modules that do not need Docker, or
+decide ubuntu-only is what the monorepo wants and say so.
+
 ---
 
 # Findings in the imported code
