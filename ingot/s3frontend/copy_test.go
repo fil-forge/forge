@@ -20,8 +20,8 @@ import (
 	"github.com/fil-forge/versitygw/s3err"
 	"github.com/fil-forge/versitygw/s3response"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/registry"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // Every failed copy-source precondition is a 412, including the two the

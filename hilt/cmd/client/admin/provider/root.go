@@ -2,7 +2,7 @@
 package provider
 
 import (
-	"github.com/fil-forge/hilt/cmd/client/admin/provider/nodes"
+	"github.com/fil-forge/forge/hilt/cmd/client/admin/provider/nodes"
 	"github.com/spf13/cobra"
 )
 

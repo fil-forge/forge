@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/smithy-go"
-	hiltclient "github.com/fil-forge/hilt/pkg/client"
+	hiltclient "github.com/fil-forge/forge/hilt/pkg/client"
 	s3 "github.com/fil-forge/libforge/commands/s3"
 	s3bkt "github.com/fil-forge/libforge/commands/s3/bucket"
 	s3req "github.com/fil-forge/libforge/commands/s3/request"
@@ -21,9 +21,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/fil-forge/ingot/config"
-	"github.com/fil-forge/ingot/iam"
-	ingottesting "github.com/fil-forge/ingot/testing"
+	"github.com/fil-forge/forge/ingot/config"
+	"github.com/fil-forge/forge/ingot/iam"
+	ingottesting "github.com/fil-forge/forge/ingot/testing"
 )
 
 // recordingIAM wraps the real iam.Service and records every access key

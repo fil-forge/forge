@@ -16,9 +16,9 @@ import (
 	"github.com/fil-forge/versitygw/s3err"
 	"github.com/fil-forge/versitygw/s3response"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
-	"github.com/fil-forge/ingot/internal/reqscope"
-	"github.com/fil-forge/ingot/registry"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/internal/reqscope"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // maxCopySize is S3's ceiling on the bytes one copy request may move: the

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/ingot/bucket"
+	"github.com/fil-forge/forge/ingot/bucket"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	"github.com/fil-forge/ucantone/multikey/ed25519"
 	"github.com/fil-forge/ucantone/ucan"

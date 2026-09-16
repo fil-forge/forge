@@ -1,7 +1,7 @@
 package routing
 
 import (
-	"github.com/fil-forge/sprue/cmd/client/lib"
+	"github.com/fil-forge/forge/sprue/cmd/client/lib"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/spf13/cobra"
 )

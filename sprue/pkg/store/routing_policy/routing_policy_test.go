@@ -4,10 +4,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/fil-forge/sprue/internal/testutil"
-	routingpolicy "github.com/fil-forge/sprue/pkg/store/routing_policy"
-	routingpolicymemory "github.com/fil-forge/sprue/pkg/store/routing_policy/memory"
-	routingpolicypostgres "github.com/fil-forge/sprue/pkg/store/routing_policy/postgres"
+	"github.com/fil-forge/forge/sprue/internal/testutil"
+	routingpolicy "github.com/fil-forge/forge/sprue/pkg/store/routing_policy"
+	routingpolicymemory "github.com/fil-forge/forge/sprue/pkg/store/routing_policy/memory"
+	routingpolicypostgres "github.com/fil-forge/forge/sprue/pkg/store/routing_policy/postgres"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/stretchr/testify/require"
 )

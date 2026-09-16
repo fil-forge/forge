@@ -14,7 +14,7 @@ import (
 	"github.com/fil-forge/versitygw/s3err"
 	"github.com/fil-forge/versitygw/s3response"
 
-	"github.com/fil-forge/ingot/registry"
+	"github.com/fil-forge/forge/ingot/registry"
 )
 
 // upc issues an UploadPartCopy into bucket "bk".

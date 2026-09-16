@@ -1,5 +1,3 @@
-//go:build itest
-
 package itest
 
 import (
@@ -21,10 +19,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 	"github.com/filecoin-project/go-fee/cose"
 
-	msbucket "github.com/fil-forge/ingot/bucket"
+	msbucket "github.com/fil-forge/forge/ingot/bucket"
 )
 
 // TestForgeEncryption is the end-to-end encryption suite: the

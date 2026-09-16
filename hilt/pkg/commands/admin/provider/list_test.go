@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/fil-forge/hilt/pkg/commands/admin/provider"
+	"github.com/fil-forge/forge/hilt/pkg/commands/admin/provider"
 	"github.com/fil-forge/libforge/testutil"
 	"github.com/stretchr/testify/require"
 )

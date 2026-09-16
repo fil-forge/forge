@@ -76,7 +76,7 @@ require (
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/fil-forge/libforge v0.0.0-20260904125112-81372e7200bf // indirect
+	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe // indirect
 	github.com/filecoin-project/go-data-segment v0.0.1 // indirect
 	github.com/fsnotify/fsevents v0.2.0 // indirect
 	github.com/fvbommel/sortorder v1.1.0 // indirect

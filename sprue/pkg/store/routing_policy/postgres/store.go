@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	routingpolicy "github.com/fil-forge/sprue/pkg/store/routing_policy"
+	routingpolicy "github.com/fil-forge/forge/sprue/pkg/store/routing_policy"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 	"github.com/jackc/pgx/v5"

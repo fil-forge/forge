@@ -3,7 +3,7 @@ package nodes
 import (
 	"fmt"
 
-	"github.com/fil-forge/hilt/cmd/client/lib"
+	"github.com/fil-forge/forge/hilt/cmd/client/lib"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/spf13/cobra"
 )

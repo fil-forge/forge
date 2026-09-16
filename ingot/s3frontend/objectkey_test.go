@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/fil-forge/ingot/mst"
+	"github.com/fil-forge/forge/ingot/mst"
 	"github.com/fil-forge/versitygw/s3err"
 )
 

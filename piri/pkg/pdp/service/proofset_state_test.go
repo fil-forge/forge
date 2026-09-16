@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/fil-forge/piri/pkg/pdp/types"
+	"github.com/fil-forge/forge/piri/pkg/pdp/types"
 )
 
 func TestSetChallengeStatus(t *testing.T) {

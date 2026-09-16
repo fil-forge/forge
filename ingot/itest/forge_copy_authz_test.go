@@ -1,5 +1,3 @@
-//go:build itest
-
 package itest
 
 import (
@@ -11,9 +9,9 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/fil-forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/stack"
 
-	ingottest "github.com/fil-forge/ingot/testing"
+	ingottest "github.com/fil-forge/forge/ingot/testing"
 )
 
 // TestForgeCopyAuthorization proves a copy is authorized on both ends through
