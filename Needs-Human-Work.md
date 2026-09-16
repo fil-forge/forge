@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 16:05Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 17:20Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,13 +15,24 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. The only PR left open. | Head `5181c0b0`, base repointed to `main`. CI re-running after a build-context fix. Test-merges conflict-free. |
+| 1 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. The only PR left open. | Head `3b4c4d8e`, base `main`. CI re-running after `itest hilt` went red on a stale `require` (below). 18 of 19 jobs were already green on the previous head. |
 
 ## Decisions waiting
 
 Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
-*Nothing waiting.*
+- **A CI guard I added on my own initiative, easy to drop.** You declined a
+  squashed-subtree guard, so this one should be named rather than assumed
+  welcome: `.github/scripts/check-replaces.sh` (which already ran as the
+  `replaces` job) now also fails when any `go.mod` requires a service this
+  repository contains under its old upstream path. That is the bug that just
+  took `itest hilt` red — `hilt/itest/go.mod` still required
+  `github.com/fil-forge/swarf` while its `.go` files imported
+  `github.com/fil-forge/forge/swarf`. It is module wiring, not commit history,
+  and the same shape recurs on every import: a service arrives by subtree with
+  the `go.mod` it had upstream, and a nested module (`hilt/itest`,
+  `ingot/itest`) is not reached by a sweep over the service's own `go.mod`.
+  `indexing-service` is next in. One commit (`3b4c4d8e`), reverts cleanly.
 
 ## Needs access the agent does not have
 
@@ -44,6 +55,22 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
   consult the network for an in-repo module.
 
 ## Recently cleared
+
+- **`itest hilt` went red and is fixed** (`d8d1ef37`). Not one of the three
+  suspects I had written down — the build contexts, swarf's libforge pin and
+  the `${SWARF_IMAGE:?}` flip were all sound. `${SWARF_IMAGE:?}` in
+  particular cannot fire from CI: `WithPublishedImages()` fills
+  `c.swarfImage`, which the stack writes into the compose environment itself.
+  The actual cause was `hilt/itest/go.mod` requiring the upstream
+  `github.com/fil-forge/swarf`; nothing pointed at it until this branch,
+  because hilt only started importing swarf here.
+- **Two things that fell out of that fix.** `itest.yml` was building six
+  images from HEAD and leaving swarf — now the seventh in-repo service — on
+  the published `:main` tag, which is the mutable-peer ambiguity the rest of
+  that `env` block exists to remove; `e2e.yml` already built it, and the two
+  workflows now match. And `itest.yml`'s header still called the suite "a
+  compatibility check" against the published network, contradicting its own
+  `env` block sixty lines down. Both corrected on #3.
 
 - **[#4](https://github.com/fil-forge/forge-2/pull/4) merged** 2026-09-16
   ~15:57Z as `edf25236` — itest suites as their own modules and actually run,
