@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 12:30Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 12:45Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,9 +15,8 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | CI re-running on `8efa2335`. Was 17/17 green on `3c1a04b3`, whose tree is identical. |
-| 2 | **Merge [#6](https://github.com/fil-forge/forge-2/pull/6)** `claude/pin-external-images` — 18 images pinned by digest across 35 references, plus a `renovate.json` that would keep them moving. | 15/15 green at `ef607dea`. Based on `main`, so independent of #4. |
-| 3 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
+| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | Head `4dd620cf`. `main` moved under it when #6 merged; the resulting conflict is resolved and pushed, CI re-running. |
+| 2 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
 
 #3's rebuild, verified twice: `git subtree add -P swarf c43af97be79883bd74b20a1df2dab46e09605b0a`
 onto the new base, cherry-pick the ten commits, check `git diff <old head> HEAD -- swarf/`
@@ -47,8 +46,10 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
   manual runs.
 - **Does `swarf` stay pinned** once #3 lands, or does moving in retire its pin
   the way approach rule 2 says it should?
-- **Turn Renovate on.** #6 ships the config as a demonstration; installing the
-  GitHub App on the org is an admin action, deliberately not attempted.
+- **Turn Renovate on.** `renovate.json` is on `main` as of #6, but it does
+  nothing until the GitHub App is installed on the org — an admin action,
+  deliberately not attempted. Until then the 18 pinned images are frozen
+  rather than maintained, which is the trade #6 made knowingly.
 
 ## Needs access the agent does not have
 
@@ -70,6 +71,9 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **[#6](https://github.com/fil-forge/forge-2/pull/6) merged** 2026-09-16
+  12:27Z — 18 images pinned by digest across 35 references, plus the Renovate
+  config. It moved `main` under #4; see blocking item 1.
 - **`claude/itest-image-pin-probe` is gone** — the scratch branch the 403
   above blocked. Deleted since; no longer outstanding.
 - **The three MinIO repoints all merged**:
