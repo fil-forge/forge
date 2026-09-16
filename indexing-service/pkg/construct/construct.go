@@ -108,9 +108,9 @@ func DefaultHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 30 * time.Second,
 		Transport: &http.Transport{
-			Dial: (&net.Dialer{
+			DialContext: (&net.Dialer{
 				Timeout: 5 * time.Second,
-			}).Dial,
+			}).DialContext,
 			TLSHandshakeTimeout: 5 * time.Second,
 		},
 	}
