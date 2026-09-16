@@ -404,7 +404,7 @@ func (s *Stack) chownScratchToHostUser(ctx context.Context) {
 	}
 	cmd := osexec.CommandContext(ctx, "docker", "run", "--rm", "-u", "0:0",
 		"-v", fmt.Sprintf("%s:/s", scratchDir),
-		"busybox", "chown", "-R", u.Uid+":"+u.Gid, "/s",
+		snapshot.BusyboxImage, "chown", "-R", u.Uid+":"+u.Gid, "/s",
 	)
 	_ = cmd.Run()
 }

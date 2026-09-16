@@ -11,10 +11,11 @@ import (
 	"github.com/fil-forge/forge/smelt/pkg/manifest"
 )
 
-// busyboxImage is the helper used to tar/untar through docker volumes.
-// It's tiny and ubiquitous — any host running smelt already has it pulled
-// (or gets it in seconds on first use).
-const busyboxImage = "busybox:latest"
+// BusyboxImage is the helper used to tar/untar through docker volumes, and
+// to chown scratch dirs back to the host user in pkg/stack. Exported so
+// there is one pinned literal rather than one per caller. It's tiny and
+// ubiquitous — any host running smelt already has it pulled.
+const BusyboxImage = "busybox:latest@sha256:dc2d74b28e4cf8984fa52af1f39bc7c3d9c73760b41a74d629f5d11b1ab28616"
 
 // resolveVolumes returns the compose-declared volume names (without project
 // prefix) that this manifest produces. Only volumes actually created by the
@@ -90,7 +91,7 @@ func archiveVolume(ctx context.Context, projectName, volName, outputDir string) 
 		"-u", "0:0",
 		"-v", fmt.Sprintf("%s:/src:ro", fullVol),
 		"-v", fmt.Sprintf("%s:/dst", outputDirAbs),
-		busyboxImage,
+		BusyboxImage,
 		"tar", "-C", "/src", "-czf", fmt.Sprintf("/dst/%s.tar.gz", volName), ".",
 	)
 	cmd.Stdout = os.Stdout
@@ -174,7 +175,7 @@ func RestoreVolume(ctx context.Context, projectName, volName, inputDir string) e
 		"-u", "0:0",
 		"-v", fmt.Sprintf("%s:/dst", fullVol),
 		"-v", fmt.Sprintf("%s:/src:ro", inputDirAbs),
-		busyboxImage,
+		BusyboxImage,
 		"tar", "-C", "/dst", extractFlags, fmt.Sprintf("/src/%s", tarName),
 	)
 	cmd.Stdout = os.Stdout
