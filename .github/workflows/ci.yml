@@ -123,8 +123,13 @@ jobs:
         run: |
           $GITHUB_WORKSPACE/.github/scripts/retry.sh go mod tidy
           git diff --exit-code -- go.mod go.sum
+      # -race and -shuffle=on, both of which each service's own CI ran.
+      # -race requires cgo, so CGO_ENABLED is 1 here regardless of the
+      # matrix's value for the build steps above.
       - name: test
-        run: go test ${{ matrix.build_flags }} ./...
+        env:
+          CGO_ENABLED: "1"
+        run: go test ${{ matrix.build_flags }} -race -shuffle=on ./...
       # Tag-gated packages are invisible to every step above, so a broken
       # import path in them stays green until someone runs the suite by hand.
       # Compiling them (not running them — they need Docker and a live stack)
