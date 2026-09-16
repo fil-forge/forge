@@ -96,7 +96,7 @@ services:
   # restarts but not a hilt-vault container restart. The image's default
   # command is `server -dev`; the entrypoint reads the BAO_DEV_* vars below.
   hilt-vault:
-    image: openbao/openbao:2.6
+    image: openbao/openbao:2.6@sha256:11fd73a2102cda9c55d5d881a8c3210303146a7ec1e8ac76f526e175c6d24641
     ports:
       - "${SMELT_HILT_VAULT_PORT:-15112:8200}"
     environment:
@@ -118,7 +118,7 @@ services:
   # enough — no init sidecar needed. Named hilt-postgres because `postgres`
   # is taken by upload's sidecar.
   hilt-postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     ports:
       - "${SMELT_HILT_POSTGRES_PORT:-15111:5432}"
     environment:

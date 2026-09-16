@@ -11,7 +11,7 @@
 
 services:
   dynamodb-local:
-    image: amazon/dynamodb-local:latest
+    image: amazon/dynamodb-local:latest@sha256:ff89bd48ff32cd8d9be5fee8873b65b8854dc408f1afe881be6eb00247bc0dab
     # Root so docker's auto-created volume dir (root-owned) is writable. The
     # upstream image's dynamodblocal uid 1000 can't write into a fresh named
     # volume without a chown sidecar.
@@ -69,7 +69,7 @@ services:
     networks:
       - forge-network
   email:
-    image: rnwood/smtp4dev:v3
+    image: rnwood/smtp4dev:v3@sha256:25c434c1900a9c5b61e17ead0a774d9e81b80554d05cf64719d69e5ea8c66537
     ports:
       - "${SMELT_SMTP_PORT:-15080:25}"
       - "${SMELT_SMTP_WEB_PORT:-15081:80}"  # Web UI / API

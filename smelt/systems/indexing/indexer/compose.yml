@@ -6,7 +6,7 @@
 services:
   # Redis - Cache backend for indexing service
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
     ports:
       - "${SMELT_REDIS_PORT:-15020:6379}"
     healthcheck:

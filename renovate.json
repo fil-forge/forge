@@ -7,7 +7,7 @@
   "postUpdateOptions": ["gomodTidy"],
   "packageRules": [
     {
-      "description": "In-repo libraries must hold the same version in every module. ci.yml does not check that; a split is only visible as a build failure somewhere else, so keep each bump to a single PR that moves all nine go.mod files together rather than nine PRs that land at nine different times.",
+      "description": "In-repo libraries must hold the same version in every module. ci.yml does not check that; a split is only visible as a build failure somewhere else, so keep each bump to a single PR that moves all nine go.mod files together rather than nine PRs that land at nine different times. Everything else in Go is left to the default of one PR per dependency, which is the cadence the per-service dependabot configs used before the consolidation dropped them.",
       "matchManagers": ["gomod"],
       "matchPackageNames": [
         "github.com/fil-forge/libforge",
@@ -17,18 +17,6 @@
         "github.com/fil-forge/go-ipni-tools"
       ],
       "groupName": "fil-forge libraries"
-    },
-    {
-      "description": "Everything else in Go, one PR per dependency, matching the cadence the per-service dependabot configs used before the consolidation dropped them.",
-      "matchManagers": ["gomod"],
-      "matchPackageNames": ["*"],
-      "excludePackageNames": [
-        "github.com/fil-forge/libforge",
-        "github.com/fil-forge/ucantone",
-        "github.com/fil-forge/swarf",
-        "github.com/fil-forge/versitygw",
-        "github.com/fil-forge/go-ipni-tools"
-      ]
     },
     {
       "description": "Actions as one grouped PR, as the per-service dependabot configs did.",
@@ -44,11 +32,11 @@
   ],
   "customManagers": [
     {
-      "description": "MinIO is referenced from Go as well as from compose: two testutil constants and the piri compose generator, whose output is gitignored and so has no file for the docker-compose manager to read. Scoped to the minio image by name, which deliberately leaves smelt/pkg/stack/options.go alone - the six ghcr.io/fil-forge/<service>:main references there are the published peers an itest run is meant to be tested against, and pinning those would turn that compatibility check into a slower copy of e2e.",
+      "description": "Images named from Go rather than from compose: testcontainers constants in four services' testutil packages, and the piri compose generator, whose output is gitignored and so has no file for the docker-compose manager to read. The match REQUIRES an @sha256 digest, which fences this manager by construction: it sees exactly the references this repository has already pinned, and cannot touch the six ghcr.io/fil-forge/<service>:main entries in smelt/pkg/stack/options.go. Those are the published peers an itest run is meant to be tested against, and pinning them would turn that compatibility check into a slower copy of e2e.",
       "customType": "regex",
       "managerFilePatterns": ["/\\.go$/"],
       "matchStrings": [
-        "(?<depName>ghcr\\.io/fil-forge/minio):(?<currentValue>[^\"@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?"
+        "\"(?<depName>[a-z0-9][a-z0-9._/-]*):(?<currentValue>[\\w][\\w.-]*)@(?<currentDigest>sha256:[a-f0-9]{64})\""
       ],
       "datasourceTemplate": "docker"
     }
