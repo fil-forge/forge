@@ -53,9 +53,11 @@ jobs:
             context: .
           - service: ingot
             context: .
-          # No cross-module replace: the service dir is a sufficient context.
+          # swarf is linked into hilt's binary (the revocation client), so its
+          # source must be in the context. smelt is not: that edge is test-only
+          # and lives in hilt/itest.
           - service: hilt
-            context: hilt
+            context: .
           - service: sprue
             context: sprue
           - service: delegator

@@ -120,7 +120,7 @@ jobs:
             echo "::endgroup::"
           }
           build piri .
-          build hilt hilt
+          build hilt .
           build ingot .
           build sprue sprue
           build delegator delegator
