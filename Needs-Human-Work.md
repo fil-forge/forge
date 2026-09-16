@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 14:20Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 14:40Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -53,7 +53,13 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
   drop as you prefer.
 - **The `forge-2` → `forge` rename**, whenever this path is judged correct.
   Module paths are already `github.com/fil-forge/forge/*` and are wrong only
-  in the interim.
+  in the interim, so the rename fixes them by happening rather than needing a
+  sweep of its own. What is broken meanwhile is narrow and worth knowing
+  before someone "fixes" it: an external `go get
+  github.com/fil-forge/forge/piri` resolves at the *old* repository and fails
+  there. Nothing we build is affected — per-module `GOWORK=off` builds, the
+  workspace build, and every `replace ../<svc>` edge are relative and never
+  consult the network for an in-repo module.
 
 ## Recently cleared
 
