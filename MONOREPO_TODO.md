@@ -77,6 +77,35 @@ Phase 1 work and gives up same-commit co-development in exchange.
 consolidation is finished. So this one has a decision already; what it needs
 is Phase 1 to happen.
 
+## Decide whether to cover smelt/systems/stress-tester
+
+It is a module in its own right — `smelt/systems/stress-tester/go.mod`, with
+its own `Dockerfile`, `compose.yml` and `cmd/` — and nothing builds, vets or
+tests it. smelt's own `go build ./...` does not reach it because it is a
+separate module, it is absent from `go.work`, and no workflow references it.
+It is the only Go in this repository in that position.
+
+**Why it waits.** It is not a check that was dropped: upstream's `go-check`
+walked every `go.mod` in a repository, so this module lost its coverage at the
+consolidation, when the root workflow started enumerating modules by name.
+[#9](https://github.com/fil-forge/forge-2/pull/9) briefly added it and it was
+taken back out, because restoring what was removed and covering something that
+was never covered are two different changes.
+
+It is also not free. Its `go.mod` says `go 1.24.0` where every other module
+says `1.27.0`, which is below staticcheck's own minimum — adding it to the
+matrix is what turned #9 red, and the fix had to move the toolchain source
+from the job's module to `go.work`.
+
+**The choice.** Add it to the matrix and to `go.work` and keep it building —
+noting that adding it to `go.work` shifts workspace-mode resolution for every
+other module (measured: `modernc.org/cc/v3` 3.40.0 → 3.41.0, `modernc.org/ccgo/v3`
+3.16.13 → 3.17.0, plus a gorm and sqlite subtree) — or decide it is a
+development tool that does not need CI, and say so where someone will find it.
+
+It is clean on build, vet, tidy, test and staticcheck as it stands, so
+whichever way this goes, it is not currently broken.
+
 ## Decide what to do about the macOS test run
 
 Each service's own CI ran its tests on macOS as well as ubuntu: the shared
