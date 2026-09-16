@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 19:40Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 20:45Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -16,6 +16,7 @@ Nothing else proceeds until these do.
 | | what | state |
 |---|---|---|
 | 1 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. The only PR left open. | Head `5177695b`, base `main`. Was green on all 19 at `a957312f`; CI re-running after two comment-only commits answering your 18:29Z review. All five threads answered on the PR. |
+| 2 | **Review [#8](https://github.com/fil-forge/forge-2/pull/8)** `claude/upstream-findings` — records the four swarf bugs #3's review found and deliberately did not fix. Docs only, one file. | Not blocking anything. Also asks whether upstream findings and whole-repo questions should share `MONOREPO_TODO.md`. Nobody has filed these as issues against swarf; it is not in this session's repo scope. |
 
 ## Decisions waiting
 

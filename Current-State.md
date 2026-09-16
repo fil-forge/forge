@@ -135,6 +135,13 @@ Seven rules that have actually decided things:
    It pins the head sha, so it goes stale on every push and is **refreshed as
    part of pushing**, not left to rot. Policy set by Petra, 2026-09-16.
 
+9. **A branch meant to be reviewed and merged gets a PR, opened when it is
+   pushed.** Not left as a bare branch for someone to notice. Scratch branches
+   — probes, experiments, anything not meant to survive — do not need one, and
+   should not get one. Policy set by Petra, 2026-09-16, after two branches
+   (`claude/monorepo-todo`, `claude/upstream-findings`) were pushed without
+   PRs and had to be opened by hand.
+
 ## Where it stands
 
 **`main` is at `edf25236`.** Phase 0 complete and then some: 7 services
