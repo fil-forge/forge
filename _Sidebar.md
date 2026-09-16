@@ -2,6 +2,7 @@
 
 - [[Home]]
 - [[Current State]] ← start here
+- [[Needs Human Work]] 👤
 - [[Consolidation Findings]]
   - Blind spots (B1–B8)
   - Latent issues (L1–L12)
