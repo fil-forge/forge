@@ -23,11 +23,6 @@ type ServerConfig struct {
 	// "us-east-1".
 	Region string
 
-	// RootAccess / RootSecret configure the single-account IAM root
-	// user for the embedded S3 listener. Both required.
-	RootAccess string
-	RootSecret string
-
 	// MaxBlobSize is the blob ceiling for new objects, in bytes.
 	// 0 → bucket.DefaultMaxBlobSize.
 	MaxBlobSize int64
@@ -52,6 +47,12 @@ type ServerConfig struct {
 	// idempotency are reaped past the same age. Zero → default 7 days;
 	// negative → sweeper disabled.
 	MultipartSessionTTL time.Duration
+
+	// ReleaseGrace delays each blob release this long past the drop of its
+	// last reference claim, so in-flight readers of the prior catalog root
+	// finish first. Config.ServerConfig() applies the 60s default; zero here
+	// means releases are due immediately.
+	ReleaseGrace time.Duration
 
 	// CORSConfig is the S3 CORS configuration the backend reports for
 	// every bucket, rendered from Config.CORSAllowedOrigins by

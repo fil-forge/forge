@@ -9,10 +9,13 @@ import (
 	"strings"
 	"time"
 
+	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	"github.com/fil-forge/ucantone/did"
+	"github.com/filecoin-project/go-fee/aesstream"
 	"github.com/spf13/viper"
 	"go.uber.org/multierr"
 
+	"github.com/fil-forge/forge/ingot/bucket"
 	"github.com/fil-forge/forge/ingot/internal/cors"
 )
 
@@ -27,12 +30,11 @@ type Config struct {
 	DataDir string `mapstructure:"data_dir" yaml:"data_dir"`
 	// Region is the AWS region advertised over sigv4 (default "us-east-1").
 	Region string `mapstructure:"region" yaml:"region"`
-	// RootAccess / RootSecret are the S3 root-account credentials the embedded
-	// S3 listener (versitygw) requires. Both required.
-	RootAccess string `mapstructure:"root_access" yaml:"root_access"`
-	RootSecret string `mapstructure:"root_secret" yaml:"root_secret"`
-	// MaxBlobSize is the blob ceiling for new objects, in bytes (0 -> default
-	// 256 MiB). An object larger than this is coarsely split into ≤ max blobs.
+	// MaxBlobSize is the blob ceiling for new objects, in bytes (0 -> the
+	// default, bucket.DefaultMaxBlobSize: the largest split whose encrypted
+	// envelope fits piri's ~254 MiB piece cap). An object larger than this is
+	// coarsely split into ≤ max blobs. Validate rejects values whose envelope
+	// a default-configured piri would refuse.
 	MaxBlobSize int64 `mapstructure:"max_blob_size" yaml:"max_blob_size"`
 	// CORSAllowedOrigins lists the browser origins the S3 listener answers
 	// CORS for. Each entry is an exact origin ("https://app.example"), a
@@ -93,6 +95,13 @@ type Config struct {
 	// background sweeper and their spooled parts dropped. Empty → default
 	// 7 days; a negative duration disables the sweeper.
 	MultipartSessionTTL string `mapstructure:"multipart_session_ttl" yaml:"multipart_session_ttl"`
+
+	// ReleaseGrace delays each blob release (crypto-shred + location delete +
+	// network remove) this long past the drop of its last reference claim
+	// (Go duration string), so in-flight readers holding the prior catalog
+	// root finish their decryption prefetch first. Empty → default 60s; a
+	// negative duration makes releases due immediately.
+	ReleaseGrace string `mapstructure:"release_grace" yaml:"release_grace"`
 
 	// CatalogPlane overrides the catalog logstore pipeline knobs. Any field
 	// left zero/unset falls back to the top-level SealBytes / SealAge / Retain
@@ -164,6 +173,16 @@ func (c Config) ServerConfig() (ServerConfig, error) {
 			return ServerConfig{}, fmt.Errorf("ingot: parse multipart_session_ttl %q: %w", c.MultipartSessionTTL, err)
 		}
 	}
+	releaseGrace := 60 * time.Second
+	if c.ReleaseGrace != "" {
+		releaseGrace, err = time.ParseDuration(c.ReleaseGrace)
+		if err != nil {
+			return ServerConfig{}, fmt.Errorf("ingot: parse release_grace %q: %w", c.ReleaseGrace, err)
+		}
+		if releaseGrace < 0 {
+			releaseGrace = 0
+		}
+	}
 	// Render the CORS configuration here — the single place it is built —
 	// so a typo fails at startup (via Validate) rather than from New.
 	corsCfg, err := cors.Build(c.CORSAllowedOrigins)
@@ -174,8 +193,6 @@ func (c Config) ServerConfig() (ServerConfig, error) {
 		Addr:        c.Addr,
 		DataDir:     c.DataDir,
 		Region:      c.Region,
-		RootAccess:  c.RootAccess,
-		RootSecret:  c.RootSecret,
 		MaxBlobSize: c.MaxBlobSize,
 
 		CORSConfig: corsCfg,
@@ -189,6 +206,7 @@ func (c Config) ServerConfig() (ServerConfig, error) {
 		RetainCatalog:    firstNonZeroInt(c.CatalogPlane.Retain, c.Retain),
 
 		MultipartSessionTTL: mpTTL,
+		ReleaseGrace:        releaseGrace,
 	}, nil
 }
 
@@ -395,8 +413,14 @@ func (c *Config) Validate() error {
 	if c.DataDir == "" {
 		errs = multierr.Append(errs, errors.New("data_dir is required"))
 	}
-	if c.RootAccess == "" || c.RootSecret == "" {
-		errs = multierr.Append(errs, errors.New("root_access and root_secret (S3 root credentials) are required"))
+	if c.MaxBlobSize > 0 {
+		// What ships to piri is the FEE envelope, not the plaintext: per-chunk
+		// GCM tags plus the COSE header (budgeted generously). Fail at startup
+		// rather than at the first PUT's BlobSizeLimitExceeded.
+		const envelopeHeaderBudget = 1024
+		if enc := aesstream.EncryptedSize(c.MaxBlobSize, aesstream.DefaultChunkSize) + envelopeHeaderBudget; enc > blobcmds.MaxBlobSize {
+			errs = multierr.Append(errs, fmt.Errorf("max_blob_size %d: its encrypted envelope (~%d bytes) exceeds the %d-byte network blob ceiling (the piece cap of a default-configured piri) — use at most the default %d, or raise every piri in the region above piri's default piece size", c.MaxBlobSize, enc, int64(blobcmds.MaxBlobSize), bucket.DefaultMaxBlobSize))
+		}
 	}
 	if _, err := c.ServerConfig(); err != nil {
 		errs = multierr.Append(errs, err)

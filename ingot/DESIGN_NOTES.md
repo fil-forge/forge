@@ -70,9 +70,21 @@ plaintext values — only the digest and the stored sizes
 Consequences, per the RFC: content **dedup is gone** for bodies (a fresh CEK
 makes every stored digest unique), a DELETE that releases a blob's last
 claim also deletes its params row (crypto-shred — the ciphertext is
-unreadable even where copies survive), and **cross-space CopyObject is
-rejected** `NotImplemented` (the CEK wrap is space-bound; a rewrap flow is a
-filed follow-up). Rotation: Hilt replaces `#wrap` in place and archives the
+unreadable even where copies survive), and a **cross-space CopyObject
+re-ingests** (the CEK wrap is space-bound, so the source's blobs cannot be
+shared: the plaintext streams through the read path into new blobs under the
+destination's space, as a PUT of those bytes would; within one space the copy
+stays metadata-only). A copy source in **another tenant's bucket is refused**
+`AccessDenied` before that: hilt refuses the source when it authorizes the
+request, and ingot compares the tenant recorded on the two bucket rows as
+well (a row whose owner predates the record matches none). Because hilt
+resolves the source during authorization, ahead of the gateway's argument
+validation, a copy whose source parses but names a missing or foreign bucket
+(an invalid bucket name, an empty key) reports hilt's answer (`NoSuchBucket`,
+`AccessDenied`) rather than `InvalidArgument`; a source hilt cannot parse
+(bad percent-encoding) is authorized as a plain write and the gateway
+reports the encoding error as S3 does.
+Rotation: Hilt replaces `#wrap` in place and archives the
 old key, so a write inside the cache TTL of a rotation still recovers.
 
 A `200` therefore means the body is durable and accepted on the network and
@@ -114,7 +126,10 @@ at PUT time or a sealed catalog CAR from the background flush:
 
 Multipart parts stop after step 2 (**parked**: durable, unaccepted) and run
 steps 3 and 4 at `CompleteMultipartUpload`; an abort unwinds a parked blob
-with `/blob/abort`.
+with `/blob/abort`. A part copied from an existing object (`UploadPartCopy`)
+is ingested the same way: the source's plaintext range streams through the
+decrypting read path into new parked blobs, so the source may be in any
+bucket of the tenant and nothing is shared with it.
 
 ## Read path
 
@@ -157,24 +172,30 @@ HEAD never decrypts. See `s3frontend/decrypt.go`.
 - **space**: per bucket, a `did:plc` minted by hilt at bucket create and
   stored on the bucket row; the subject of every blob and retrieve
   invocation.
-- **access key**: the S3 access key ID is a `did:key`. Every non-root
+- **tenant**: the `did:plc` hilt names as the caller's tenant in its
+  authorize response; stored on the bucket row at create (the bucket's
+  owner) and carried per request in `internal/reqscope` (the caller). The
+  write path resolves the tenant's wrap key from the request's; the copy
+  paths compare the two buckets'.
+- **access key**: the S3 access key ID is a `did:key`. Every
   request is authorized through hilt (`/s3/request/authorize`, with a local
-  fast path over cached delegations); hilt re-delegates the key's grant to
+  fast path over the cached derived key, the key's effective S3 action set
+  per bucket and its delegations); hilt re-delegates the key's grant to
   the agent, and the per-key `DelegationCache` carries those proofs into the
   request via `internal/reqscope`, where the uploader and the network read
   tier spend them. The uploader also captures a per-space ship authority
   (1h TTL) for the async catalog flush.
-- The **root account** (versitygw root credentials) bypasses hilt: bucket
-  administration works, but with no proof store it can neither write to
-  spaces nor read through the network tier.
+- There is **no root account**: versitygw's built-in root user is disabled
+  (an empty `RootUserConfig`), so every access key resolves through hilt. A
+  key hilt has not issued is rejected as InvalidAccessKeyId.
 
 The [principals diagram](./docs/diagrams.md#principals-and-proof-stores)
 draws the chains and the stores.
 
 ## State & durability
 
-- **Postgres (`ingot` schema)** is the mutable index: per-bucket roots and
-  versioning state, segment metadata and op-roots, the blob claim ledger
+- **Postgres (`ingot` schema)** is the mutable index: per-bucket roots,
+  versioning state and owning tenant, segment metadata and op-roots, the blob claim ledger
   (`blob_refs`), locations and inclusions, upload intents, multipart
   sessions/parts/parks, and GC candidates. goose tracks its version at
   `ingot.goose_db_version` (never collides with a host's own migrations).

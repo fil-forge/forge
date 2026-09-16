@@ -14,7 +14,6 @@ import (
 	"github.com/fil-forge/versitygw/auth"
 	"github.com/fil-forge/versitygw/metrics"
 	"github.com/fil-forge/versitygw/s3api"
-	"github.com/fil-forge/versitygw/s3api/middlewares"
 	"github.com/fil-forge/versitygw/s3event"
 	"github.com/fil-forge/versitygw/s3log"
 	"github.com/gofiber/fiber/v3"
@@ -86,6 +85,9 @@ type ServerDeps struct {
 	// Parks persists deferred-accept park state between UploadPart and
 	// Complete/Abort.
 	Parks registry.ParkStore
+	// PendingReleases is the deferred blob-release queue drained by the
+	// release sweeper. Typically the same instance as Registry.
+	PendingReleases registry.PendingReleaseStore
 
 	// EncParams is the per-blob FEE encryption-parameter table the decrypting
 	// read path consults; RegionKeys unwraps its region-wrapped CEKs. Both
@@ -110,10 +112,9 @@ type ServerDeps struct {
 	// to fetch it). Required.
 	Identity identity.Identity
 
-	// IAM authenticates non-root access keys (hilt/iam, which authorizes
-	// each request against the Hilt tenant service). Required: the root
-	// account is checked before the IAM lookup, but every other access key
-	// is resolved through it.
+	// IAM authenticates every access key (hilt/iam, which authorizes each
+	// request against the Hilt tenant service). Required: versitygw's
+	// built-in root account is disabled, so no request bypasses it.
 	IAM auth.IAMService
 }
 
@@ -127,12 +128,13 @@ var _ s3frontend.SegmentDigestLister = (*logstore.Manager)(nil)
 // lifecycle. fx callers wrap these in OnStart/OnStop hooks; tests
 // call them directly.
 type Server struct {
-	cfg       config.ServerConfig
-	logger    *zap.Logger
-	log       blockstore.Log
-	backend   *s3frontend.Backend
-	api       *s3api.S3ApiServer
-	sweepStop chan struct{}
+	cfg         config.ServerConfig
+	logger      *zap.Logger
+	log         blockstore.Log
+	backend     *s3frontend.Backend
+	api         *s3api.S3ApiServer
+	sweepStop   chan struct{}
+	releaseStop chan struct{}
 }
 
 // New wires a ServerDeps + ServerConfig into a runnable Server. The
@@ -178,26 +180,28 @@ func New(ctx context.Context, cfg config.ServerConfig, deps ServerDeps) (*Server
 
 	bs := blockstore.NewLayered(spool, log, deps.BaseBlockReader)
 	backend := s3frontend.New(s3frontend.Deps{
-		Authority:   deps.Authority,
-		Registry:    deps.Registry,
-		Intents:     deps.Intents,
-		Locations:   deps.Locations,
-		BlobRefs:    deps.BlobRefs,
-		GC:          deps.GC,
-		Multipart:   deps.Multipart,
-		Parks:       deps.Parks,
-		Reads:       bs,
-		Log:         log,
-		Spool:       spool,
-		Uploader:    deps.BodyUploader,
-		Deferred:    deps.Deferred,
-		Remover:     deps.Remover,
-		EncParams:   deps.EncParams,
-		RegionKeys:  deps.RegionKeys,
-		TenantKeys:  deps.TenantKeys,
-		MaxBlobSize: cfg.MaxBlobSize,
-		CORS:        cfg.CORSConfig,
-		Logger:      logger,
+		Authority:       deps.Authority,
+		Registry:        deps.Registry,
+		Intents:         deps.Intents,
+		Locations:       deps.Locations,
+		BlobRefs:        deps.BlobRefs,
+		GC:              deps.GC,
+		Multipart:       deps.Multipart,
+		Parks:           deps.Parks,
+		Reads:           bs,
+		Log:             log,
+		Spool:           spool,
+		Uploader:        deps.BodyUploader,
+		Deferred:        deps.Deferred,
+		Remover:         deps.Remover,
+		EncParams:       deps.EncParams,
+		RegionKeys:      deps.RegionKeys,
+		TenantKeys:      deps.TenantKeys,
+		PendingReleases: deps.PendingReleases,
+		ReleaseGrace:    cfg.ReleaseGrace,
+		MaxBlobSize:     cfg.MaxBlobSize,
+		CORS:            cfg.CORSConfig,
+		Logger:          logger,
 	})
 
 	api, err := buildS3API(ctx, backend, cfg, deps.IAM, deps.Identity, logger)
@@ -236,6 +240,7 @@ func (s *Server) Start(ctx context.Context) error {
 		}
 	}()
 	s.startMultipartSweeper()
+	s.startReleaseSweeper()
 	return nil
 }
 
@@ -277,6 +282,41 @@ func (s *Server) startMultipartSweeper() {
 	}()
 }
 
+// startReleaseSweeper spawns the deferred-release sweeper: release intents
+// past their not_before (last-claim drop + ReleaseGrace) are executed —
+// claim-count recheck, crypto-shred, location delete, network remove — with
+// failures retried next tick. The interval floor keeps a tiny test grace
+// from spinning a sub-second ticker.
+func (s *Server) startReleaseSweeper() {
+	interval := s.cfg.ReleaseGrace / 2
+	if interval > 10*time.Minute {
+		interval = 10 * time.Minute
+	}
+	if interval < time.Second {
+		interval = time.Second
+	}
+	s.releaseStop = make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-s.releaseStop:
+				return
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+				n, err := s.backend.SweepPendingReleases(ctx)
+				cancel()
+				if err != nil {
+					s.logger.Warn("release sweep", zap.Error(err))
+				} else if n > 0 {
+					s.logger.Info("release sweep executed deferred releases", zap.Int("count", n))
+				}
+			}
+		}
+	}()
+}
+
 // Stop shuts the listener down and drains the log. Always returns
 // the combined error of the two operations so callers see all
 // failure modes; either alone is non-fatal to the other.
@@ -286,6 +326,10 @@ func (s *Server) Stop(ctx context.Context) error {
 	if s.sweepStop != nil {
 		close(s.sweepStop)
 		s.sweepStop = nil
+	}
+	if s.releaseStop != nil {
+		close(s.releaseStop)
+		s.releaseStop = nil
 	}
 	var errs []error
 	if err := s.api.ShutDown(); err != nil {
@@ -392,9 +436,11 @@ func newBucketFlushFunc(up uploader.Uploader, reg registry.Registry, locations r
 
 // buildS3API constructs the versitygw S3ApiServer with the wiring ingot
 // needs: no event sink, generous concurrency limits, and an audit-log sink
-// that reports unexpected request failures through zap. Non-root access keys
-// authenticate through iam, which is required (the root account is checked
-// before the IAM lookup). The server also publishes id's DID document at
+// that reports unexpected request failures through zap. Every access key
+// authenticates through iam, which is required: versitygw's built-in root
+// account is disabled (an empty RootUserConfig), since a root request never
+// reaches hilt and so carries none of the delegations the Forge-facing
+// handlers need. The server also publishes id's DID document at
 // /.well-known/did.json.
 func buildS3API(ctx context.Context, backend *s3frontend.Backend, cfg config.ServerConfig, iam auth.IAMService, id identity.Identity, logger *zap.Logger) (*s3api.S3ApiServer, error) {
 	if iam == nil {
@@ -421,11 +467,14 @@ func buildS3API(ctx context.Context, backend *s3frontend.Backend, cfg config.Ser
 		// Without this the part-number ceiling defaults to 0 and every
 		// UploadPart is rejected. 10000 is the S3 maximum.
 		s3api.WithMpMaxParts(10000),
+		// Ingot stores keys as opaque byte strings in an MST, not as
+		// filesystem paths, so the path-traversal key guard does not apply:
+		// keys like "../file.txt" are legal literal S3 keys and must round-trip.
+		s3api.WithDisableObjNameTraversalCheck(),
 		// Stash the signed S3 request on the context for every request. The
 		// bucket-authority seam (Create/Delete/ListBuckets) recovers it to
-		// forward to Hilt; doing it here — ahead of auth — covers all auth
-		// paths (root included), not just the Hilt-backed IAM lookup, so a
-		// root request can still drive bucket operations.
+		// forward to Hilt; doing it here, ahead of auth, covers the presigned
+		// and POST-form auth paths as well as the header-signed one.
 		s3api.WithMiddleware("/", func(c fiber.Ctx) error {
 			c.Locals(reqscope.RequestKey(), fasthttputil.RequestFromHTTPContext(c.RequestCtx()))
 			return c.Next()
@@ -442,8 +491,9 @@ func buildS3API(ctx context.Context, backend *s3frontend.Backend, cfg config.Ser
 	}
 	opts = append(opts, s3api.WithRoute(http.MethodGet, web.WellKnownDIDPath, didDocumentHandler(doc)))
 
+	// No s3api.WithRootUser: the gateway has no root account, so every access
+	// key resolves through iam.
 	api, err := s3api.New(backend,
-		middlewares.RootUserConfig{Access: cfg.RootAccess, Secret: cfg.RootSecret},
 		cfg.Region, iam, loggers.S3Logger, loggers.AdminLogger, evSender, mm,
 		opts...,
 	)
@@ -468,12 +518,6 @@ func validateServerInputs(cfg config.ServerConfig, deps ServerDeps) error {
 	}
 	if cfg.DataDir == "" {
 		return errors.New("ingot: ServerConfig.DataDir is required")
-	}
-	if cfg.RootAccess == "" || cfg.RootSecret == "" {
-		return errors.New("ingot: ServerConfig.RootAccess and ServerConfig.RootSecret are required")
-	}
-	if cfg.RootAccess == "" || cfg.RootSecret == "" {
-		return errors.New("ingot: ServerConfig.RootAccess and ServerConfig.RootSecret are required")
 	}
 	if deps.BaseBlockReader == nil {
 		return errors.New("ingot: ServerDeps.BaseBlockReader is required")
@@ -516,6 +560,9 @@ func validateServerInputs(cfg config.ServerConfig, deps ServerDeps) error {
 	}
 	if deps.Multipart == nil {
 		return errors.New("ingot: ServerDeps.Multipart is required")
+	}
+	if deps.PendingReleases == nil {
+		return errors.New("ingot: ServerDeps.PendingReleases is required")
 	}
 	if deps.Remover == nil {
 		return errors.New("ingot: ServerDeps.Remover is required")
