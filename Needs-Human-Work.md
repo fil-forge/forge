@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 16:15Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 16:05Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,8 +15,7 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | Head `0d455123`, CI running. Also moves `itest`'s peer images to HEAD, so a red means this service regressed rather than that somebody else merged. |
-| 2 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. | **Rebuilt onto #4** and base repointed there; head `76204d40`. `swarf/` is byte-identical to the frozen `1ede102`, the upstream root is still an ancestor, and swarf/hilt/ingot all build, vet, tidy and gofmt clean. |
+| 1 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. The only PR left open. | Head `5181c0b0`, base repointed to `main`. CI re-running after a build-context fix. Test-merges conflict-free. |
 
 ## Decisions waiting
 
@@ -46,6 +45,11 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **[#4](https://github.com/fil-forge/forge-2/pull/4) merged** 2026-09-16
+  ~15:57Z as `edf25236` — itest suites as their own modules and actually run,
+  the six-service subtree resync, `itest` peers from HEAD, and
+  `MAJOR_DECISIONS.md`. Merged with a merge commit, so #3 already contains it
+  and needed no fourth rebuild.
 - **`itest`'s peers come from HEAD** — decided, implemented and pushed on #4.
   The suites append `pkg/stack.OptionsFromEnv` after `WithPublishedImages`, and
   `itest.yml` builds the six services from the commit under test, so a red

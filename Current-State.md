@@ -118,7 +118,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `c6a7ebdc`.** Phase 0 complete and then some: 7 services
+**`main` is at `edf25236`.** Phase 0 complete and then some: 7 services
 subtree-merged with history, module paths rewritten, `go.work`, per-module CI,
 library pins unified across the nine original modules, every subtree resynced
 to its upstream head, 18 images
@@ -126,7 +126,8 @@ pinned by digest, and the stack booting in CI from images built at HEAD.
 
 Merged since the last snapshot: **#1** (stack from HEAD images), **#5** (the
 six-subtree resync, into #4's branch), **#6** (image pins + `renovate.json`),
-**#7** (`MONOREPO_TODO.md`). **#2** was closed unmerged — guppy is being
+**#7** (`MONOREPO_TODO.md`) and **#4** (itest modules, the resync, HEAD peers,
+`MAJOR_DECISIONS.md`). **#2** was closed unmerged — guppy is being
 archived, so its tag cannot move under us in the window that mattered.
 
 Two open, as a stack:
