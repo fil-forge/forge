@@ -120,7 +120,8 @@ Seven rules that have actually decided things:
 
 **`main` is at `c6a7ebdc`.** Phase 0 complete and then some: 7 services
 subtree-merged with history, module paths rewritten, `go.work`, per-module CI,
-library pins unified, every subtree resynced to its upstream head, 18 images
+library pins unified across the nine original modules, every subtree resynced
+to its upstream head, 18 images
 pinned by digest, and the stack booting in CI from images built at HEAD.
 
 Merged since the last snapshot: **#1** (stack from HEAD images), **#5** (the
@@ -184,27 +185,18 @@ not survive #3.
   `check-dockerfile-retry.sh` written during the first attempt live in the
   old `fil-forge/forge` and were never carried across. Worth porting the
   ones whose defect can recur here.
-- **`itest ingot` is within four minutes of its timeout.** `itest.yml` runs
-  `-timeout 25m` inside `timeout-minutes: 30`; observed 21m04s and 21m24s.
-  The ordering is deliberate and the failure is loud: Go's timeout fires
-  first and dumps every goroutine stack, so a red run says `test timed out
-  after 25m0s` and shows what was stuck. If GitHub's fired first the runner
-  would kill the job with no Go output at all. Left alone deliberately —
-  revisit on the first red, which will name itself. Note that a timeout here
-  is ambiguous between "genuinely slower" and "a container never came up";
-  the goroutine dump is what tells them apart, which is the whole reason
-  Go's limit is the inner one.
-  Upstream runs the same suite at `-timeout 40m` inside `timeout-minutes: 60`,
-  but that budget is sized for `INGOT_ITEST_BIG` too, which we do not run — so
-  ours is not a reckless trim of theirs, it is a budget for a smaller
-  workload. The two questions are one question: wiring that test in needs the
-  larger budget *and* upstream's "Free runner disk space" step.
-
-  **Correction.** On two runs (21m04s, then 21m24s) this was written up as
-  narrowing, and upgraded from "watch" to "decide". A third says otherwise:
-  21m11s. Mean ~21m13s, spread 20 seconds — variance, not drift. Two points
-  were never enough to have a direction, and reading one into them was wrong.
-  Back to: revisit on the first red, which will name itself.
+- **`itest ingot` now runs 29m03s and the job cap is 45 minutes.** Taking the
+  peers from HEAD added a six-image build to the job — measured at 6m27s and
+  8m12s on two runs — and the total went from ~21m30s to **29m03s**. The cap
+  was 30. It was raised to 45 in the same change, on an estimate; the first
+  full run came in with **57 seconds** to spare against the old number, so the
+  raise was load-bearing rather than precautionary.
+  The ordering still holds and still matters: Go's `-timeout 25m` covers the
+  test only (~22m30s of that 29m) and fires first on a hang, dumping every
+  goroutine. A runner kill at the job cap gives nothing, which is why the two
+  numbers must not be levelled.
+  Worth watching rather than acting on: the test portion is a little above the
+  ~21m30s it used to take standalone. One observation, so not yet a fact.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
