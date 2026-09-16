@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 14:05Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 14:20Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -27,8 +27,19 @@ then repoint the PR base to `main`.
 
 Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
-- **Wire `INGOT_ITEST_BIG` into CI**, or leave the large-object cases to
-  manual runs.
+- **Wire `INGOT_ITEST_BIG` into CI**, or leave the 5 GiB max-part case to
+  manual runs. Note what this actually costs, which is more than an env var:
+  upstream's `go-test.yml` sets it alongside `-timeout 40m` inside
+  `timeout-minutes: 60`, *and* a "Free runner disk space" step that deletes
+  dotnet, android and CodeQL because the test churns 10-15 GiB. Our
+  `itest.yml` runs `-timeout 25m` inside `timeout-minutes: 30` and frees
+  nothing — a budget sized for the suite *without* this test. So the three
+  move together or not at all.
+
+  The docs here that describe it were **correct upstream** and were
+  invalidated by us: `itest/README.md` says "(CI sets it)", which was true of
+  `fil-forge/ingot` and stopped being true when consolidation pruned the
+  per-service workflows.
 
 ## Needs access the agent does not have
 

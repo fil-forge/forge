@@ -206,6 +206,11 @@ project. We build from source and publish
   is ambiguous between "genuinely slower" and "a container never came up";
   the goroutine dump is what tells them apart, which is the whole reason
   Go's limit is the inner one.
+  Upstream runs the same suite at `-timeout 40m` inside `timeout-minutes: 60`,
+  but that budget is sized for `INGOT_ITEST_BIG` too, which we do not run — so
+  ours is not a reckless trim of theirs, it is a budget for a smaller
+  workload. The two questions are one question: wiring that test in needs the
+  larger budget *and* upstream's "Free runner disk space" step.
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
