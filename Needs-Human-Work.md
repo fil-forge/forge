@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 17:52Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 19:40Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,7 +15,7 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. The only PR left open. | **Ready.** Head `3b4c4d8e`, base `main`, all 19 checks green ([run](https://github.com/fil-forge/forge-2/actions/runs/35126438769)) — `itest hilt` 8m12s, `itest ingot` 26m43s against the 45m cap, `e2e` 10m10s. One review thread left open on purpose: the `immutable` cache header on `swarf/pkg/fx/app.go:348`, answered in full and held out of a migration PR as a scope call. |
+| 1 | **Merge [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf` — swarf as the 8th module. The only PR left open. | Head `5177695b`, base `main`. Was green on all 19 at `a957312f`; CI re-running after two comment-only commits answering your 18:29Z review. All five threads answered on the PR. |
 
 ## Decisions waiting
 

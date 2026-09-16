@@ -173,6 +173,32 @@ not survive #3.
 
 ## Known debt
 
+- **Six per-module checks were lost with the per-service `.github/`
+  directories, and nothing replaced them.** Every service called
+  `ipdxco/unified-github-workflows`' `go-check` and `go-test`; seven had those
+  callers deleted on `main` in `7321ee6a`, swarf's went in `52a5979b` on #3.
+  Read against `Peeja/unified-github-workflows` at `d9b156f4` (a fork of
+  `main` — the services pinned `@v1.0`, and the fork carries no tags, so the
+  two could not be diffed), what is gone is: **`staticcheck ./...`**;
+  **`gofmt -s`** (the `replaces` job runs plain `gofmt -l .`, so the
+  simplifications are unchecked); **`go test -race ./...`** on ubuntu;
+  the **macOS** run; **`-shuffle=on`**; and **coverage upload to Codecov**.
+  What is *not* lost, because it was gated off upstream too: the 32-bit and
+  Windows runs (`skip32bit`, `skipOSes`), the `go generate` drift check
+  (needs `gogenerate: true`, and no service sets it) and `golangci-lint`
+  (needs a `.golangci.*`, which no service has). `go mod tidy` + go.sum diff
+  and `go vet` are covered by the root `unit` job.
+  Belongs in `MONOREPO_TODO.md`; see **Next**.
+- **hilt's image builds from the repository root, and that is meant to be
+  temporary.** hilt links swarf through a sibling `replace`, and Go resolves
+  replace targets before downloading, so the context must contain both.
+  Narrowing it is not a Dockerfile change: an in-repo module reached by a
+  `replace` always lives outside `hilt/`, so only consuming swarf as a
+  published tagged module narrows it — Phase 1 work, which gives up
+  same-commit co-development in exchange. Petra's call (2026-09-16): keep it,
+  resolve before the consolidation finishes. Recorded in `hilt/Dockerfile`
+  (`5177695b`); `MONOREPO_TODO.md` entry owed.
+
 - `Dockerfile.release` (hilt, ingot, sprue) has the build-context problem the
   main Dockerfiles had, and nothing builds it. Surfaces at the first release.
 - Base images float in our own Dockerfiles (`alpine:latest`,
