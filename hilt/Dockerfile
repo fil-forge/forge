@@ -2,27 +2,26 @@
 FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
 ARG TARGETARCH
 ARG TARGETOS=linux
-# Build context is this directory:
+# Build context is the repository root:
 #
-#   docker build -f hilt/Dockerfile --target prod hilt
+#   docker build -f hilt/Dockerfile --target prod .
 #
-# It was the repository root until hilt/itest became its own module. hilt's
-# go.mod carried `replace => ../smelt` for that suite alone, and Go resolves
-# every replace target before it downloads anything, so a context scoped here
-# died in `go mod download` reading ../smelt/go.mod. Nothing hilt's binary
-# links has ever lived outside this directory -- the module boundary is what
-# let the context say so.
-#
-# swarf IS linked into the binary (the revocation client), so this context is
-# the repository root again and swarf's source is copied. #4 had narrowed it
-# to hilt/ because hilt's only sibling dependency was smelt, and that one is
-# test-only -- it lives in hilt/itest now and is absent from this module's
-# graph entirely, so no smelt anything is copied here.
+# hilt's binary links swarf (the revocation client), which resolves through
+# `replace => ../swarf`. Go reads every replace target before it downloads
+# anything, so a context scoped to hilt/ dies in `go mod download`. piri and
+# ingot build from the root for the same reason; sprue, delegator, the signer
+# and swarf have no sibling replace and keep their own directory.
 #
 # The closure is derived, not hand-maintained:
 #
 #   cd hilt && GOWORK=off go list -deps ./cmd/main.go | grep fil-forge/forge/
 #   -> hilt, swarf
+#
+# This is meant to be temporary, and to be resolved before the consolidation
+# is finished. Narrowing the context back to hilt/ is not a Dockerfile change:
+# an in-repo module reached by a `replace` always lives outside hilt/, so the
+# only thing that narrows it is consuming swarf as a published, tagged module
+# -- Phase 1 work, which in exchange gives up same-commit co-development.
 #
 # go.work is deliberately NOT copied: the build must resolve through this
 # module's own go.mod, as it did when this was a standalone repo. Copying it
