@@ -10,4 +10,5 @@ use (
 	./piri-signing-service
 	./smelt
 	./sprue
+	./swarf
 )

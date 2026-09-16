@@ -53,15 +53,19 @@ jobs:
             context: .
           - service: ingot
             context: .
-          # No cross-module replace: the service dir is a sufficient context.
+          # swarf is linked into hilt's binary (the revocation client), so its
+          # source must be in the context. smelt is not: that edge is test-only
+          # and lives in hilt/itest.
           - service: hilt
-            context: hilt
+            context: .
           - service: sprue
             context: sprue
           - service: delegator
             context: delegator
           - service: piri-signing-service
             context: piri-signing-service
+          - service: swarf
+            context: swarf
     name: image ${{ matrix.service }}
     runs-on: ubuntu-24.04
     # piri links curio; its build time is the unknown this run measures.

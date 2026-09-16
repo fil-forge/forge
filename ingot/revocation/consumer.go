@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
-	"github.com/fil-forge/swarf/pkg/api"
-	swarfclient "github.com/fil-forge/swarf/pkg/client"
+	"github.com/fil-forge/forge/swarf/pkg/api"
+	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/ipfs/go-cid"
 	"go.uber.org/zap"

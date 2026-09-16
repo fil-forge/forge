@@ -8,13 +8,17 @@ name: itest
 # so -- which meant a suite could rot for weeks without anything going red. Each
 # is now its own Go module, so it gets a job instead of a build tag.
 #
-# What a run actually proves is worth naming, because it is not what e2e.yml
-# proves. Each suite compiles the working tree's service to a static binary,
-# mounts it over that service's published image, and takes every *other*
-# service from the registry -- which is what stack.WithPublishedImages() states.
-# So this is HEAD-of-one-service against the published network: a compatibility
-# check. e2e.yml is the whole-stack check, where every in-repo image is built
-# from the commit under test.
+# What a run proves is worth naming, because it is not what e2e.yml proves.
+# Both suites run the commit under test: every in-repo image is built from
+# HEAD here as well (see the env block below), so the difference is not whose
+# code runs but what the suite looks at.
+#
+# A suite here goes deep on one service's own contract -- hilt's subtests are
+# all access keys and revocation, ingot's are all its own surface -- and
+# treats the rest of the stack as scaffolding that has to be there. e2e.yml
+# goes wide on the assembly instead: upload and retrieve, end to end, which
+# is the only place a broken Dockerfile, entrypoint or compose wiring can
+# show up at all.
 
 on:
   push:
@@ -80,6 +84,7 @@ jobs:
       UPLOAD_IMAGE: forge/sprue:head
       DELEGATOR_IMAGE: forge/delegator:head
       SIGNER_IMAGE: forge/piri-signing-service:head
+      SWARF_IMAGE: forge/swarf:head
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -120,11 +125,12 @@ jobs:
             echo "::endgroup::"
           }
           build piri .
-          build hilt hilt
+          build hilt .
           build ingot .
           build sprue sprue
           build delegator delegator
           build piri-signing-service piri-signing-service
+          build swarf swarf
           docker image ls --filter 'reference=forge/*:head'
 
       # -count=1 is load-bearing, not a style choice. setup-go restores GOCACHE,

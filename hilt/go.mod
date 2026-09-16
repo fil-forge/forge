@@ -5,8 +5,8 @@ go 1.27.0
 require (
 	github.com/alanshaw/dag-json-gen v0.0.9
 	github.com/docker/docker v28.5.2+incompatible
+	github.com/fil-forge/forge/swarf v0.0.0
 	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
-	github.com/fil-forge/swarf v0.0.1-0.20260821142121-d5d1a0a56f00
 	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
 	github.com/ipfs/go-cid v0.6.2
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
@@ -144,3 +144,5 @@ require (
 	lukechampine.com/blake3 v1.4.1 // indirect
 	pitr.ca/jsontokenizer v0.3.2 // indirect
 )
+
+replace github.com/fil-forge/forge/swarf => ../swarf

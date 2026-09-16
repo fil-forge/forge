@@ -20,7 +20,7 @@ import (
 	tenantmemory "github.com/fil-forge/forge/hilt/pkg/store/tenant/memory"
 	"github.com/fil-forge/forge/hilt/pkg/vault"
 	vaultmemory "github.com/fil-forge/forge/hilt/pkg/vault/memory"
-	swarfclient "github.com/fil-forge/swarf/pkg/client"
+	swarfclient "github.com/fil-forge/forge/swarf/pkg/client"
 	"github.com/fil-forge/ucantone/did"
 	"github.com/fil-forge/ucantone/did/plc"
 	"github.com/fil-forge/ucantone/multikey/secp256k1"

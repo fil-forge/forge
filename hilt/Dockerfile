@@ -2,27 +2,41 @@
 FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
 ARG TARGETARCH
 ARG TARGETOS=linux
-# Build context is this directory:
+# Build context is the repository root:
 #
-#   docker build -f hilt/Dockerfile --target prod hilt
+#   docker build -f hilt/Dockerfile --target prod .
 #
-# It was the repository root until hilt/itest became its own module. hilt's
-# go.mod carried `replace => ../smelt` for that suite alone, and Go resolves
-# every replace target before it downloads anything, so a context scoped here
-# died in `go mod download` reading ../smelt/go.mod. Nothing hilt's binary
-# links has ever lived outside this directory -- the module boundary is what
-# let the context say so.
+# hilt's binary links swarf (the revocation client), which resolves through
+# `replace => ../swarf`. Go reads every replace target before it downloads
+# anything, so a context scoped to hilt/ dies in `go mod download`. piri and
+# ingot build from the root for the same reason; sprue, delegator, the signer
+# and swarf have no sibling replace and keep their own directory.
 #
-# A consequence worth having: go.work is now unreachable from this context
-# rather than merely uncopied, so the build cannot slip into workspace mode.
+# The closure is derived, not hand-maintained:
+#
+#   cd hilt && GOWORK=off go list -deps ./cmd/main.go | grep fil-forge/forge/
+#   -> hilt, swarf
+#
+# This is meant to be temporary, and to be resolved before the consolidation
+# is finished. Narrowing the context back to hilt/ is not a Dockerfile change:
+# an in-repo module reached by a `replace` always lives outside hilt/, so the
+# only thing that narrows it is consuming swarf as a published, tagged module
+# -- Phase 1 work, which in exchange gives up same-commit co-development.
+#
+# go.work is deliberately NOT copied: the build must resolve through this
+# module's own go.mod, as it did when this was a standalone repo. Copying it
+# (or a broad `COPY . .`) would silently switch the build to workspace mode.
 WORKDIR /src
-COPY go.mod go.sum ./
+COPY hilt/go.mod hilt/go.sum ./hilt/
+COPY swarf/go.mod swarf/go.sum ./swarf/
 # proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR) and the
 # go command does not retry, so one bad fetch out of several hundred fails the
 # image build.
 RUN --mount=type=cache,target=/go/pkg/mod \
-    (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
-COPY . .
+    cd hilt && (go mod download || (sleep 5 && go mod download) || (sleep 15 && go mod download))
+COPY hilt/ ./hilt/
+COPY swarf/ ./swarf/
+WORKDIR /src/hilt
 
 # Production build - stripped binary
 FROM build AS build-prod
