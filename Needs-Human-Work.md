@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 21:05Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 21:25Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,12 +19,13 @@ with their histories.
 
 ## Open pull requests
 
-Neither blocks anything; both want a look.
+None blocks anything. #10 is stacked on #9.
 
 | | what | state |
 |---|---|---|
-| [#9](https://github.com/fil-forge/forge-2/pull/9) | **Restore the checks the per-service `.github/` dirs took**: `staticcheck`, `gofmt -s`, `-race`, `-shuffle=on`. Also covers `smelt/systems/stress-tester`, which nothing built. Two workflow files, no code. | CI running. `staticcheck` and `gofmt -s` measured clean (0 across 11 modules / 344 packages); `-race` and `-shuffle` can only be judged by a real run. |
-| [#8](https://github.com/fil-forge/forge-2/pull/8) | **`MONOREPO_TODO.md`**: the four swarf findings #3 deferred, plus hilt's build context and the macOS run. Docs only. | Asks one question: should upstream findings and whole-repo questions share the file? |
+| [#10](https://github.com/fil-forge/forge-2/pull/10) | **Bring `indexing-service` into the monorepo** — the ninth module and the last service. Stacked on #9. | Rebuilt (not rebased) when #9 changed, per rule 7; trees verified byte-identical. CI running. |
+| [#9](https://github.com/fil-forge/forge-2/pull/9) | **Restore the dropped checks**: `staticcheck`, `gofmt -s`, `-race`, `-shuffle=on`. | Rebuilt to Petra's 20:57Z review — comments cut, `stress-tester` moved to the TODO, tests are one run not two. All five threads answered. CI running. |
+| [#8](https://github.com/fil-forge/forge-2/pull/8) | **`MONOREPO_TODO.md`** — four swarf findings, plus hilt's build context, the macOS run and `stress-tester`'s coverage. Docs only. | Asks one question: should upstream findings and whole-repo questions share the file? |
 
 ## Decisions waiting
 

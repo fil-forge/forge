@@ -199,6 +199,15 @@ not survive #3.
 
 ## Known debt
 
+- **The unit suites run only under `-race`, not twice.** Upstream ran the
+  suite plain and then again under the race detector; #9 runs it once, with
+  `-race -shuffle=on`. Measured on this repository the second run is 3.2x the
+  first (49s against 2m38s for sprue, 64% of the job), and what it uniquely
+  covers is the uninstrumented binary, which `go build` and `go vet` already
+  compile. The cost, which is real: piri's matrix sets `CGO_ENABLED=0` for
+  its skiff build and `-race` requires cgo, so piri's tests now always run
+  with cgo enabled, which its shipped binary does not.
+
 - **Five per-module checks were lost with the per-service `.github/`
   directories, and nothing replaced them.** Every service called
   `ipdxco/unified-github-workflows`' `go-check` and `go-test`; seven had those
