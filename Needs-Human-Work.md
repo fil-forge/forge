@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 14:30Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 15:10Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -15,7 +15,7 @@ Nothing else proceeds until these do.
 
 | | what | state |
 |---|---|---|
-| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | **17/17 green at `da699f7a`.** Rebuilt onto the new base per rule 7 after #6 moved `main` under it, plus one commit adding `MAJOR_DECISIONS.md`. Blocked on review alone. |
+| 1 | **Merge [#4](https://github.com/fil-forge/forge-2/pull/4)** `claude/itest-modules` — each itest suite its own module, and actually run in CI. Carries the six-service subtree resync. | **17/17 green at `20142aa3`.** Rebuilt onto the new base per rule 7 after #6 moved `main` under it, plus `MAJOR_DECISIONS.md`. Blocked on review alone. |
 | 2 | **Decide on [#3](https://github.com/fil-forge/forge-2/pull/3)** `claude/bring-in-swarf`. Frozen at `1ede102`; its base `claude/images-from-head` merged as #1 on 2026-09-15. | Needs a **rebuild**, not a base repoint — it carries a `git subtree add` merge that a plain rebase would flatten (approach rule 6). Recipe below. Awaiting go-ahead. |
 
 #3's rebuild, verified twice: `git subtree add -P swarf c43af97be79883bd74b20a1df2dab46e09605b0a`
@@ -27,6 +27,25 @@ then repoint the PR base to `main`.
 
 Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
+- **What should `itest`'s peer images be, now that all six are in-repo?** Stay
+  on mutable `:main`, pin by digest, or build from HEAD as `e2e` does. This
+  reopened when the justification I had written for the status quo did not
+  survive checking: nothing documents `itest` as a compatibility gate against
+  the published network. `ingot/itest/README.md` frames the suite as testing a
+  *real deployed* ingot rather than an in-memory one, and treats the mutable
+  tags as a hazard — "images … that Docker never re-pulls", with instructions
+  to re-pull by hand. The likeliest reason peers came from the registry is
+  that in the polyrepo ingot's repository had no sibling source, so there was
+  no other option. The monorepo removes that constraint.
+
+  Bearing on it: a red `itest ingot` should mean ingot's own contract
+  regressed, and once already it meant `hilt:main` moved instead. Against it:
+  building six images per itest job costs time (`e2e` records the whole matrix
+  at ~2.5 min, piri slowest at 2m14s). The "do we still work with what is
+  deployed?" question is real but belongs to a third suite — `compat.yml`,
+  already in the plan's Phase 1. Until this is settled the peer-image entry in
+  `MAJOR_DECISIONS.md` is defending a status quo whose original reason has
+  expired.
 - **Wire `INGOT_ITEST_BIG` into CI**, or leave the 5 GiB max-part case to
   manual runs. Note what this actually costs, which is more than an env var:
   upstream's `go-test.yml` sets it alongside `-timeout 40m` inside
