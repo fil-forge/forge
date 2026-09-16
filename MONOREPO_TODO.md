@@ -126,6 +126,51 @@ ubuntu, so this is not free to find out by trying.
 restore macOS, restore it only for the modules that do not need Docker, or
 decide ubuntu-only is what the monorepo wants and say so.
 
+## Turn `SA4006` back on
+
+`staticcheck.conf` at the repository root says `checks = ["inherit",
+"-SA4006"]`, added by [#10](https://github.com/fil-forge/forge-2/pull/10). It
+is off everywhere, for one finding in one generated file.
+
+**What fires.** `indexing-service/pkg/service/queryresult/json_gen.go:231`.
+`dag-json-gen` emits `written++` after each field and guards the *next* field
+with `if written > 0 { WriteComma() }`, so the increment after the last field
+has no reader. A true positive, and the JSON is correct.
+
+**Why it waits.** Three ways out, none of them this branch's:
+
+- **Fix the generator.** The durable answer, and it is upstream:
+  `github.com/alanshaw/dag-json-gen`, pinned at `v0.0.9`, which is also the
+  latest published version — so there is no newer release to take instead.
+  Someone has to open that PR.
+- **Pin staticcheck back to what the polyrepo ran.** Not available.
+  indexing-service was `go 1.25.7`, so the shared workflow's version table gave
+  it 2025.1.1 and its `Go Checks` at `bcb63ec` was green. Unifying the libforge
+  pin moved it to `go 1.27.0`, and both older versions — 2025.1.1 (`v0.6.1`)
+  and 2026.1 (`v0.7.0`) — fail on *every* package with `export data version 4
+  is greater than maximum supported version 2`. Only 2026.2.1 reads Go 1.27
+  export data, and the libforge pin requires `go >= 1.27.0`. Verified by
+  installing both.
+- **Narrow the suppression instead of widening it.** staticcheck's config is
+  directory-scoped and walks up, so a `staticcheck.conf` in
+  `indexing-service/pkg/service/queryresult/` would cover one directory rather
+  than thirteen modules. That is where it started, and it was moved out: that
+  directory is inside a subtree prefix, so a file there is permanent local
+  divergence every future `git subtree pull` of indexing-service has to carry,
+  and it would still cover the three hand-written files beside `json_gen.go`.
+  A narrower scope for a permanent conflict is a real trade, not an obvious
+  one.
+
+**The cost of leaving it.** SA4006 fires exactly once across thirteen modules
+today, so nothing is lost yet. What is lost is future findings: a genuine dead
+assignment written tomorrow, anywhere in the repository, goes unreported. The
+longer this stays, the less true "nothing is lost" gets.
+
+**The choice.** Fix `dag-json-gen` upstream and drop the conf; or narrow it to
+the one directory and accept the subtree divergence; or decide SA4006 is not
+worth carrying and say so here rather than leaving the conf reading as
+temporary.
+
 ---
 
 # Findings in the imported code
