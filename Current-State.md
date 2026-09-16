@@ -173,7 +173,7 @@ not survive #3.
 
 ## Known debt
 
-- **Six per-module checks were lost with the per-service `.github/`
+- **Five per-module checks were lost with the per-service `.github/`
   directories, and nothing replaced them.** Every service called
   `ipdxco/unified-github-workflows`' `go-check` and `go-test`; seven had those
   callers deleted on `main` in `7321ee6a`, swarf's went in `52a5979b` on #3.
@@ -182,12 +182,25 @@ not survive #3.
   two could not be diffed), what is gone is: **`staticcheck ./...`**;
   **`gofmt -s`** (the `replaces` job runs plain `gofmt -l .`, so the
   simplifications are unchecked); **`go test -race ./...`** on ubuntu;
-  the **macOS** run; **`-shuffle=on`**; and **coverage upload to Codecov**.
+  the **macOS** run; and **`-shuffle=on`**.
   What is *not* lost, because it was gated off upstream too: the 32-bit and
   Windows runs (`skip32bit`, `skipOSes`), the `go generate` drift check
   (needs `gogenerate: true`, and no service sets it) and `golangci-lint`
   (needs a `.golangci.*`, which no service has). `go mod tidy` + go.sum diff
   and `go vet` are covered by the root `unit` job.
+  **Codecov is not on this list, though an earlier version of this page had
+  it.** The upload step is gated on `steps.secrets.outputs.CODECOV_TOKEN ==
+  'true'`, computed as `if ($s[$k] // "") == "" then "false" else "true"`, so
+  an absent, empty or missing-entirely secret skips it. No service carries a
+  `codecov.yml` or mentions codecov in any `.md`/`.yml`/`.yaml`, and Petra's
+  recollection (2026-09-16) is that it was not running on the polyrepo. The
+  `-cover -coverprofile -coverpkg=./...` flags did run, but the profile went
+  only to the skipped upload, so nothing consumed it. Adding Codecov would be
+  new work, not restoration.
+  **macOS is a TODO, not a restore** (Petra, 2026-09-16): the runners have no
+  Docker daemon and several modules' tests need one, so whether those jobs
+  were ever green upstream has to be established first — reproducing a job
+  that was already red buys nothing.
   Belongs in `MONOREPO_TODO.md`; see **Next**.
 - **hilt's image builds from the repository root, and that is meant to be
   temporary.** hilt links swarf through a sibling `replace`, and Go resolves
