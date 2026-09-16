@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-16 12:58Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-16 13:10Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -27,13 +27,6 @@ then repoint the PR base to `main`.
 
 Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
-- **Subtree history: unsquashed or `--squash`?** `main` is unsquashed by
-  construction — seven `Add '<svc>/' from commit '<sha>'` adds, 1010 commits,
-  59 merges — and `git subtree pull` continues that, so #4 carries 53 upstream
-  commits behind 6 merges. Raised over #4 on 2026-09-16 and settled *for #4
-  only*: one empty merge dropped, the mechanism left alone. The repo-wide
-  question is open and belongs to `main`, not to a branch. Mixing the two
-  modes on one prefix is the thing to avoid.
 - **`itest.yml`'s timeout budget.** `-timeout 25m` sits inside
   `timeout-minutes: 30` so Go fires first and dumps goroutines rather than the
   runner killing the job blind. Two full runs observed: **21m04s**
@@ -72,6 +65,10 @@ Flagged and deliberately not acted on. Each is a judgement call, not a task.
 
 ## Recently cleared
 
+- **Subtree history is never squashed** — decided 2026-09-16, and now rule 7
+  in [[Current State]] rather than an open question. `--squash` is off the
+  table on every prefix, so the commit and merge counts `main` carries are
+  the intended cost, not drift.
 - **[#6](https://github.com/fil-forge/forge-2/pull/6) merged** 2026-09-16
   12:27Z — 18 images pinned by digest across 35 references, plus the Renovate
   config. It moved `main` under #4; see blocking item 1.

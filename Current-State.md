@@ -9,7 +9,7 @@ Consolidating the Fil Forge polyrepo into a monorepo at
 
 ## Approach
 
-Six rules that have actually decided things:
+Seven rules that have actually decided things:
 
 1. **What goes in: things that ship as the Forge network.** The services and
    the tools that operate them — deployed together, versioned together, and
@@ -77,6 +77,20 @@ Six rules that have actually decided things:
    branches instead — base tip, fresh `git subtree add` at the same upstream
    commit, then cherry-pick — and check afterwards that the tree is unchanged
    and the upstream root is still an ancestor.
+
+7. **Subtree history is never squashed.** No `git subtree add --squash`, no
+   `git subtree pull --squash`, on any prefix, ever. Same principle as rule
+   6's exception, different mechanism: a rebase flattens imported history
+   after the fact, `--squash` declines to import it in the first place, and
+   both end with a monorepo that cannot say where its code came from. The
+   cost is visible and is meant to be paid — `main` carries 1010 commits and
+   59 merges because seven services' full histories are in it, and each
+   `git subtree pull` adds that service's new commits behind a merge. That is
+   the feature.
+
+   The corollary that actually bites: because the modes are not
+   interchangeable, a branch that carries subtree merges is *merged* when its
+   base moves, not rebased — the one place rule 6 inverts.
 
 ## Where it stands
 
