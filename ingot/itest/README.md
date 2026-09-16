@@ -28,10 +28,17 @@ tenant + all-permission access key through hilt's Tenant API (curl inside the
 hilt container, local-dev partner key) and returns the SigV4 credentials.
 The old `ingot login` / `ingot space generate` self-provisioning CLI is gone.
 
-The stack's service images are mutable `:main` tags that Docker never
-re-pulls — if hilt errors with "unsupported DID method in did:web" or sprue
-with "handler not found" (did:plc resolution and `/blob/list` landed on
+**Locally**, the stack's peer images are mutable `:main` tags that Docker
+never re-pulls — if hilt errors with "unsupported DID method in did:web" or
+sprue with "handler not found" (did:plc resolution and `/blob/list` landed on
 sprue main 2026-07-17), re-pull `ghcr.io/fil-forge/{hilt,sprue,...}:main`.
+That is the local default because it is fast: no image builds at all.
+
+**In CI this does not apply.** `itest.yml` builds every in-repo service from
+the commit under test and passes it through `*_IMAGE`, so a run is
+reproducible and a red means this service regressed rather than that somebody
+else merged. Whether we still work against the *deployed* network is a
+separate question, for Phase 1's compat suite.
 To run against an upload-service (sprue) image the registry doesn't have
 yet — e.g. one built from an unmerged branch — point the stack at it:
 

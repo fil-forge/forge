@@ -108,9 +108,9 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 	t.Logf("booting the smelt Forge stack (~1-2 min; first run also compiles ingot and pulls images)")
 	opts := []stack.Option{
 		// First, so everything below still wins: smelt's compose files no
-		// longer default the images this repo's siblings build, and this
-		// suite tests one service (ingot) against the published rest of the
-		// network.
+		// longer default the images this repo's siblings build. This is the
+		// local default only -- CI overrides it with images built from HEAD,
+		// below.
 		stack.WithPublishedImages(),
 		// Postgres-backed piri: piri:main's curio PDP pipeline refuses
 		// sqlite ("curio PDP pipeline requires Postgres") as of 2026-07-24.
@@ -150,6 +150,15 @@ func forgeStack(t *testing.T, extra ...stack.Option) (*stack.Stack, string) {
 		t.Logf("using hilt binary override: %s", bin)
 		opts = append(opts, stack.WithServiceBinary("hilt", bin))
 	}
+	// Peers from HEAD when CI supplies them. itest's subject is this one
+	// service's own contract; the rest of the stack is scaffolding, and
+	// scaffolding that moves turns a red into a question about somebody
+	// else's merge. `WithPublishedImages` above is the local default -- no
+	// image builds, fast to iterate -- and these win over it, so CI can pass
+	// images built from this commit and get a reproducible run. Compatibility
+	// against what is actually deployed is a separate question, for a suite
+	// built to ask it.
+	opts = append(opts, stack.OptionsFromEnv()...)
 	opts = append(opts, extra...)
 	s := stack.MustNewStack(t, opts...)
 	endpoint := s.IngotEndpoint()
