@@ -1,0 +1,12 @@
+/.vscode
+
+/cmd/indexing-service
+/indexing-service
+*.car
+/build
+.terraform
+.env
+.tfworkspace
+/ucangen
+/indexer
+.claude

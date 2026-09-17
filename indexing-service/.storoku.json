@@ -1,0 +1,100 @@
+{
+  "app": "indexer",
+  "privateKeyEnvVar": "",
+  "didEnvVar": "",
+  "port": 8080,
+  "js": null,
+  "domainBase": "",
+  "cloudflare": false,
+  "createDB": false,
+  "caches": [
+    "providers",
+    "no-providers",
+    "indexes",
+    "claims"
+  ],
+  "topics": null,
+  "queues": [
+    {
+      "name": "provider-caching",
+      "fifo": false,
+      "highThroughput": false,
+      "messageRetentionSeconds": 86400
+    },
+    {
+      "name": "ipni-publisher",
+      "fifo": true,
+      "highThroughput": true,
+      "messageRetentionSeconds": 86400
+    },
+    {
+      "name": "ipni-advertisement-publishing",
+      "fifo": true,
+      "highThroughput": false,
+      "messageRetentionSeconds": 86400
+    }
+  ],
+  "buckets": [
+    {
+      "name": "provider-caching-bucket",
+      "public": false,
+      "objectExpirationDays": 14
+    },
+    {
+      "name": "ipni-store-bucket",
+      "public": true
+    },
+    {
+      "name": "notifier-head-bucket",
+      "public": false
+    },
+    {
+      "name": "claim-store-bucket",
+      "public": false
+    },
+    {
+      "name": "ipni-publisher-bucket",
+      "public": false,
+      "objectExpirationDays": 14
+    }
+  ],
+  "secrets": null,
+  "tables": [
+    {
+      "name": "metadata",
+      "attributes": [
+        {
+          "name": "provider",
+          "type": "S"
+        },
+        {
+          "name": "contextID",
+          "type": "B"
+        }
+      ],
+      "hashKey": "provider",
+      "rangeKey": "contextID"
+    },
+    {
+      "name": "chunk-links",
+      "attributes": [
+        {
+          "name": "provider",
+          "type": "S"
+        },
+        {
+          "name": "contextID",
+          "type": "B"
+        }
+      ],
+      "hashKey": "provider",
+      "rangeKey": "contextID"
+    }
+  ],
+  "networks": [
+    "warm",
+    "forge",
+    "test"
+  ],
+  "writeToContainer": false
+}
