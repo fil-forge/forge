@@ -10,7 +10,7 @@ builds:
       # Stamp the build package (see internal/build). {{.Version}} has no
       # leading v, so prefix one. CommitDate/CommitTimestamp keep the build
       # reproducible. https://goreleaser.com/customization/builds/#reproducible-builds
-      - -s -w -X github.com/fil-forge/ingot/internal/build.Version=v{{.Version}} -X github.com/fil-forge/ingot/internal/build.Commit={{.Commit}} -X github.com/fil-forge/ingot/internal/build.Date={{.CommitDate}} -X github.com/fil-forge/ingot/internal/build.BuiltBy=goreleaser
+      - -s -w -X github.com/fil-forge/forge/ingot/internal/build.Version=v{{.Version}} -X github.com/fil-forge/forge/ingot/internal/build.Commit={{.Commit}} -X github.com/fil-forge/forge/ingot/internal/build.Date={{.CommitDate}} -X github.com/fil-forge/forge/ingot/internal/build.BuiltBy=goreleaser
     goos:
       - linux
       - darwin
