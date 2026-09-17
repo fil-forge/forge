@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-16 16:00Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 02:00Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -29,8 +29,9 @@ Seven rules that have actually decided things:
      being dismantled and archived now, not at some later phase.
 
    In: `piri`, `hilt`, `ingot`, `sprue`, `smelt`, `delegator`,
-   `piri-signing-service` (all landed), `swarf` (landed), `indexing-service`
-   and `forgectl` (pending).
+   `piri-signing-service`, `swarf`, `indexing-service` (all landed), and
+   `forgectl` — the last one, open as
+   [#12](https://github.com/fil-forge/forge-2/pull/12).
 
    This rule has a useful side effect: anything moving in stops being an
    external dependency, so it needs no image pin — see rule 2.
@@ -144,33 +145,33 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `edf25236`.** Phase 0 complete and then some: 7 services
+**`main` is at `ecb70114`.** Phase 0 complete and then some: **nine** services
 subtree-merged with history, module paths rewritten, `go.work`, per-module CI,
-library pins unified across the nine original modules, every subtree resynced
-to its upstream head, 18 images
-pinned by digest, and the stack booting in CI from images built at HEAD.
+library pins unified, every subtree resynced to its upstream head, 18 images
+pinned by digest, the checks the per-service `.github/` directories took with
+them restored, and the stack booting in CI from images built at HEAD —
+including the indexer, as of #11.
 
-Merged since the last snapshot: **#1** (stack from HEAD images), **#5** (the
-six-subtree resync, into #4's branch), **#6** (image pins + `renovate.json`),
-**#7** (`MONOREPO_TODO.md`) and **#4** (itest modules, the resync, HEAD peers,
-`MAJOR_DECISIONS.md`). **#2** was closed unmerged — guppy is being
-archived, so its tag cannot move under us in the window that mattered.
+Merged since the last snapshot: **#3** (swarf, `433cd628`), **#9** (dropped
+checks restored, `7435ba98`), **#8** (`MONOREPO_TODO.md`, `f1746b3e`), **#10**
+(indexing-service, `6c6cad31`) and **#11** (the indexer built from HEAD,
+`ecb70114`).
 
-Two open, as a stack:
+Two open, and they are **not** a stack — both sit directly on `main`:
 
 | PR | branch | what |
 |---|---|---|
-| [#4](https://github.com/fil-forge/forge-2/pull/4) | `claude/itest-modules` | each `itest/` its own module and actually run in CI; carries #5's resync; `itest` peers now built from HEAD; `MAJOR_DECISIONS.md` |
-| [#3](https://github.com/fil-forge/forge-2/pull/3) | `claude/bring-in-swarf` | swarf as the 8th module, stacked on #4 |
+| [#14](https://github.com/fil-forge/forge-2/pull/14) | `claude/ci-concurrency` | `ci.yml` gains the `concurrency` block the other three workflows already had. One file, six lines. |
+| [#12](https://github.com/fil-forge/forge-2/pull/12) | `claude/bring-in-forgectl` | forgectl, the tenth and last in-scope module; also widens delegator's Docker context to the repository root, because delegator links it in non-test code |
 
-#3 is **rebuilt** onto #4 rather than merging it (rule 7), and has been twice
-now — each #4 push costs a #3 rebuild, which is the price of the stack.
-
-**One interaction to watch.** #4 narrows hilt's Docker context to `hilt/`
-because its only sibling dependency was test-only. #3 gives hilt a *linked*
-dependency on swarf, widening it back to the repository root — hilt plus
-swarf, and still not smelt. #4's own "2.1 MB" figure is true of #4 and does
-not survive #3.
+**#12 is stale on purpose.** Its head (`9106da01`) still carries the
+*superseded* indexing-service subtree merge `2f5e938e`; `main` carries
+`23ba7a9f` instead, because #10 was rebuilt onto a moving `main` four times
+before it landed. So #12 holds a second, parallel copy of that 426-commit
+import and GitHub reads it as conflicting. It is **held unrebuilt until #14
+merges**, so the rebuild happens once rather than twice — Petra's call,
+2026-09-17. Its content was reviewed and approved at that head; the rebuild
+changes no file in the work itself.
 
 **Polyrepo MinIO repoints are all merged**: `smelt`,
 [indexing-service#96](https://github.com/fil-forge/indexing-service/pull/96),
@@ -179,23 +180,22 @@ not survive #3.
 
 ## Next
 
-1. **Merge #4, then #3.** Everything else stacks behind them.
-2. **Bring in `indexing-service`.** One question the plan left open is now
-   answered: **its client is not test-only.** Derived rather than assumed —
-   `GOWORK=off go list -deps ./cmd/...` in `ingot` reaches
-   `indexing-service/pkg/{client,types,service/queryresult}`, and the imports
-   live in `blockstore/forge.go` and `blockstore/locator/indexlocator.go`,
-   with no `_test.go` importing it at all. So ingot's Docker build needs
-   indexing-service **source**, not a `go.mod` stub. Cheaper than it sounds:
-   ingot already builds with the repository root as context for its `hilt`
-   edge, so this adds a `COPY indexing-service/` line rather than changing the
-   context. ingot is its only consumer.
-3. **`forgectl`** — in scope, a CLI, touches none of the image machinery.
-4. **Phase 1** — release tags, `compat.yml`, publishing. `compat.yml` matters
+1. **Merge #14, rebuild #12, merge #12.** That closes the import phase: all ten
+   in-scope modules in, and nothing left to bring in. Do not start another
+   import without Petra saying so — `MAJOR_DECISIONS.md` records what is
+   deliberately out and why.
+2. **Phase 1** — release tags, `compat.yml`, publishing. `compat.yml` matters
    more than it did: moving `itest` to HEAD images removed the only thing that
    was accidentally testing compatibility against the deployed network.
-5. **`libforge`'s dissolution** is what first exercises the audience rule
+3. **`libforge`'s dissolution** is what first exercises the audience rule
    (rule 1). Nothing currently in the repository is a pure library.
+4. **The `forge-2` → `forge` rename**, whenever this path is judged correct.
+   Waiting on a person; see [[Needs Human Work]].
+
+`MONOREPO_TODO.md` is on `main` as of #8 and now carries **six** whole-repo
+questions: the s3-compat report pipeline, Renovate, hilt's build context, the
+macOS run, `stress-tester` coverage, and turning `SA4006` back on. None is
+blocking; none should be answered early.
 
 ## Known debt
 
@@ -208,35 +208,27 @@ not survive #3.
   its skiff build and `-race` requires cgo, so piri's tests now always run
   with cgo enabled, which its shipped binary does not.
 
-- **Five per-module checks were lost with the per-service `.github/`
-  directories, and nothing replaced them.** Every service called
-  `ipdxco/unified-github-workflows`' `go-check` and `go-test`; seven had those
-  callers deleted on `main` in `7321ee6a`, swarf's went in `52a5979b` on #3.
-  Read against `Peeja/unified-github-workflows` at `d9b156f4` (a fork of
-  `main` — the services pinned `@v1.0`, and the fork carries no tags, so the
-  two could not be diffed), what is gone is: **`staticcheck ./...`**;
-  **`gofmt -s`** (the `replaces` job runs plain `gofmt -l .`, so the
-  simplifications are unchecked); **`go test -race ./...`** on ubuntu;
-  the **macOS** run; and **`-shuffle=on`**.
-  What is *not* lost, because it was gated off upstream too: the 32-bit and
-  Windows runs (`skip32bit`, `skipOSes`), the `go generate` drift check
-  (needs `gogenerate: true`, and no service sets it) and `golangci-lint`
-  (needs a `.golangci.*`, which no service has). `go mod tidy` + go.sum diff
-  and `go vet` are covered by the root `unit` job.
-  **Codecov is not on this list, though an earlier version of this page had
-  it.** The upload step is gated on `steps.secrets.outputs.CODECOV_TOKEN ==
-  'true'`, computed as `if ($s[$k] // "") == "" then "false" else "true"`, so
-  an absent, empty or missing-entirely secret skips it. No service carries a
-  `codecov.yml` or mentions codecov in any `.md`/`.yml`/`.yaml`, and Petra's
-  recollection (2026-09-16) is that it was not running on the polyrepo. The
-  `-cover -coverprofile -coverpkg=./...` flags did run, but the profile went
-  only to the skipped upload, so nothing consumed it. Adding Codecov would be
-  new work, not restoration.
-  **macOS is a TODO, not a restore** (Petra, 2026-09-16): the runners have no
-  Docker daemon and several modules' tests need one, so whether those jobs
-  were ever green upstream has to be established first — reproducing a job
-  that was already red buys nothing.
-  Belongs in `MONOREPO_TODO.md`; see **Next**.
+- **Four of the five dropped per-module checks are restored; one is a
+  question, not debt.** Every service called
+  `ipdxco/unified-github-workflows`' `go-check` and `go-test`; those callers
+  were deleted with the per-service `.github/` directories (seven in
+  `7321ee6a`, swarf's in `52a5979b`). #9 brought back **`staticcheck ./...`**,
+  **`gofmt -s`**, **`go test -race`** and **`-shuffle=on`**. The **macOS run**
+  was deliberately not restored and is a `MONOREPO_TODO.md` question: those
+  runners have no Docker daemon and several modules' tests need one, so
+  whether the jobs were ever green upstream has to be established first.
+  Measured when restored: staticcheck **0 findings across 11 modules, 344
+  packages**; `gofmt -s -l .` **0 files** — both checked with planted controls
+  so eleven zeros could not be a broken analyzer.
+  **Codecov was never running** and is not on the list, though an earlier
+  version of this page had it. Its upload is gated on a non-empty
+  `CODECOV_TOKEN`, no service carries a `codecov.yml`, and Petra's
+  recollection (2026-09-16) agrees. The `-cover` flags ran but the profile
+  went only to the skipped upload. Adding it would be new work, not
+  restoration.
+  Also not lost, because gated off upstream too: the 32-bit and Windows runs,
+  the `go generate` drift check and `golangci-lint`.
+
 - **hilt's image builds from the repository root, and that is meant to be
   temporary.** hilt links swarf through a sibling `replace`, and Go resolves
   replace targets before downloading, so the context must contain both.
@@ -245,7 +237,7 @@ not survive #3.
   published tagged module narrows it — Phase 1 work, which gives up
   same-commit co-development in exchange. Petra's call (2026-09-16): keep it,
   resolve before the consolidation finishes. Recorded in `hilt/Dockerfile`
-  (`5177695b`); `MONOREPO_TODO.md` entry owed.
+  (`5177695b`) and in `MONOREPO_TODO.md` as of #8.
 
 - `Dockerfile.release` (hilt, ingot, sprue) has the build-context problem the
   main Dockerfiles had, and nothing builds it. Surfaces at the first release.
@@ -262,24 +254,56 @@ not survive #3.
   ones whose defect can recur here.
 - **`itest ingot` is drifting toward its 45-minute cap, one image build at a
   time.** 21m30s standalone before the peers came from HEAD; 29m03s once six
-  images were built in-job; 30m15s on #11, which adds the indexer as the
-  eighth. Each service brought in-repo adds a build to this job, so the
-  margin shrinks as the monorepo grows rather than staying put. About
-  fifteen minutes left. The ordering still holds: Go's `-timeout 25m`
-  covers the test portion only and fires first on a hang, dumping
-  goroutines, where a runner kill at the cap gives nothing.
-- **`itest ingot` was 29m03s and the job cap is 45 minutes.** Taking the
-  peers from HEAD added a six-image build to the job — measured at 6m27s and
-  8m12s on two runs — and the total went from ~21m30s to **29m03s**. The cap
-  was 30. It was raised to 45 in the same change, on an estimate; the first
-  full run came in with **57 seconds** to spare against the old number, so the
-  raise was load-bearing rather than precautionary.
-  The ordering still holds and still matters: Go's `-timeout 25m` covers the
-  test only (~22m30s of that 29m) and fires first on a hang, dumping every
-  goroutine. A runner kill at the job cap gives nothing, which is why the two
-  numbers must not be levelled.
-  Worth watching rather than acting on: the test portion is a little above the
-  ~21m30s it used to take standalone. One observation, so not yet a fact.
+  images were built in-job; **30m18s** on #12's head, which builds eight.
+  (#10, at seven, ran 27m15s; #11 at eight ran 29m43s.) Each service brought
+  in-repo adds a build to this job, so the margin shrinks as the monorepo
+  grows rather than staying put. About fifteen minutes left.
+  The cap was 30 and was raised to 45 on an estimate; the first full run after
+  the peers moved to HEAD came in with **57 seconds** to spare against the old
+  number, so the raise was load-bearing rather than precautionary.
+  The ordering holds and must keep holding: Go's `-timeout 25m` covers the
+  test portion only (~22m30s of the 29m) and fires first on a hang, dumping
+  every goroutine. A runner kill at the job cap gives nothing, which is why
+  the two numbers must not be levelled.
+
+- **`SA4006` is off for the whole repository**, via a root `staticcheck.conf`
+  reading `checks = ["inherit", "-SA4006"]` (#10). It suppresses one true
+  positive in one generated file —
+  `indexing-service/pkg/service/queryresult/json_gen.go:231`, a comma counter
+  incremented after the last field, which nothing reads. The fix belongs
+  upstream in `alanshaw/dag-json-gen`, pinned at `v0.0.9`, which is also its
+  latest release.
+  **Pinning staticcheck back is not available**, which is the part worth
+  knowing: indexing-service was `go 1.25.7`, so the shared workflow's
+  version table gave it 2025.1.1 and its own checks were green at the exact
+  commit we imported. Unifying the libforge pin moved it to `go 1.27.0`, and
+  both older versions that table can produce — 2025.1.1 (`v0.6.1`) and 2026.1
+  (`v0.7.0`) — fail on *every* package with `export data version 4 is greater
+  than maximum supported version 2`. Verified by installing both.
+  It fires exactly once across thirteen modules today, so nothing is lost
+  yet; that stops being true the longer it stays. `MONOREPO_TODO.md` carries
+  the entry and the three ways out.
+
+- **CI does not filter jobs by what a PR changed, on purpose — and that is
+  not free.** No `paths:`, `paths-ignore:` or changed-files detection
+  anywhere in `.github/`. `ci.yml`'s header says why: one job per module and
+  no filter list means a new shared module cannot fall out of one and go
+  silently green. The cost, measured: **#8 was one Markdown file** and its
+  last push still cost `itest` 26m27s, `e2e` 9m57s, `ci` 8m40s and `images`
+  7m00s.
+  Worth a decision rather than a quiet fix, because the obvious mechanism —
+  a hand-written `paths:` list — is the same silent-green shape this
+  consolidation keeps deleting, and a job skipped by a path filter reports as
+  *skipped*, which never satisfies a required status check. If it is done, it
+  should derive the affected set from `go list -deps` (rule 3) rather than
+  from a typed list.
+
+- **`ci.yml` is the only workflow with no `permissions:` block.**
+  `images.yml`, `e2e.yml` and `itest.yml` each set `permissions: contents:
+  read`; `ci.yml` inherits whatever the repository default is. Noticed while
+  writing #14 and deliberately left out of that diff — different concern from
+  run cost, and it should be judged on its own. Two lines.
+
 - No **image-age check** anywhere. Every image failure so far would have been
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
