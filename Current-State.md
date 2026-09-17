@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 17:05Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 17:20Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -360,6 +360,36 @@ only what a change affects. None is blocking; none should be answered early.
   old `fil-forge/forge` and were never carried across. Worth porting the
   ones whose defect can recur here — though not `check-image-lists.sh` as
   written, which is lesson L12 itself.
+- **The image build is cacheable after all, and the warm number is 23 seconds.**
+  [#25](https://github.com/fil-forge/forge-2/pull/25) is **22/22 green** and
+  measured. `itest.yml` and `e2e.yml` used plain `docker build`, which cannot use
+  `--cache-from type=gha` at all, so the absence of a cache was never a decision;
+  they now use `docker/build-push-action@v6` with `type=gha` per service, and
+  `images.yml` stays cold as the canary on the same events.
+
+      all 8 images       baseline (plain docker build)   7m34s  itest ingot / 6m08s itest hilt
+                         cold + cache write (run 1)     11m21s  e2e  -- ~3 min WORSE
+                         warm (run 2)                      23s  e2e
+      whole e2e job      baseline (#24)                 13m10s
+                         warm                            5m29s
+
+  Per service warm: piri 4s, hilt 5s, ingot 3s, sprue 2s, delegator 2s,
+  piri-signing-service 2s, swarf 3s, indexing-service 2s.
+
+  **Two things keep this honest.** The warm run is a **re-run of the same
+  commit**, so every layer hit — that is the ceiling, not the average. A real
+  pull request changes Go source, which invalidates the `go build` layer for the
+  services it touches; the base image, apt and `go mod download` layers (the bulk)
+  still hit, so expect minutes rather than 23 seconds, and **worth re-measuring on
+  a real source change**. And the cold path costs ~3 minutes more than before,
+  because `mode=max` exports every layer — so the first run on `main` after
+  merging is *slower*, by construction.
+
+  **Not yet checked: cache size against GitHub's 10 GB per-repository limit.**
+  Eight images exported at `mode=max` is not small, and eviction is LRU, so a
+  cache that overflows quietly degrades back to cold builds. Worth a look before
+  treating 23 seconds as permanent.
+
 - **`TestUploadAndRetrieve/filesystem` in `smelt/tests/e2e` is flaky — 2 failures
   in 40 `e2e` runs (5%), and both are the same shape.** It is a startup race, not
   a test bug:

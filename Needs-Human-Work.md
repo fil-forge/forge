@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 17:05Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 17:20Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,15 +19,14 @@ tidying and block nothing.
 
 ## Open pull requests
 
-**⚠️ `e2e` on [#25](https://github.com/fil-forge/forge-2/pull/25) went red, and
-it is a pre-existing flake, not the change.** Confirmed against `main`:
-`TestUploadAndRetrieve/filesystem` failed the same way on run 160 (`main`
-`ff2f794d`, 14:08Z) as on run 182 (#25, 16:39Z) — `compose up` reporting a
-dependency unhealthy, a *different* container each time (`upload-1` then
-`plc-1`), always the `filesystem` permutation, never `s3`. 2 failures in 40
-runs. One re-run queued, which is the single re-run the rules allow for
-establishing that a failure is not this PR's. Recorded as debt on
-[[Current State]].
+**[#25](https://github.com/fil-forge/forge-2/pull/25) is 22/22 green and the
+measurement is in: the warm image build is 23 seconds**, against a 7m34s
+baseline; the whole `e2e` job went 13m10s → 5m29s. Its `e2e` red earlier was a
+pre-existing flake, confirmed against run 160 on `main` `ff2f794d` at 14:08Z, and
+the one allowed re-run passed. Caveats are on [[Current State]] and in the PR:
+the warm run is a same-commit re-run so it is the ceiling, the cold path is ~3
+min *worse*, and the cache size has not been checked against GitHub's 10 GB
+limit.
 
 
 Five. All sit on `main` independently, touching disjoint files; none carries a
