@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 20:05Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 20:15Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -423,6 +423,29 @@ only what a change affects. None is blocking; none should be answered early.
   `hilt/pkg/fx/revocation.go` and `ingot/revocation/consumer.go` both link it in
   production code. The fix already existed in `cmd/swarf/stream.go`; the library
   every service consumes did neither half of it.
+
+  **#28 belongs upstream as well, and the argument is stronger than tidiness.**
+  Verified rather than assumed: the fix and its test contain **no module paths**,
+  the patch `git apply`s cleanly to `fil-forge/swarf` at its head, and there it
+  builds, vets and passes both subtests under `github.com/fil-forge/swarf/pkg/client`.
+  Nothing about it is monorepo-specific.
+
+  What settles it is **who actually runs the code**. Upstream `hilt` and `ingot`
+  both require `github.com/fil-forge/swarf` in their `go.mod`, pinned at
+  `v0.0.1-0.20260821142121-d5d1a0a56f00` (2026-08-21) — and the bug predates that
+  pin: `_ = scanner.Err()` arrived in `7520dac` on **2026-08-18**. Meanwhile the
+  monorepo ships nothing, because Phase 1's release machinery does not exist yet.
+  **So #28 as it stands fixes a hang in the copy nobody deploys, and leaves it in
+  the copy everyone deploys.**
+
+  Landing the *identical* patch in both places is also the cheapest outcome for
+  the final pull: when ours and theirs are byte-identical, the three-way merge
+  takes it with no conflict at all.
+
+  **Two caveats.** `fil-forge/swarf` is **not in this session's repository
+  scope**, so an upstream PR needs the repo added first. And upstream swarf being
+  fixed does not fix its consumers: `hilt` and `ingot` would each need a pin bump
+  to pick it up — the same shape as the versitygw `lockWaitTime` item.
 
   **The other three want deciding, not fixing**, and are still open: the
   revocation lookup served `immutable` for a year on a mutable route; the memory
