@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 16:48Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 17:05Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -144,7 +144,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `586738ed`, and the import phase is closed.** All **ten**
+**`main` is at `144b3162`, and the import phase is closed.** All **ten**
 in-scope modules are subtree-merged with their histories, module paths
 rewritten, `go.work`, per-module CI, library pins unified, every subtree
 resynced to its upstream head, images pinned by digest, the checks the
@@ -360,6 +360,31 @@ only what a change affects. None is blocking; none should be answered early.
   old `fil-forge/forge` and were never carried across. Worth porting the
   ones whose defect can recur here — though not `check-image-lists.sh` as
   written, which is lesson L12 itself.
+- **`TestUploadAndRetrieve/filesystem` in `smelt/tests/e2e` is flaky — 2 failures
+  in 40 `e2e` runs (5%), and both are the same shape.** It is a startup race, not
+  a test bug:
+
+      run 160, main ff2f794d, 14:08Z   container ...-filesystem-upload-1 is unhealthy   FAIL (59.32s)
+      run 182, #25 7fb93177,  16:39Z   container ...-filesystem-plc-1    is unhealthy   FAIL (62.27s)
+
+  Both fail in `compose up` with a dependency judged unhealthy, both in the
+  **`filesystem`** permutation, never `s3` — and a *different* container each
+  time, which is what a race looks like rather than a broken image. `plc-1`'s own
+  log says `Error: connect ECONNREFUSED 172.18.0.6:5432`: it lost the race to its
+  postgres, restarted once, and the healthcheck deadline hit ~200ms later.
+
+  **The likely mechanism:** the two permutations are `t.Parallel()`, so ~40
+  containers start on one runner at once and healthchecks starve. That both
+  observed failures are `filesystem` is suggestive of something systematic rather
+  than symmetric, but two data points is not proof.
+
+  **Why it matters beyond the flake:** run 182 is on
+  [#25](https://github.com/fil-forge/forge-2/pull/25), which changes how images
+  are built, so this looked exactly like a regression until the `main` failure
+  was found. A 5% flake in the one suite that exists to catch flakiness will keep
+  costing that diagnosis. Worth fixing properly — the honest fix is compose
+  healthcheck/`depends_on` ordering, not a retry.
+
 - **`itest ingot` is ~30 minutes, unsharded, and that is now a measured choice
   rather than an unexamined one.**
   [#21](https://github.com/fil-forge/forge-2/pull/21) built the sharding, ran

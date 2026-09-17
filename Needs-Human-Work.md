@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 16:48Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 17:05Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -18,6 +18,17 @@ and all ten in-scope modules are on `main`. The two open PRs are follow-on
 tidying and block nothing.
 
 ## Open pull requests
+
+**⚠️ `e2e` on [#25](https://github.com/fil-forge/forge-2/pull/25) went red, and
+it is a pre-existing flake, not the change.** Confirmed against `main`:
+`TestUploadAndRetrieve/filesystem` failed the same way on run 160 (`main`
+`ff2f794d`, 14:08Z) as on run 182 (#25, 16:39Z) — `compose up` reporting a
+dependency unhealthy, a *different* container each time (`upload-1` then
+`plc-1`), always the `filesystem` permutation, never `s3`. 2 failures in 40
+runs. One re-run queued, which is the single re-run the rules allow for
+establishing that a failure is not this PR's. Recorded as debt on
+[[Current State]].
+
 
 Five. All sit on `main` independently, touching disjoint files; none carries a
 `git subtree add`, so they rebase rather than needing a rule 7 rebuild. **Only
