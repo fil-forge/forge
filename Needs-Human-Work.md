@@ -23,8 +23,24 @@ Two. **[#9](https://github.com/fil-forge/forge/pull/9)** — the first PR on
 `forge` itself — and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
 upstream.
 
-**#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) and
-waiting on review — nothing on it is the agent's to do.
+**#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) — **22
+check runs on its head, none failing** — but GitHub reports its
+`mergeable_state` as **`blocked`**, not `clean`. (`swarf` #17, for contrast,
+reads `clean`.)
+
+**Worth one look, because this has bitten before.** `blocked` with everything
+green is either a required *review* — expected, and fine — or a **required
+status check that no longer reports**, which is exactly what #16's
+`replaces` → `guards` rename caused on `forge-2`. The agent cannot tell which:
+reading `branches/main/protection` returns *Resource not accessible by
+integration*. If `forge`'s branch protection was configured before the
+transplant, its required contexts describe the **old** repo's workflows, and
+a PR can sit blocked forever on a check that will never appear.
+
+The 22 contexts #9 actually reports, to compare against the rule:
+`e2e`, `guards`, `image {delegator,hilt,indexing-service,ingot,piri,piri-signing-service,sprue,swarf}`,
+`itest {hilt,ingot}`, `unit {delegator,forgectl,hilt,indexing-service,ingot,piri,piri-signing-service,smelt,sprue,swarf}`.
+Anything required that is not in that list will never report.
 
 **The finding: every goreleaser `-X` ldflag names a pre-consolidation module
 path.**
