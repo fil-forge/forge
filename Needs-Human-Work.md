@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 17:24Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 17:42Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,19 +19,14 @@ tidying and block nothing.
 
 ## Open pull requests
 
-**[#25](https://github.com/fil-forge/forge-2/pull/25) is 22/22 green and the
-measurement is in: the warm image build is 23 seconds**, against a 7m34s
-baseline; the whole `e2e` job went 13m10s → 5m29s. Its `e2e` red earlier was a
-pre-existing flake, confirmed against run 160 on `main` `ff2f794d` at 14:08Z, and
-the one allowed re-run passed. Caveats are on [[Current State]] and in the PR:
-the warm run is a same-commit re-run so it is the ceiling, the cold path is ~3
-min *worse*, and the cache size has not been checked against GitHub's 10 GB
-limit.
-
-
-Five. All sit on `main` independently, touching disjoint files; none carries a
-`git subtree add`, so they rebase rather than needing a rule 7 rebuild. **Only
-#25 can fail** — the other four are documentation or deletions nothing reads.
+One — **[#27](https://github.com/fil-forge/forge-2/pull/27)**. #25 and #26
+merged, so the layer cache is live on `main` (`95e83665`) and its numbers are
+recorded: **23s warm** against a 7m34s baseline, the `e2e` job 13m10s → 5m29s.
+Three caveats travel with that, on [[Current State]] and in #26: the warm run was
+a same-commit re-run so it is the **ceiling not the average**, the cold path is
+~3 min *worse*, and **the cache size has not been checked against GitHub's 10 GB
+limit** — that one needs `gh cache list` or the Actions cache API, neither of
+which the agent can reach from here.
 
 **Each one now opens with a block naming the checks that are safe to merge
 without waiting for** — see [[Current State]] for why, and what makes it more
@@ -39,8 +34,7 @@ than a feeling.
 
 | | what | state |
 |---|---|---|
-| [#25](https://github.com/fil-forge/forge-2/pull/25) | **Layer-cache the image builds in `itest`/`e2e`**, keeping `images.yml` cold as the canary. The ~6 min build sits on both critical paths and neither could ever cache it — they used plain `docker build`, which cannot use `type=gha` at all. | `7fb93177`. **The judgement call**: it leans on `images.yml` running cold on the same events, so a broken Dockerfile still turns that red on the same commit. If you do not buy that, close it rather than amend it. The first run after merge is cold by construction — do not judge it on that one. |
-| [#26](https://github.com/fil-forge/forge-2/pull/26) | **Record what the cache measured** in `MONOREPO_TODO.md`, with its three caveats — the warm number is a same-commit ceiling, the cold path is ~3 min worse, and the 10 GB cache limit is unchecked. | `28d8ffdc`, one file, nothing reads it. |
+| [#27](https://github.com/fil-forge/forge-2/pull/27) | **Fix the `e2e` flake at its root.** `pg_isready` without `-h` probes the Unix socket, which is up during `initdb` while TCP is refused — the healthcheck went green 2.25s before the port existed and dependents started into the gap. Six sites + a list-free guard that also covers Go. | `ea7dafa3`. **Watch `e2e` and `guards`.** The mechanism is proven from `plc-postgres`'s own log; **the frequency is not** — a 5% flake cannot be shown fixed by one green run. |
 
 **One check-name change is outstanding for branch protection**: #16's
 `replaces` → `guards`, merged and live, so a rule requiring `replaces` waits on
