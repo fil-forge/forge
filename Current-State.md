@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 19:55Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 20:05Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -379,15 +379,34 @@ only what a change affects. None is blocking; none should be answered early.
   upstream does not have. smelt's "move the healthcheck off `mc`" fix is already
   in our tree verbatim. **Nothing on `main` is made redundant by upstream.**
 
-  **So a naive `git subtree pull` can regress the pins.** It would merge
-  upstream's *unpinned* MinIO strings over our *pinned* ones. The compose case
-  is caught — `check-stack-images.sh` fails on an image without a digest — but
-  the **Go** cases are not: `piri/pkg/internal/testutil/minio.go` and
-  `sprue/internal/testutil/s3.go` sit in the population deliberately left
-  unguarded (the 367-matches decision). **A regression there would be silent**,
-  which is exactly the shape that decision accepted, and the final pull is the
-  moment it matters. Cheapest mitigation: diff the pinned-image set before and
-  after any subtree pull, and treat a shrink as a failure.
+  **A subtree pull will NOT silently regress the pins — an earlier version of
+  this entry said it would, and that was wrong.** Tested with `git merge-file`
+  on the real base/ours/theirs for each file rather than reasoned about:
+
+      piri/pkg/internal/testutil/minio.go   1 conflict
+      sprue/internal/testutil/s3.go         1 conflict
+      smelt/systems/common/compose.yml      2 conflicts
+
+  Every one conflicts loudly, and in each the **digest-bearing line survives the
+  merge** — the conflict is confined to the `minio.Run(…)` call, while the
+  `const defaultMinioImage = "…@sha256:…"` block sits in a region upstream did
+  not touch and merges cleanly.
+
+  **And a careless resolution is caught too.** Simulated taking *theirs* at the
+  conflict: it compiles and vets clean, but `staticcheck` reports
+  `U1000 const defaultMinioImage is unused` and `U1000 func minioImage is
+  unused`, and `ci.yml` runs staticcheck on every module. The compose case is
+  additionally covered by `check-stack-images.sh`.
+
+  **That is a property of the shape #19 introduced, and worth knowing.** A named
+  const plus a `minioImage()` helper means dropping the pin *orphans them*, so
+  the indirection is self-guarding under merge in a way a bare inline literal
+  would not be. The deliberately-unguarded Go image population is not exposed
+  here after all.
+
+  The one residual risk is narrow and compound: resolving to *theirs* **and**
+  deleting the orphaned const and helper to silence staticcheck. That is a
+  deliberate act, not an oversight.
 
 - **The deferred import findings are now fixable, and that is a category worth
   knowing about.** `MONOREPO_TODO.md`'s *Findings in the imported code* holds
