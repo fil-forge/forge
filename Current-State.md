@@ -39,10 +39,14 @@ What follows:
   end to end** — a cold run costs roughly triple a warm one. That is a
   **fourth** `e2e` pass on #27's postgres fix, and four passes still had a ~81%
   chance even unfixed at a 5% base rate: **not a verdict.** Keep counting.
-  `itest hilt` went green at 20:35Z (14m02s). **`itest ingot` was still inside
-  its suite step 23 minutes in** — not a failure, and not news: ingot's itest
-  being the long pole is exactly what the closed #21 was about. It is the job
-  to watch if anyone reconsiders sharding.
+  `itest` finished green at **20:57Z** — `hilt` in 14m02s, `ingot` taking the
+  full 36 minutes. Not a failure, and not news: ingot's itest being the long
+  pole is exactly what the closed #21 was about, and it is the job to look at
+  first if sharding is ever reconsidered.
+
+  **So `fil-forge/forge`'s first CI sweep on the transplanted `main` is green
+  across all four workflows** — `ci`, `images`, `e2e`, `itest` — from a
+  completely cold cache.
 - **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z against
   the *old* `f60dd596`. Its next scheduled run is the first against the
   monorepo tree, and nobody has seen that happen.

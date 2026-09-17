@@ -23,7 +23,11 @@ Two. **[#9](https://github.com/fil-forge/forge/pull/9)** — the first PR on
 `forge` itself — and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
 upstream.
 
-**#9: every goreleaser `-X` ldflag names a pre-consolidation module path.**
+**#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) and
+waiting on review — nothing on it is the agent's to do.
+
+**The finding: every goreleaser `-X` ldflag names a pre-consolidation module
+path.**
 17 of 21, across all four `.goreleaser.yaml` files. The linker does not object
 to an `-X` whose import path matches nothing — it exits 0 and silently leaves
 the variable at its default — so a release cut from today's tree would ship
