@@ -346,8 +346,20 @@ only what a change affects. None is blocking; none should be answered early.
   | `sprue` | 4 | 2026-09-17 (today) |
   | `delegator` | 4 | 2026-09-11 |
   | `piri` | 2 | 2026-09-14 `Point minio at our own build (#123)` |
-  | `swarf` | 0 | dormant since 2026-08-27 |
+  | `swarf` | 0 | `main` dormant since 2026-08-27, but **two open drafts** |
   | `indexing-service`, `piri-signing-service`, `forgectl` | 0 | at the import point |
+
+  **"Behind" counts merged commits, and for `swarf` that undercounts what is
+  coming.** Its `main` really has not moved since 2026-08-27, but `pyropy` has
+  two drafts open from 2026-09-15:
+  [#15](https://github.com/fil-forge/swarf/pull/15) (`WithNonce` on `Publish`)
+  and [#16](https://github.com/fil-forge/swarf/pull/16) (memory store stamps
+  `RecordedAt` under the lock). **#15 edits `pkg/client/client.go` and
+  `pkg/client/client_test.go` — the same two files our fix touches.** Checked
+  with `git merge-tree` rather than assumed: both merge cleanly into
+  `claude/firehose-scanner-buffer` today. #16 is also adjacent to one of the
+  three findings left for you, the memory-vs-PostgreSQL divergence — worth
+  reading before deciding that one.
 
   **This page previously said every subtree was resynced to its upstream head.**
   That was true when it was written and is not true now; `sprue`, `libforge` and
