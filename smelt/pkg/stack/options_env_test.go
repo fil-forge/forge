@@ -102,6 +102,7 @@ func TestWithPublishedImagesFillsUnsetFields(t *testing.T) {
 		"DELEGATOR_IMAGE": "ghcr.io/fil-forge/delegator:main",
 		"SIGNER_IMAGE":    "ghcr.io/fil-forge/piri-signing-service:main",
 		"SWARF_IMAGE":     "ghcr.io/fil-forge/swarf:main",
+		"INDEXER_IMAGE":   "ghcr.io/fil-forge/indexing-service:main",
 	}
 
 	env := c.buildEnv()

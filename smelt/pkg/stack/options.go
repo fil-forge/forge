@@ -411,8 +411,8 @@ var envImageOptions = []struct {
 // the variable rather than quietly booting :main.
 //
 // Only what this repository builds. The other images the stack runs (guppy,
-// indexer, ipni, plc, blockchain, minio) come from elsewhere and keep their
-// `:-` compose defaults, so there is nothing for this to fill in.
+// ipni, plc, blockchain, minio) come from elsewhere and keep their `:-`
+// compose defaults, so there is nothing for this to fill in.
 var publishedImages = []struct {
 	ref string
 	get func(*config) *string
@@ -424,6 +424,7 @@ var publishedImages = []struct {
 	{"ghcr.io/fil-forge/delegator:main", func(c *config) *string { return &c.delegatorImage }},
 	{"ghcr.io/fil-forge/piri-signing-service:main", func(c *config) *string { return &c.signerImage }},
 	{"ghcr.io/fil-forge/swarf:main", func(c *config) *string { return &c.swarfImage }},
+	{"ghcr.io/fil-forge/indexing-service:main", func(c *config) *string { return &c.indexerImage }},
 }
 
 // WithPublishedImages fills in the published :main reference for every image
