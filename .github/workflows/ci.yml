@@ -33,6 +33,10 @@ env:
   # comes back, whichever source served it.
   GOPROXY: "https://proxy.golang.org|direct"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   replaces:
     name: replaces
