@@ -27,10 +27,12 @@ below is an event.
 
 What a replacement probably keeps: rules 2 through 5, which are about the code
 and its CI rather than about moving it, and the commands and conventions at the
-end. What it probably drops: rules 1 and 6 through 9, the wiki, and most of the
-document table — by then the wiki's content belongs in the repository or in
-issues, and *Needs Human Work* should be empty. Do not treat that split as
-settled; decide it when you can see the finished shape.
+end. What it probably drops: rules 1 and 6 through 9, the wiki, most of the
+document table, and the per-pull-request **skippable-checks block** — by then
+the wiki's content belongs in the repository or in issues, *Needs Human Work*
+should be empty, and the blocks should have been replaced by real filtering
+designed from what they turned out to say. Do not treat that split as settled;
+decide it when you can see the finished shape.
 
 ## Where state lives, and what goes where
 
@@ -117,6 +119,43 @@ the `guards` job), `images`, `e2e`, `itest`. **Nothing is filtered by path, on
 purpose**: `ci.yml`'s header says why, and `MONOREPO_TODO.md` carries the
 question of whether that should change. A documentation-only change therefore
 costs a full run; that is known, not an oversight.
+
+### Every pull request opens with which checks are safe to skip
+
+Because nothing is path-filtered and `itest` alone is ~23 minutes, **the first
+thing in a pull request body is a block naming the checks a reviewer can merge
+without waiting for, and why.** Refresh it on every push, the way rule 8's
+range link is refreshed.
+
+This is the interim for the path-filtering question, and deliberately a manual
+one. It avoids both faults the automatic version has: a `paths:` list goes
+stale silently when a module gains a dependency, and a path-filtered job
+reports *skipped*, which never satisfies a required status check. A sentence
+written per push goes stale the moment it is written and is re-derived anyway,
+and it can say things no filter can express — "this check already passed on
+`<sha>` and nothing under `.github/` has changed since".
+
+**Derive it; do not assert it.** The closure here is not obvious, which is the
+whole reason CI is unfiltered: `ingot → indexing-service` and
+`delegator → forgectl` were both invisible in `go.mod` and only appeared under
+`go list -deps` (rule 3). So:
+
+- **Markdown only** — everything is skippable; nothing compiles or reads it.
+  Say which files, so the claim is checkable.
+- **One workflow's own YAML** — only that workflow's checks matter. Prove no
+  other workflow, script or test reads it, with the `grep` in the block.
+- **Go code** — run `GOWORK=off go list -deps ./...` per module and name the
+  jobs the closure reaches. Never eyeball it.
+- **Already green at an earlier head** — name the run and show
+  `git diff <green-sha> HEAD -- <paths>` is empty.
+
+**Say what it costs if it is wrong**, in the block: the checks still run, we
+just do not wait, so an ignored check that goes red leaves `main` red. That is
+a real trade and the reviewer is the one making it.
+
+Keep the blocks. When the real filtering is designed, they are the worked
+examples of what it has to be able to express — and the ones that turned out
+wrong are worth more than the ones that did not.
 
 The `guards` job runs the `check-*.sh` scripts in `.github/scripts/`. **That
 directory is the list** — this file deliberately does not enumerate them,
