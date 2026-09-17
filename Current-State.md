@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 15:05Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 15:15Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -144,7 +144,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `ff2f794d`, and the import phase is closed.** All **ten**
+**`main` is at `3c3fe769`, and the import phase is closed.** All **ten**
 in-scope modules are subtree-merged with their histories, module paths
 rewritten, `go.work`, per-module CI, library pins unified, every subtree
 resynced to its upstream head, images pinned by digest, the checks the
@@ -156,8 +156,9 @@ booting in CI from images built at HEAD.
 `sprue`, `swarf`.
 
 Merged since the last snapshot: **#12** (forgectl — the tenth and last,
-`7ccafeab`) and **#15** (`ci.yml`'s `permissions` block and the
-path-filtering TODO entry, `ff2f794d`). Before those, in order: #3 (swarf),
+`7ccafeab`), **#15** (`ci.yml`'s `permissions` block and the path-filtering
+TODO entry, `ff2f794d`) and **#16** (26 base images pinned by index digest,
+`check-base-images.sh`, and the `replaces` → `guards` rename, `3c3fe769`). Before those, in order: #3 (swarf),
 #9 (dropped checks), #8 (`MONOREPO_TODO.md`), #10 (indexing-service),
 #11 (the indexer from HEAD) and #14 (`ci.yml`'s `concurrency` block).
 
@@ -165,7 +166,6 @@ Two open, stacked, both follow-on tidying rather than migration:
 
 | PR | branch | what |
 |---|---|---|
-| [#16](https://github.com/fil-forge/forge-2/pull/16) | `claude/pin-base-images` | 26 external `FROM` references pinned by index digest + `check-base-images.sh`; second commit renames the `replaces` job to `guards`, which is what it is |
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived with swarf and indexing-service *after* #6 had finished pinning + `check-stack-images.sh` |
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17; stacked on it because it moves the same lines |
 
@@ -183,7 +183,7 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #16, then #17, then #19.** Stacked in that order; neither carries a
+1. **Merge #17, then #19.** Stacked in that order; neither carries a
    `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
    #16 changes a check name (`replaces` → `guards`), so a branch protection
    rule naming the old one needs updating with it.

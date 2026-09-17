@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 15:05Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 15:15Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -24,7 +24,6 @@ needing a rule 7 rebuild.
 
 | | what | state |
 |---|---|---|
-| [#16](https://github.com/fil-forge/forge-2/pull/16) | **Pin the base images our Dockerfiles build `FROM`** — 26 references, by index digest — plus `check-base-images.sh`. Second commit renames the `replaces` job to `guards`. | On `main`. Was 21/21 green before the rebase and the rename. |
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | **Pin the 5 references that arrived after #6 had finished pinning**, carried in by swarf (#3) and indexing-service (#10) — plus `check-stack-images.sh` for compose. | On #16. |
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | On #17, because it moves the same lines. Answers Petra's review question there; she asked for it as its own PR. |
 
@@ -40,6 +39,9 @@ records what is deliberately out.
 Decisions taken while she was away, all reversible, all flagged on the PR that
 made them. None needs undoing; they need confirming.
 
+- **#16 is merged, so the `replaces` → `guards` rename is live.** A branch
+  protection rule still requiring `replaces` now waits on a check that will
+  never report.
 - **#17 reuses digests already in the tree** rather than resolving fresh —
   `postgres:16-alpine` is `cf78e766…` in four other places, the minio release
   `2c4349a1…` in piri's testutil. Resolving fresh would have put two builds of
