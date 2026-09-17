@@ -24,7 +24,7 @@ upstream. `forge` has no open PRs at all, and
 [#28](https://github.com/fil-forge/forge-2/pull/28) on `forge-2` is superseded
 (see below) — it can be closed.
 
-**#17 took a review and grew a second commit** (`406cbe0`). Petra's note: the
+**#17 took a review and grew a second commit** (`406cbe0`, **5/5 green**). Petra's note: the
 duplicated buffer limits and the comment explaining the duplication were the
 wrong shape. The duplication ran deeper than the constants — `cmd/swarf` and
 `pkg/client` had the *same* SSE loop — so the framing moved to a new
@@ -33,7 +33,18 @@ lines. Both call sites collapse to the one step that differs. Two behaviours
 of the old loop were checked rather than assumed and written down there: an
 event carrying no data is not dispatched (which the event stream format
 requires, not an accident), and fields other than `event`/`data` are ignored —
-including the `id:` line `pkg/fx` writes before every revocation. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
+including the `id:` line `pkg/fx` writes before every revocation.
+
+`406cbe0` first came back red, and **not from the refactor**: `proxy.golang.org`
+cut the `gitlab.com/yawning/tuplehash` zip mid-transfer (`stream error: stream
+ID 321; INTERNAL_ERROR`), so `cmd/swarf`, `itest` and `pkg/fx` — the three
+packages that reach `secp256k1-voi` — reported `[setup failed]` without
+compiling. Ruled out rather than assumed: **every added test ran and passed in
+that same job** (`TestScannerReadsEvents` 8/8, the two size tests 1/1 each,
+`TestStreamLargeEvent` 3/3), the commit changes no dependencies, and `Go
+Checks` and `Container` were green on the same SHA. A module download dying
+before any test body runs is the one sanctioned re-run; it passed on attempt 2.
+**That re-run is spent** — a second failure on this commit would be real. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
 its guard are live, and `e2e` has now passed twice on the fix (still weak
 evidence: two passes had a ~90% chance even unfixed). #25 and #26
 merged, so the layer cache is live on `main` (`95e83665`) and its numbers are

@@ -36,10 +36,13 @@ What follows:
   useful part: **piri 5m52s**, then hilt 10s, ingot 7s, sprue 5s, swarf 6s —
   they share piri's layers — and delegator 1m21s, piri-signing-service 1m10s,
   indexing-service 1m51s, which do not. **`e2e` went green at 20:39Z, 17m30s
-  end to end** — a cold run costs roughly triple a warm one. `itest` was still
-  running at 20:45Z. That is a **fourth** `e2e` pass on #27's postgres fix, and
-  four passes still had a ~81% chance even unfixed at a 5% base rate: **not a
-  verdict.** Keep counting.
+  end to end** — a cold run costs roughly triple a warm one. That is a
+  **fourth** `e2e` pass on #27's postgres fix, and four passes still had a ~81%
+  chance even unfixed at a 5% base rate: **not a verdict.** Keep counting.
+  `itest hilt` went green at 20:35Z (14m02s). **`itest ingot` was still inside
+  its suite step 23 minutes in** — not a failure, and not news: ingot's itest
+  being the long pole is exactly what the closed #21 was about. It is the job
+  to watch if anyone reconsiders sharding.
 - **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z against
   the *old* `f60dd596`. Its next scheduled run is the first against the
   monorepo tree, and nobody has seen that happen.
