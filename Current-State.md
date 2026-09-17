@@ -181,7 +181,7 @@ One open. **#27 merged** (`24b18ee5`), so the postgres healthcheck fix and its g
 | PR | branch | what |
 |---|---|---|
 | [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29`, **22/22 green** | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used |
-| [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) | `claude/firehose-scanner-buffer` `a50b142` | **upstream**, the identical patch — see *The deferred import findings* below |
+| [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) | `claude/firehose-scanner-buffer` `a50b142`, **5/5 green** | **upstream**, the identical patch — see *The deferred import findings* below |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
 23s warm against a 7m34s baseline, with the caveats below. **#27** is the
@@ -460,7 +460,9 @@ only what a change affects. None is blocking; none should be answered early.
   (`claude/firehose-scanner-buffer`, `a50b142`): the same patch, applied with
   `git apply -p2`, unmodified, and re-verified in both directions against
   upstream's own tree — unfixed, each subtest hangs to its 30s deadline; fixed,
-  both pass in ~0.05s. The scope caveat is spent. Worth keeping from the
+  both pass in ~0.05s. **Green upstream: 5/5** — Go Checks, Go Test on ubuntu
+  (including `-race`, and the shared workflow shuffles test order), macos and
+  windows, and Container. The scope caveat is spent. Worth keeping from the
   exercise: the clone arrived **shallow (depth 1)**, where `git log -S` and
   `git merge-base` answer confidently and wrongly (`7520dac` reported as *not*
   an ancestor of a commit it plainly precedes). `git fetch --unshallow` is what
