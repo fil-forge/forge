@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 16:20Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 16:30Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -170,18 +170,22 @@ Before those, in order: #3 (swarf), #9 (dropped checks), #8
 also live in one-line form, and which says of itself that it is scaffolding for
 the construction rather than a guide to the finished monorepo.
 
-Two open, both on `main`, neither stacked on anything — #17 merging retargeted
-#19, which Petra then rebased:
+Two open, both on `main`, neither stacked on anything:
 
 | PR | branch | what |
 |---|---|---|
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` `6442c4c5` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17 |
-| [#21](https://github.com/fil-forge/forge-2/pull/21) | `claude/shard-itest` `e0205346` | `itest ingot` sharded across three runners, shards deriving their own tests. Measured at ~25%, and the entry now carries the numbers plus two unexploited levers. **Changes check names**: `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3` |
 | [#22](https://github.com/fil-forge/forge-2/pull/22) | `claude/ignorable-checks` `b3bdc66e` | `AGENTS.md` gains the skippable-checks practice below. Petra's idea, 2026-09-17 |
 
-#19 is 22/22 green. #21 is still based on `3c3fe769` and does not need
-rebasing: it touches only `itest.yml` and `MONOREPO_TODO.md`, and `main` since
-then has touched neither. #22 is one file nothing reads.
+#19 is 22/22 green; #17 merging retargeted it to `main` and Petra rebased it.
+#22 is one file nothing reads.
+
+**[#21](https://github.com/fil-forge/forge-2/pull/21) (sharding `itest ingot`)
+was closed unmerged**, 16:21Z, for simplicity — it was green and measured, but
+it bought ~25% of wall clock for ~43% more runner-minutes, four `itest` jobs of
+flake surface instead of two, and a check-name change to remember. The branch
+`claude/shard-itest` survives at `e0205346`, so reviving it is a reopen, not a
+rebuild. **What it measured is the lasting part, and it is below.**
 
 **Every pull request now opens with a block naming the checks a reviewer can
 merge without waiting for, and why** — Petra's idea (2026-09-17), and the
@@ -189,9 +193,9 @@ interim for the path-filtering question. It is manual on purpose: a `paths:`
 list goes stale silently when a module gains a dependency, and a path-filtered
 job reports *skipped*, which never satisfies a required status check. A block
 rewritten per push has neither fault, and it can say things no path pattern
-can — #21's says "`itest` already passed on `f4c5c21f` and
-`git diff f4c5c21f HEAD -- .github/` is empty", which is a fact about two shas,
-not a path.
+can — the one on #21 (now closed) said "`itest` already passed on `f4c5c21f`
+and `git diff f4c5c21f HEAD -- .github/` is empty", which is a fact about two
+shas, not a path.
 
 Two conditions make it work rather than just feel good. **Derive it, do not
 assert it** — the closure here is not obvious, which is the whole reason CI is
@@ -217,10 +221,10 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #19 and #21**, in either order and independently — neither carries
-   a `git subtree add`, and they touch disjoint files. Two check-name changes
-   are outstanding for branch protection: #16's `replaces` → `guards`, already
-   on `main`, and #21's `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3`.
+1. **Merge #19 and #22**, in either order and independently — neither carries
+   a `git subtree add`, and they touch disjoint files. One check-name change is
+   outstanding for branch protection: #16's `replaces` → `guards`, already on
+   `main`. (#21 would have added a second; it is closed.)
 2. **Phase 1** — release tags, `compat.yml`, publishing. This is the next
    real phase now that the imports are done. `compat.yml` matters more than
    it did: moving `itest` to HEAD images removed the only thing that was
@@ -312,65 +316,77 @@ only what a change affects. None is blocking; none should be answered early.
   old `fil-forge/forge` and were never carried across. Worth porting the
   ones whose defect can recur here — though not `check-image-lists.sh` as
   written, which is lesson L12 itself.
-- **`itest ingot` is sharded, and the saving is ~25%, not the half that was
-  predicted.** Measured against a genuine A/B: #19's unsharded run finished four
-  minutes after #21's sharded one, same runner pool, same hour.
+- **`itest ingot` is ~30 minutes, unsharded, and that is now a measured choice
+  rather than an unexamined one.**
+  [#21](https://github.com/fil-forge/forge-2/pull/21) built the sharding, ran
+  it green, and was **closed unmerged** (2026-09-17 16:21Z) once the numbers
+  were in. Branch `claude/shard-itest` survives at `e0205346`; reviving it is a
+  reopen. The measurement is the part worth keeping, because every remaining
+  option is judged against it.
+
+  A genuine A/B — #19's unsharded run finished four minutes after #21's sharded
+  one, same runner pool, same hour:
 
       itest workflow      30m43s unsharded  ->  23m07s sharded
       slowest job         29m29s            ->  17m07s
       test binary         1267.853s         ->  628.841 + 462.731 + 204.654s
+      runner-minutes      29m29s            ->  42m04s
 
-  **Total test work is unchanged (+2.2%)** — nothing got cheaper, it got spread,
-  which is what sharding is for and what bounds every remaining option. Runner
-  cost went the other way: 29m29s of runner time became 42m04s. The trade
-  actually made was **~43% more runner-minutes for ~25% less wall clock.**
+  **Total test work is unchanged (+2.2%)** — nothing got cheaper, it got spread.
+  The trade on offer was **~43% more runner-minutes for ~25% less wall clock**,
+  plus four `itest` jobs of flake surface instead of two and a check-name change
+  to remember. Declined for simplicity, revivable.
 
-  Three costs the "13 uniform boots" model did not have:
+  **Why sharding only bought 25%**, all three of which outlive the decision:
 
-  1. **The shards are unbalanced — 629s / 463s / 205s** — and the critical path
-     is the slowest, not the mean. Round-robin splits by test *name order* and
-     assumes uniform cost; shard 1 drew `TestForgeVersity` (hundreds of
-     subtests, dozens of 3-second retention waits) plus two TTL-bound tests,
-     shard 3 drew four cheap ones. Perfect balance would be 432s, so this alone
-     costs **3m17s**.
-  2. **Queue wait of 2m25s–4m47s** per shard — four concurrent jobs where there
-     were two. Pure loss, and it grows with shard count.
-  3. **The ~6 minute image build is per job** and did not move.
+  1. **Round-robin by test *name order* is unbalanced — 629s / 463s / 205s** —
+     and the critical path is the slowest, not the mean. Shard 1 drew
+     `TestForgeVersity` (hundreds of subtests, dozens of 3-second object-lock
+     waits) plus two TTL-bound tests; shard 3 drew four cheap ones. Perfect
+     balance would be 432s, so this alone cost **3m17s**. Any revival should
+     bin-pack against a previous run's timings — never a hand-written grouping,
+     which is a list a new test falls out of silently.
+  2. **Queue wait rose from 42s to 2m25s–4m47s** — four concurrent jobs where
+     there were two. That is ~4 of the 10.5 minutes handed straight back, and
+     it gets worse with shard count.
+  3. **The ~6 minute image build is per job** and did not move — sharding
+     triplicated it.
 
-  **That falsifies the boot arithmetic this page carried twice.** Shard 3 ran
+  **It also falsified the boot arithmetic this page carried twice.** Shard 3 ran
   four tests — four boots — in 204.654s, so a boot is at most ~51s, not the ~80s
-  taken from 1257/13. The "1040s booting, 217s working" split was wrong, and the
-  shared stack is therefore worth **less** than the 3–4 minutes last estimated,
-  not more. It is parked: it changes test isolation in the one job that exists
-  to catch flakiness, for less than was claimed.
+  from 1257/13. The "1040s booting, 217s working" split was wrong, so **the
+  shared stack is worth less than the 3–4 minutes last estimated, not more.**
+  Parked for good: it changes test isolation in the job that exists to catch
+  flakiness, for less than was ever claimed.
 
-  **We are not out of levers, and two of them were not on the list.** Both found
-  by reading source after the measurement pointed at them:
+  **Two levers survive the decision, and neither needs sharding.** Both found by
+  reading source after the measurement pointed at them, and **both currently
+  live only on the closed branch and this page** — they belong in
+  `MONOREPO_TODO.md` on `main`:
 
   - **`itest` and `e2e` have no Docker layer cache, and never decided not to.**
     `itest.yml:143` and `e2e.yml:118` shell out to plain `docker build`, which
     cannot use `--cache-from type=gha` at all; only `images.yml` uses buildx.
-    The "No caching, deliberately (2026-09-11)" comment is *in `images.yml`*
-    and reasons about that workflow — "the point is to provoke build failures".
-    That does not obviously carry where the build is a means to running tests,
-    and `images.yml` already proves the cold build on the same commit on every
-    PR. **Keep `images.yml` uncached as the canary, cache the other two**: up
-    to ~6 min off four jobs, for a handful of lines.
+    The "No caching, deliberately (2026-09-11)" comment is *in `images.yml`* and
+    reasons about that workflow — "the point is to provoke build failures". That
+    does not obviously carry where the build is a means to running tests, and
+    `images.yml` already proves the cold build on the same commit every PR.
+    **Keep `images.yml` uncached as the canary, cache the other two**: up to ~6
+    min off each, for a handful of lines. **This is the cheapest thing
+    available and it is now the top of the list.**
   - **`lockWaitTime` is 3s in our own versitygw fork and is self-imposed.**
     `tests/integration/utils.go:2654`; `cleanupLockedObjects` sets
-    `RetainUntilDate: now + lockWaitTime` and then sleeps that long waiting for
-    the lock it just created. **38 call sites ≈ 114s of pure sleep**, in
-    `TestForgeVersity`, which is the test that bounds the whole job. 3s → 1s
-    saves ~76s; 1s is the floor until someone checks sub-second retention
-    round-trips. Lands in versitygw, arrives here as a pin bump — and
-    `fil-forge/versitygw` is **not** in the agent's repository scope.
+    `RetainUntilDate: now + lockWaitTime` then sleeps that long waiting for the
+    lock it just created. **38 call sites ≈ 114s of pure sleep**, inside
+    `TestForgeVersity`, the test that bounds the job. 3s → 1s saves ~76s; 1s is
+    the floor until someone checks sub-second retention round-trips. Lands in
+    versitygw — **not** in the agent's repository scope — and arrives here as a
+    pin bump.
 
-  Then, in order: **build once and load** (same ~6 min from the other side,
-  but 1–2 GB of artifact round-trip nobody has measured — try the cache first);
-  **balance the shards by measured duration** (~3m17s, derived from a previous
-  run's timings, never a hand-written grouping); and the **path-filtering
-  question** already open in `MONOREPO_TODO.md`, which is the only one that
-  helps a docs-only PR. `MONOREPO_TODO.md` on #21 carries all of it.
+  Then **build-once-and-load** (same ~6 min from the other side, 1–2 GB of
+  unmeasured artifact round-trip — try the cache first), and the
+  **path-filtering question**, whose interim answer is the skippable-checks
+  block on every PR (#22).
   The ordering still holds and still matters: Go's `-timeout 25m` fires first
   on a hang and dumps every goroutine, where a runner kill at the 45-minute cap
   gives nothing. The two numbers must not be levelled.

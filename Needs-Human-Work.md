@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 16:20Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 16:30Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,7 +19,7 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Three. All sit on `main` independently, touching disjoint files; none carries
+Two. Both sit on `main` independently, touching disjoint files; neither carries
 a `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
 
 **Each one now opens with a block naming the checks that are safe to merge
@@ -29,13 +29,13 @@ than a feeling.
 | | what | state |
 |---|---|---|
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | `6442c4c5`, **22/22 green** at 15:52Z. Was stacked on #17; #17 merging retargeted it to `main` and Petra rebased it. Verified: the rebase brought in only #20's two files and left the six-file change intact. Answers Petra's review question on #17; she asked for it as its own PR. |
-| [#21](https://github.com/fil-forge/forge-2/pull/21) | **Shard `itest ingot` across three runners.** **Measured, green:** 30m43s → 23m07s on the workflow, ~25% — not the half predicted. Shards derive their own tests, so a new test cannot fall out silently. | `6fb033cd`, based on `3c3fe769`. The last commit replaces the entry's estimates with the measurement and re-triggers CI; the code is unchanged from the green run. **Does not need rebasing**: it touches only `itest.yml` and `MONOREPO_TODO.md`, and `main` has touched neither since. **Changes check names** to `itest ingot 1/3`, `2/3`, `3/3` — a branch protection rule naming the old one will wait forever, same edge as `replaces` → `guards`. |
 | [#22](https://github.com/fil-forge/forge-2/pull/22) | **Open every PR with which checks are safe to merge without.** Your idea, written into `AGENTS.md` so it survives the session. The interim for path filtering; the blocks become the worked examples that design it. | `b3bdc66e`, one file, nothing in the repo reads it. **A process proposal, like #20** — worth a read rather than a merge on trust. Two things I'd look at: whether "derive, don't assert" binds hard enough, and whether the four change-shapes cover what you expect (a Dockerfile-only change and a `go.mod` bump are deliberately absent — I did not want to guess at shapes I have not had to reason about). |
 
-**Two check-name changes are outstanding for branch protection**: #16's
-`replaces` → `guards`, already merged and live; and #21's `itest ingot` split,
-which lands when #21 does. A rule requiring either old name stops being
-satisfied. Both were done on Petra's say-so, 2026-09-17.
+**One check-name change is outstanding for branch protection**: #16's
+`replaces` → `guards`, merged and live, so a rule requiring `replaces` waits on
+a check that will never report. Done on Petra's say-so, 2026-09-17. #21 would
+have added a second (`itest ingot` → `itest ingot 1/3`…); it is closed, so that
+one is off the table unless the branch is revived.
 
 **Nothing is left to import**, and nothing should be started. `MAJOR_DECISIONS.md`
 records what is deliberately out.
@@ -107,7 +107,13 @@ and the `replaces` → `guards` rename (approved and done).
   [#2](https://github.com/fil-forge/forge-2/pull/2), closed unmerged.
 
   **Live, must stay:** `claude/test-image-pins` (#19),
-  `claude/shard-itest` (#21).
+  `claude/ignorable-checks` (#22).
+
+  **Closed, but do not delete:** `claude/shard-itest` at `e0205346` — #21,
+  closed unmerged for simplicity. It holds a green, measured sharding
+  implementation and the only copy in git of the measurement behind it, so
+  reviving it is a reopen rather than a rebuild. Deleting the branch is what
+  would turn that into a rebuild.
 
 - **Why this page kept going stale, and what is proposed about it.** Every
   rule this repository runs on has been living in one session's scheduled
@@ -160,6 +166,20 @@ still your call.
 
 ## Recently cleared
 
+- **#21 closed unmerged** (16:21Z), sharding `itest ingot`, on Petra's call:
+  "closed it for simplicity. We can revive it later if we want." It was green
+  and measured — 30m43s → 23m07s, ~25% — but the trade was ~43% more
+  runner-minutes, four `itest` jobs of flake surface instead of two, and a
+  check-name change to remember. I had recommended keeping it, on the argument
+  that the rename is free only while no check is required; that argument lost
+  to simplicity, which is a reasonable place for it to lose. Branch survives at
+  `e0205346`.
+
+  **The measurement outlived the PR and is on [[Current State]]**, including the
+  two levers it turned up that need no sharding at all — the missing buildx
+  layer cache in `itest`/`e2e`, and the self-imposed 3-second `lockWaitTime` in
+  our versitygw fork. Those two are the live work now, and **they are not yet in
+  `MONOREPO_TODO.md` on `main`** — they were born on the closed branch.
 - **#20 and #17 merged**, 2026-09-17 15:19Z (`4db13774`) and 15:21Z
   (`586738ed`). The repository has a root `AGENTS.md` for the first time, and
   every image reference the stack pulls is pinned by digest with a guard over
