@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 17:24Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 17:40Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -144,7 +144,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `144b3162`, and the import phase is closed.** All **ten**
+**`main` is at `95e83665`, and the import phase is closed.** All **ten**
 in-scope modules are subtree-merged with their histories, module paths
 rewritten, `go.work`, per-module CI, library pins unified, every subtree
 resynced to its upstream head, images pinned by digest, the checks the
@@ -167,19 +167,19 @@ those: #12 (forgectl, the tenth and last module), #15, #16, and earlier #3
 also live in one-line form, and which says of itself that it is scaffolding for
 the construction rather than a guide to the finished monorepo.
 
-Two open, both on `main`, neither stacked on anything — #22, #23 and #24 merged at 16:20–16:47Z:
+One open. **#25 and #26 merged** (`95e83665`), so the layer cache is live:
 
 | PR | branch | what |
 |---|---|---|
-| [#25](https://github.com/fil-forge/forge-2/pull/25) | `claude/ci-cache` `7fb93177` | layer-cache the image builds in `itest`/`e2e`, `images.yml` stays cold as the canary. **22/22 green; warm build 23s** |
-| [#26](https://github.com/fil-forge/forge-2/pull/26) | `claude/cache-measured` `28d8ffdc` | records #25's measurement in `MONOREPO_TODO.md`, with its three caveats |
+| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `ea7dafa3` | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
 
-**#25 is green and measured** — its `e2e` red was the pre-existing flake below,
-and the re-run that cleared it was warm, so it produced the number too. #26 is
-one file nothing reads.
+**The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
+23s warm against a 7m34s baseline, with the caveats below. **#27** is the
+follow-on that the cache work turned up — chasing #25's `e2e` red to its root
+found a real bug, not a flake.
 
 **Pre-rename work, run while Petra is away** (2026-09-17 16:40–17:25Z): #23, #24,
-#25 and #26. Deliberately *not* attempted, with reasons: the release workflow itself
+#25, #26 and #27. Deliberately *not* attempted, with reasons: the release workflow itself
 (unverifiable until tags can be cut, and an unrunnable workflow is the
 silent-green shape this repo keeps deleting), `compat.yml` (needs published
 images to test against), the tag scheme (long-lived and hard to reverse — a
@@ -383,30 +383,39 @@ only what a change affects. None is blocking; none should be answered early.
   cache that overflows quietly degrades back to cold builds. Worth a look before
   treating 23 seconds as permanent.
 
-- **`TestUploadAndRetrieve/filesystem` in `smelt/tests/e2e` is flaky — 2 failures
-  in 40 `e2e` runs (5%), and both are the same shape.** It is a startup race, not
-  a test bug:
+- **~~`TestUploadAndRetrieve/filesystem` is flaky~~ — root cause found, fix open
+  on [#27](https://github.com/fil-forge/forge-2/pull/27).** It was 2 failures in
+  40 `e2e` runs naming a *different* container each time (`upload-1` on run 160,
+  `main` `ff2f794d`; `plc-1` on run 182), which read like a generic startup race.
+  It is one bug, and `plc-postgres`'s own log against `plc`'s crash pins it:
 
-      run 160, main ff2f794d, 14:08Z   container ...-filesystem-upload-1 is unhealthy   FAIL (59.32s)
-      run 182, #25 7fb93177,  16:39Z   container ...-filesystem-plc-1    is unhealthy   FAIL (62.27s)
+      16:55:27.593  temp server: listening on Unix socket ONLY
+      16:55:27.633  temp server: ready to accept connections   <- healthcheck GREEN
+      16:55:29.441  temp server: shut down
+      16:55:29.887  real server: listening on IPv4 0.0.0.0:5432
+      16:55:30.531  plc exits: ECONNREFUSED 172.18.0.6:5432
 
-  Both fail in `compose up` with a dependency judged unhealthy, both in the
-  **`filesystem`** permutation, never `s3` — and a *different* container each
-  time, which is what a race looks like rather than a broken image. `plc-1`'s own
-  log says `Error: connect ECONNREFUSED 172.18.0.6:5432`: it lost the race to its
-  postgres, restarted once, and the healthcheck deadline hit ~200ms later.
+  **The healthcheck was green 2.25 seconds before the port existed.**
+  `pg_isready` without `-h` probes the **Unix socket**, and the official postgres
+  image runs `initdb` against a temporary server started with
+  `listen_addresses=''` — socket up, TCP refused by design — so the probe passes
+  *during* initialisation. `plc` already declared
+  `depends_on: {condition: service_healthy}`: the ordering was never wrong, the
+  **readiness signal** was. That is also why the victim differs run to run.
 
-  **The likely mechanism:** the two permutations are `t.Parallel()`, so ~40
-  containers start on one runner at once and healthchecks starve. That both
-  observed failures are `filesystem` is suggestive of something systematic rather
-  than symmetric, but two data points is not proof.
+  Six sites fixed with `-h 127.0.0.1` (five compose files plus
+  `smelt/pkg/generate/compose.go`, whose gitignored output was checked to
+  actually emit it), and `check-pg-healthchecks.sh` added so the seventh cannot
+  arrive unnoticed — list-free, covers Go as well as YAML, and fails if it ever
+  finds nothing to check. Verified in both directions: 6 FAILs before, 6 oks
+  after.
 
-  **Why it matters beyond the flake:** run 182 is on
-  [#25](https://github.com/fil-forge/forge-2/pull/25), which changes how images
-  are built, so this looked exactly like a regression until the `main` failure
-  was found. A 5% flake in the one suite that exists to catch flakiness will keep
-  costing that diagnosis. Worth fixing properly — the honest fix is compose
-  healthcheck/`depends_on` ordering, not a retry.
+  **Postgres was the only class member**, checked: every other healthcheck is
+  HTTP over localhost or `redis-cli ping`, TCP by construction.
+
+  **Still unverified: that the flake is gone.** A 5% failure rate cannot be shown
+  fixed by one green run. The mechanism is proven; the frequency is not.
+
 
 - **`itest ingot` is ~30 minutes, unsharded, and that is now a measured choice
   rather than an unexamined one.**
