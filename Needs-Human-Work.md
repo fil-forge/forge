@@ -19,8 +19,35 @@ tidying and block nothing.
 
 ## Open pull requests
 
-One that matters: **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**,
-upstream. `forge` has no open PRs at all, and
+Two. **[#9](https://github.com/fil-forge/forge/pull/9)** — the first PR on
+`forge` itself — and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
+upstream.
+
+**#9: every goreleaser `-X` ldflag names a pre-consolidation module path.**
+17 of 21, across all four `.goreleaser.yaml` files. The linker does not object
+to an `-X` whose import path matches nothing — it exits 0 and silently leaves
+the variable at its default — so a release cut from today's tree would ship
+binaries reporting **`v0.0.0`** (piri, sprue, indexing-service) or **`dev`**
+(ingot). Proven on a real binary, not argued: `sprue/cmd` built with the stale
+path contains the injected string **0 times**, with the corrected path
+**once**. And `go version -m` records the `-ldflags` argument either way, so
+the released artifact's build info would look correct. The fix derives each
+path from the config's own `go.mod`; `check-goreleaser-ldflags.sh` re-derives
+it in CI and fails if it finds no `-X` flags at all.
+
+Deliberately left in #9 because they are entangled with the release flow's
+design: `ingot` and `sprue` publish to `ghcr.io/fil-forge/<svc>` while the
+monorepo's convention is `ghcr.io/fil-forge/forge/<svc>`, and none of the four
+sets `release.disable`, which the old `release.yml` depended on.
+
+**Also in #9: a branch-name choice to confirm.** The session's designated
+branch for this repo is `claude/forge-monorepo-poc-p9w0yr`, but that branch
+sits on the **pre-orphan lineage** with unmerged commits sharing no history
+with today's `main` — rebasing them would be meaningless and force-pushing
+would destroy them. Used `claude/goreleaser-ldflags` instead; say if you want
+it moved.
+
+`forge` had no open PRs before this, and
 [#28](https://github.com/fil-forge/forge-2/pull/28) on `forge-2` is superseded
 (see below) — it can be closed.
 
@@ -75,16 +102,13 @@ records what is deliberately out.
 
 ## Waiting on Petra
 
-**Two decisions, both created by the move to `forge` (2026-09-17 20:21Z).**
-
-- **Archive `fil-forge/forge-2`, or delete it?** *Recommend archive.* This
-  wiki links 11 distinct `forge-2` PRs (#2, #15–#17, #19–#22, #25, #27, #28)
-  in 16 places, and `main`'s own merge commits name those numbers in their
-  messages. The links cannot be repointed at `forge`: its PR numbering is
-  separate, **#2 already collides**, and `forge` will climb into the rest.
-  Deleting `forge-2` turns the whole record into 404s and leaves the merge
-  messages pointing at other people's PRs; archiving costs nothing and keeps
-  every link live.
+- ~~Archive `fil-forge/forge-2`, or delete it?~~ **Done — archived 20:45Z.**
+  Which is what the record needed: this wiki links 11 distinct `forge-2` PRs
+  in 16 places and `main`'s merge commits name those numbers, and the links
+  could not have been repointed (`forge`'s numbering is separate and **#2
+  already collides**). Archiving keeps them all live. Side effect worth
+  knowing: `forge-2` is read-only, so #28 stays frozen as *open* and cannot
+  be closed — the archive banner is the signal, not its state.
 - ~~Where does #28 land?~~ **Decided: it does not.** The swarf fix arrives
   with the final subtree pull once
   [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) has merged, so
