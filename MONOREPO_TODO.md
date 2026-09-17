@@ -259,12 +259,33 @@ test binary. Inside the test binary, 13 top-level tests boot 13 full stacks;
 
 ### Live options, in order
 
-- **Layer-cache the image builds** — done, pending review, and the cheapest
-  thing available: `itest.yml` and `e2e.yml` used plain `docker build`, which
-  cannot use `--cache-from type=gha` at all, so the absence of a cache was never
-  a decision. `images.yml` stays cold as the canary. **Re-measure once it has
-  merged and had one warm run** — the first run after merge is cold by
-  construction, and the number to compare is the ~6 min build step.
+- **Layer-cache the image builds — done and measured, on
+  [#25](https://github.com/fil-forge/forge-2/pull/25), 22/22 green.** `itest.yml`
+  and `e2e.yml` used plain `docker build`, which cannot use
+  `--cache-from type=gha` at all, so the absence of a cache was never a decision;
+  they now use `docker/build-push-action@v6` with `type=gha` scoped per service,
+  and `images.yml` stays cold as the canary on the same events.
+
+  | all 8 images | |
+  |---|---|
+  | baseline, plain `docker build` | **7m34s** (`itest ingot`), 6m08s (`itest hilt`) |
+  | cold + cache write | **11m21s** — ~3 min *worse* |
+  | **warm** | **23s** |
+
+  The whole `e2e` job went **13m10s → 5m29s**. Per service warm: piri 4s, hilt 5s,
+  ingot 3s, sprue 2s, delegator 2s, piri-signing-service 2s, swarf 3s,
+  indexing-service 2s.
+
+  **Three caveats, none of them small.** The warm figure came from a **re-run of
+  the same commit**, so every layer hit — that is the ceiling, not the average; a
+  real change invalidates the `go build` layer for the services it touches, while
+  the base, apt and `go mod download` layers (the bulk) still hit, so expect
+  minutes rather than seconds. **Re-measure on a real source change.** The cold
+  path is ~3 minutes worse because `mode=max` exports every layer, so the first
+  run on `main` after merging is slower by construction. And **nobody has checked
+  the cache against GitHub's 10 GB per-repository limit** — eight images at
+  `mode=max` is not small, eviction is LRU, and an overflowing cache degrades
+  quietly back to cold builds.
 - **`lockWaitTime` is 3s in our own versitygw fork, and it is self-imposed.**
   `tests/integration/utils.go:2654` in
   `github.com/fil-forge/versitygw` (pinned `v0.0.0-20260914113944-a628e2cc628c`)
@@ -287,7 +308,9 @@ test binary. Inside the test binary, 13 top-level tests boot 13 full stacks;
   `e2e` entirely rather than just caching it. Unmeasured, and the uncertainty is
   real: 8 images is likely 1–2 GB of round-trip. A registry would be faster but
   `images.yml` deliberately takes no `packages: write` so fork pull requests
-  work. **Try the cache first**; if it works this stops mattering.
+  work. **Try the cache first** — done, and on the warm path it takes the build to
+  23s, which is below anything an artifact round-trip could achieve. This option
+  is effectively dead unless the cache turns out to evict often.
 - **Sharding, if revived, should bin-pack against measured durations.** The
   closed implementation split by test *name order*, which assumes uniform cost:
   629s / 463s / 205s, where perfect balance would be 432s — 3m17s lost to
