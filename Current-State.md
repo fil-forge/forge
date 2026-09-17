@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 02:00Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 02:55Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -145,33 +145,38 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `ecb70114`.** Phase 0 complete and then some: **nine** services
+**`main` is at `da029c51`.** Phase 0 complete and then some: **nine** services
 subtree-merged with history, module paths rewritten, `go.work`, per-module CI,
 library pins unified, every subtree resynced to its upstream head, 18 images
 pinned by digest, the checks the per-service `.github/` directories took with
-them restored, and the stack booting in CI from images built at HEAD —
-including the indexer, as of #11.
+them restored, and the stack booting in CI from images built at HEAD.
 
 Merged since the last snapshot: **#3** (swarf, `433cd628`), **#9** (dropped
 checks restored, `7435ba98`), **#8** (`MONOREPO_TODO.md`, `f1746b3e`), **#10**
-(indexing-service, `6c6cad31`) and **#11** (the indexer built from HEAD,
-`ecb70114`).
+(indexing-service, `6c6cad31`), **#11** (the indexer built from HEAD,
+`ecb70114`) and **#14** (`ci.yml`'s `concurrency` block, `da029c51`).
 
-Two open, and they are **not** a stack — both sit directly on `main`:
+Four open. **#12 is the last import; the other three are follow-on tidying and
+form a stack.**
 
-| PR | branch | what |
-|---|---|---|
-| [#14](https://github.com/fil-forge/forge-2/pull/14) | `claude/ci-concurrency` | `ci.yml` gains the `concurrency` block the other three workflows already had. One file, six lines. |
-| [#12](https://github.com/fil-forge/forge-2/pull/12) | `claude/bring-in-forgectl` | forgectl, the tenth and last in-scope module; also widens delegator's Docker context to the repository root, because delegator links it in non-test code |
+| PR | branch | what | state |
+|---|---|---|---|
+| [#12](https://github.com/fil-forge/forge-2/pull/12) | `claude/bring-in-forgectl` | forgectl, the tenth and last in-scope module; widens delegator's Docker context to the repository root | **22/22 green, `mergeable_state: clean`** — and blocked, see below |
+| [#15](https://github.com/fil-forge/forge-2/pull/15) | `claude/ci-permissions` | `ci.yml` gains `permissions: contents: read`; the path-filtering question goes to `MONOREPO_TODO.md` | on `main` |
+| [#16](https://github.com/fil-forge/forge-2/pull/16) | `claude/pin-base-images` | 26 external `FROM` references pinned by index digest + `check-base-images.sh` | on #15 |
+| [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived after #6 had finished pinning + `check-stack-images.sh` | on #16 |
 
-**#12 is stale on purpose.** Its head (`9106da01`) still carries the
-*superseded* indexing-service subtree merge `2f5e938e`; `main` carries
-`23ba7a9f` instead, because #10 was rebuilt onto a moving `main` four times
-before it landed. So #12 holds a second, parallel copy of that 426-commit
-import and GitHub reads it as conflicting. It is **held unrebuilt until #14
-merges**, so the rebuild happens once rather than twice — Petra's call,
-2026-09-17. Its content was reviewed and approved at that head; the rebuild
-changes no file in the work itself.
+**#12 cannot be merged by the agent, and it is not a CI or conflict problem.**
+GitHub has it registered as a *stacked* pull request, left over from when its
+base was `claude/indexer-from-head`, and that registration survived #11 merging
+and the retarget to `main`. All three routes refuse:
+
+    REST merge          403  Merging stacked PRs via this endpoint is not supported
+    auto-merge          Auto-merge is not supported for stacked pull requests
+    change the base     Cannot change the base branch because the PR is part of a stack
+
+The web UI's own merge button uses the endpoint the error points at, so it is
+one click for a human. Recorded rather than worked around.
 
 **Polyrepo MinIO repoints are all merged**: `smelt`,
 [indexing-service#96](https://github.com/fil-forge/indexing-service/pull/96),
@@ -180,22 +185,23 @@ changes no file in the work itself.
 
 ## Next
 
-1. **Merge #14, rebuild #12, merge #12.** That closes the import phase: all ten
-   in-scope modules in, and nothing left to bring in. Do not start another
-   import without Petra saying so — `MAJOR_DECISIONS.md` records what is
-   deliberately out and why.
-2. **Phase 1** — release tags, `compat.yml`, publishing. `compat.yml` matters
+1. **Merge #12.** That closes the import phase: all ten in-scope modules in,
+   and nothing left to bring in. Do not start another import without Petra
+   saying so — `MAJOR_DECISIONS.md` records what is deliberately out and why.
+2. **Then #15 → #16 → #17**, in that order; each is stacked on the one above.
+   None of the three carries a `git subtree add`, so they rebase rather than
+   needing a rule 7 rebuild.
+3. **Phase 1** — release tags, `compat.yml`, publishing. `compat.yml` matters
    more than it did: moving `itest` to HEAD images removed the only thing that
    was accidentally testing compatibility against the deployed network.
-3. **`libforge`'s dissolution** is what first exercises the audience rule
+4. **`libforge`'s dissolution** is what first exercises the audience rule
    (rule 1). Nothing currently in the repository is a pure library.
-4. **The `forge-2` → `forge` rename**, whenever this path is judged correct.
+5. **The `forge-2` → `forge` rename**, whenever this path is judged correct.
    Waiting on a person; see [[Needs Human Work]].
 
-`MONOREPO_TODO.md` is on `main` as of #8 and now carries **six** whole-repo
-questions: the s3-compat report pipeline, Renovate, hilt's build context, the
-macOS run, `stress-tester` coverage, and turning `SA4006` back on. None is
-blocking; none should be answered early.
+`MONOREPO_TODO.md` carries **six** whole-repo questions as of #8, and #15 adds
+a seventh (whether CI should run only what a change affects). None is blocking;
+none should be answered early.
 
 ## Known debt
 
@@ -241,10 +247,23 @@ blocking; none should be answered early.
 
 - `Dockerfile.release` (hilt, ingot, sprue) has the build-context problem the
   main Dockerfiles had, and nothing builds it. Surfaces at the first release.
-- Base images float in our own Dockerfiles (`alpine:latest`,
-  `debian:bookworm-slim`, `golang:1.27-bookworm`).
-- `plc`, `storetheindex`, `filecoin-localdev` still float, but barely move —
-  pin when convenient.
+- ~~Base images float in our own Dockerfiles.~~ **PR open:
+  [#16](https://github.com/fil-forge/forge-2/pull/16)** pins all 26 external
+  `FROM` references by *index* digest (a per-arch digest would silently break
+  the `--platform=$BUILDPLATFORM` builds), and adds
+  `check-base-images.sh` so the 27th cannot arrive unnoticed.
+- ~~`plc`, `storetheindex`, `filecoin-localdev` still float.~~ Not true as
+  written: a sweep for 2026-09-17 found **one** unpinned compose image
+  (`postgres:16-alpine` in swarf's) and four in Go, all of which arrived with
+  swarf (#3) and indexing-service (#10) *after* #6 had finished pinning.
+  **PR open: [#17](https://github.com/fil-forge/forge-2/pull/17)**, which also
+  adds `check-stack-images.sh` for compose.
+  It deliberately adds **no Go guard**: a string shaped like an image
+  reference matches 367 times here, almost all `s3:GetObject` IAM actions and
+  `host:port` pairs, and narrowing to testcontainers call sites drops to 8 but
+  then misses two of the real ones. A guard over part of a class reads exactly
+  like a guard over the class (L12), so there is none rather than a partial
+  one. That population remains unguarded, on purpose and in writing.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
 - **This repository has two guard scripts**, `check-replaces.sh` and
@@ -254,8 +273,11 @@ blocking; none should be answered early.
   ones whose defect can recur here.
 - **`itest ingot` is drifting toward its 45-minute cap, one image build at a
   time.** 21m30s standalone before the peers came from HEAD; 29m03s once six
-  images were built in-job; **30m18s** on #12's head, which builds eight.
-  (#10, at seven, ran 27m15s; #11 at eight ran 29m43s.) Each service brought
+  images were built in-job; and on #12's final head, with eight images and
+  forgectl in the tree, **26m37s** — the fastest of the recent runs, against
+  30m18s and 29m43s on its two predecessors. The trend is noisy enough that
+  three points do not make a line; what is not noisy is that each service
+  brought in-repo adds a build to this job. Each service brought
   in-repo adds a build to this job, so the margin shrinks as the monorepo
   grows rather than staying put. About fifteen minutes left.
   The cap was 30 and was raised to 45 on an estimate; the first full run after
@@ -296,9 +318,12 @@ blocking; none should be answered early.
   consolidation keeps deleting, and a job skipped by a path filter reports as
   *skipped*, which never satisfies a required status check. If it is done, it
   should derive the affected set from `go list -deps` (rule 3) rather than
-  from a typed list.
+  from a typed list. **Recorded as a `MONOREPO_TODO.md` question by
+  [#15](https://github.com/fil-forge/forge-2/pull/15)**, so this line is now a
+  pointer rather than the record.
 
-- **`ci.yml` is the only workflow with no `permissions:` block.**
+- ~~**`ci.yml` is the only workflow with no `permissions:` block.**~~ **PR
+  open: [#15](https://github.com/fil-forge/forge-2/pull/15).** Originally:
   `images.yml`, `e2e.yml` and `itest.yml` each set `permissions: contents:
   read`; `ci.yml` inherits whatever the repository default is. Noticed while
   writing #14 and deliberately left out of that diff — different concern from
