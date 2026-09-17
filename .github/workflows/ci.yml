@@ -22,6 +22,9 @@ on:
   # a run possible without inventing a commit to trigger one.
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   # proxy.golang.org drops HTTP/2 streams mid-transfer (INTERNAL_ERROR);
   # golang/go#51323 has tracked it since 2022 and is still open, unassigned
