@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 18:25Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 18:35Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -176,11 +176,12 @@ those: #12 (forgectl, the tenth and last module), #15, #16, and earlier #3
 also live in one-line form, and which says of itself that it is scaffolding for
 the construction rather than a guide to the finished monorepo.
 
-One open. **#25 and #26 merged** (`95e83665`), so the layer cache is live:
+Two open. **#25 and #26 merged** (`95e83665`), so the layer cache is live:
 
 | PR | branch | what |
 |---|---|---|
-| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `a8a6040b`, **22/22 green** | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
+| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `a8a6040b`, **22/22 green** |
+| [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29` | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
 23s warm against a 7m34s baseline, with the caveats below. **#27** is the
@@ -332,6 +333,27 @@ only what a change affects. None is blocking; none should be answered early.
   resolve before the consolidation finishes. Recorded in `hilt/Dockerfile`
   (`5177695b`) and in `MONOREPO_TODO.md` as of #8.
 
+- **The deferred import findings are now fixable, and that is a category worth
+  knowing about.** `MONOREPO_TODO.md`'s *Findings in the imported code* holds
+  problems noticed while bringing a service in and deliberately left alone,
+  because changing behaviour inside a commit whose job is to move code makes a
+  regression and a migration fault indistinguishable. **The imports are settled,
+  so that reason has expired** — these are ordinary work now.
+
+  Of swarf's four, exactly one was a bug rather than a decision, and
+  [#28](https://github.com/fil-forge/forge-2/pull/28) fixes it: the firehose
+  client built a default `bufio.Scanner` (64 KiB token cap) and discarded
+  `ErrTooLong`, so an event with a long delegation `Path` was never yielded and
+  `Stream` reconnected at the same cursor forever — **a hang, not a failure**.
+  `hilt/pkg/fx/revocation.go` and `ingot/revocation/consumer.go` both link it in
+  production code. The fix already existed in `cmd/swarf/stream.go`; the library
+  every service consumes did neither half of it.
+
+  **The other three want deciding, not fixing**, and are still open: the
+  revocation lookup served `immutable` for a year on a mutable route; the memory
+  and PostgreSQL stores disagreeing about what `Get` returns (a test passing
+  against memory can be wrong about production); and `streamSettleWindow = 10s`
+  assuming a bound on transaction duration that PostgreSQL does not give.
 - **Image pins live inside subtree prefixes, and that is a standing cost.**
   #6 pinned images inside `piri/`, `hilt/` and `sprue/`; #17 added `swarf/` and
   `indexing-service/`. Each is local divergence that every future
