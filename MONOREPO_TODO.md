@@ -171,6 +171,58 @@ the one directory and accept the subtree divergence; or decide SA4006 is not
 worth carrying and say so here rather than leaving the conf reading as
 temporary.
 
+## Decide whether CI should run only what a change affects
+
+Nothing in `.github/` filters by path: no `paths:`, no `paths-ignore:`, no
+changed-files detection. Every push runs all four workflows and every job in
+them. `ci.yml`'s own header says why:
+
+> Unfiltered by path on purpose: one job per module and no filter list means a
+> new shared module cannot fall out of one and go silently green.
+
+**What it costs**, measured rather than estimated. [#8](https://github.com/fil-forge/forge-2/pull/8)
+changed **one Markdown file**. Its last push still ran:
+
+| workflow | wall clock |
+|---|---|
+| `images` | 7m00s |
+| `ci` | 8m40s |
+| `e2e` | 9m57s |
+| `itest` | **26m27s** |
+
+26 minutes and 22 jobs for a documentation edit, and that repeats on every
+push to every branch.
+
+**Why it waits.** The obvious mechanism is the wrong one, in two separate
+ways:
+
+- **A hand-written `paths:` list is the same silent-green shape this
+  consolidation keeps deleting.** The itest suites compiled behind a build tag
+  and discarded, `SMELT_WORKSPACE` masking broken Dockerfiles, the indexer
+  pulled from a published digest — each was green because something was not
+  looked at. A filter list that goes stale when a module gains a dependency
+  fails the same way, and looks identical while doing it.
+- **A skipped job never satisfies a required status check.** GitHub reports a
+  path-filtered job as *skipped*, not *success*, so any such job that is also
+  required blocks the merge permanently. The usual answer is to start the job
+  always and exit early inside it — which means the useful version of this
+  filters *what a job does*, not *whether it runs*.
+
+**The shape a good answer probably has**, if it is worth doing: derive the
+affected set from the module graph rather than typing it. Rule 3 already says
+this — `go list -deps` on the build target, not `go.mod` — and it is how the
+`ingot → indexing-service` and `delegator → forgectl` edges were found, both
+of which `go.mod` alone did not show. A derived set cannot go stale when
+someone adds an import; a typed list silently can.
+
+**The cheap part is already done.** `ci.yml` had no `concurrency:` block while
+the other three did, so its runs piled up on a re-push instead of cancelling;
+that was fixed separately and is not what this entry is about.
+
+**The choice.** Build the derived gate, accept the cost as the price of not
+having a stale filter list, or find a third thing — perhaps splitting the
+slowest suites onto a different trigger.
+
 ---
 
 # Findings in the imported code
