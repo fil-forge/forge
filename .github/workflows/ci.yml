@@ -41,8 +41,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  replaces:
-    name: replaces
+  guards:
+    name: guards
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
