@@ -41,8 +41,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  replaces:
-    name: replaces
+  guards:
+    name: guards
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +52,8 @@ jobs:
           cache-dependency-path: smelt/go.sum
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
+      - name: every external base image is pinned by digest
+        run: .github/scripts/check-base-images.sh
       - name: gofmt
         run: |
           unformatted=$(gofmt -s -l .)
