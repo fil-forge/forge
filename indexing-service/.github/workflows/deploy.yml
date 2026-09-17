@@ -1,0 +1,130 @@
+# storoku:ignore
+
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [main]
+  workflow_run:
+    workflows: [Releaser]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: Environment
+        options:
+          - production
+          - forge-production
+          - forge-test
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+
+jobs:
+  # apply staging on pushes to main, plan otherwise
+  staging:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      env: staging
+      workspace: staging
+      did: did:web:staging.indexer.forge.fil.one
+      ipni-endpoint: ${{ vars.STAGING_IPNI_ENDPOINT }}
+      ipni-fallback-endpoints: ${{ vars.STAGING_IPNI_FALLBACK_ENDPOINTS }}
+      ipni-announce-urls: ${{ vars.STAGING_IPNI_ANNOUNCE_URLS }}
+      ipni-format-peer-id: ${{ vars.STAGING_IPNI_FORMAT_PEER_ID }}
+      ipni-format-endpoint: ${{ vars.STAGING_IPNI_FORMAT_ENDPOINT }}
+      apply: ${{ github.event_name != 'pull_request' }}
+    secrets:
+      aws-account-id: ${{ secrets.STAGING_AWS_ACCOUNT_ID }}
+      aws-region: ${{ secrets.STAGING_AWS_REGION }}
+      region: ${{ secrets.STAGING_AWS_REGION }}
+      private-key: ${{ secrets.STAGING_PRIVATE_KEY }}
+      honeycomb-api-key: ${{ secrets.STAGING_HONEYCOMB_API_KEY }}
+      sentry-dsn: ${{ secrets.STAGING_SENTRY_DSN }}
+
+  warm-staging:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      env: warm-staging
+      workspace: warm-staging
+      network: warm
+      did: did:web:staging.indexer.warm.forge.fil.one
+      ipni-endpoint: ${{ vars.WARM_STAGING_IPNI_ENDPOINT }}
+      ipni-fallback-endpoints: ${{ vars.WARM_STAGING_IPNI_FALLBACK_ENDPOINTS }}
+      ipni-announce-urls: ${{ vars.WARM_STAGING_IPNI_ANNOUNCE_URLS }}
+      ipni-format-peer-id: ${{ vars.WARM_STAGING_IPNI_FORMAT_PEER_ID }}
+      ipni-format-endpoint: ${{ vars.WARM_STAGING_IPNI_FORMAT_ENDPOINT }}
+      apply: ${{ github.event_name != 'pull_request' }}
+    secrets:
+      aws-account-id: ${{ secrets.WARM_STAGING_AWS_ACCOUNT_ID }}
+      aws-region: ${{ secrets.WARM_STAGING_AWS_REGION }}
+      region: ${{ secrets.WARM_STAGING_AWS_REGION }}
+      private-key: ${{ secrets.WARM_STAGING_PRIVATE_KEY }}
+      sentry-dsn: ${{ secrets.WARM_STAGING_SENTRY_DSN }}
+
+  # apply prod and test on successful release, plan otherwise
+  production:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      env: production
+      workspace: prod
+      did: did:web:indexer.forge.fil.one
+      ipni-endpoint: ${{ vars.PROD_IPNI_ENDPOINT }}
+      ipni-fallback-endpoints: ${{ vars.PROD_IPNI_FALLBACK_ENDPOINTS }}
+      ipni-announce-urls: ${{ vars.PROD_IPNI_ANNOUNCE_URLS }}
+      ipni-format-peer-id: ${{ vars.PROD_IPNI_FORMAT_PEER_ID }}
+      ipni-format-endpoint: ${{ vars.PROD_IPNI_FORMAT_ENDPOINT }}
+      apply: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'workflow_dispatch' && contains(github.ref, 'refs/tags')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
+    secrets:
+      aws-account-id: ${{ secrets.PROD_AWS_ACCOUNT_ID }}
+      aws-region: ${{ secrets.PROD_AWS_REGION }}
+      region: ${{ secrets.PROD_AWS_REGION }}
+      private-key: ${{ secrets.PROD_PRIVATE_KEY }}
+      honeycomb-api-key: ${{ secrets.PROD_HONEYCOMB_API_KEY }}
+      sentry-dsn: ${{ secrets.PROD_SENTRY_DSN }}
+
+  forge-production:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      env: forge-prod
+      workspace: forge-prod
+      network: forge
+      did: did:web:indexer.forge.fil.one
+      ipni-endpoint: ${{ vars.FORGE_PROD_IPNI_ENDPOINT }}
+      ipni-fallback-endpoints: ${{ vars.FORGE_PROD_IPNI_FALLBACK_ENDPOINTS }}
+      ipni-announce-urls: ${{ vars.FORGE_PROD_IPNI_ANNOUNCE_URLS }}
+      ipni-format-peer-id: ${{ vars.FORGE_PROD_IPNI_FORMAT_PEER_ID }}
+      ipni-format-endpoint: ${{ vars.FORGE_PROD_IPNI_FORMAT_ENDPOINT }}
+      apply: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'workflow_dispatch' && contains(github.ref, 'refs/tags')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'forge-production') }}
+    secrets:
+      aws-account-id: ${{ secrets.FORGE_PROD_AWS_ACCOUNT_ID }}
+      aws-region: ${{ secrets.FORGE_PROD_AWS_REGION }}
+      region: ${{ secrets.FORGE_PROD_AWS_REGION }}
+      private-key: ${{ secrets.FORGE_PROD_PRIVATE_KEY }}
+      sentry-dsn: ${{ secrets.FORGE_PROD_SENTRY_DSN }}
+
+  forge-test:
+    uses: ./.github/workflows/terraform.yml
+    with:
+      env: forge-test
+      workspace: forge-test
+      network: test
+      did: did:web:indexer.test.forge.fil.one
+      ipni-endpoint: ${{ vars.FORGE_TEST_IPNI_ENDPOINT }}
+      ipni-fallback-endpoints: ${{ vars.FORGE_TEST_IPNI_FALLBACK_ENDPOINTS }}
+      ipni-announce-urls: ${{ vars.FORGE_TEST_IPNI_ANNOUNCE_URLS }}
+      ipni-format-peer-id: ${{ vars.FORGE_TEST_IPNI_FORMAT_PEER_ID }}
+      ipni-format-endpoint: ${{ vars.FORGE_TEST_IPNI_FORMAT_ENDPOINT }}
+      apply: ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'workflow_dispatch' && contains(github.ref, 'refs/tags')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'forge-test') }}
+    secrets:
+      aws-account-id: ${{ secrets.FORGE_TEST_AWS_ACCOUNT_ID }}
+      aws-region: ${{ secrets.FORGE_TEST_AWS_REGION }}
+      region: ${{ secrets.FORGE_TEST_AWS_REGION }}
+      private-key: ${{ secrets.FORGE_TEST_PRIVATE_KEY }}
+      sentry-dsn: ${{ secrets.FORGE_TEST_SENTRY_DSN }}

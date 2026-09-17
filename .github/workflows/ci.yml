@@ -74,6 +74,7 @@ jobs:
           - service: delegator
           - service: piri-signing-service
           - service: swarf
+          - service: indexing-service
     name: unit ${{ matrix.service }}
     runs-on: ubuntu-latest
     env:

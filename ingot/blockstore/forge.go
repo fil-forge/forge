@@ -11,7 +11,7 @@ import (
 	"github.com/fil-forge/libforge/blobindex"
 	"github.com/fil-forge/libforge/digestutil"
 
-	indexclient "github.com/fil-forge/indexing-service/pkg/client"
+	indexclient "github.com/fil-forge/forge/indexing-service/pkg/client"
 	contentcmds "github.com/fil-forge/libforge/commands/content"
 	"github.com/fil-forge/libforge/ucan/retrieval"
 	"github.com/fil-forge/ucantone/did"
