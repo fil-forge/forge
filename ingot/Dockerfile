@@ -44,7 +44,7 @@
 #     /usr/bin/ingot -- serve --config /etc/ingot/config.yaml
 # then attach your client on the mapped 2345 (smelt's compose.debug.yml pattern).
 
-FROM --platform=$BUILDPLATFORM golang:1.27-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.27-bookworm@sha256:648f440f42a0958804efb24df176f806f9d353b41f1c0627f666428e40310f6b AS build
 ARG TARGETOS=linux
 ARG TARGETARCH
 WORKDIR /src
@@ -85,7 +85,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     cp /go/bin/${TARGETOS}_${TARGETARCH}/dlv /go/bin/dlv 2>/dev/null || true
 
 # ---- production runtime ----
-FROM debian:bookworm-slim AS prod
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS prod
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
@@ -98,7 +98,7 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/bin/ingot"]
 
 # ---- development runtime: prod + debug tooling + delve ----
-FROM debian:bookworm-slim AS dev
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171 AS dev
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \

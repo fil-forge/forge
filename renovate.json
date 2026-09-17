@@ -34,10 +34,11 @@
       "groupName": "github-actions"
     },
     {
-      "description": "Images the stack pulls rather than builds. Pinning them by digest is the point of this config: without it a CI result is a function of the registry as well as the commit, so an old commit re-run later can go red with nothing to bisect. The tag is kept alongside the digest so the file still says what it is running.",
+      "description": "Images this repository does not build: the ones the stack pulls, and the base images our own Dockerfiles are built FROM. Pinning them by digest is the point of this config: without it a result is a function of the registry as well as the commit, so an old commit re-run later can go red with nothing to bisect. The tag is kept alongside the digest so the file still says what it is running. `dockerfile` is here so a newly added Dockerfile cannot arrive with a floating base -- though until the Renovate app is installed that is aspirational, and .github/scripts/check-base-images.sh is what actually enforces it.",
       "matchManagers": [
         "docker-compose",
-        "custom.regex"
+        "custom.regex",
+        "dockerfile"
       ],
       "pinDigests": true,
       "groupName": "stack images"

@@ -5,7 +5,7 @@
 # packages it. Mirrors the main Dockerfile's `prod` target — debian slim +
 # ca-certificates + curl (smelt's healthcheck hits /health with curl) — and
 # keeps the bare ENTRYPOINT so the compose `command:` supplies `serve …`.
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \

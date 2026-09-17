@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS builder
+FROM golang:1.24-alpine@sha256:8bee1901f1e530bfb4a7850aa7a479d17ae3a18beb6e09064ed54cfd245b7191 AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN CGO_ENABLED=0 go build \
     -o /stress ./cmd/stress
 
 # Runtime image - use Debian to match guppy's glibc requirements
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:88200866dfff7ea7f5cbcb6ec7c8a701889efe6fe859fe64d6990e4b07ea4171
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
