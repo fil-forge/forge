@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 15:26Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 15:29Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -144,7 +144,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `3c3fe769`, and the import phase is closed.** All **ten**
+**`main` is at `586738ed`, and the import phase is closed.** All **ten**
 in-scope modules are subtree-merged with their histories, module paths
 rewritten, `go.work`, per-module CI, library pins unified, every subtree
 resynced to its upstream head, images pinned by digest, the checks the
@@ -155,21 +155,32 @@ booting in CI from images built at HEAD.
 `indexing-service`, `ingot`, `piri`, `piri-signing-service`, `smelt`,
 `sprue`, `swarf`.
 
-Merged since the last snapshot: **#12** (forgectl — the tenth and last,
+Merged since the last snapshot: **#20** (a root `AGENTS.md` + `CLAUDE.md`,
+`4db13774`) and **#17** (the 5 image references that arrived with swarf and
+indexing-service *after* #6 had finished pinning, plus `check-stack-images.sh`,
+`586738ed`). Before those: **#12** (forgectl — the tenth and last,
 `7ccafeab`), **#15** (`ci.yml`'s `permissions` block and the path-filtering
 TODO entry, `ff2f794d`) and **#16** (26 base images pinned by index digest,
-`check-base-images.sh`, and the `replaces` → `guards` rename, `3c3fe769`). Before those, in order: #3 (swarf),
-#9 (dropped checks), #8 (`MONOREPO_TODO.md`), #10 (indexing-service),
-#11 (the indexer from HEAD) and #14 (`ci.yml`'s `concurrency` block).
+`check-base-images.sh`, and the `replaces` → `guards` rename, `3c3fe769`).
+Before those, in order: #3 (swarf), #9 (dropped checks), #8
+(`MONOREPO_TODO.md`), #10 (indexing-service), #11 (the indexer from HEAD) and
+#14 (`ci.yml`'s `concurrency` block).
 
-Four open. #17 and #19 are stacked follow-on tidying; #20 and #21 are independent:
+**The repository now has a root `AGENTS.md`**, which is where the rules below
+also live in one-line form, and which says of itself that it is scaffolding for
+the construction rather than a guide to the finished monorepo.
+
+Two open, both on `main`, neither stacked on anything — #17 merging retargeted
+#19, which Petra then rebased:
 
 | PR | branch | what |
 |---|---|---|
-| [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived with swarf and indexing-service *after* #6 had finished pinning + `check-stack-images.sh` |
-| [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17; stacked on it because it moves the same lines |
-| [#20](https://github.com/fil-forge/forge-2/pull/20) | `claude/root-agents-md` | a root `AGENTS.md` + `CLAUDE.md`. On `main`, independent of the stack |
-| [#21](https://github.com/fil-forge/forge-2/pull/21) | `claude/shard-itest` | `itest ingot` sharded across three runners, shards deriving their own tests. **Changes check names**: `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3` |
+| [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` `6442c4c5` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17 |
+| [#21](https://github.com/fil-forge/forge-2/pull/21) | `claude/shard-itest` `f4c5c21f` | `itest ingot` sharded across three runners, shards deriving their own tests. **Changes check names**: `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3` |
+
+Both had CI in flight as of this snapshot. #21 is still based on `3c3fe769` and
+does not need rebasing: it touches only `itest.yml` and `MONOREPO_TODO.md`, and
+`main` since then has touched neither.
 
 **#12's merge needed a human**, and the reason is worth keeping: GitHub had it
 registered as a *stacked* pull request from when its base was
@@ -185,10 +196,10 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #17, then #19** — stacked in that order — and **#20** and **#21** whenever; neither carries a
-   `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
-   #16 changes a check name (`replaces` → `guards`), so a branch protection
-   rule naming the old one needs updating with it.
+1. **Merge #19 and #21**, in either order and independently — neither carries
+   a `git subtree add`, and they touch disjoint files. Two check-name changes
+   are outstanding for branch protection: #16's `replaces` → `guards`, already
+   on `main`, and #21's `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3`.
 2. **Phase 1** — release tags, `compat.yml`, publishing. This is the next
    real phase now that the imports are done. `compat.yml` matters more than
    it did: moving `itest` to HEAD images removed the only thing that was
@@ -252,17 +263,19 @@ only what a change affects. None is blocking; none should be answered early.
 
 - `Dockerfile.release` (hilt, ingot, sprue) has the build-context problem the
   main Dockerfiles had, and nothing builds it. Surfaces at the first release.
-- ~~Base images float in our own Dockerfiles.~~ **PR open:
-  [#16](https://github.com/fil-forge/forge-2/pull/16)** pins all 26 external
-  `FROM` references by *index* digest (a per-arch digest would silently break
-  the `--platform=$BUILDPLATFORM` builds), and adds
-  `check-base-images.sh` so the 27th cannot arrive unnoticed.
+- ~~Base images float in our own Dockerfiles.~~ **Fixed, merged
+  ([#16](https://github.com/fil-forge/forge-2/pull/16))**: all 26 external
+  `FROM` references pinned by *index* digest (a per-arch digest would silently
+  break the `--platform=$BUILDPLATFORM` builds), with `check-base-images.sh` so
+  the 27th cannot arrive unnoticed.
 - ~~`plc`, `storetheindex`, `filecoin-localdev` still float.~~ Not true as
   written: a sweep for 2026-09-17 found **one** unpinned compose image
   (`postgres:16-alpine` in swarf's) and four in Go, all of which arrived with
   swarf (#3) and indexing-service (#10) *after* #6 had finished pinning.
-  **PR open: [#17](https://github.com/fil-forge/forge-2/pull/17)**, which also
-  adds `check-stack-images.sh` for compose.
+  **Fixed, merged ([#17](https://github.com/fil-forge/forge-2/pull/17))**,
+  which also adds `check-stack-images.sh` for compose.
+  [#19](https://github.com/fil-forge/forge-2/pull/19), still open, moves the
+  four Go references out of test bodies into `testutil` packages.
   It deliberately adds **no Go guard**: a string shaped like an image
   reference matches 367 times here, almost all `s3:GetObject` IAM actions and
   `host:port` pairs, and narrowing to testcontainers call sites drops to 8 but
@@ -271,11 +284,13 @@ only what a change affects. None is blocking; none should be answered early.
   one. That population remains unguarded, on purpose and in writing.
 - Old `fil-forge/forge` still references the dead MinIO image. Superseded;
   left alone deliberately.
-- **This repository has two guard scripts**, `check-replaces.sh` and
-  `retry.sh`. The `check-image-lists.sh`, `check-setup-go-cache.sh` and
+- **`.github/scripts/` holds `check-replaces.sh`, `check-base-images.sh`,
+  `check-stack-images.sh` and `retry.sh`** — the last a helper, not a guard.
+  The `check-image-lists.sh`, `check-setup-go-cache.sh` and
   `check-dockerfile-retry.sh` written during the first attempt live in the
   old `fil-forge/forge` and were never carried across. Worth porting the
-  ones whose defect can recur here.
+  ones whose defect can recur here — though not `check-image-lists.sh` as
+  written, which is lesson L12 itself.
 - **`itest ingot` cost ~28 minutes, and the cause is not what the earlier note
   here assumed.** Measured from the job log rather than from the trend:
 
@@ -354,3 +369,7 @@ only what a change affects. None is blocking; none should be answered early.
   visible months earlier from "when was this tag last pushed".
 - Per-service `CLAUDE.md`/`AGENTS.md` still describe polyrepo reality; 13
   stale module paths in docs. Best swept at the `forge-2` → `forge` rename.
+  The **root** `AGENTS.md` (#20) is accurate but says of itself that it is
+  construction scaffolding, and names the conditions for replacing it —
+  nothing left to import, no subtree pulls pending, the rename done, Phase 1
+  real. Three of those four already hold.

@@ -19,20 +19,18 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Four. #17 and #19 are stacked; #20 and #21 sit on `main` independently. None
-carries a `git subtree add`, so they rebase rather than needing a rule 7
-rebuild.
+Two. Both sit on `main` independently, touching disjoint files; neither carries
+a `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
 
 | | what | state |
 |---|---|---|
-| [#17](https://github.com/fil-forge/forge-2/pull/17) | **Pin the 5 references that arrived after #6 had finished pinning**, carried in by swarf (#3) and indexing-service (#10) — plus `check-stack-images.sh` for compose. | On #16. |
-| [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | On #17, because it moves the same lines. Answers Petra's review question there; she asked for it as its own PR. |
-| [#21](https://github.com/fil-forge/forge-2/pull/21) | **Shard `itest ingot` across three runners** — ~28 min to roughly half. Shards derive their own tests, so a new test cannot fall out silently. | On `main`. **Changes check names** to `itest ingot 1/3`, `2/3`, `3/3` — a branch protection rule naming the old one will wait forever, same edge as `replaces` → `guards`. |
-| [#20](https://github.com/fil-forge/forge-2/pull/20) | **A root `AGENTS.md`**, which this repository has never had though all ten services do. | On `main`, independent. **Wants a real read**: it is a proposal about how this repository is worked on, not a record of something already agreed. Its first section says it is *scaffolding* and names checkable conditions for replacing it — nothing left to import, no subtree pulls pending, the rename done, Phase 1 real — because most of it is about assembling the repo rather than working in it. The nine rules are compressed from [[Current State]] and may have lost a nuance; the wiki-update trigger is the line that has to work. |
+| [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | `6442c4c5`. Was stacked on #17; #17 merging retargeted it to `main` and Petra rebased it. Verified: the rebase brought in only #20's two files and left the six-file change intact. Answers Petra's review question on #17; she asked for it as its own PR. |
+| [#21](https://github.com/fil-forge/forge-2/pull/21) | **Shard `itest ingot` across three runners** — ~28 min to roughly half. Shards derive their own tests, so a new test cannot fall out silently. | `f4c5c21f`, based on `3c3fe769`. **Does not need rebasing**: it touches only `itest.yml` and `MONOREPO_TODO.md`, and `main` has touched neither since. **Changes check names** to `itest ingot 1/3`, `2/3`, `3/3` — a branch protection rule naming the old one will wait forever, same edge as `replaces` → `guards`. |
 
-**#16 changes a check name**, `replaces` → `guards`. A branch protection rule
-that requires the old name stops being satisfied until it is updated. Done on
-Petra's say-so, 2026-09-17.
+**Two check-name changes are outstanding for branch protection**: #16's
+`replaces` → `guards`, already merged and live; and #21's `itest ingot` split,
+which lands when #21 does. A rule requiring either old name stops being
+satisfied. Both were done on Petra's say-so, 2026-09-17.
 
 **Nothing is left to import**, and nothing should be started. `MAJOR_DECISIONS.md`
 records what is deliberately out.
@@ -79,30 +77,44 @@ and the `replaces` → `guards` rename (approved and done).
   ordinary pushes to the same remote succeed. Left for a human rather than
   routed around.
 
-  **Verified fully contained in `main` (`ff2f794d`) as of 14:25Z, safe to
-  delete now — seven of them:** `claude/bring-in-forgectl`,
+  **Verified fully contained in `main` (`586738ed`) as of 15:29Z — eighteen,
+  safe to delete now.** Derived, not typed:
+
+  ```sh
+  for b in $(git branch -r --format='%(refname:short)' | grep '^origin/claude/'); do
+    git merge-base --is-ancestor "$b" origin/main && echo "$b"
+  done
+  ```
+
+  `claude/bring-in-forgectl`, `claude/bring-in-indexing-service`,
   `claude/bring-in-swarf`, `claude/ci-concurrency`, `claude/ci-permissions`,
-  `claude/indexer-from-head`, `claude/monorepo-todo`,
-  `claude/upstream-findings`.
+  `claude/e2e-stack-job`, `claude/images-from-head`,
+  `claude/indexer-from-head`, `claude/itest-modules`, `claude/monorepo-todo`,
+  `claude/pin-base-images`, `claude/pin-external-images`,
+  `claude/pin-stragglers`, `claude/prune-dead-workflows`,
+  `claude/restore-dropped-checks`, `claude/root-agents-md`,
+  `claude/unify-library-pins`, `claude/upstream-findings`.
 
   **Not contained, so look before deleting:** `claude/major-decisions` and
   `claude/subtree-resync` (each may hold commits that reached `main` only as
-  content), and `claude/pin-guppy`, which is
+  content); `claude/itest-image-pin-probe`, a throwaway probe that never
+  became a PR; and `claude/pin-guppy`, which is
   [#2](https://github.com/fil-forge/forge-2/pull/2), closed unmerged.
 
-  **Live, must stay:** `claude/pin-base-images` (#16),
-  `claude/pin-stragglers` (#17).
+  **Live, must stay:** `claude/test-image-pins` (#19),
+  `claude/shard-itest` (#21).
 
 - **Why this page kept going stale, and what is proposed about it.** Every
   rule this repository runs on has been living in one session's scheduled
   check-in prompts — session-local, timer-driven, gone when the session ends.
   So these pages were updated when a check-in fired rather than when the thing
   they describe changed, and drifted in between; Petra noticed #19 missing
-  before any check-in did. [#20](https://github.com/fil-forge/forge-2/pull/20)
-  proposes the fix: a root `AGENTS.md`, which loads at the start of every
-  session, carrying the trigger as an *event* — opened, pushed, merged, closed,
-  or decided → update the wiki before reporting — rather than as "keep it
-  current", which is the phrasing that failed.
+  before any check-in did. **[#20](https://github.com/fil-forge/forge-2/pull/20)
+  is merged**, so the fix is in place rather than proposed: a root `AGENTS.md`,
+  which loads at the start of every session, carrying the trigger as an
+  *event* — opened, pushed, merged, closed, or decided → update the wiki before
+  reporting — rather than as "keep it current", which is the phrasing that
+  failed. Whether it works is now an observable thing rather than an argument.
 
 - **This wiki lives in two places and the agent can only write one.** These
   pages are the `wiki` branch of `fil-forge/forge-2`, which it pushes, and the
@@ -143,6 +155,16 @@ still your call.
 
 ## Recently cleared
 
+- **#20 and #17 merged**, 2026-09-17 15:19Z (`4db13774`) and 15:21Z
+  (`586738ed`). The repository has a root `AGENTS.md` for the first time, and
+  every image reference the stack pulls is pinned by digest with a guard over
+  the compose half. Merging #17 also retargeted #19 to `main`; Petra rebased
+  it, and the rebase was verified to bring in nothing but #20's two files.
+- **#17's three flagged decisions are effectively confirmed** by its merge:
+  reusing digests already in the tree rather than resolving fresh, editing
+  inside subtree prefixes, and shipping no Go image guard. They are left
+  written down above rather than deleted, because the reasoning is the part
+  worth keeping.
 - **The import phase is over.** #12 merged 2026-09-17 as `7ccafeab`, putting
   forgectl in and with it the tenth and last in-scope module. #15 followed as
   `ff2f794d`. `main` now carries delegator, forgectl, hilt, indexing-service,
@@ -155,7 +177,8 @@ still your call.
   and changing the base all refused, each with a different message naming the
   stack. One click in the web UI, no API route.
 - **The `replaces` job is now `guards`.** It had run `gofmt -s` as well as
-  `check-replaces.sh` for some time, and #16 and #17 add two more guards.
+  `check-replaces.sh` for some time, and #16 and #17 added two more guards —
+  `check-base-images.sh` and `check-stack-images.sh`, both now on `main`.
 - **#14 merged** 2026-09-17 ~01:5xZ as `da029c51` — `ci.yml` gained the
   `concurrency` block the other three workflows already had, so its runs stop
   piling up on a re-push. Amended in review to drop a comment that explained
