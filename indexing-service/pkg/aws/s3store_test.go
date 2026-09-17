@@ -63,7 +63,7 @@ func createS3(t *testing.T) *url.URL {
 	// 2026-09-11 -- every tag, pinned releases included -- and archived the
 	// project, so there is no public image left to pull. fil-forge/minio builds
 	// it from source at the tag below.
-	container, err := minio.Run(t.Context(), "ghcr.io/fil-forge/minio:RELEASE.2025-10-15T17-29-55Z")
+	container, err := minio.Run(t.Context(), "ghcr.io/fil-forge/minio:RELEASE.2025-10-15T17-29-55Z@sha256:2c4349a1a8dcb3549896109a5363250f77ee90b51f706dc8ceac2b88732a95e7")
 	testcontainers.CleanupContainer(t, container)
 	require.NoError(t, err)
 
