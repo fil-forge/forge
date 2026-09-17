@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 18:17Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 18:25Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -36,49 +36,33 @@ than a feeling.
 |---|---|---|
 | [#27](https://github.com/fil-forge/forge-2/pull/27) | **Fix the `e2e` flake at its root.** `pg_isready` without `-h` probes the Unix socket, which is up during `initdb` while TCP is refused — the healthcheck went green 2.25s before the port existed and dependents started into the gap. Six sites + a list-free guard that also covers Go. | `a8a6040b`, **22/22 green** including `guards` and `e2e`. **Green is not proof**: at a ~5% base rate one passing `e2e` had a ~95% chance regardless — the mechanism justifies the fix, not the run. `guards` went red on the first push — the guard matched its own step name in `ci.yml`; fixed by anchoring to an invocation, and re-verified against the tree actually being pushed. The mechanism is proven from `plc-postgres`'s own log; **the frequency is not** — a 5% flake cannot be shown fixed by one green run. |
 
-**One check-name change is outstanding for branch protection**: #16's
-`replaces` → `guards`, merged and live, so a rule requiring `replaces` waits on
-a check that will never report. Done on Petra's say-so, 2026-09-17. #21 would
-have added a second (`itest ingot` → `itest ingot 1/3`…); it is closed, so that
-one is off the table unless the branch is revived.
+**No check-name change is outstanding.** #16's `replaces` → `guards` is merged,
+live, and confirmed resolved (2026-09-17). #21 would have added a second
+(`itest ingot` → `itest ingot 1/3`…) but is closed, so that one returns only if
+the branch is revived. #27 adds a *step* to the existing `guards` job, which
+changes no check name. Worth re-reading this line before enabling required
+checks.
 
 **Nothing is left to import**, and nothing should be started. `MAJOR_DECISIONS.md`
 records what is deliberately out.
 
 ## Waiting on Petra
 
-Decisions taken while she was away, all reversible, all flagged on the PR that
-made them. None needs undoing; they need confirming.
+*Nothing waiting.* **All five open items were approved 2026-09-17** — the
+`replaces` → `guards` rename confirmed resolved, #17's digest reuse, #17's edits
+inside subtree prefixes, #17 shipping no Go image guard, and the four guard
+scripts that were the agent's own initiative.
 
-- **#16 is merged, so the `replaces` → `guards` rename is live.** A branch
-  protection rule still requiring `replaces` now waits on a check that will
-  never report.
-- **#17 reuses digests already in the tree** rather than resolving fresh —
-  `postgres:16-alpine` is `cf78e766…` in four other places, the minio release
-  `2c4349a1…` in piri's testutil. Resolving fresh would have put two builds of
-  one tag in one repository, which is the *agreement* failure rule 2 exists
-  for. Both were checked against the registry and are still current.
-- **#17 edits inside subtree prefixes** (`swarf/`, `indexing-service/`), which
-  is local divergence every future `git subtree pull` carries — the concern
-  that moved `staticcheck.conf` to the root on #10. Judged acceptable here:
-  #6 already pins images inside `piri/`, `hilt/` and `sprue/`, and unlike a
-  lint config an image pin has no root-level alternative.
-- **#17 ships no Go image guard, deliberately**, and the reason is measured: a
-  string shaped like an image reference matches 367 times in this repository,
-  almost all `s3:GetObject` IAM actions and `host:port` pairs; narrowing to
-  testcontainers call sites drops that to 8 but then misses two of the real
-  references. A guard over part of a class reads exactly like a guard over the
-  class (L12), so there is none rather than a partial one. That population
-  stays unguarded, on purpose and in writing.
-- **Two CI guards now exist that were the agent's own initiative.** The
-  squashed-subtree guard was declined, so these are named rather than assumed
-  welcome: `check-replaces.sh`'s second pass (one commit, `3b4c4d8e`, which
-  has since caught the same fault twice — `hilt/itest/go.mod` on #3 and
-  `ingot/itest/go.mod` on #10), and now `check-base-images.sh` and
-  `check-stack-images.sh` on #16 and #17. All revert cleanly.
+The reasoning that outlives the approval has moved to [[Current State]] rather
+than sitting in a list that gets pruned: the digest-reuse practice is now
+recorded under rule 2 as its worked example, and Known debt carries both the
+standing cost of pinning inside subtree prefixes and the guards' provenance.
+The measured case against a Go image guard — 367 matches broadly, 8 when
+narrowed and still missing two real references — was already there.
 
-*Cleared since the last update:* #15's two-changes-in-one-PR bundling (merged),
-and the `replaces` → `guards` rename (approved and done).
+**New decisions land here as they are taken.** The pattern that has worked:
+take the reversible one, flag it on the PR that makes it, and list it here to be
+confirmed rather than assumed.
 
 ## Needs access the agent does not have
 
@@ -186,6 +170,12 @@ still your call.
 
 ## Recently cleared
 
+- **All five "Waiting on Petra" items approved** (2026-09-17): the
+  `replaces` → `guards` rename resolved, #17's reuse of digests already in the
+  tree, #17's edits inside subtree prefixes, #17 shipping no Go image guard,
+  and the guard scripts that were the agent's own initiative. The durable
+  reasoning moved to [[Current State]]; the approval itself is what is recorded
+  here.
 - **#21 closed unmerged** (16:21Z), sharding `itest ingot`, on Petra's call:
   "closed it for simplicity. We can revive it later if we want." It was green
   and measured — 30m43s → 23m07s, ~25% — but the trade was ~43% more

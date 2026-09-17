@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 18:17Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 18:25Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -53,6 +53,15 @@ Seven rules that have actually decided things:
    pinned to reproducibly-different versions of the same library, which is
    how a six-week ucantone wire skew survived a green CI. That is what
    unifying the library pins fixed.
+
+   **Applied: pinning an image the tree already pins means reusing that
+   digest, not resolving a fresh one.** #17 took `cf78e766…` for
+   `postgres:16-alpine` from the four places that already had it and
+   `2c4349a1…` for the minio release from piri's testutil, rather than asking
+   the registry today. Resolving fresh would have put two builds of one tag in
+   one repository — the *agreement* failure, not the reproducibility one.
+   Both were checked against the registry and were still current. Approved
+   2026-09-17.
 3. **Derive dependency lists, never hand-maintain them.** `go list -deps` on
    the build target, not `go.mod`'s replace list. It is sometimes narrower
    and sometimes wider than the obvious guess, and it cannot go stale.
@@ -323,6 +332,21 @@ only what a change affects. None is blocking; none should be answered early.
   resolve before the consolidation finishes. Recorded in `hilt/Dockerfile`
   (`5177695b`) and in `MONOREPO_TODO.md` as of #8.
 
+- **Image pins live inside subtree prefixes, and that is a standing cost.**
+  #6 pinned images inside `piri/`, `hilt/` and `sprue/`; #17 added `swarf/` and
+  `indexing-service/`. Each is local divergence that every future
+  `git subtree pull` has to carry — the same concern that moved
+  `staticcheck.conf` out to the root on #10. Accepted deliberately and approved
+  2026-09-17: unlike a lint config, an image pin **has no root-level
+  alternative**, because it has to live where the reference is. Worth
+  remembering at the next resync rather than rediscovering as a conflict.
+- **The guard scripts were the agent's own initiative, and are approved**
+  (2026-09-17). Named rather than assumed welcome, because an earlier proposal
+  — a squashed-subtree guard — was declined: `check-replaces.sh`'s second pass
+  (`3b4c4d8e`, which has since caught the same fault twice, `hilt/itest/go.mod`
+  on #3 and `ingot/itest/go.mod` on #10), `check-base-images.sh` (#16),
+  `check-stack-images.sh` (#17), and `check-pg-healthchecks.sh` (#27, open).
+  All revert cleanly.
 - `Dockerfile.release` (hilt, ingot, sprue) has the build-context problem the
   main Dockerfiles had, and nothing builds it. Surfaces at the first release.
 - ~~Base images float in our own Dockerfiles.~~ **Fixed, merged
