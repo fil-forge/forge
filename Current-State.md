@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 14:25Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 15:05Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -167,6 +167,7 @@ Two open, stacked, both follow-on tidying rather than migration:
 |---|---|---|
 | [#16](https://github.com/fil-forge/forge-2/pull/16) | `claude/pin-base-images` | 26 external `FROM` references pinned by index digest + `check-base-images.sh`; second commit renames the `replaces` job to `guards`, which is what it is |
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived with swarf and indexing-service *after* #6 had finished pinning + `check-stack-images.sh` |
+| [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17; stacked on it because it moves the same lines |
 
 **#12's merge needed a human**, and the reason is worth keeping: GitHub had it
 registered as a *stacked* pull request from when its base was
@@ -182,7 +183,7 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #16, then #17.** Stacked in that order; neither carries a
+1. **Merge #16, then #17, then #19.** Stacked in that order; neither carries a
    `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
    #16 changes a check name (`replaces` → `guards`), so a branch protection
    rule naming the old one needs updating with it.
