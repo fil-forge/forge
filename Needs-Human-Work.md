@@ -78,6 +78,19 @@ forgectl is #12. Do not start another module without saying so.
 
   Live and must stay: `claude/bring-in-forgectl` (#12),
   `claude/ci-concurrency` (#14).
+- **This wiki has to be mirrored by hand now.** These pages live in two
+  places that were in sync until 2026-09-17 02:10Z: the `wiki` branch of
+  `fil-forge/forge-2`, which the agent can push, and the real GitHub wiki at
+  `forge-2.wiki.git`, which it can read but not write — the git proxy returns
+  `403 … not in this session's authorized repository set`, and
+  `forge-2.wiki` cannot be added as a source because GitHub does not expose a
+  wiki as a repository. Earlier pushes to it did land, so this is a change in
+  what the session is allowed to reach rather than something that never
+  worked.
+  **So the wiki is one commit behind the branch**, and stays behind until
+  someone runs `git push https://github.com/fil-forge/forge-2.wiki.git
+  <branch tip>:master`. Worth fixing properly rather than repeating: either
+  authorize the wiki, or drop it and let the `wiki` branch be the only copy.
 - **Archiving `session_01GXUttS5N775eQ7QXboRAxe`**, the round-1 review
   session. It has nothing left to post; see *Recently cleared*.
 - **The `forge-2` → `forge` rename**, whenever this path is judged correct.
