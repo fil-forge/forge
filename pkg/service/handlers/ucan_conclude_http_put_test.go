@@ -1,6 +1,7 @@
-package handlers_test
+package handlers
 
 import (
+	"context"
 	"net/url"
 	"testing"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/fil-forge/sprue/internal/testutil"
 	"github.com/fil-forge/sprue/pkg/piriclient"
 	"github.com/fil-forge/sprue/pkg/routing"
-	"github.com/fil-forge/sprue/pkg/service/handlers"
 	"github.com/fil-forge/sprue/pkg/store/agent"
 	agent_store "github.com/fil-forge/sprue/pkg/store/agent/memory"
 	blob_registry "github.com/fil-forge/sprue/pkg/store/blob_registry/memory"
@@ -19,17 +19,19 @@ import (
 	routing_policy_store "github.com/fil-forge/sprue/pkg/store/routing_policy/memory"
 	spacediff_store "github.com/fil-forge/sprue/pkg/store/space_diff/memory"
 	storage_provider_store "github.com/fil-forge/sprue/pkg/store/storage_provider/memory"
+	"github.com/fil-forge/ucantone/ucan"
 	"github.com/fil-forge/ucantone/ucan/container"
 	"github.com/fil-forge/ucantone/ucan/invocation"
 	"github.com/fil-forge/ucantone/ucan/promise"
 	"github.com/fil-forge/ucantone/ucan/receipt"
+	"github.com/ipfs/go-cid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
 )
 
 type httpPutDeps struct {
-	ch            handlers.ConclusionHandler
+	ch            ConclusionHandler
 	spStore       *storage_provider_store.Store
 	agentStore    *agent_store.Store
 	consumerStore *consumer_store.Store
@@ -48,7 +50,7 @@ func newHTTPPutDeps(t *testing.T, nodeProvider piriclient.Provider, logger *zap.
 		metrics_store.NewSpaceStore(),
 		metrics_store.New(),
 	)
-	ch := handlers.NewHTTPPutConcludeHandler(router, nodeProvider, agentStore, blobReg, logger)
+	ch := NewHTTPPutConcludeHandler(router, nodeProvider, agentStore, blobReg, logger)
 	return &httpPutDeps{
 		ch:            ch,
 		spStore:       spStore,
@@ -71,7 +73,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		// Destination.Task points to an invocation that's not in the agent store.
 		nonExistentAllocTask := testutil.RandomCID(t)
 
-		blobProvider := deriveBlobProvider(t, digest)
+		blobProvider := testutil.DeriveBlobProvider(t, digest)
 		putInv, err := httpcmds.Put.Invoke(
 			blobProvider,
 			blobProvider.DID(),
@@ -90,7 +92,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		err = deps.ch.Handler(ctx, putInv, putRcpt)
+		_, err = deps.ch.Handler(ctx, []Conclusion{{Invocation: putInv, Receipt: putRcpt}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "getting allocation invocation")
 	})
@@ -124,7 +126,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		)
 		require.NoError(t, deps.agentStore.Write(ctx, msg, agent.Index(msg)))
 
-		blobProvider := deriveBlobProvider(t, digest)
+		blobProvider := testutil.DeriveBlobProvider(t, digest)
 		putInv, err := httpcmds.Put.Invoke(
 			blobProvider,
 			blobProvider.DID(),
@@ -142,7 +144,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		err = deps.ch.Handler(ctx, putInv, putRcpt)
+		_, err = deps.ch.Handler(ctx, []Conclusion{{Invocation: putInv, Receipt: putRcpt}})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "getting storage provider info")
 	})
@@ -161,7 +163,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 			Site: testutil.RandomCID(t),
 			PDP:  promise.AwaitOK{Task: testutil.RandomCID(t)},
 		}
-		piriSrv := newMockPiriServer(
+		piriSrv := testutil.NewMockPiriServer(
 			t, storageProvider, uploadService,
 			&blobcmds.AllocateOK{Size: blob.Size},
 			acceptOK,
@@ -169,7 +171,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		piriURL := testutil.Must(url.Parse(piriSrv.URL))(t)
 
 		deps := newHTTPPutDeps(t, piriclient.NewProvider(uploadService, logger), logger)
-		require.NoError(t, deps.spStore.Put(ctx, storageProvider.DID(), *piriURL, 100, nil, providerProofs(t, storageProvider, uploadService)))
+		require.NoError(t, deps.spStore.Put(ctx, storageProvider.DID(), *piriURL, 100, nil, testutil.ProviderProofs(t, storageProvider, uploadService)))
 
 		// Provision the space so blob_registry.Register succeeds.
 		account := testutil.Must(didmailto.New("alice@example.com"))(t)
@@ -198,7 +200,7 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		require.NoError(t, deps.agentStore.Write(ctx, msg, agent.Index(msg)))
 
 		// /http/put invocation referring to the allocation task.
-		blobProvider := deriveBlobProvider(t, digest)
+		blobProvider := testutil.DeriveBlobProvider(t, digest)
 		putInv, err := httpcmds.Put.Invoke(
 			blobProvider,
 			blobProvider.DID(),
@@ -219,8 +221,15 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		// The upload service is authorized to invoke /blob/accept by the proofs
 		// the provider granted it at registration (sourced from the provider
 		// record), so no proof travels in the conclude metadata.
-		err = deps.ch.Handler(ctx, putInv, putRcpt)
+		meta, err := deps.ch.Handler(ctx, []Conclusion{{Invocation: putInv, Receipt: putRcpt}})
 		require.NoError(t, err)
+
+		// The accept receipt travels back in the conclude response, so the
+		// deliverer reads the outcome instead of polling for it.
+		require.Len(t, meta.Receipts(), 1)
+		acceptedOK, err := blobcmds.Accept.Unpack(meta.Receipts()[0])
+		require.NoError(t, err)
+		require.Equal(t, acceptOK.Site, acceptedOK.Site)
 
 		// Blob should now be registered in the space, with cause = blobAddTaskLink.
 		rec, err := deps.blobReg.Get(ctx, space.DID(), digest)
@@ -228,4 +237,48 @@ func TestHTTPPutConcludeHandler(t *testing.T) {
 		require.Equal(t, blobAddTaskLink, rec.Cause)
 		require.Equal(t, blob.Size, rec.Blob.Size)
 	})
+}
+
+// countingAgentStore counts how the completion path reads the agent store.
+type countingAgentStore struct {
+	agent.Store
+	single, batch int
+}
+
+func (c *countingAgentStore) GetInvocation(ctx context.Context, task cid.Cid) (ucan.Invocation, error) {
+	c.single++
+	return c.Store.GetInvocation(ctx, task)
+}
+
+func (c *countingAgentStore) GetInvocations(ctx context.Context, tasks []cid.Cid) (map[cid.Cid]ucan.Invocation, error) {
+	c.batch++
+	return c.Store.GetInvocations(ctx, tasks)
+}
+
+// TestResolveAllocationsLooksUpOnce pins that a batch of concluded puts costs
+// one agent-store lookup for its allocations rather than one per blob, and
+// that the allocations come back in delivery order.
+func TestResolveAllocationsLooksUpOnce(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	ctx := t.Context()
+	uploadService := testutil.WebService
+	storageProvider := testutil.RandomIssuer(t)
+	deps := newHTTPPutDeps(t, piriclient.NewProvider(uploadService, logger), logger)
+
+	parked := parkBlobs(t, ctx, deps, uploadService, storageProvider, testutil.RandomIssuer(t).DID(), testutil.RandomCID(t), 5)
+	conclusions := make([]Conclusion, len(parked))
+	for i, p := range parked {
+		conclusions[i] = p.conc
+	}
+
+	counting := &countingAgentStore{Store: deps.agentStore}
+	puts, err := resolveAllocations(ctx, counting, conclusions, logger)
+	require.NoError(t, err)
+	require.Equal(t, 1, counting.batch, "one lookup for the whole batch")
+	require.Zero(t, counting.single, "no per-blob lookups")
+	require.Len(t, puts, len(parked))
+	for i, put := range puts {
+		require.Equal(t, parked[i].digest.String(), put.blob.Digest.String(), "put %d resolved to another blob's allocation", i)
+		require.Equal(t, storageProvider.DID(), put.provider)
+	}
 }
