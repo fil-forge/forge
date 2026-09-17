@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 17:20Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 17:24Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -39,11 +39,8 @@ than a feeling.
 
 | | what | state |
 |---|---|---|
-| [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | `6442c4c5`, **22/22 green** at 15:52Z. Was stacked on #17; #17 merging retargeted it to `main` and Petra rebased it. Verified: the rebase brought in only #20's two files and left the six-file change intact. Answers Petra's review question on #17; she asked for it as its own PR. |
-| [#22](https://github.com/fil-forge/forge-2/pull/22) | **Open every PR with which checks are safe to merge without.** Your idea, written into `AGENTS.md` so it survives the session. The interim for path filtering; the blocks become the worked examples that design it. | `b3bdc66e`, one file, nothing in the repo reads it. **A process proposal, like #20** — worth a read rather than a merge on trust. Two things I'd look at: whether "derive, don't assert" binds hard enough, and whether the four change-shapes cover what you expect (a Dockerfile-only change and a `go.mod` bump are deliberately absent — I did not want to guess at shapes I have not had to reason about). |
 | [#25](https://github.com/fil-forge/forge-2/pull/25) | **Layer-cache the image builds in `itest`/`e2e`**, keeping `images.yml` cold as the canary. The ~6 min build sits on both critical paths and neither could ever cache it — they used plain `docker build`, which cannot use `type=gha` at all. | `7fb93177`. **The judgement call**: it leans on `images.yml` running cold on the same events, so a broken Dockerfile still turns that red on the same commit. If you do not buy that, close it rather than amend it. The first run after merge is cold by construction — do not judge it on that one. |
-| [#23](https://github.com/fil-forge/forge-2/pull/23) | **Three `MONOREPO_TODO.md` entries**: the CI wall-clock measurement re-homed off closed #21; **forgectl's mainnet metrics**; Phase 1's missing release flow and the tag/rename ordering. | `f434a879`. The forgectl item is the one with a real-world consequence — see below. |
-| [#24](https://github.com/fil-forge/forge-2/pull/24) | **Drop the last two per-service `.github/` directories** — 21 inert files under `forgectl/` and `indexing-service/`, which `7321ee6a` removed for the other seven. | `e8617e6d`. Nothing has ever run them; GitHub reads workflows only at the repository root. |
+| [#26](https://github.com/fil-forge/forge-2/pull/26) | **Record what the cache measured** in `MONOREPO_TODO.md`, with its three caveats — the warm number is a same-commit ceiling, the cold path is ~3 min worse, and the 10 GB cache limit is unchecked. | `28d8ffdc`, one file, nothing reads it. |
 
 **One check-name change is outstanding for branch protection**: #16's
 `replaces` → `guards`, merged and live, so a rule requiring `replaces` waits on

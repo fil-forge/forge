@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 17:20Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 17:24Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -155,38 +155,31 @@ booting in CI from images built at HEAD.
 `indexing-service`, `ingot`, `piri`, `piri-signing-service`, `smelt`,
 `sprue`, `swarf`.
 
-Merged since the last snapshot: **#20** (a root `AGENTS.md` + `CLAUDE.md`,
-`4db13774`) and **#17** (the 5 image references that arrived with swarf and
-indexing-service *after* #6 had finished pinning, plus `check-stack-images.sh`,
-`586738ed`). Before those: **#12** (forgectl — the tenth and last,
-`7ccafeab`), **#15** (`ci.yml`'s `permissions` block and the path-filtering
-TODO entry, `ff2f794d`) and **#16** (26 base images pinned by index digest,
-`check-base-images.sh`, and the `replaces` → `guards` rename, `3c3fe769`).
-Before those, in order: #3 (swarf), #9 (dropped checks), #8
-(`MONOREPO_TODO.md`), #10 (indexing-service), #11 (the indexer from HEAD) and
-#14 (`ci.yml`'s `concurrency` block).
+Merged since the last snapshot, in order: **#20** (a root `AGENTS.md` +
+`CLAUDE.md`), **#17** (the 5 straggler image pins + `check-stack-images.sh`),
+**#22** (the skippable-checks practice in `AGENTS.md`), **#19** (test image pins
+into `testutil`), **#23** (three `MONOREPO_TODO.md` entries) and **#24** (the
+last two per-service `.github/` directories) — `main` is `144b3162`. Before
+those: #12 (forgectl, the tenth and last module), #15, #16, and earlier #3
+(swarf), #9, #8, #10 (indexing-service), #11 and #14.
 
 **The repository now has a root `AGENTS.md`**, which is where the rules below
 also live in one-line form, and which says of itself that it is scaffolding for
 the construction rather than a guide to the finished monorepo.
 
-Five open, all on `main`, none stacked on anything:
+Two open, both on `main`, neither stacked on anything — #22, #23 and #24 merged at 16:20–16:47Z:
 
 | PR | branch | what |
 |---|---|---|
-| [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` `6442c4c5` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17 |
-| [#22](https://github.com/fil-forge/forge-2/pull/22) | `claude/ignorable-checks` `b3bdc66e` | `AGENTS.md` gains the skippable-checks practice below. Petra's idea, 2026-09-17 |
-| [#23](https://github.com/fil-forge/forge-2/pull/23) | `claude/todo-ci-speed` `f434a879` | three `MONOREPO_TODO.md` entries: the CI wall-clock measurement re-homed off closed #21, forgectl's mainnet metrics, and Phase 1's missing release flow |
-| [#24](https://github.com/fil-forge/forge-2/pull/24) | `claude/prune-inert-github` `e8617e6d` | the last two per-service `.github/` directories, 21 inert files |
-| [#25](https://github.com/fil-forge/forge-2/pull/25) | `claude/ci-cache` `7fb93177` | layer-cache the image builds in `itest`/`e2e`, `images.yml` stays cold as the canary. **The only one of the five that can fail** |
+| [#25](https://github.com/fil-forge/forge-2/pull/25) | `claude/ci-cache` `7fb93177` | layer-cache the image builds in `itest`/`e2e`, `images.yml` stays cold as the canary. **22/22 green; warm build 23s** |
+| [#26](https://github.com/fil-forge/forge-2/pull/26) | `claude/cache-measured` `28d8ffdc` | records #25's measurement in `MONOREPO_TODO.md`, with its three caveats |
 
-#19 is 22/22 green. #22, #23 and #24 are doc or deletion-only — nothing in the
-repository reads `AGENTS.md`, `MONOREPO_TODO.md`, or any of the 21 inert files
-#24 removes. **#25 is the only one that changes behaviour**, and its `itest` and
-`e2e` runs are its own measurement.
+**#25 is green and measured** — its `e2e` red was the pre-existing flake below,
+and the re-run that cleared it was warm, so it produced the number too. #26 is
+one file nothing reads.
 
-**Pre-rename work, run while Petra is away** (2026-09-17 16:4xZ): #23, #24 and
-#25. Deliberately *not* attempted, with reasons: the release workflow itself
+**Pre-rename work, run while Petra is away** (2026-09-17 16:40–17:25Z): #23, #24,
+#25 and #26. Deliberately *not* attempted, with reasons: the release workflow itself
 (unverifiable until tags can be cut, and an unrunnable workflow is the
 silent-green shape this repo keeps deleting), `compat.yml` (needs published
 images to test against), the tag scheme (long-lived and hard to reverse — a
