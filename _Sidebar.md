@@ -1,7 +1,8 @@
 ### Forge monorepo
 
 - [[Home]]
-- [[Current State]] ← start here
+- [[Plan]] ← the one-page map
+- [[Current State]] ← the detail
 - [[Needs Human Work]] 👤
 - [[Consolidation Findings]]
   - Blind spots (B1–B8)

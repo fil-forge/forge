@@ -6,8 +6,10 @@ history stays about the code.
 
 ## Pages
 
+- **[[Plan]]** — one page: what is done, what is in flight, what is left.
+  Start here if you want the shape rather than the detail.
 - **[[Current State]]** — where the work is right now: approach, what
-  has landed, what is next. Start here; it is a snapshot, kept current.
+  has landed, what is next, with the evidence. A snapshot, kept current.
 - **[[Needs Human Work]]** — the short list of things waiting on a person:
   what is blocking, what decisions are open, and what the agent cannot do
   itself. Kept current.
