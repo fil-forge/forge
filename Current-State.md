@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 18:35Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 19:20Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -153,7 +153,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `95e83665`, and the import phase is closed.** All **ten**
+**`main` is at `24b18ee5`, and the import phase is closed.** All **ten**
 in-scope modules are subtree-merged with their histories, module paths
 rewritten, `go.work`, per-module CI, library pins unified, every subtree
 resynced to its upstream head, images pinned by digest, the checks the
@@ -176,11 +176,10 @@ those: #12 (forgectl, the tenth and last module), #15, #16, and earlier #3
 also live in one-line form, and which says of itself that it is scaffolding for
 the construction rather than a guide to the finished monorepo.
 
-Two open. **#25 and #26 merged** (`95e83665`), so the layer cache is live:
+One open. **#27 merged** (`24b18ee5`), so the postgres healthcheck fix and its guard are live:
 
 | PR | branch | what |
 |---|---|---|
-| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `a8a6040b`, **22/22 green** |
 | [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29` | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
@@ -424,6 +423,11 @@ only what a change affects. None is blocking; none should be answered early.
   re-push can leave a partially warmed cache** — not a fault, but it means a
   single job's timing is not a clean measurement of anything.
 
+  **A fourth point, `main` after #27 merged** (`24b18ee5`): the whole `e2e` job
+  in **6m18s**, against the 13m10s baseline. The first run after a merge was
+  expected to be partly cold and was not, which is the cache behaving as
+  intended across the PR → `main` scope boundary.
+
   **Two things keep this honest.** The warm run is a **re-run of the same
   commit**, so every layer hit — that is the ceiling, not the average. A real
   pull request changes Go source, which invalidates the `go build` layer for the
@@ -481,12 +485,13 @@ only what a change affects. None is blocking; none should be answered early.
   against the tree you are actually pushing.** Rule 5 says check both
   directions; it now also has to say check the final state.
 
-  **#27 is 22/22 green on `a8a6040b`** (18:0xZ), `guards` included, and `e2e`
-  passed. **That is not evidence the flake is fixed.** At a ~5% base rate a
-  single green run had a ~95% chance of happening anyway; it would take dozens
-  of consecutive passes to say anything statistically. The mechanism is what
-  justifies the fix, not this run. Expect the evidence to accumulate from
-  ordinary runs rather than from a victory lap.
+  **#27 merged as `24b18ee5`** (19:02Z) and `e2e` has now passed twice on the
+  fix — once on `a8a6040b`, once on `main` post-merge. **That is still weak
+  evidence.** At a ~5% base rate two consecutive passes had a ~90% chance of
+  happening even unfixed, so it rules out very little; it would take dozens to
+  say anything statistically. The mechanism is what justifies the fix. Record
+  passes as they accumulate, and **treat a recurrence as informative rather than
+  as noise** — that is the observation that would actually falsify this.
 
   **Still unverified: that the flake is gone.** A 5% failure rate cannot be shown
   fixed by one green run. The mechanism is proven; the frequency is not.

@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 18:35Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 19:20Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,7 +19,9 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Two — **#27** and **#28**. #25 and #26
+One — **#28**. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
+its guard are live, and `e2e` has now passed twice on the fix (still weak
+evidence: two passes had a ~90% chance even unfixed). #25 and #26
 merged, so the layer cache is live on `main` (`95e83665`) and its numbers are
 recorded: **23s warm** against a 7m34s baseline, the `e2e` job 13m10s → 5m29s.
 Three caveats travel with that, on [[Current State]] and in #26: the warm run was
@@ -34,7 +36,6 @@ than a feeling.
 
 | | what | state |
 |---|---|---|
-| [#27](https://github.com/fil-forge/forge-2/pull/27) | **Fix the `e2e` flake at its root.** `pg_isready` without `-h` probes the Unix socket, which is up during `initdb` while TCP is refused — the healthcheck went green 2.25s before the port existed and dependents started into the gap. Six sites + a list-free guard that also covers Go. | `a8a6040b`, **22/22 green** including `guards` and `e2e`. **Green is not proof**: at a ~5% base rate one passing `e2e` had a ~95% chance regardless — the mechanism justifies the fix, not the run. `guards` went red on the first push — the guard matched its own step name in `ci.yml`; fixed by anchoring to an invocation, and re-verified against the tree actually being pushed. The mechanism is proven from `plc-postgres`'s own log; **the frequency is not** — a 5% flake cannot be shown fixed by one green run. |
 | [#28](https://github.com/fil-forge/forge-2/pull/28) | **swarf's firehose client dropped oversized events and then hung** — default 64 KiB scanner cap, `ErrTooLong` discarded, so `Stream` reconnected at the same cursor forever. hilt and ingot both link it in production. | `52648c29`. **Three sibling findings are left deliberately**: the `immutable` cache on a mutable route, the memory-vs-PostgreSQL `Get` divergence, and the 10s settle window. Each is a **contract decision** — I would rather you chose than have me encode one. |
 
 **No check-name change is outstanding.** #16's `replaces` → `guards` is merged,
