@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 17:40Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 17:36Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -171,7 +171,7 @@ One open. **#25 and #26 merged** (`95e83665`), so the layer cache is live:
 
 | PR | branch | what |
 |---|---|---|
-| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `ea7dafa3` | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
+| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `a8a6040b` | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
 23s warm against a 7m34s baseline, with the caveats below. **#27** is the
@@ -412,6 +412,19 @@ only what a change affects. None is blocking; none should be answered early.
 
   **Postgres was the only class member**, checked: every other healthcheck is
   HTTP over localhost or `redis-cli ping`, TCP by construction.
+
+  **The guard failed CI on its own step name**, first push: `ci.yml`'s
+  `- name: every pg_isready healthcheck probes TCP` contains the literal word,
+  and the grep matched a *mention* rather than an *invocation*. Anchored to a
+  preceding quote in `a8a6040b`, which keeps `.github/` in scope — an Actions
+  `services:` block can carry `--health-cmd "pg_isready …"`, so excluding the
+  directory would have bought a real blind spot to dodge a false positive.
+
+  **The process lesson is the durable one**: the guard was verified in both
+  directions, *then* wired into `ci.yml`, and not run again — so what was
+  verified was a tree that no longer existed at push time. **Verify a guard
+  against the tree you are actually pushing.** Rule 5 says check both
+  directions; it now also has to say check the final state.
 
   **Still unverified: that the flake is gone.** A 5% failure rate cannot be shown
   fixed by one green run. The mechanism is proven; the frequency is not.
