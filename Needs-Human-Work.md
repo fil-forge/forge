@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 17:36Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 18:17Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -34,7 +34,7 @@ than a feeling.
 
 | | what | state |
 |---|---|---|
-| [#27](https://github.com/fil-forge/forge-2/pull/27) | **Fix the `e2e` flake at its root.** `pg_isready` without `-h` probes the Unix socket, which is up during `initdb` while TCP is refused — the healthcheck went green 2.25s before the port existed and dependents started into the gap. Six sites + a list-free guard that also covers Go. | `a8a6040b`. **Watch `e2e` and `guards`.** `guards` went red on the first push — the guard matched its own step name in `ci.yml`; fixed by anchoring to an invocation, and re-verified against the tree actually being pushed. The mechanism is proven from `plc-postgres`'s own log; **the frequency is not** — a 5% flake cannot be shown fixed by one green run. |
+| [#27](https://github.com/fil-forge/forge-2/pull/27) | **Fix the `e2e` flake at its root.** `pg_isready` without `-h` probes the Unix socket, which is up during `initdb` while TCP is refused — the healthcheck went green 2.25s before the port existed and dependents started into the gap. Six sites + a list-free guard that also covers Go. | `a8a6040b`, **22/22 green** including `guards` and `e2e`. **Green is not proof**: at a ~5% base rate one passing `e2e` had a ~95% chance regardless — the mechanism justifies the fix, not the run. `guards` went red on the first push — the guard matched its own step name in `ci.yml`; fixed by anchoring to an invocation, and re-verified against the tree actually being pushed. The mechanism is proven from `plc-postgres`'s own log; **the frequency is not** — a 5% flake cannot be shown fixed by one green run. |
 
 **One check-name change is outstanding for branch protection**: #16's
 `replaces` → `guards`, merged and live, so a rule requiring `replaces` waits on

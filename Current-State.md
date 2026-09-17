@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 17:36Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 18:17Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -171,7 +171,7 @@ One open. **#25 and #26 merged** (`95e83665`), so the layer cache is live:
 
 | PR | branch | what |
 |---|---|---|
-| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `a8a6040b` | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
+| [#27](https://github.com/fil-forge/forge-2/pull/27) | `claude/pg-healthcheck-tcp` `a8a6040b`, **22/22 green** | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
 23s warm against a 7m34s baseline, with the caveats below. **#27** is the
@@ -369,6 +369,15 @@ only what a change affects. None is blocking; none should be answered early.
   Per service warm: piri 4s, hilt 5s, ingot 3s, sprue 2s, delegator 2s,
   piri-signing-service 2s, swarf 3s, indexing-service 2s.
 
+  **A third data point, from a real branch push** (#27 `a8a6040b`, `e2e`): all 8
+  images in **2m27s** — seven of them 3–7s each, and `indexing-service` alone
+  1m55s. That lands exactly in the "minutes rather than seconds" range this
+  entry predicted, so the caveat below was calibrated. The one cold image is
+  worth knowing why: the previous push's run was cancelled mid-build by
+  `cancel-in-progress`, so that scope's cache export never finished. **A rapid
+  re-push can leave a partially warmed cache** — not a fault, but it means a
+  single job's timing is not a clean measurement of anything.
+
   **Two things keep this honest.** The warm run is a **re-run of the same
   commit**, so every layer hit — that is the ceiling, not the average. A real
   pull request changes Go source, which invalidates the `go build` layer for the
@@ -425,6 +434,13 @@ only what a change affects. None is blocking; none should be answered early.
   verified was a tree that no longer existed at push time. **Verify a guard
   against the tree you are actually pushing.** Rule 5 says check both
   directions; it now also has to say check the final state.
+
+  **#27 is 22/22 green on `a8a6040b`** (18:0xZ), `guards` included, and `e2e`
+  passed. **That is not evidence the flake is fixed.** At a ~5% base rate a
+  single green run had a ~95% chance of happening anyway; it would take dozens
+  of consecutive passes to say anything statistically. The mechanism is what
+  justifies the fix, not this run. Expect the evidence to accumulate from
+  ordinary runs rather than from a victory lap.
 
   **Still unverified: that the flake is gone.** A 5% failure rate cannot be shown
   fixed by one green run. The mechanism is proven; the frequency is not.
