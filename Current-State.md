@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 15:25Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 15:30Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -162,13 +162,14 @@ TODO entry, `ff2f794d`) and **#16** (26 base images pinned by index digest,
 #9 (dropped checks), #8 (`MONOREPO_TODO.md`), #10 (indexing-service),
 #11 (the indexer from HEAD) and #14 (`ci.yml`'s `concurrency` block).
 
-Three open. #17 and #19 are stacked follow-on tidying; #20 is independent:
+Four open. #17 and #19 are stacked follow-on tidying; #20 and #21 are independent:
 
 | PR | branch | what |
 |---|---|---|
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived with swarf and indexing-service *after* #6 had finished pinning + `check-stack-images.sh` |
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17; stacked on it because it moves the same lines |
 | [#20](https://github.com/fil-forge/forge-2/pull/20) | `claude/root-agents-md` | a root `AGENTS.md` + `CLAUDE.md`. On `main`, independent of the stack |
+| [#21](https://github.com/fil-forge/forge-2/pull/21) | `claude/shard-itest` | `itest ingot` sharded across three runners, shards deriving their own tests. **Changes check names**: `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3` |
 
 **#12's merge needed a human**, and the reason is worth keeping: GitHub had it
 registered as a *stacked* pull request from when its base was
@@ -184,7 +185,7 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #17, then #19** — stacked in that order — and **#20** whenever; neither carries a
+1. **Merge #17, then #19** — stacked in that order — and **#20** and **#21** whenever; neither carries a
    `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
    #16 changes a check name (`replaces` → `guards`), so a branch protection
    rule naming the old one needs updating with it.
@@ -275,22 +276,28 @@ only what a change affects. None is blocking; none should be answered early.
   `check-dockerfile-retry.sh` written during the first attempt live in the
   old `fil-forge/forge` and were never carried across. Worth porting the
   ones whose defect can recur here.
-- **`itest ingot` is drifting toward its 45-minute cap, one image build at a
-  time.** 21m30s standalone before the peers came from HEAD; 29m03s once six
-  images were built in-job; and on #12's final head, with eight images and
-  forgectl in the tree, **26m37s** — the fastest of the recent runs, against
-  30m18s and 29m43s on its two predecessors. The trend is noisy enough that
-  three points do not make a line; what is not noisy is that each service
-  brought in-repo adds a build to this job. Each service brought
-  in-repo adds a build to this job, so the margin shrinks as the monorepo
-  grows rather than staying put. About fifteen minutes left.
-  The cap was 30 and was raised to 45 on an estimate; the first full run after
-  the peers moved to HEAD came in with **57 seconds** to spare against the old
-  number, so the raise was load-bearing rather than precautionary.
-  The ordering holds and must keep holding: Go's `-timeout 25m` covers the
-  test portion only (~22m30s of the 29m) and fires first on a hang, dumping
-  every goroutine. A runner kill at the job cap gives nothing, which is why
-  the two numbers must not be levelled.
+- **`itest ingot` cost ~28 minutes, and the cause is not what the earlier note
+  here assumed.** Measured from the job log rather than from the trend:
+
+      the Go test binary   1257s = 20m57s   (ok .../ingot/itest 1257.018s)
+      everything else      ~7 min           (setup, vet, staticcheck, 8 images)
+
+  Inside those 21 minutes, **13 top-level tests boot 13 full stacks**, and
+  `stack_test.go` logs the cost itself — `booting the smelt Forge stack (~1-2
+  min…)`. The subtests run in hundredths of a second. The suite is not slow;
+  booting the stack thirteen times is. The earlier framing here — that image
+  builds were eating the margin — had the smaller half.
+  [#21](https://github.com/fil-forge/forge-2/pull/21) shards it across three
+  runners and roughly halves the wall clock, with each shard deriving its own
+  tests from `go test -list` rather than from a `-run` list a new test could
+  fall out of silently.
+  **What remains is a decision, in `MONOREPO_TODO.md`**: the 8 images are still
+  built three times per pull request and sharding multiplies that; and nine of
+  the thirteen tests could share one stack, which is worth 8–16 minutes but
+  changes test isolation.
+  The ordering still holds and still matters: Go's `-timeout 25m` fires first
+  on a hang and dumps every goroutine, where a runner kill at the 45-minute cap
+  gives nothing. The two numbers must not be levelled.
 
 - **`SA4006` is off for the whole repository**, via a root `staticcheck.conf`
   reading `checks = ["inherit", "-SA4006"]` (#10). It suppresses one true

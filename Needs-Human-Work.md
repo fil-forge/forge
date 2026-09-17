@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 15:25Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 15:30Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,13 +19,15 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Two, stacked. Neither carries a `git subtree add`, so they rebase rather than
-needing a rule 7 rebuild.
+Four. #17 and #19 are stacked; #20 and #21 sit on `main` independently. None
+carries a `git subtree add`, so they rebase rather than needing a rule 7
+rebuild.
 
 | | what | state |
 |---|---|---|
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | **Pin the 5 references that arrived after #6 had finished pinning**, carried in by swarf (#3) and indexing-service (#10) — plus `check-stack-images.sh` for compose. | On #16. |
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | On #17, because it moves the same lines. Answers Petra's review question there; she asked for it as its own PR. |
+| [#21](https://github.com/fil-forge/forge-2/pull/21) | **Shard `itest ingot` across three runners** — ~28 min to roughly half. Shards derive their own tests, so a new test cannot fall out silently. | On `main`. **Changes check names** to `itest ingot 1/3`, `2/3`, `3/3` — a branch protection rule naming the old one will wait forever, same edge as `replaces` → `guards`. |
 | [#20](https://github.com/fil-forge/forge-2/pull/20) | **A root `AGENTS.md`**, which this repository has never had though all ten services do. | On `main`, independent. **Wants a real read**: it is a proposal about how this repository is worked on, not a record of something already agreed. Its first section says it is *scaffolding* and names checkable conditions for replacing it — nothing left to import, no subtree pulls pending, the rename done, Phase 1 real — because most of it is about assembling the repo rather than working in it. The nine rules are compressed from [[Current State]] and may have lost a nuance; the wiki-update trigger is the line that has to work. |
 
 **#16 changes a check name**, `replaces` → `guards`. A branch protection rule
