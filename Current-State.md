@@ -28,11 +28,16 @@ What follows:
 - **Module paths `github.com/fil-forge/forge/*` are correct at the repo they
   name.** The interim wrongness the plan flagged — an external `go get`
   resolving at a repo that does not have the code — is over.
-- **The monorepo's CI ran on `forge` for the first time, cold.** Actions caches
-  are per-repository, so nothing `forge-2` warmed carried over. `ci` **9m14s,
-  green** (run 36, on top of old-forge's own 35); `images` **3m04s, green**;
-  `e2e` and `itest` (both run 1) were still building 11 minutes in. Read these
-  against the cold numbers below, not the warm ones.
+- **The monorepo's CI ran on `forge` for the first time, cold**, and the cold
+  prediction held. Actions caches are per-repository, so nothing `forge-2`
+  warmed carried over. `ci` **9m14s green** (run 36, on top of old-forge's own
+  35); `images` **3m04s green**; `e2e`'s eight image builds **10m42s** against
+  the 11m21s cold figure measured on `forge-2`. The per-image split is the
+  useful part: **piri 5m52s**, then hilt 10s, ingot 7s, sprue 5s, swarf 6s —
+  they share piri's layers — and delegator 1m21s, piri-signing-service 1m10s,
+  indexing-service 1m51s, which do not. The `e2e` suite itself was still
+  running at 20:35Z; `itest` likewise. Do not read a flake verdict into
+  whatever they say — see the counting rule below.
 - **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z against
   the *old* `f60dd596`. Its next scheduled run is the first against the
   monorepo tree, and nobody has seen that happen.
