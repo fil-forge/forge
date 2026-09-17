@@ -16,6 +16,7 @@ import (
 	jsg "github.com/alanshaw/dag-json-gen"
 	ucancmd "github.com/fil-forge/libforge/commands/ucan"
 	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/swarf/internal/sse"
 	"github.com/fil-forge/swarf/pkg/api"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
@@ -278,9 +279,9 @@ func sseEvent(t *testing.T, record api.FirehoseRevocation) string {
 //
 // A FirehoseRevocation carries a CID per delegation in the chain, so a long
 // path pushes one SSE event past the default bufio.Scanner token limit. Before
-// the buffer was raised, Scan stopped, ErrTooLong was discarded, streamConn
-// returned nil, and Stream reconnected at the same cursor -- forever, never
-// yielding and never erroring. A hang, not a failure.
+// sse.Scanner raised the buffer, Scan stopped, ErrTooLong was discarded,
+// streamConn returned nil, and Stream reconnected at the same cursor --
+// forever, never yielding and never erroring. A hang, not a failure.
 func TestStreamLargeEvent(t *testing.T) {
 	issuer, err := identity.New("", "")
 	require.NoError(t, err)
@@ -329,8 +330,8 @@ func TestStreamLargeEvent(t *testing.T) {
 		require.Equal(t, 1, streamed, "the oversized event was dropped")
 	})
 
-	t.Run("past streamScanMax errors rather than hanging", func(t *testing.T) {
-		huge := strings.Repeat("a", streamScanMax+1)
+	t.Run("past sse.MaxEventBytes errors rather than hanging", func(t *testing.T) {
+		huge := strings.Repeat("a", sse.MaxEventBytes+1)
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/event-stream")
 			_, _ = fmt.Fprintf(w, "event: revocation\ndata: %s\n\n", huge)
