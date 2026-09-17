@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 19:20Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 19:40Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -332,6 +332,49 @@ only what a change affects. None is blocking; none should be answered early.
   resolve before the consolidation finishes. Recorded in `hilt/Dockerfile`
   (`5177695b`) and in `MONOREPO_TODO.md` as of #8.
 
+- **The polyrepo is NOT frozen, and the subtrees have drifted — ~45 commits
+  across six services.** Measured 2026-09-17 by comparing each
+  `git-subtree-split` recorded in `main`'s history against that repository's
+  live `origin/main`:
+
+  | service | behind | newest upstream commit |
+  |---|---|---|
+  | `ingot` | **25** | 2026-09-16 `chore: CI itest sharding for faster results (#166)` |
+  | `hilt` | 6 | 2026-09-14 |
+  | `smelt` | 4 | 2026-09-15 `fix: postgres and openbao boot issues (#44)` |
+  | `sprue` | 4 | 2026-09-17 (today) |
+  | `delegator` | 4 | 2026-09-11 |
+  | `piri` | 2 | 2026-09-14 `Point minio at our own build (#123)` |
+  | `swarf` | 0 | dormant since 2026-08-27 |
+  | `indexing-service`, `piri-signing-service`, `forgectl` | 0 | at the import point |
+
+  **This page previously said every subtree was resynced to its upstream head.**
+  That was true when it was written and is not true now; `sprue`, `libforge` and
+  `ucantone` all had commits *today*.
+
+  **Petra's policy (2026-09-17):** no regular pulls, one final pull at the end
+  — but **pull early where upstream fixes something we have hit.**
+
+  Two rows are worth reading closely:
+
+  - **`smelt` `96fc212` is the same bug #27 just fixed, found upstream first.**
+    Its message says `pg_isready` goes green against the temporary server the
+    image runs for `initdb` — the mechanism #27 derived independently from the
+    `plc-postgres` log, two days later. **The fixes are complementary, not
+    duplicate**: upstream makes the *consumer* wait (a `postgres-init.sh` that
+    waits for real sessions) and also fixes a second boot race we have not hit,
+    `ingot-openbao-init` writing before raft elects a leader; #27 fixes the
+    *signal* itself, which helps every dependent. They do not conflict — #27
+    touches line 150, upstream lines 163–183 of the same file. **This is the
+    strongest candidate for an early pull.**
+  - **`ingot` #166 is CI itest sharding**, i.e. the same work as closed #21.
+    It arrives with the final pull whether or not #21 is ever revived.
+
+  **Some of this drift is our own work**, made upstream and never brought back:
+  `piri` #123 and the MinIO repoints this page records as merged. Worth checking
+  whether the monorepo already has equivalent content before treating those as
+  missing.
+
 - **The deferred import findings are now fixable, and that is a category worth
   knowing about.** `MONOREPO_TODO.md`'s *Findings in the imported code* holds
   problems noticed while bringing a service in and deliberately left alone,
@@ -484,6 +527,12 @@ only what a change affects. None is blocking; none should be answered early.
   verified was a tree that no longer existed at push time. **Verify a guard
   against the tree you are actually pushing.** Rule 5 says check both
   directions; it now also has to say check the final state.
+
+  **The diagnosis was not novel, and the record should say so.** Upstream smelt
+  `96fc212` (2026-09-15, ash) names the same mechanism two days earlier —
+  `pg_isready` going green against the temporary `initdb` server. #27 derived it
+  independently from the `plc-postgres` log, which is why the account holds, but
+  it was already known in the polyrepo and nobody here had looked.
 
   **#27 merged as `24b18ee5`** (19:02Z) and `e2e` has now passed twice on the
   fix — once on `a8a6040b`, once on `main` post-merge. **That is still weak

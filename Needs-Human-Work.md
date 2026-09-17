@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 19:20Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 19:40Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -65,6 +65,24 @@ narrowed and still missing two real references — was already there.
 **New decisions land here as they are taken.** The pattern that has worked:
 take the reversible one, flag it on the PR that makes it, and list it here to be
 confirmed rather than assumed.
+
+## Subtree drift, and what to pull early
+
+**The polyrepo is not frozen** — ~45 commits across six services since the
+imports; `sprue`, `libforge` and `ucantone` all committed today. Full table on
+[[Current State]]. Policy (Petra, 2026-09-17): no regular pulls, **one final
+pull at the end**, but pull early where upstream fixes something we have hit.
+
+**One row meets that bar now: `smelt` `96fc212`, "postgres and openbao boot
+issues".** It is the same bug #27 fixed, found upstream two days earlier, and it
+fixes a *second* boot race we have not hit yet — `ingot-openbao-init` writing
+before raft elects a leader. The two fixes are complementary and do not
+conflict. **Pulling smelt (4 commits) is a recommendation awaiting your call**;
+an agent-initiated `git subtree pull` is a rule 7 operation and not something to
+start unasked.
+
+`ingot` is **25 behind**, including #166 — CI itest sharding, the same work as
+closed #21. It arrives with the final pull regardless.
 
 ## Needs access the agent does not have
 
