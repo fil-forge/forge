@@ -1,39 +1,53 @@
 # Current state
 
-**Snapshot as of 2026-09-17 20:30Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 20:35Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
-Consolidating the Fil Forge polyrepo into a monorepo. The plan is
+Consolidating the Fil Forge polyrepo into a monorepo at
+[`fil-forge/forge`](https://github.com/fil-forge/forge). The plan is
 `forge-consolidation-plan.md` (Phases 0–6).
 
-## The monorepo is on `fil-forge/forge` now
+## The move to `forge` is done
 
-**At 20:21Z Petra pushed `24b18ee5` onto
-[`fil-forge/forge`](https://github.com/fil-forge/forge)'s `main`** and closed
-[#6](https://github.com/fil-forge/forge/pull/6),
+**`fil-forge/forge`'s `main` is `24b18ee5`** — the monorepo. Petra pushed it at
+20:21Z and closed forge [#6](https://github.com/fil-forge/forge/pull/6),
 [#7](https://github.com/fil-forge/forge/pull/7) and
-[#8](https://github.com/fil-forge/forge/pull/8) — the pre-fork chain, whose
-base history `main` no longer contains. `fil-forge/forge` has **no open PRs**.
+[#8](https://github.com/fil-forge/forge/pull/8), the pre-fork chain whose base
+history `main` no longer contains. `fil-forge/forge` has **no open PRs**. Her
+description — the rename "was really pushing commits back to the original repo"
+— matches what the remotes show: `forge-2` was never renamed, it was copied
+from, and both repositories still exist.
 
-Read from the remotes, not inferred: this is a **push, not a rename**. Both
-repositories still exist and both `main`s are `24b18ee5`, but they are
-distinct — `forge` has 13 branches and neither `wiki` nor
-`claude/swarf-firehose-scanner`; `forge-2` has 14 including both. So:
+**This wiki now lives on `forge`.** Its `wiki` branch is `d9c8f3b2`,
+fast-forwarded there at 20:31Z; it had been one commit behind, missing this
+section's predecessor. `forge-2`'s copy is frozen at the same commit. Work from
+`forge`.
 
-- **Module paths `github.com/fil-forge/forge/*` are now correct at the repo
-  they name.** The interim wrongness the plan flagged (an external `go get`
-  resolving at a repo without the code) is over for `main`.
-- **The monorepo's CI ran on `forge` for the first time** — the push started
-  `ci` (run 36, on top of old-forge's own 35), and `e2e`, `itest` and `images`
-  at **run 1**. `images` went green in 3m04s. See below for the rest.
-- **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z
-  against the *old* `f60dd596`. Its next scheduled run is the first against
-  the monorepo tree, and nobody has seen that happen.
-- **Open work is still on `forge-2`**: the `wiki` branch this page lives on,
-  the branch deletion list, `claude/shard-itest`, and
-  [#28](https://github.com/fil-forge/forge-2/pull/28). **Where #28 lands is
-  Petra's call** — its branch would apply to `forge` unchanged, since the two
-  `main`s are the same commit.
+What follows:
+
+- **Module paths `github.com/fil-forge/forge/*` are correct at the repo they
+  name.** The interim wrongness the plan flagged — an external `go get`
+  resolving at a repo that does not have the code — is over.
+- **The monorepo's CI ran on `forge` for the first time, cold.** Actions caches
+  are per-repository, so nothing `forge-2` warmed carried over. `ci` **9m14s,
+  green** (run 36, on top of old-forge's own 35); `images` **3m04s, green**;
+  `e2e` and `itest` (both run 1) were still building 11 minutes in. Read these
+  against the cold numbers below, not the warm ones.
+- **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z against
+  the *old* `f60dd596`. Its next scheduled run is the first against the
+  monorepo tree, and nobody has seen that happen.
+- **Two things exist only on `forge-2`:** the branch-deletion list (including
+  `claude/shard-itest`, which must **not** be deleted) and
+  [#28](https://github.com/fil-forge/forge-2/pull/28), the swarf firehose fix.
+  #28's branch applies to `forge` unchanged — the two `main`s are the same
+  commit — but where it lands is Petra's call, and the same patch is already
+  open upstream as [`swarf` #17](https://github.com/fil-forge/swarf/pull/17).
+- **⚠️ Do not rewrite this wiki's `forge-2` PR links to point at `forge`.**
+  They name 11 distinct PRs (#2, #15–#17, #19–#22, #25, #27, #28) across 16
+  places, and those numbers are `forge-2`'s. `forge` has its own #1–#8, so
+  **#2 already collides**, and `forge`'s numbering will climb into the rest.
+  The links resolve only while `fil-forge/forge-2` exists: **archive it rather
+  than delete it**, unless the record 404ing is acceptable.
 
 ## Approach
 

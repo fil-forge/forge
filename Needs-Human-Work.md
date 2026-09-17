@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 20:15Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 20:35Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,8 +19,10 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Two — **#28** here, and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
-upstream, carrying the identical patch. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
+Two, and **neither is on `forge`** — which has no open PRs at all.
+**[#28](https://github.com/fil-forge/forge-2/pull/28)** is still on `forge-2`,
+and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)** is upstream,
+carrying the identical patch. Both are green. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
 its guard are live, and `e2e` has now passed twice on the fix (still weak
 evidence: two passes had a ~90% chance even unfixed). #25 and #26
 merged, so the layer cache is live on `main` (`95e83665`) and its numbers are
@@ -51,7 +53,25 @@ records what is deliberately out.
 
 ## Waiting on Petra
 
-*Nothing waiting.* **All five open items were approved 2026-09-17** — the
+**Two decisions, both created by the move to `forge` (2026-09-17 20:21Z).**
+
+- **Archive `fil-forge/forge-2`, or delete it?** *Recommend archive.* This
+  wiki links 11 distinct `forge-2` PRs (#2, #15–#17, #19–#22, #25, #27, #28)
+  in 16 places, and `main`'s own merge commits name those numbers in their
+  messages. The links cannot be repointed at `forge`: its PR numbering is
+  separate, **#2 already collides**, and `forge` will climb into the rest.
+  Deleting `forge-2` turns the whole record into 404s and leaves the merge
+  messages pointing at other people's PRs; archiving costs nothing and keeps
+  every link live.
+- **Where does [#28](https://github.com/fil-forge/forge-2/pull/28) land?**
+  Its branch applies to `forge` unchanged — the two `main`s are the same
+  commit — so it can be pushed there and re-opened, or dropped in favour of
+  picking the fix up from upstream once
+  [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) merges and the
+  subtree is pulled. **Not started either way.** The second route is slower
+  but leaves no local divergence in `swarf/` to carry.
+
+**All five earlier items were approved 2026-09-17** — the
 `replaces` → `guards` rename confirmed resolved, #17's digest reuse, #17's edits
 inside subtree prefixes, #17 shipping no Go image guard, and the four guard
 scripts that were the agent's own initiative.
