@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 19:50Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 19:55Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -180,7 +180,7 @@ One open. **#27 merged** (`24b18ee5`), so the postgres healthcheck fix and its g
 
 | PR | branch | what |
 |---|---|---|
-| [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29` | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
+| [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29`, **22/22 green** | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
 23s warm against a 7m34s baseline, with the caveats below. **#27** is the
@@ -548,9 +548,9 @@ only what a change affects. None is blocking; none should be answered early.
   independently from the `plc-postgres` log, which is why the account holds, but
   it was already known in the polyrepo and nobody here had looked.
 
-  **#27 merged as `24b18ee5`** (19:02Z) and `e2e` has now passed twice on the
-  fix — once on `a8a6040b`, once on `main` post-merge. **That is still weak
-  evidence.** At a ~5% base rate two consecutive passes had a ~90% chance of
+  **#27 merged as `24b18ee5`** (19:02Z) and `e2e` has now passed **three times** on
+  the fix — `a8a6040b`, `main` post-merge, and #28's branch. **That is still weak
+  evidence.** At a ~5% base rate three consecutive passes had a ~86% chance of
   happening even unfixed, so it rules out very little; it would take dozens to
   say anything statistically. The mechanism is what justifies the fix. Record
   passes as they accumulate, and **treat a recurrence as informative rather than

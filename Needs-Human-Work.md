@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 19:50Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 19:55Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -36,7 +36,7 @@ than a feeling.
 
 | | what | state |
 |---|---|---|
-| [#28](https://github.com/fil-forge/forge-2/pull/28) | **swarf's firehose client dropped oversized events and then hung** — default 64 KiB scanner cap, `ErrTooLong` discarded, so `Stream` reconnected at the same cursor forever. hilt and ingot both link it in production. | `52648c29`. **Three sibling findings are left deliberately**: the `immutable` cache on a mutable route, the memory-vs-PostgreSQL `Get` divergence, and the 10s settle window. Each is a **contract decision** — I would rather you chose than have me encode one. |
+| [#28](https://github.com/fil-forge/forge-2/pull/28) | **swarf's firehose client dropped oversized events and then hung** — default 64 KiB scanner cap, `ErrTooLong` discarded, so `Stream` reconnected at the same cursor forever. hilt and ingot both link it in production. | `52648c29`, **22/22 green** — every load-bearing check in its own block passed. **Three sibling findings are left deliberately**: the `immutable` cache on a mutable route, the memory-vs-PostgreSQL `Get` divergence, and the 10s settle window. Each is a **contract decision** — I would rather you chose than have me encode one. |
 
 **No check-name change is outstanding.** #16's `replaces` → `guards` is merged,
 live, and confirmed resolved (2026-09-17). #21 would have added a second
