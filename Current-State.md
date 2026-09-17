@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 15:15Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 15:25Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -162,12 +162,13 @@ TODO entry, `ff2f794d`) and **#16** (26 base images pinned by index digest,
 #9 (dropped checks), #8 (`MONOREPO_TODO.md`), #10 (indexing-service),
 #11 (the indexer from HEAD) and #14 (`ci.yml`'s `concurrency` block).
 
-Two open, stacked, both follow-on tidying rather than migration:
+Three open. #17 and #19 are stacked follow-on tidying; #20 is independent:
 
 | PR | branch | what |
 |---|---|---|
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived with swarf and indexing-service *after* #6 had finished pinning + `check-stack-images.sh` |
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17; stacked on it because it moves the same lines |
+| [#20](https://github.com/fil-forge/forge-2/pull/20) | `claude/root-agents-md` | a root `AGENTS.md` + `CLAUDE.md`. On `main`, independent of the stack |
 
 **#12's merge needed a human**, and the reason is worth keeping: GitHub had it
 registered as a *stacked* pull request from when its base was
@@ -183,7 +184,7 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #17, then #19.** Stacked in that order; neither carries a
+1. **Merge #17, then #19** — stacked in that order — and **#20** whenever; neither carries a
    `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
    #16 changes a check name (`replaces` → `guards`), so a branch protection
    rule naming the old one needs updating with it.

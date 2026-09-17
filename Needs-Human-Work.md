@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 15:15Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 15:25Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -26,6 +26,7 @@ needing a rule 7 rebuild.
 |---|---|---|
 | [#17](https://github.com/fil-forge/forge-2/pull/17) | **Pin the 5 references that arrived after #6 had finished pinning**, carried in by swarf (#3) and indexing-service (#10) — plus `check-stack-images.sh` for compose. | On #16. |
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | On #17, because it moves the same lines. Answers Petra's review question there; she asked for it as its own PR. |
+| [#20](https://github.com/fil-forge/forge-2/pull/20) | **A root `AGENTS.md`**, which this repository has never had though all ten services do. | On `main`, independent. **Wants a real read**: it is a proposal about how this repository is worked on, not a record of something already agreed. The nine rules are compressed from [[Current State]] and may have lost a nuance; the wiki-update trigger is the line that has to work. |
 
 **#16 changes a check name**, `replaces` → `guards`. A branch protection rule
 that requires the old name stops being satisfied until it is updated. Done on
@@ -89,6 +90,17 @@ and the `replaces` → `guards` rename (approved and done).
 
   **Live, must stay:** `claude/pin-base-images` (#16),
   `claude/pin-stragglers` (#17).
+
+- **Why this page kept going stale, and what is proposed about it.** Every
+  rule this repository runs on has been living in one session's scheduled
+  check-in prompts — session-local, timer-driven, gone when the session ends.
+  So these pages were updated when a check-in fired rather than when the thing
+  they describe changed, and drifted in between; Petra noticed #19 missing
+  before any check-in did. [#20](https://github.com/fil-forge/forge-2/pull/20)
+  proposes the fix: a root `AGENTS.md`, which loads at the start of every
+  session, carrying the trigger as an *event* — opened, pushed, merged, closed,
+  or decided → update the wiki before reporting — rather than as "keep it
+  current", which is the phrasing that failed.
 
 - **This wiki lives in two places and the agent can only write one.** These
   pages are the `wiki` branch of `fil-forge/forge-2`, which it pushes, and the
