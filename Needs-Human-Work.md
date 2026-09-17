@@ -19,10 +19,21 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Two, and **neither is on `forge`** — which has no open PRs at all.
-**[#28](https://github.com/fil-forge/forge-2/pull/28)** is still on `forge-2`,
-and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)** is upstream,
-carrying the identical patch. Both are green. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
+One that matters: **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**,
+upstream. `forge` has no open PRs at all, and
+[#28](https://github.com/fil-forge/forge-2/pull/28) on `forge-2` is superseded
+(see below) — it can be closed.
+
+**#17 took a review and grew a second commit** (`406cbe0`). Petra's note: the
+duplicated buffer limits and the comment explaining the duplication were the
+wrong shape. The duplication ran deeper than the constants — `cmd/swarf` and
+`pkg/client` had the *same* SSE loop — so the framing moved to a new
+`internal/sse`, whose `Scanner` reads events the way `bufio.Scanner` reads
+lines. Both call sites collapse to the one step that differs. Two behaviours
+of the old loop were checked rather than assumed and written down there: an
+event carrying no data is not dispatched (which the event stream format
+requires, not an accident), and fields other than `event`/`data` are ignored —
+including the `id:` line `pkg/fx` writes before every revocation. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
 its guard are live, and `e2e` has now passed twice on the fix (still weak
 evidence: two passes had a ~90% chance even unfixed). #25 and #26
 merged, so the layer cache is live on `main` (`95e83665`) and its numbers are
@@ -63,13 +74,12 @@ records what is deliberately out.
   Deleting `forge-2` turns the whole record into 404s and leaves the merge
   messages pointing at other people's PRs; archiving costs nothing and keeps
   every link live.
-- **Where does [#28](https://github.com/fil-forge/forge-2/pull/28) land?**
-  Its branch applies to `forge` unchanged — the two `main`s are the same
-  commit — so it can be pushed there and re-opened, or dropped in favour of
-  picking the fix up from upstream once
-  [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) merges and the
-  subtree is pulled. **Not started either way.** The second route is slower
-  but leaves no local divergence in `swarf/` to carry.
+- ~~Where does #28 land?~~ **Decided: it does not.** The swarf fix arrives
+  with the final subtree pull once
+  [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) has merged, so
+  nothing local diverges inside `swarf/`. #28 is superseded and can be closed
+  whenever convenient. **The ordering is the thing to remember: #17 must merge
+  before the pull**, or the pull brings the hang and a second pull is needed.
 
 **All five earlier items were approved 2026-09-17** — the
 `replaces` → `guards` rename confirmed resolved, #17's digest reuse, #17's edits

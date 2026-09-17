@@ -35,18 +35,24 @@ What follows:
   the 11m21s cold figure measured on `forge-2`. The per-image split is the
   useful part: **piri 5m52s**, then hilt 10s, ingot 7s, sprue 5s, swarf 6s —
   they share piri's layers — and delegator 1m21s, piri-signing-service 1m10s,
-  indexing-service 1m51s, which do not. The `e2e` suite itself was still
-  running at 20:35Z; `itest` likewise. Do not read a flake verdict into
-  whatever they say — see the counting rule below.
+  indexing-service 1m51s, which do not. **`e2e` went green at 20:39Z, 17m30s
+  end to end** — a cold run costs roughly triple a warm one. `itest` was still
+  running at 20:45Z. That is a **fourth** `e2e` pass on #27's postgres fix, and
+  four passes still had a ~81% chance even unfixed at a 5% base rate: **not a
+  verdict.** Keep counting.
 - **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z against
   the *old* `f60dd596`. Its next scheduled run is the first against the
   monorepo tree, and nobody has seen that happen.
-- **Two things exist only on `forge-2`:** the branch-deletion list (including
-  `claude/shard-itest`, which must **not** be deleted) and
-  [#28](https://github.com/fil-forge/forge-2/pull/28), the swarf firehose fix.
-  #28's branch applies to `forge` unchanged — the two `main`s are the same
-  commit — but where it lands is Petra's call, and the same patch is already
-  open upstream as [`swarf` #17](https://github.com/fil-forge/swarf/pull/17).
+- **[#28](https://github.com/fil-forge/forge-2/pull/28) is superseded.**
+  Decided 2026-09-17: the swarf fix comes in with the final subtree pull, once
+  [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) has merged. That is
+  the better outcome — it leaves **no local divergence inside `swarf/`** to
+  carry through every future pull, which is the standing cost the image pins
+  already pay. It does create one ordering constraint: **the pull only picks
+  the fix up if #17 merged first.** Pull before that and the monorepo ships the
+  hang and needs a second pull.
+- **The branch-deletion list is still only on `forge-2`**, `claude/shard-itest`
+  included — which must **not** be deleted.
 - **⚠️ Do not rewrite this wiki's `forge-2` PR links to point at `forge`.**
   They name 11 distinct PRs (#2, #15–#17, #19–#22, #25, #27, #28) across 16
   places, and those numbers are `forge-2`'s. `forge` has its own #1–#8, so
