@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 15:55Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 16:08Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -323,13 +323,33 @@ only what a change affects. None is blocking; none should be answered early.
   not more. It is parked: it changes test isolation in the one job that exists
   to catch flakiness, for less than was claimed.
 
-  **Building the images once is now unambiguously the largest lever** — ~6 min on
-  every shard's critical path, four ingot-side jobs paying it instead of one —
-  and the artifact round-trip for 8 images is the one number nobody has.
-  Balancing the shards by *measured* duration is the cheap remaining win at
-  ~3m17s, but it must be derived from a previous run's timings: a hand-written
-  grouping is a list a new test falls out of silently. `MONOREPO_TODO.md` on
-  #21 carries all of it.
+  **We are not out of levers, and two of them were not on the list.** Both found
+  by reading source after the measurement pointed at them:
+
+  - **`itest` and `e2e` have no Docker layer cache, and never decided not to.**
+    `itest.yml:143` and `e2e.yml:118` shell out to plain `docker build`, which
+    cannot use `--cache-from type=gha` at all; only `images.yml` uses buildx.
+    The "No caching, deliberately (2026-09-11)" comment is *in `images.yml`*
+    and reasons about that workflow — "the point is to provoke build failures".
+    That does not obviously carry where the build is a means to running tests,
+    and `images.yml` already proves the cold build on the same commit on every
+    PR. **Keep `images.yml` uncached as the canary, cache the other two**: up
+    to ~6 min off four jobs, for a handful of lines.
+  - **`lockWaitTime` is 3s in our own versitygw fork and is self-imposed.**
+    `tests/integration/utils.go:2654`; `cleanupLockedObjects` sets
+    `RetainUntilDate: now + lockWaitTime` and then sleeps that long waiting for
+    the lock it just created. **38 call sites ≈ 114s of pure sleep**, in
+    `TestForgeVersity`, which is the test that bounds the whole job. 3s → 1s
+    saves ~76s; 1s is the floor until someone checks sub-second retention
+    round-trips. Lands in versitygw, arrives here as a pin bump — and
+    `fil-forge/versitygw` is **not** in the agent's repository scope.
+
+  Then, in order: **build once and load** (same ~6 min from the other side,
+  but 1–2 GB of artifact round-trip nobody has measured — try the cache first);
+  **balance the shards by measured duration** (~3m17s, derived from a previous
+  run's timings, never a hand-written grouping); and the **path-filtering
+  question** already open in `MONOREPO_TODO.md`, which is the only one that
+  helps a docs-only PR. `MONOREPO_TODO.md` on #21 carries all of it.
   The ordering still holds and still matters: Go's `-timeout 25m` fires first
   on a hang and dumps every goroutine, where a runner kill at the 45-minute cap
   gives nothing. The two numbers must not be levelled.
