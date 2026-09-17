@@ -23,6 +23,16 @@
 # The rule has no list in it. Every pg_isready is either given a host or it is
 # a bug, so nothing here needs updating when a service is added. It covers Go
 # as well as YAML because smelt/pkg/generate builds one of these strings.
+#
+# It matches an *invocation*, not a mention: the name must be preceded by a
+# quote, so it is the start of a quoted command string. The first version of
+# this check did not, and its own step name in ci.yml -- "every pg_isready
+# healthcheck probes TCP" -- failed it. A guard that cannot tell running a
+# thing from naming it is not guarding the thing.
+#
+# The gap that leaves: an unquoted invocation, e.g. `--health-cmd pg_isready`
+# in an Actions services: block. Nothing in this repository writes one, and
+# the alternative -- matching every mention -- is what just misfired.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -38,7 +48,7 @@ while IFS= read -r hit; do
     *pg_isready*-h[[:space:]]*|*pg_isready*--host*) echo "ok   $file:$line" ;;
     *) echo "FAIL $file:$line pg_isready with no -h probes the Unix socket"; status=1 ;;
   esac
-done < <(grep -rn 'pg_isready' --include='*.yml' --include='*.yaml' --include='*.go' . | grep -v '^\./\.git/')
+done < <(grep -rn '["'"'"']pg_isready' --include='*.yml' --include='*.yaml' --include='*.go' . | grep -v '^\./\.git/')
 
 if [ "$checked" -eq 0 ]; then
   echo "No pg_isready healthchecks found -- this check has nothing to guard."
