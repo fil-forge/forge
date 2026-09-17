@@ -48,18 +48,31 @@ jobs:
       # ones. pkg/stack/cleanup.go says as much ("For single-suite test
       # machines this is safe"). A matrix gives each job its own Docker host;
       # folding these into one job would have them tear each other down.
+      # ingot is split across runners because its cost is stack boots, not
+      # tests: 13 top-level tests, 13 boots, ~1-2 min each (stack_test.go says
+      # so in its own log line), which was 21 of the job's 28 minutes. Splitting
+      # divides that almost linearly. hilt runs whole -- it is ~8 minutes.
+      #
+      # Which tests each shard runs is DERIVED, not listed: see the itest step.
+      # A hand-written -run regex per shard is a list a new test can fall out
+      # of, and it would fall out silently, which is the shape rule 5 exists
+      # to catch.
       matrix:
-        service: [hilt, ingot]
-    name: itest ${{ matrix.service }}
+        include:
+          - {service: hilt,  name: hilt,      shard: 1, shards: 1}
+          - {service: ingot, name: ingot 1/3, shard: 1, shards: 3}
+          - {service: ingot, name: ingot 2/3, shard: 2, shards: 3}
+          - {service: ingot, name: ingot 3/3, shard: 3, shards: 3}
+    name: itest ${{ matrix.name }}
     # Pinned rather than -latest so the Docker version cannot drift underneath
     # the harness, which requires 25+. Same reason as e2e.yml.
     runs-on: ubuntu-24.04
-    # 45, not 30, because this job now builds six images before it tests: the
-    # hilt suite went 1m50s -> 8m12s on that step alone, so ingot's ~21m30s
-    # run lands near 28m and 30 left about two minutes of margin. The Go
-    # timeout below stays 25m and still fires first on a hang, which is the
-    # point of the ordering -- it dumps goroutines, where a runner kill gives
-    # nothing. Upstream runs 60 for a suite that also does the 5 GiB case.
+    # 45 was set when ingot ran whole and landed near 28 minutes, leaving
+    # little margin. Sharding took the longest job to roughly half that, so
+    # this is now generous rather than tight -- left as it is because the Go
+    # timeout below is the one that matters: it fires first on a hang and
+    # dumps every goroutine, where a runner kill at the cap gives nothing.
+    # Lowering the cap is a separate judgement and wants its own measurement.
     timeout-minutes: 45
     defaults:
       run:
@@ -248,7 +261,31 @@ jobs:
       # Never retried, deliberately: a retry here would mask a flaky suite,
       # which is the one thing this job exists to see.
       - name: itest
-        run: go test -count=1 -v -timeout 25m ./...
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ matrix.shards }}
+        run: |
+          set -euo pipefail
+          # Derive this shard's tests from the binary rather than listing them
+          # here. Round-robin over the sorted names, so a test added later
+          # lands in a shard by itself; a hand-written -run regex is a list a
+          # new test falls out of, and it falls out silently -- a green job
+          # that ran nothing looks exactly like a green job that ran
+          # everything. `shards: 1` selects all of them, so hilt takes this
+          # same path unsharded (NR % 1 is always 0).
+          #
+          # Cost here is one stack boot per top-level test, so a split by test
+          # count is a split by time; nothing cleverer is needed.
+          all=$(go test -list '^Test' ./... | grep '^Test' | sort)
+          mine=$(printf '%s\n' "$all" | awk -v k="$SHARD" -v s="$SHARDS" 'NR % s == k % s')
+          if [ -z "$mine" ]; then
+            echo "::error::shard $SHARD/$SHARDS matched no tests -- the suite has fewer than $SHARDS, or -list failed"
+            exit 1
+          fi
+          echo "::group::shard $SHARD/$SHARDS runs $(printf '%s\n' "$mine" | wc -l) of $(printf '%s\n' "$all" | wc -l)"
+          printf '%s\n' "$mine"
+          echo "::endgroup::"
+          go test -count=1 -v -timeout 25m -run "^($(printf '%s\n' "$mine" | paste -sd'|' -))$" ./...
 
       - name: dump container state on failure
         if: failure()
