@@ -15,7 +15,7 @@ import (
 	logging "github.com/ipfs/go-log/v2"
 	"go.uber.org/fx"
 
-	"github.com/fil-forge/forgectl/pkg/services/types"
+	"github.com/fil-forge/forge/forgectl/pkg/services/types"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	replicacmds "github.com/fil-forge/libforge/commands/blob/replica"
 	"github.com/fil-forge/libforge/commands/claim"

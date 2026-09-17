@@ -1,0 +1,51 @@
+package providers
+
+import (
+	"github.com/fil-forge/forge/forgectl/cli/config"
+	"github.com/fil-forge/forge/forgectl/cli/printer"
+	"github.com/fil-forge/forge/forgectl/pkg/services/inspector"
+	"github.com/spf13/cobra"
+)
+
+var (
+	listLimit  int64
+	listOffset int64
+)
+
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "List registered service providers",
+	Args:  cobra.NoArgs,
+	RunE:  runList,
+}
+
+func init() {
+	listCmd.Flags().Int64Var(&listLimit, "limit", 50, "Maximum number of providers to display")
+	listCmd.Flags().Int64Var(&listOffset, "offset", 0, "Starting offset for pagination")
+}
+
+func runList(cmd *cobra.Command, _ []string) error {
+	ctx := cmd.Context()
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	inspctr, err := inspector.New(inspector.Config{
+		ClientEndpoint:            cfg.RPCUrl,
+		PaymentsContractAddress:   cfg.PaymentsAddr(),
+		ServiceContractAddress:    cfg.ServiceAddr(),
+		ProviderRegistryAddress:   cfg.ServiceRegistryAddr(),
+		TokenAddress:              cfg.TokenAddr(),
+		SessionKeyRegistryAddress: cfg.SessionKeyRegistryAddr(),
+	})
+	if err != nil {
+		return err
+	}
+
+	res, err := inspctr.ListProviders(ctx, listOffset, listLimit)
+	if err != nil {
+		return err
+	}
+	return printer.AsJson(cmd.OutOrStdout(), res)
+}
