@@ -1,11 +1,39 @@
 # Current state
 
-**Snapshot as of 2026-09-17 20:15Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 20:30Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
-Consolidating the Fil Forge polyrepo into a monorepo at
-[`fil-forge/forge-2`](https://github.com/fil-forge/forge-2), which becomes
-`forge` at the end. The plan is `forge-consolidation-plan.md` (Phases 0–6).
+Consolidating the Fil Forge polyrepo into a monorepo. The plan is
+`forge-consolidation-plan.md` (Phases 0–6).
+
+## The monorepo is on `fil-forge/forge` now
+
+**At 20:21Z Petra pushed `24b18ee5` onto
+[`fil-forge/forge`](https://github.com/fil-forge/forge)'s `main`** and closed
+[#6](https://github.com/fil-forge/forge/pull/6),
+[#7](https://github.com/fil-forge/forge/pull/7) and
+[#8](https://github.com/fil-forge/forge/pull/8) — the pre-fork chain, whose
+base history `main` no longer contains. `fil-forge/forge` has **no open PRs**.
+
+Read from the remotes, not inferred: this is a **push, not a rename**. Both
+repositories still exist and both `main`s are `24b18ee5`, but they are
+distinct — `forge` has 13 branches and neither `wiki` nor
+`claude/swarf-firehose-scanner`; `forge-2` has 14 including both. So:
+
+- **Module paths `github.com/fil-forge/forge/*` are now correct at the repo
+  they name.** The interim wrongness the plan flagged (an external `go get`
+  resolving at a repo without the code) is over for `main`.
+- **The monorepo's CI ran on `forge` for the first time** — the push started
+  `ci` (run 36, on top of old-forge's own 35), and `e2e`, `itest` and `images`
+  at **run 1**. `images` went green in 3m04s. See below for the rest.
+- **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z
+  against the *old* `f60dd596`. Its next scheduled run is the first against
+  the monorepo tree, and nobody has seen that happen.
+- **Open work is still on `forge-2`**: the `wiki` branch this page lives on,
+  the branch deletion list, `claude/shard-itest`, and
+  [#28](https://github.com/fil-forge/forge-2/pull/28). **Where #28 lands is
+  Petra's call** — its branch would apply to `forge` unchanged, since the two
+  `main`s are the same commit.
 
 ## Approach
 
