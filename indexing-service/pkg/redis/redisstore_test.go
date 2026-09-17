@@ -360,7 +360,7 @@ func TestBatchingValueSetStore(t *testing.T) {
 
 	ctx := context.Background()
 	container, err := valkey.Run(ctx,
-		"valkey/valkey:7.2.5",
+		"valkey/valkey:7.2.5@sha256:57361de39073ea1ef5e7bcfd8068871b21c0a197f01d460e15511f27070fc49b",
 		valkey.WithSnapshotting(10, 1),
 		valkey.WithLogLevel(valkey.LogLevelVerbose),
 	)
