@@ -219,11 +219,176 @@ someone adds an import; a typed list silently can.
 the other three did, so its runs piled up on a re-push instead of cancelling;
 that was fixed separately and is not what this entry is about.
 
+**The interim, in place now.** Since no check is required yet, every pull
+request opens with a block naming the checks a reviewer can merge without
+waiting for, and why — a manual, per-push version of the same idea, recorded in
+`AGENTS.md`. It has neither fault above: it cannot go stale, and nothing is
+skipped so nothing reports *skipped*. Keep the blocks; when the derived gate is
+designed, they are the worked examples of what it has to express.
+
 **The choice.** Build the derived gate, accept the cost as the price of not
 having a stale filter list, or find a third thing — perhaps splitting the
 slowest suites onto a different trigger.
 
 ---
+
+## Decide how much further to go on CI wall clock
+
+**Measured, not estimated.** `itest` is the long pole at ~30 minutes.
+[#21](https://github.com/fil-forge/forge-2/pull/21) built test sharding, ran it
+green, and was closed unmerged for simplicity; branch `claude/shard-itest`
+survives at `e0205346`, so reviving it is a reopen. Its A/B is the evidence
+base for everything here — #19's unsharded run finished four minutes after
+#21's sharded one, same runner pool, same hour:
+
+| | unsharded | sharded (closed) |
+|---|---|---|
+| `itest` workflow | **30m43s** | 23m07s |
+| slowest job | 29m29s | 17m07s |
+| test binary | **1267.853s** | 628.841 + 462.731 + 204.654s |
+| runner-minutes | **29m29s** | 42m04s |
+
+Total test work was unchanged (+2.2%): nothing got cheaper, it got spread. The
+trade on offer was ~43% more runner-minutes and four `itest` jobs of flake
+surface instead of two, for ~25% less wall clock. Declined.
+
+**Where the ~30 minutes actually goes**, from the job log: ~7 min of checkout,
+setup-go, vet, staticcheck and tidy plus the 8 image builds, and ~21 min of
+test binary. Inside the test binary, 13 top-level tests boot 13 full stacks;
+`stack_test.go` logs the cost itself.
+
+### Live options, in order
+
+- **Layer-cache the image builds** — done, pending review, and the cheapest
+  thing available: `itest.yml` and `e2e.yml` used plain `docker build`, which
+  cannot use `--cache-from type=gha` at all, so the absence of a cache was never
+  a decision. `images.yml` stays cold as the canary. **Re-measure once it has
+  merged and had one warm run** — the first run after merge is cold by
+  construction, and the number to compare is the ~6 min build step.
+- **`lockWaitTime` is 3s in our own versitygw fork, and it is self-imposed.**
+  `tests/integration/utils.go:2654` in
+  `github.com/fil-forge/versitygw` (pinned `v0.0.0-20260914113944-a628e2cc628c`)
+  sets `lockWaitTime = time.Second * 3`; `cleanupLockedObjects` sets
+  `RetainUntilDate: time.Now().Add(lockWaitTime)` and then sleeps the same
+  duration waiting for the lock it just created to lapse. Nothing external
+  requires 3 seconds — the teardown picks the date.
+
+  **38 call sites** across `Access_Control.go`, `CopyObject.go`,
+  `CreateMultipartUpload.go`, `GetObject*.go`, `PutObject*.go`,
+  `WORM_protection.go` and `versioning.go`, so at one firing each that is
+  **~114s of pure `time.Sleep`** inside `TestForgeVersity`, the test that bounds
+  the suite. 3s → 1s saves ~76s. **1s is the safe floor until someone checks**
+  whether sub-second `RetainUntilDate` round-trips through ingot's object-lock
+  path; second granularity is the conservative assumption, not a verified one.
+  versitygw is a fork we control, but it is a different repository, so this
+  lands upstream and arrives here as a pin bump.
+- **Build the images once and load them** — `images.yml` already builds all 8
+  and could hand them over as an artifact, removing the build from `itest` and
+  `e2e` entirely rather than just caching it. Unmeasured, and the uncertainty is
+  real: 8 images is likely 1–2 GB of round-trip. A registry would be faster but
+  `images.yml` deliberately takes no `packages: write` so fork pull requests
+  work. **Try the cache first**; if it works this stops mattering.
+- **Sharding, if revived, should bin-pack against measured durations.** The
+  closed implementation split by test *name order*, which assumes uniform cost:
+  629s / 463s / 205s, where perfect balance would be 432s — 3m17s lost to
+  imbalance alone. It must be derived from a previous run's timings, never a
+  hand-written grouping, which is a list a new test falls out of silently.
+- **Sharing one stack across tests is parked**, and the arithmetic that made it
+  look attractive was wrong. Shard 3 ran four tests — four boots — in 204.654s,
+  so a boot is at most ~51s, not the ~80s taken from 1257/13. It is worth less
+  than the 3–4 minutes last estimated, and it changes test isolation in the one
+  job that exists to catch flakiness.
+
+**Not a lever: queue wait.** Sharding took it from 42s to 2m25s–4m47s, because
+four concurrent jobs do not all get runners at once. It is the reason more
+shards buy less than they look like they should.
+
+---
+
+## Reproduce forgectl's mainnet metrics jobs, before the polyrepo is archived
+
+`forgectl` is the only imported service that had genuinely scheduled workflows,
+and they are operational rather than CI:
+
+| workflow | schedule | runs |
+|---|---|---|
+| `metrics-payments.yaml` | every 30 minutes | `forgectl metrics payments --payer … --otlp-endpoint …` |
+| `metrics-faults.yaml` | every 12 hours | `forgectl metrics faults …` |
+
+Both target `environment: mainnet` and push to an OTLP endpoint, taking the
+payer address and endpoint from repository secrets.
+
+**Nothing is broken today.** They run in `fil-forge/forgectl`, which still
+exists; the copies that came in with the subtree never ran, because GitHub reads
+workflows only at the repository root, and they have now been deleted.
+
+**The hazard is the archival step.** Whenever `fil-forge/forgectl` is archived
+or its workflows are disabled, mainnet fault and payment metrics stop, silently
+— a dashboard goes flat and nothing fails. Reproducing them here needs a
+`mainnet` environment and the two secrets configured on this repository, which
+is a person's job, not an agent's. Sequence it with the archival rather than
+after it.
+
+The seven services pruned earlier carry no equivalent risk: the only
+`schedule:` keys among every file that prune deleted were dependabot intervals.
+
+---
+
+## Phase 1 needs machinery this repository does not have
+
+The consolidation plan says to "cut initial release tags … via the *existing*
+`release.yml` flow". **There is no `release.yml`.** `main` has four workflows —
+`ci`, `e2e`, `images`, `itest` — and none of them tags, releases or publishes.
+The plan treated `forge` at `f60dd59` as a starting point that already had that
+apparatus; this repository was built from subtree imports instead, and the
+apparatus was never part of them.
+
+What survives is raw material, and it is uneven:
+
+| | have it |
+|---|---|
+| `version.json` | 8 of 10 — not `forgectl`, not `smelt` |
+| `.goreleaser.yaml` | 4 — `indexing-service`, `ingot`, `piri`, `sprue` |
+| `Dockerfile.release` | 4 — `hilt`, `ingot`, `sprue`, `swarf` |
+
+**The `Dockerfile.release` files are goreleaser-shaped, not repo-shaped.** Each
+is `FROM debian:bookworm-slim@…` plus `COPY <svc> /usr/bin/<svc>` — it copies a
+*pre-built binary* from goreleaser's `dist/` context. So "nothing builds them"
+cannot be fixed by adding a CI job; it needs the release flow to exist first.
+Note also that `hilt` and `swarf` have a `Dockerfile.release` and **no**
+`.goreleaser.yaml`, so those two are doubly orphaned.
+
+**And one trap worth seeing before it bites:** at the monorepo root, `hilt` is a
+*directory*. `COPY hilt /usr/bin/hilt` is unambiguous in goreleaser's `dist/`,
+and copies an entire source tree if anyone ever builds that file with the
+repository root as context — which is the context every other Dockerfile here
+uses.
+
+### Sequencing: tags are gated on the rename
+
+Module paths are already `github.com/fil-forge/forge/*`, and a submodule tag has
+to be `<svc>/vX.Y.Z` in the repository the module path names. A tag pushed to
+`fil-forge/forge-2` sits where no module path resolves: `go get
+github.com/fil-forge/forge/piri@piri/v1.2.3` looks in `fil-forge/forge`, the old
+repository, and finds nothing. **Any tag cut before the rename has to be cut
+again after it**, so the rename gates the tagging half of Phase 1.
+
+The parts that do not: deciding the tag scheme, writing the release workflow,
+`compat.yml`, and giving `forgectl` and `smelt` a `version.json` if the flow
+wants one.
+
+**`compat.yml` matters more than it did.** Moving `itest` to images built from
+HEAD removed the only thing that was accidentally testing compatibility against
+the deployed network.
+
+**Reference material** for all of this is `indexing-service`'s old per-repo
+workflows — `releaser.yml`, `tagpush.yml`, `release-binaries.yml`,
+`release-check.yml`, `publish-ghcr.yml` — which were inert here and have been
+deleted; they are one `git show` away in this repository's history, and still
+live in the polyrepo. Note `images.yml` deliberately takes no `packages: write`
+so that fork pull requests work, so publishing needs its own workflow or a job
+split rather than a flag on that one.
+
 
 # Findings in the imported code
 
