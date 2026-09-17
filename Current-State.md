@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 16:08Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 16:20Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -176,11 +176,32 @@ Two open, both on `main`, neither stacked on anything — #17 merging retargeted
 | PR | branch | what |
 |---|---|---|
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` `6442c4c5` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17 |
-| [#21](https://github.com/fil-forge/forge-2/pull/21) | `claude/shard-itest` `f4c5c21f` | `itest ingot` sharded across three runners, shards deriving their own tests. **Changes check names**: `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3` |
+| [#21](https://github.com/fil-forge/forge-2/pull/21) | `claude/shard-itest` `e0205346` | `itest ingot` sharded across three runners, shards deriving their own tests. Measured at ~25%, and the entry now carries the numbers plus two unexploited levers. **Changes check names**: `itest ingot` → `itest ingot 1/3`, `2/3`, `3/3` |
+| [#22](https://github.com/fil-forge/forge-2/pull/22) | `claude/ignorable-checks` `b3bdc66e` | `AGENTS.md` gains the skippable-checks practice below. Petra's idea, 2026-09-17 |
 
-Both had CI in flight as of this snapshot. #21 is still based on `3c3fe769` and
-does not need rebasing: it touches only `itest.yml` and `MONOREPO_TODO.md`, and
-`main` since then has touched neither.
+#19 is 22/22 green. #21 is still based on `3c3fe769` and does not need
+rebasing: it touches only `itest.yml` and `MONOREPO_TODO.md`, and `main` since
+then has touched neither. #22 is one file nothing reads.
+
+**Every pull request now opens with a block naming the checks a reviewer can
+merge without waiting for, and why** — Petra's idea (2026-09-17), and the
+interim for the path-filtering question. It is manual on purpose: a `paths:`
+list goes stale silently when a module gains a dependency, and a path-filtered
+job reports *skipped*, which never satisfies a required status check. A block
+rewritten per push has neither fault, and it can say things no path pattern
+can — #21's says "`itest` already passed on `f4c5c21f` and
+`git diff f4c5c21f HEAD -- .github/` is empty", which is a fact about two shas,
+not a path.
+
+Two conditions make it work rather than just feel good. **Derive it, do not
+assert it** — the closure here is not obvious, which is the whole reason CI is
+unfiltered, and `ingot → indexing-service` and `delegator → forgectl` were both
+invisible in `go.mod`. And **state what it costs when wrong**: the checks still
+run, so an ignored check that goes red leaves `main` red, and the reviewer is
+the one taking that trade. The blocks are kept — when real filtering is
+designed they are the worked examples of what it must express, and the ones
+that turn out wrong are worth more than the ones that do not.
+[#22](https://github.com/fil-forge/forge-2/pull/22) puts it in `AGENTS.md`.
 
 **#12's merge needed a human**, and the reason is worth keeping: GitHub had it
 registered as a *stacked* pull request from when its base was
