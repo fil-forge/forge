@@ -136,7 +136,7 @@ services:
     volumes:
       - hilt-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U hilt -d hilt"]
+      test: ["CMD-SHELL", "pg_isready -U hilt -d hilt -h 127.0.0.1"]
       start_interval: 1s
       interval: 5s
       timeout: 3s

@@ -150,7 +150,7 @@ func buildPostgresService() ComposeService {
 			"piri-postgres-data:/var/lib/postgresql/data",
 		},
 		Healthcheck: &Healthcheck{
-			Test:          []string{"CMD-SHELL", "pg_isready -U piri -d postgres"},
+			Test:          []string{"CMD-SHELL", "pg_isready -U piri -d postgres -h 127.0.0.1"},
 			StartInterval: "1s",
 			Interval:      "5s",
 			Timeout:       "3s",

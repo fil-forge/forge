@@ -56,6 +56,8 @@ jobs:
         run: .github/scripts/check-base-images.sh
       - name: every pulled compose image is pinned by digest
         run: .github/scripts/check-stack-images.sh
+      - name: every pg_isready healthcheck probes TCP
+        run: .github/scripts/check-pg-healthchecks.sh
       - name: gofmt
         run: |
           unformatted=$(gofmt -s -l .)
