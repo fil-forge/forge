@@ -314,11 +314,44 @@ was one click — but no API route the agent has could do it.
    none of them tags, releases or publishes. What survives from the polyrepo
    is raw material, and uneven:
 
-   | | have it |
-   |---|---|
-   | `version.json` | 8 of 10 — not `forgectl`, not `smelt` |
-   | `.goreleaser.yaml` | 4 — `indexing-service`, `ingot`, `piri`, `sprue` |
-   | `Dockerfile.release` | 4 — `hilt`, `ingot`, `sprue`, `swarf`, and **nothing builds them** |
+   Per service, derived from the tree rather than asserted — "in list" is the
+   old `release.yml`'s hard-coded allowlist `piri|hilt|sprue|ingot`:
+
+   | service | in list | `version.json` | `.goreleaser.yaml` | `dockers:` | `Dockerfile.release` |
+   |---|---|---|---|---|---|
+   | `piri` | ✓ | ✓ | ✓ | — | — |
+   | `hilt` | ✓ | ✓ | **—** | — | ✓ |
+   | `sprue` | ✓ | ✓ | ✓ | ✓ | ✓ |
+   | `ingot` | ✓ | ✓ | ✓ | ✓ | ✓ |
+   | `indexing-service` | — | ✓ | ✓ | — | — |
+   | `swarf` | — | ✓ | **—** | — | ✓ |
+   | `delegator` | — | ✓ | — | — | — |
+   | `piri-signing-service` | — | ✓ | — | — | — |
+   | `forgectl` | — | — | — | — | — |
+   | `smelt` | — | — | — | — | — |
+
+   Three things fall straight out of it:
+
+   - **`hilt` is in the allowlist with no `.goreleaser.yaml`.** Restoring
+     `release.yml` as written would tag `hilt/vX.Y.Z`, create its GitHub
+     release, and *then* fail at the goreleaser step — leaving a published tag
+     with no artifacts behind it. `swarf` has the same absence but is not in
+     the allowlist, so it simply never releases.
+   - **"Nothing builds the `Dockerfile.release` files" is stronger than it
+     sounds.** `hilt`'s and `swarf`'s are wired to nothing that *could* build
+     them: no goreleaser config exists to invoke them. Only `ingot` and
+     `sprue` have a `dockers:` section naming `Dockerfile.release` — and those
+     two publish to the retired `ghcr.io/fil-forge/<svc>`, not
+     `ghcr.io/fil-forge/forge/<svc>`.
+   - **`piri` and `indexing-service` would release binaries and no image** —
+     goreleaser config, no `dockers:`, no `Dockerfile.release`.
+
+   The hazard in every `Dockerfile.release` is the same one the main
+   Dockerfiles had: `COPY <svc> /usr/bin/<svc>` is unambiguous inside
+   goreleaser's own context, where `<svc>` is the cross-compiled binary, and
+   silently copies a **directory** if anyone ever builds one with the
+   repository root as context. Not verifiable here — no Docker daemon in this
+   environment and no goreleaser run to hand it a context.
 
    `images.yml` also deliberately takes no `packages: write`, so fork pull
    requests work — publishing needs its own workflow or a job split rather
