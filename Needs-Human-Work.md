@@ -19,7 +19,8 @@ tidying and block nothing.
 
 ## Open pull requests
 
-One — **#28**. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
+Two — **#28** here, and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
+upstream, carrying the identical patch. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
 its guard are live, and `e2e` has now passed twice on the fix (still weak
 evidence: two passes had a ~90% chance even unfixed). #25 and #26
 merged, so the layer cache is live on `main` (`95e83665`) and its numbers are
@@ -36,7 +37,7 @@ than a feeling.
 
 | | what | state |
 |---|---|---|
-| [#28](https://github.com/fil-forge/forge-2/pull/28) | **swarf's firehose client dropped oversized events and then hung** — default 64 KiB scanner cap, `ErrTooLong` discarded, so `Stream` reconnected at the same cursor forever. hilt and ingot both link it in production. | `52648c29`, **22/22 green**. **Should also go upstream**: the patch is path-free and applies, builds and passes cleanly on `fil-forge/swarf` itself, and upstream `hilt` and `ingot` pin a swarf version that has the bug — so as it stands #28 fixes the copy nobody deploys. Needs `fil-forge/swarf` added to the session's repo scope, plus a pin bump in each consumer afterwards. **Three sibling findings are left deliberately**: the `immutable` cache on a mutable route, the memory-vs-PostgreSQL `Get` divergence, and the 10s settle window. Each is a **contract decision** — I would rather you chose than have me encode one. |
+| [#28](https://github.com/fil-forge/forge-2/pull/28) | **swarf's firehose client dropped oversized events and then hung** — default 64 KiB scanner cap, `ErrTooLong` discarded, so `Stream` reconnected at the same cursor forever. hilt and ingot both link it in production. | `52648c29`, **22/22 green**. **Now also open upstream** as [`fil-forge/swarf` #17](https://github.com/fil-forge/swarf/pull/17) (`a50b142`) — the identical patch, re-verified in both directions against upstream's own tree. That was the part that mattered: upstream `hilt` and `ingot` pin a swarf version that has the bug, so #28 alone fixes the copy nobody deploys. **Still yours:** review and merge swarf #17, then a pin bump in each consumer — the same shape as the versitygw `lockWaitTime` item. **Three sibling findings are left deliberately**: the `immutable` cache on a mutable route, the memory-vs-PostgreSQL `Get` divergence, and the 10s settle window. Each is a **contract decision** — I would rather you chose than have me encode one. |
 
 **No check-name change is outstanding.** #16's `replaces` → `guards` is merged,
 live, and confirmed resolved (2026-09-17). #21 would have added a second

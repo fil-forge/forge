@@ -180,7 +180,8 @@ One open. **#27 merged** (`24b18ee5`), so the postgres healthcheck fix and its g
 
 | PR | branch | what |
 |---|---|---|
-| [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29`, **22/22 green** | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used | `pg_isready -h 127.0.0.1` on all six sites + `check-pg-healthchecks.sh`. Fixes the `e2e` flake at its root |
+| [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29`, **22/22 green** | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used |
+| [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) | `claude/firehose-scanner-buffer` `a50b142` | **upstream**, the identical patch — see *The deferred import findings* below |
 
 **The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
 23s warm against a 7m34s baseline, with the caveats below. **#27** is the
@@ -442,10 +443,30 @@ only what a change affects. None is blocking; none should be answered early.
   the final pull: when ours and theirs are byte-identical, the three-way merge
   takes it with no conflict at all.
 
-  **Two caveats.** `fil-forge/swarf` is **not in this session's repository
-  scope**, so an upstream PR needs the repo added first. And upstream swarf being
-  fixed does not fix its consumers: `hilt` and `ingot` would each need a pin bump
-  to pick it up — the same shape as the versitygw `lockWaitTime` item.
+  **Opened upstream 2026-09-17 as
+  [`fil-forge/swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
+  (`claude/firehose-scanner-buffer`, `a50b142`): the same patch, applied with
+  `git apply -p2`, unmodified, and re-verified in both directions against
+  upstream's own tree — unfixed, each subtest hangs to its 30s deadline; fixed,
+  both pass in ~0.05s. The scope caveat is spent. Worth keeping from the
+  exercise: the clone arrived **shallow (depth 1)**, where `git log -S` and
+  `git merge-base` answer confidently and wrongly (`7520dac` reported as *not*
+  an ancestor of a commit it plainly precedes). `git fetch --unshallow` is what
+  made the history below checkable at all.
+
+  **A sharper reading of that history, now that it is readable.** The 64 KiB cap
+  is not four weeks old — `bufio.NewScanner` has been in `pkg/client/client.go`
+  since the initial commit `3e14143` (2026-07-16). What `7520dac` changed is the
+  *consequence*. Before it, `Stream` made one connection and **reported** the scan
+  error (`yield(…, fmt.Errorf("reading revocation stream: %w", err))`), so an
+  oversized event failed loudly on a stream that then ended. `7520dac` added the
+  reconnect-with-backoff loop **and** replaced that branch with
+  `_ = scanner.Err()`; the two together are the hang. So the hang is dated
+  exactly to 2026-08-18 — three days before the pin every consumer still carries.
+
+  **The remaining caveat stands:** fixing upstream swarf does not fix its
+  consumers — `hilt` and `ingot` each need a pin bump to pick it up, the same
+  shape as the versitygw `lockWaitTime` item.
 
   **The other three want deciding, not fixing**, and are still open: the
   revocation lookup served `immutable` for a year on a mutable route; the memory
