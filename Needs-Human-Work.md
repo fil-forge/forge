@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 16:30Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 16:48Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,8 +19,9 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Two. Both sit on `main` independently, touching disjoint files; neither carries
-a `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
+Five. All sit on `main` independently, touching disjoint files; none carries a
+`git subtree add`, so they rebase rather than needing a rule 7 rebuild. **Only
+#25 can fail** — the other four are documentation or deletions nothing reads.
 
 **Each one now opens with a block naming the checks that are safe to merge
 without waiting for** — see [[Current State]] for why, and what makes it more
@@ -30,6 +31,9 @@ than a feeling.
 |---|---|---|
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | **Move the four inline test image pins into `testutil`**, in piri's shape — named const, doc comment, env override. | `6442c4c5`, **22/22 green** at 15:52Z. Was stacked on #17; #17 merging retargeted it to `main` and Petra rebased it. Verified: the rebase brought in only #20's two files and left the six-file change intact. Answers Petra's review question on #17; she asked for it as its own PR. |
 | [#22](https://github.com/fil-forge/forge-2/pull/22) | **Open every PR with which checks are safe to merge without.** Your idea, written into `AGENTS.md` so it survives the session. The interim for path filtering; the blocks become the worked examples that design it. | `b3bdc66e`, one file, nothing in the repo reads it. **A process proposal, like #20** — worth a read rather than a merge on trust. Two things I'd look at: whether "derive, don't assert" binds hard enough, and whether the four change-shapes cover what you expect (a Dockerfile-only change and a `go.mod` bump are deliberately absent — I did not want to guess at shapes I have not had to reason about). |
+| [#25](https://github.com/fil-forge/forge-2/pull/25) | **Layer-cache the image builds in `itest`/`e2e`**, keeping `images.yml` cold as the canary. The ~6 min build sits on both critical paths and neither could ever cache it — they used plain `docker build`, which cannot use `type=gha` at all. | `7fb93177`. **The judgement call**: it leans on `images.yml` running cold on the same events, so a broken Dockerfile still turns that red on the same commit. If you do not buy that, close it rather than amend it. The first run after merge is cold by construction — do not judge it on that one. |
+| [#23](https://github.com/fil-forge/forge-2/pull/23) | **Three `MONOREPO_TODO.md` entries**: the CI wall-clock measurement re-homed off closed #21; **forgectl's mainnet metrics**; Phase 1's missing release flow and the tag/rename ordering. | `f434a879`. The forgectl item is the one with a real-world consequence — see below. |
+| [#24](https://github.com/fil-forge/forge-2/pull/24) | **Drop the last two per-service `.github/` directories** — 21 inert files under `forgectl/` and `indexing-service/`, which `7321ee6a` removed for the other seven. | `e8617e6d`. Nothing has ever run them; GitHub reads workflows only at the repository root. |
 
 **One check-name change is outstanding for branch protection**: #16's
 `replaces` → `guards`, merged and live, so a rule requiring `replaces` waits on
@@ -135,6 +139,21 @@ and the `replaces` → `guards` rename (approved and done).
   expose a wiki as a repository. **Petra is syncing the wiki herself**
   (2026-09-17), so this is not blocking; it is here so nobody assumes a push
   to the branch reaches both.
+
+- **⚠️ forgectl's mainnet metrics need a `mainnet` environment and two secrets
+  on this repository, before `fil-forge/forgectl` is archived.**
+  `metrics-payments.yaml` (every 30 minutes) and `metrics-faults.yaml` (every
+  12 hours) run `forgectl metrics payments`/`faults` against
+  `environment: mainnet` and push to an OTLP endpoint, taking the payer address
+  and endpoint from repository secrets. **Nothing is broken now** — they run in
+  the polyrepo, which still exists; the copies imported here never ran and #24
+  deletes them. **The hazard is the archival step**: whenever that repository is
+  archived or its workflows disabled, mainnet fault and payment metrics stop
+  silently — a dashboard goes flat and nothing fails. Configuring an environment
+  and secrets is a person's job, so this is here rather than in the TODO alone.
+  Sequence it *with* the archival. (No equivalent risk among the seven services
+  pruned earlier: checked every file `7321ee6a` deleted, and the only
+  `schedule:` keys were dependabot intervals.)
 
 - **Archiving `session_01GXUttS5N775eQ7QXboRAxe`**, the round-1 review
   session. It has nothing left to post; see *Recently cleared*.

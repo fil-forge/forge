@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 16:35Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 16:48Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -170,15 +170,29 @@ Before those, in order: #3 (swarf), #9 (dropped checks), #8
 also live in one-line form, and which says of itself that it is scaffolding for
 the construction rather than a guide to the finished monorepo.
 
-Two open, both on `main`, neither stacked on anything:
+Five open, all on `main`, none stacked on anything:
 
 | PR | branch | what |
 |---|---|---|
 | [#19](https://github.com/fil-forge/forge-2/pull/19) | `claude/test-image-pins` `6442c4c5` | the four inline test image pins move into `testutil`, in piri's shape (named const + doc + env override). Answers a review question on #17 |
 | [#22](https://github.com/fil-forge/forge-2/pull/22) | `claude/ignorable-checks` `b3bdc66e` | `AGENTS.md` gains the skippable-checks practice below. Petra's idea, 2026-09-17 |
+| [#23](https://github.com/fil-forge/forge-2/pull/23) | `claude/todo-ci-speed` `f434a879` | three `MONOREPO_TODO.md` entries: the CI wall-clock measurement re-homed off closed #21, forgectl's mainnet metrics, and Phase 1's missing release flow |
+| [#24](https://github.com/fil-forge/forge-2/pull/24) | `claude/prune-inert-github` `e8617e6d` | the last two per-service `.github/` directories, 21 inert files |
+| [#25](https://github.com/fil-forge/forge-2/pull/25) | `claude/ci-cache` `7fb93177` | layer-cache the image builds in `itest`/`e2e`, `images.yml` stays cold as the canary. **The only one of the five that can fail** |
 
-#19 is 22/22 green; #17 merging retargeted it to `main` and Petra rebased it.
-#22 is one file nothing reads.
+#19 is 22/22 green. #22, #23 and #24 are doc or deletion-only — nothing in the
+repository reads `AGENTS.md`, `MONOREPO_TODO.md`, or any of the 21 inert files
+#24 removes. **#25 is the only one that changes behaviour**, and its `itest` and
+`e2e` runs are its own measurement.
+
+**Pre-rename work, run while Petra is away** (2026-09-17 16:4xZ): #23, #24 and
+#25. Deliberately *not* attempted, with reasons: the release workflow itself
+(unverifiable until tags can be cut, and an unrunnable workflow is the
+silent-green shape this repo keeps deleting), `compat.yml` (needs published
+images to test against), the tag scheme (long-lived and hard to reverse — a
+recommendation, not a decision an agent should take), and building the
+`Dockerfile.release` files (they are goreleaser-shaped and need the release flow
+first).
 
 **[#21](https://github.com/fil-forge/forge-2/pull/21) (sharding `itest ingot`)
 was closed unmerged**, 16:21Z, for simplicity — it was green and measured, but
@@ -221,8 +235,9 @@ was one click — but no API route the agent has could do it.
 
 ## Next
 
-1. **Merge #19 and #22**, in either order and independently — neither carries
-   a `git subtree add`, and they touch disjoint files. One check-name change is
+1. **Merge #19, #22, #23, #24 and #25** — none carries a `git subtree add` and
+   they touch disjoint files, so any order. Only **#25** can fail; the other
+   four are documentation or deletions nothing reads. One check-name change is
    outstanding for branch protection: #16's `replaces` → `guards`, already on
    `main`. (#21 would have added a second; it is closed.)
 2. **The `forge-2` → `forge` rename — and it is no longer "whenever".** Phase 1
