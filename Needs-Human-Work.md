@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 02:55Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 14:35Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -13,53 +13,32 @@ pruned once it stops being useful.
 
 Nothing else proceeds until these do.
 
-- **[#12](https://github.com/fil-forge/forge-2/pull/12) is green and ready and
-  the agent cannot merge it.** 22/22 checks, `mergeable_state: clean`, base
-  `main`. GitHub has it registered as a **stacked** pull request — left over
-  from when its base was `claude/indexer-from-head` — and that survived #11
-  merging and the retarget to `main`. Every route the agent has refuses:
-
-      REST merge        403  Merging stacked PRs via this endpoint is not supported
-      auto-merge        Auto-merge is not supported for stacked pull requests
-      change the base   Cannot change the base branch because the PR is part of a stack
-
-  The web UI's merge button uses the endpoint the first error points at, so
-  this is **one click for you** and nothing is wrong with the PR. Merging it
-  closes the import phase: all ten in-scope modules in.
-
-  (The earlier blocker on this page — the force-push needed to rebuild #12 —
-  is cleared. Petra authorised it, the rebuild is pushed, and it is what is
-  green now.)
+*Nothing blocking.* **The import phase is closed** — #12 merged as `7ccafeab`
+and all ten in-scope modules are on `main`. The two open PRs are follow-on
+tidying and block nothing.
 
 ## Open pull requests
 
-Four. #12 is the last import; #15 → #16 → #17 are follow-on tidying and stack
-on each other. None of the three carries a `git subtree add`, so they rebase
-rather than needing a rule 7 rebuild.
+Two, stacked. Neither carries a `git subtree add`, so they rebase rather than
+needing a rule 7 rebuild.
 
 | | what | state |
 |---|---|---|
-| [#12](https://github.com/fil-forge/forge-2/pull/12) | **Bring `forgectl` in** — the tenth and last in-scope module. Widens delegator's Docker context to the repository root, because delegator links it in non-test code. | **22/22 green.** Blocked on the merge above, not on anything technical. |
-| [#15](https://github.com/fil-forge/forge-2/pull/15) | **`ci.yml` gains `permissions: contents: read`** — it was the only workflow without one — plus the CI path-filtering question recorded in `MONOREPO_TODO.md`. | On `main`. Two changes in one PR *deliberately*: unfiltered CI charges a full ~26-minute `itest` run for a Markdown file, so two PRs would have cost two of them. Split it if you would rather. |
-| [#16](https://github.com/fil-forge/forge-2/pull/16) | **Pin the base images our Dockerfiles build `FROM`** — 26 references, by index digest — plus `check-base-images.sh`. Rule 2 applied one layer below where #6 stopped. | On #15. |
-| [#17](https://github.com/fil-forge/forge-2/pull/17) | **Pin the 5 references that arrived after #6 had finished pinning**, carried in by swarf (#3) and indexing-service (#10) — plus `check-stack-images.sh` for compose. | On #16. |
+| [#16](https://github.com/fil-forge/forge-2/pull/16) | **Pin the base images our Dockerfiles build `FROM`** — 26 references, by index digest — plus `check-base-images.sh`. Second commit renames the `replaces` job to `guards`. | On `main`. Was 21/21 green before the rebase and the rename. |
+| [#17](https://github.com/fil-forge/forge-2/pull/17) | **Pin the 5 references that arrived after #6 had finished pinning**, carried in by swarf (#3) and indexing-service (#10) — plus `check-stack-images.sh` for compose. | On #16. Was 21/21 green before the rebase. |
 
-**Nothing is left to import.** `MAJOR_DECISIONS.md` named indexing-service and
-forgectl as the last two pending; indexing-service landed with #10 and
-forgectl is #12. Do not start another module without saying so.
+**#16 changes a check name**, `replaces` → `guards`. A branch protection rule
+that requires the old name stops being satisfied until it is updated. Done on
+Petra's say-so, 2026-09-17.
+
+**Nothing is left to import**, and nothing should be started. `MAJOR_DECISIONS.md`
+records what is deliberately out.
 
 ## Waiting on Petra
 
-Decisions taken while you were away, all reversible, all flagged on the PR
-that made them. None needs undoing to keep going; they need confirming.
+Decisions taken while she was away, all reversible, all flagged on the PR that
+made them. None needs undoing; they need confirming.
 
-- **#15 bundles two unrelated changes** — a workflow permissions block and a
-  TODO entry — to spend one CI run instead of two. Ordinarily they would be
-  separate.
-- **#16 leaves the `replaces` job named `replaces`** though it now runs three
-  guards (`check-replaces.sh`, `gofmt -s`, `check-base-images.sh`). Renaming it
-  changes a check name and could break required-status-check configuration, so
-  it was not done unattended. It wants to be `guards`.
 - **#17 reuses digests already in the tree** rather than resolving fresh —
   `postgres:16-alpine` is `cf78e766…` in four other places, the minio release
   `2c4349a1…` in piri's testutil. Resolving fresh would have put two builds of
@@ -70,14 +49,22 @@ that made them. None needs undoing to keep going; they need confirming.
   that moved `staticcheck.conf` to the root on #10. Judged acceptable here:
   #6 already pins images inside `piri/`, `hilt/` and `sprue/`, and unlike a
   lint config an image pin has no root-level alternative.
-- **A CI guard added on the agent's own initiative, easy to drop.** You
-  declined a squashed-subtree guard, so this one is named rather than assumed
-  welcome: `.github/scripts/check-replaces.sh` also fails when a `go.mod`
-  requires a service this repository contains under its old upstream path. It
-  has earned its keep twice — `hilt/itest/go.mod` on #3, `ingot/itest/go.mod`
-  on #10, both nested modules a sweep over the service's own `go.mod` misses.
-  One commit (`3b4c4d8e`), reverts cleanly. #16 and #17 each add one more
-  guard in the same spirit.
+- **#17 ships no Go image guard, deliberately**, and the reason is measured: a
+  string shaped like an image reference matches 367 times in this repository,
+  almost all `s3:GetObject` IAM actions and `host:port` pairs; narrowing to
+  testcontainers call sites drops that to 8 but then misses two of the real
+  references. A guard over part of a class reads exactly like a guard over the
+  class (L12), so there is none rather than a partial one. That population
+  stays unguarded, on purpose and in writing.
+- **Two CI guards now exist that were the agent's own initiative.** The
+  squashed-subtree guard was declined, so these are named rather than assumed
+  welcome: `check-replaces.sh`'s second pass (one commit, `3b4c4d8e`, which
+  has since caught the same fault twice — `hilt/itest/go.mod` on #3 and
+  `ingot/itest/go.mod` on #10), and now `check-base-images.sh` and
+  `check-stack-images.sh` on #16 and #17. All revert cleanly.
+
+*Cleared since the last update:* #15's two-changes-in-one-PR bundling (merged),
+and the `replaces` → `guards` rename (approved and done).
 
 ## Needs access the agent does not have
 
@@ -86,8 +73,9 @@ that made them. None needs undoing to keep going; they need confirming.
   ordinary pushes to the same remote succeed. Left for a human rather than
   routed around.
 
-  **Verified fully contained in `main` (`da029c51`) as of 02:55Z, safe to
-  delete now:** `claude/bring-in-swarf`, `claude/ci-concurrency`,
+  **Verified fully contained in `main` (`ff2f794d`) as of 14:35Z, safe to
+  delete now — seven of them:** `claude/bring-in-forgectl`,
+  `claude/bring-in-swarf`, `claude/ci-concurrency`, `claude/ci-permissions`,
   `claude/indexer-from-head`, `claude/monorepo-todo`,
   `claude/upstream-findings`.
 
@@ -96,8 +84,7 @@ that made them. None needs undoing to keep going; they need confirming.
   content), and `claude/pin-guppy`, which is
   [#2](https://github.com/fil-forge/forge-2/pull/2), closed unmerged.
 
-  **Live, must stay:** `claude/bring-in-forgectl` (#12),
-  `claude/ci-permissions` (#15), `claude/pin-base-images` (#16),
+  **Live, must stay:** `claude/pin-base-images` (#16),
   `claude/pin-stragglers` (#17).
 
 - **This wiki lives in two places and the agent can only write one.** These
@@ -139,6 +126,19 @@ still your call.
 
 ## Recently cleared
 
+- **The import phase is over.** #12 merged 2026-09-17 as `7ccafeab`, putting
+  forgectl in and with it the tenth and last in-scope module. #15 followed as
+  `ff2f794d`. `main` now carries delegator, forgectl, hilt, indexing-service,
+  ingot, piri, piri-signing-service, smelt, sprue and swarf, each with its own
+  history behind a subtree merge.
+- **#12's merge could not be done by the agent**, and that is worth keeping
+  rather than forgetting: GitHub had it registered as a *stacked* pull request
+  from when its base was `claude/indexer-from-head`, and the registration
+  outlived both #11 merging and the retarget to `main`. REST merge, auto-merge
+  and changing the base all refused, each with a different message naming the
+  stack. One click in the web UI, no API route.
+- **The `replaces` job is now `guards`.** It had run `gofmt -s` as well as
+  `check-replaces.sh` for some time, and #16 and #17 add two more guards.
 - **#14 merged** 2026-09-17 ~01:5xZ as `da029c51` — `ci.yml` gained the
   `concurrency` block the other three workflows already had, so its runs stop
   piling up on a re-push. Amended in review to drop a comment that explained

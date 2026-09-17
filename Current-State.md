@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 02:55Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 14:35Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -28,10 +28,9 @@ Seven rules that have actually decided things:
    - **Things being retired**, which are not worth moving: `guppy` is
      being dismantled and archived now, not at some later phase.
 
-   In: `piri`, `hilt`, `ingot`, `sprue`, `smelt`, `delegator`,
-   `piri-signing-service`, `swarf`, `indexing-service` (all landed), and
-   `forgectl` — the last one, open as
-   [#12](https://github.com/fil-forge/forge-2/pull/12).
+   In, and **all ten are now on `main`**: `piri`, `hilt`, `ingot`, `sprue`,
+   `smelt`, `delegator`, `piri-signing-service`, `swarf`, `indexing-service`,
+   `forgectl`. Nothing is left to import.
 
    This rule has a useful side effect: anything moving in stops being an
    external dependency, so it needs no image pin — see rule 2.
@@ -145,38 +144,36 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `da029c51`.** Phase 0 complete and then some: **nine** services
-subtree-merged with history, module paths rewritten, `go.work`, per-module CI,
-library pins unified, every subtree resynced to its upstream head, 18 images
-pinned by digest, the checks the per-service `.github/` directories took with
-them restored, and the stack booting in CI from images built at HEAD.
+**`main` is at `ff2f794d`, and the import phase is closed.** All **ten**
+in-scope modules are subtree-merged with their histories, module paths
+rewritten, `go.work`, per-module CI, library pins unified, every subtree
+resynced to its upstream head, images pinned by digest, the checks the
+per-service `.github/` directories took with them restored, and the stack
+booting in CI from images built at HEAD.
 
-Merged since the last snapshot: **#3** (swarf, `433cd628`), **#9** (dropped
-checks restored, `7435ba98`), **#8** (`MONOREPO_TODO.md`, `f1746b3e`), **#10**
-(indexing-service, `6c6cad31`), **#11** (the indexer built from HEAD,
-`ecb70114`) and **#14** (`ci.yml`'s `concurrency` block, `da029c51`).
+`git ls-tree main` now lists: `delegator`, `forgectl`, `hilt`,
+`indexing-service`, `ingot`, `piri`, `piri-signing-service`, `smelt`,
+`sprue`, `swarf`.
 
-Four open. **#12 is the last import; the other three are follow-on tidying and
-form a stack.**
+Merged since the last snapshot: **#12** (forgectl — the tenth and last,
+`7ccafeab`) and **#15** (`ci.yml`'s `permissions` block and the
+path-filtering TODO entry, `ff2f794d`). Before those, in order: #3 (swarf),
+#9 (dropped checks), #8 (`MONOREPO_TODO.md`), #10 (indexing-service),
+#11 (the indexer from HEAD) and #14 (`ci.yml`'s `concurrency` block).
 
-| PR | branch | what | state |
-|---|---|---|---|
-| [#12](https://github.com/fil-forge/forge-2/pull/12) | `claude/bring-in-forgectl` | forgectl, the tenth and last in-scope module; widens delegator's Docker context to the repository root | **22/22 green, `mergeable_state: clean`** — and blocked, see below |
-| [#15](https://github.com/fil-forge/forge-2/pull/15) | `claude/ci-permissions` | `ci.yml` gains `permissions: contents: read`; the path-filtering question goes to `MONOREPO_TODO.md` | on `main` |
-| [#16](https://github.com/fil-forge/forge-2/pull/16) | `claude/pin-base-images` | 26 external `FROM` references pinned by index digest + `check-base-images.sh` | on #15 |
-| [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived after #6 had finished pinning + `check-stack-images.sh` | on #16 |
+Two open, stacked, both follow-on tidying rather than migration:
 
-**#12 cannot be merged by the agent, and it is not a CI or conflict problem.**
-GitHub has it registered as a *stacked* pull request, left over from when its
-base was `claude/indexer-from-head`, and that registration survived #11 merging
-and the retarget to `main`. All three routes refuse:
+| PR | branch | what |
+|---|---|---|
+| [#16](https://github.com/fil-forge/forge-2/pull/16) | `claude/pin-base-images` | 26 external `FROM` references pinned by index digest + `check-base-images.sh`; second commit renames the `replaces` job to `guards`, which is what it is |
+| [#17](https://github.com/fil-forge/forge-2/pull/17) | `claude/pin-stragglers` | the 5 image references that arrived with swarf and indexing-service *after* #6 had finished pinning + `check-stack-images.sh` |
 
-    REST merge          403  Merging stacked PRs via this endpoint is not supported
-    auto-merge          Auto-merge is not supported for stacked pull requests
-    change the base     Cannot change the base branch because the PR is part of a stack
-
-The web UI's own merge button uses the endpoint the error points at, so it is
-one click for a human. Recorded rather than worked around.
+**#12's merge needed a human**, and the reason is worth keeping: GitHub had it
+registered as a *stacked* pull request from when its base was
+`claude/indexer-from-head`, and that registration outlived both #11 merging and
+the retarget to `main`. REST merge, auto-merge and changing the base all
+refused. The web UI's own button uses the endpoint the error points at, so it
+was one click — but no API route the agent has could do it.
 
 **Polyrepo MinIO repoints are all merged**: `smelt`,
 [indexing-service#96](https://github.com/fil-forge/indexing-service/pull/96),
@@ -185,23 +182,28 @@ one click for a human. Recorded rather than worked around.
 
 ## Next
 
-1. **Merge #12.** That closes the import phase: all ten in-scope modules in,
-   and nothing left to bring in. Do not start another import without Petra
-   saying so — `MAJOR_DECISIONS.md` records what is deliberately out and why.
-2. **Then #15 → #16 → #17**, in that order; each is stacked on the one above.
-   None of the three carries a `git subtree add`, so they rebase rather than
-   needing a rule 7 rebuild.
-3. **Phase 1** — release tags, `compat.yml`, publishing. `compat.yml` matters
-   more than it did: moving `itest` to HEAD images removed the only thing that
-   was accidentally testing compatibility against the deployed network.
-4. **`libforge`'s dissolution** is what first exercises the audience rule
+1. **Merge #16, then #17.** Stacked in that order; neither carries a
+   `git subtree add`, so they rebase rather than needing a rule 7 rebuild.
+   #16 changes a check name (`replaces` → `guards`), so a branch protection
+   rule naming the old one needs updating with it.
+2. **Phase 1** — release tags, `compat.yml`, publishing. This is the next
+   real phase now that the imports are done. `compat.yml` matters more than
+   it did: moving `itest` to HEAD images removed the only thing that was
+   accidentally testing compatibility against the deployed network.
+3. **`libforge`'s dissolution** is what first exercises the audience rule
    (rule 1). Nothing currently in the repository is a pure library.
-5. **The `forge-2` → `forge` rename**, whenever this path is judged correct.
+4. **The `forge-2` → `forge` rename**, whenever this path is judged correct.
    Waiting on a person; see [[Needs Human Work]].
 
-`MONOREPO_TODO.md` carries **six** whole-repo questions as of #8, and #15 adds
-a seventh (whether CI should run only what a change affects). None is blocking;
-none should be answered early.
+**Do not import anything else without a decision.** `MAJOR_DECISIONS.md`
+records what is deliberately out — outward-facing libraries, forks of upstream
+software, and things being retired — and every module it listed as in is now
+in.
+
+`MONOREPO_TODO.md` carries **seven** whole-repo questions: the s3-compat
+report pipeline, Renovate, hilt's build context, the macOS run,
+`stress-tester` coverage, turning `SA4006` back on, and whether CI should run
+only what a change affects. None is blocking; none should be answered early.
 
 ## Known debt
 
