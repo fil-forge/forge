@@ -100,33 +100,127 @@ jobs:
           docker version
           docker compose version
 
-      - name: build service images from HEAD
-        working-directory: .
-        # No caching, deliberately -- see images.yml. The whole matrix builds
-        # in ~2.5 min wall-clock there, and piri, the slowest, is 2m14s.
-        #
-        # A service builds with the repository root as context when its
-        # go.mod carries a `replace => ../<svc>`, and with its own directory
-        # otherwise -- the build lines below say which is which. Each
-        # Dockerfile's header explains its COPY list.
-        env:
-          DOCKER_BUILDKIT: "1"
-        run: |
-          set -euo pipefail
-          build() {
-            echo "::group::build $1"
-            docker build -f "$1/Dockerfile" --target prod -t "forge/$1:head" "$2"
-            echo "::endgroup::"
-          }
-          build piri .
-          build hilt .
-          build ingot .
-          build sprue sprue
-          build delegator .
-          build piri-signing-service piri-signing-service
-          build swarf swarf
-          build indexing-service indexing-service
-          docker image ls --filter 'reference=forge/*:head'
+      # Layer-cached, unlike `images.yml`, and the difference is deliberate.
+      #
+      # `images.yml` builds these same 8 images from cold on every pull
+      # request and every push to main, on the same events as this workflow.
+      # It is the canary: its own header says the point there is "to provoke
+      # build failures, not to avoid them", and a cache hit would mean the
+      # build did not run. That argument is about a job whose product *is* the
+      # build. Here the build is a means to running the suite, and the canary
+      # has already proved the cold build on this very commit, in parallel.
+      #
+      # So: `images.yml` stays cold, these two ride the cache. If a Dockerfile
+      # breaks, `images.yml` goes red on the same commit and this job's cache
+      # cannot hide it.
+      #
+      # `docker/build-push-action` rather than the shell loop it replaces,
+      # because `type=gha` needs ACTIONS_RUNTIME_TOKEN and ACTIONS_CACHE_URL,
+      # which GitHub does not export to `run:` steps -- the usual fix is a
+      # third-party action to export them, and this repo already trusts and
+      # uses these two in `images.yml`. It also leaves exactly one way to build
+      # an image here instead of two that can drift.
+      #
+      # Scope is per service and shared with e2e.yml on purpose: they build the
+      # same 8 images from the same commit, so whichever job runs first warms
+      # the other. Branch scoping is GitHub's: a pull request reads its base
+      # branch's cache and writes its own, so main's runs are what warm it.
+      #
+      # A service builds with the repository root as context when its go.mod
+      # carries a `replace => ../<svc>`, and with its own directory otherwise.
+      # Each Dockerfile's header explains its COPY list.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: build piri
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: piri/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/piri:head
+          cache-from: type=gha,scope=piri
+          cache-to: type=gha,scope=piri,mode=max
+      - name: build hilt
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: hilt/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/hilt:head
+          cache-from: type=gha,scope=hilt
+          cache-to: type=gha,scope=hilt,mode=max
+      - name: build ingot
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ingot/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/ingot:head
+          cache-from: type=gha,scope=ingot
+          cache-to: type=gha,scope=ingot,mode=max
+      - name: build sprue
+        uses: docker/build-push-action@v6
+        with:
+          context: sprue
+          file: sprue/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/sprue:head
+          cache-from: type=gha,scope=sprue
+          cache-to: type=gha,scope=sprue,mode=max
+      - name: build delegator
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: delegator/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/delegator:head
+          cache-from: type=gha,scope=delegator
+          cache-to: type=gha,scope=delegator,mode=max
+      - name: build piri-signing-service
+        uses: docker/build-push-action@v6
+        with:
+          context: piri-signing-service
+          file: piri-signing-service/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/piri-signing-service:head
+          cache-from: type=gha,scope=piri-signing-service
+          cache-to: type=gha,scope=piri-signing-service,mode=max
+      - name: build swarf
+        uses: docker/build-push-action@v6
+        with:
+          context: swarf
+          file: swarf/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/swarf:head
+          cache-from: type=gha,scope=swarf
+          cache-to: type=gha,scope=swarf,mode=max
+      - name: build indexing-service
+        uses: docker/build-push-action@v6
+        with:
+          context: indexing-service
+          file: indexing-service/Dockerfile
+          target: prod
+          push: false
+          load: true
+          tags: forge/indexing-service:head
+          cache-from: type=gha,scope=indexing-service
+          cache-to: type=gha,scope=indexing-service,mode=max
+      - name: image list
+        run: docker image ls --filter 'reference=forge/*:head'
 
       - name: e2e
         # -count=1 defeats Go's test-result cache, which setup-go restores
