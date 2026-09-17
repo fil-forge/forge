@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 15:30Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 15:26Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -291,10 +291,20 @@ only what a change affects. None is blocking; none should be answered early.
   runners and roughly halves the wall clock, with each shard deriving its own
   tests from `go test -list` rather than from a `-run` list a new test could
   fall out of silently.
-  **What remains is a decision, in `MONOREPO_TODO.md`**: the 8 images are still
-  built three times per pull request and sharding multiplies that; and nine of
-  the thirteen tests could share one stack, which is worth 8–16 minutes but
-  changes test isolation.
+  **What remains is a decision, in `MONOREPO_TODO.md`, and sharding has moved
+  it.** Nine of the thirteen tests could share one stack, but sharding already
+  spent most of that: both attack the same quantity, and a shared stack works
+  within a process, so nine shared tests spread across three shards boot it
+  three times, not once. Backing a boot out of the one hard number (1257s over
+  13 boots ≈ 80s each) puts ~1040s of that job in booting and ~217s in test
+  work, so sharing is worth roughly **3–4 minutes on top of sharding**, not the
+  8–16 an earlier version of this entry claimed — that figure was measured
+  against the unsharded baseline. For a change that needs per-test bucket and
+  tenant namespacing, in the job that exists to catch flakiness, that is a poor
+  trade. The larger lever is now the other one: the same 8 images are built
+  three times per pull request, and sharding multiplied rather than reduced
+  that, so at ~15 minutes the fixed ~7 min overhead is about half the job.
+  Everything but the 28 minutes and the 1257s is an estimate.
   The ordering still holds and still matters: Go's `-timeout 25m` fires first
   on a hang and dumps every goroutine, where a runner kill at the 45-minute cap
   gives nothing. The two numbers must not be levelled.
