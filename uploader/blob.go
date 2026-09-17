@@ -3,6 +3,7 @@ package uploader
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 
@@ -47,7 +48,7 @@ func newUploadConfig(options ...UploadOption) *uploadConfig {
 // WithConclude controls whether UploadBlob triggers accept before returning.
 // WithConclude(false) leaves the blob parked — durable on the provider,
 // accept deferred (multipart's UploadPart): the returned UploadedBlob has a
-// nil Location and carries the state ConcludeBlob needs. Moot on dedup —
+// nil Location and carries the state ConcludeBlobs needs. Moot on dedup —
 // when the provider already held accepted bytes for the content, accept
 // already ran and the upload completes regardless.
 func WithConclude(conclude bool) UploadOption {
@@ -56,7 +57,7 @@ func WithConclude(conclude bool) UploadOption {
 
 // UploadedBlob is the result of UploadBlob. Location == nil ⇔ the blob is
 // parked (uploaded with WithConclude(false), no dedup hit): persist the task
-// links + PutInvocation (the blob_parks row) and finish with ConcludeBlob at
+// links + PutInvocation (the blob_parks row) and finish with ConcludeBlobs at
 // Complete, or abandon with AbortBlob (AddTask is the Cause). A concluding
 // upload — the default — always returns a non-nil Location or errors.
 type UploadedBlob struct {
@@ -88,7 +89,7 @@ type BodyUploader interface {
 // UploadBlob uploads one spooled blob to Forge. For a single-shot PutObject the
 // allocate→PUT→accept happens in one call (forgeclient.BlobAdd already drives
 // the whole flow and returns the location commitment); multipart's deferred
-// accept passes WithConclude(false) and finishes with ConcludeBlob at
+// accept passes WithConclude(false) and finishes with ConcludeBlobs at
 // Complete (or AbortBlob at Abort).
 func (u *Forge) UploadBlob(ctx context.Context, space did.DID, digest multihash.Multihash, size int64, localPath string, opts ...UploadOption) (UploadedBlob, error) {
 	cfg := newUploadConfig(opts...)
@@ -170,40 +171,80 @@ var _ BodyUploader = (*Forge)(nil)
 
 // DeferredBodyUploader extends BodyUploader for multipart's deferred accept:
 // UploadBlob with WithConclude(false) makes the bytes durable (parked) at
-// UploadPart; ConcludeBlob triggers accept at Complete; AbortBlob abandons a
+// UploadPart; ConcludeBlobs triggers accept at Complete; AbortBlob abandons a
 // parked blob at Abort.
 type DeferredBodyUploader interface {
 	BodyUploader
-	ConcludeBlob(ctx context.Context, space did.DID, parked UploadedBlob) (BlobLocation, error)
+	// ConcludeBlobs concludes parked uploads, returning their locations in
+	// the order given. A multipart complete has one parked blob per part, and
+	// concluding them together is what keeps its cost flat in the part count.
+	//
+	// On error the slice still has one entry per blob. A non-nil entry is a
+	// blob the upload service accepted before the failure, which the caller
+	// must record so it is neither concluded again nor aborted as parked; a
+	// nil entry is a blob still parked.
+	ConcludeBlobs(ctx context.Context, space did.DID, parked []UploadedBlob) ([]*BlobLocation, error)
+	// AbortBlob releases a parked blob on its provider. A blob the space has
+	// already accepted cannot be aborted: the error wraps [ErrBlobAccepted]
+	// and the caller releases it as an accepted blob instead.
 	AbortBlob(ctx context.Context, space did.DID, digest multihash.Multihash, cause cid.Cid) error
 }
 
-// ConcludeBlob finishes a parked upload: it concludes the deferred /http/put
-// receipt (triggering /blob/accept on the provider) and returns the published
-// location. parked is the UploadedBlob a WithConclude(false) upload returned
-// (rehydrated from its blob_parks row). The conclude carries no space proof
-// (accept is owned by sprue), so no proof store is required. Safe to retry.
-func (u *Forge) ConcludeBlob(ctx context.Context, space did.DID, parked UploadedBlob) (BlobLocation, error) {
-	added, err := u.client.BlobConclude(ctx, space, forgeclient.AddedBlob{
-		Digest:        parked.Digest,
-		Size:          uint64(parked.Size),
-		AddTask:       parked.AddTask,
-		AcceptTask:    parked.AcceptTask,
-		PutInvocation: parked.PutInvocation,
-	})
-	if err != nil {
-		return BlobLocation{}, fmt.Errorf("uploader: conclude blob: %w", err)
+// ConcludeBlobs finishes many parked uploads in as few exchanges with the
+// upload service as the batch cap allows: it delivers the blobs' deferred
+// /http/put receipts together, triggering their /blob/accept invocations, and
+// returns the published locations in the order given.
+func (u *Forge) ConcludeBlobs(ctx context.Context, space did.DID, parked []UploadedBlob) ([]*BlobLocation, error) {
+	if len(parked) == 0 {
+		return nil, nil
 	}
-	return locationFromAdded(added)
+	req := make([]forgeclient.AddedBlob, len(parked))
+	for i, p := range parked {
+		req[i] = forgeclient.AddedBlob{
+			Digest:        p.Digest,
+			Size:          uint64(p.Size),
+			AddTask:       p.AddTask,
+			AcceptTask:    p.AcceptTask,
+			PutInvocation: p.PutInvocation,
+		}
+	}
+	added, err := u.client.BlobConcludeBatch(ctx, space, req)
+	// Every blob comes back, located or still parked, whether or not the
+	// batch as a whole succeeded. What was located is converted before the
+	// error is looked at, so the caller can record it.
+	locations := make([]*BlobLocation, len(parked))
+	for i, a := range added {
+		if a.Location == nil {
+			continue
+		}
+		loc, lerr := locationFromAdded(a)
+		if lerr != nil {
+			err = errors.Join(err, lerr)
+			continue
+		}
+		locations[i] = &loc
+	}
+	if err != nil {
+		return locations, fmt.Errorf("uploader: conclude blobs: %w", err)
+	}
+	return locations, nil
 }
+
+// ErrBlobAccepted reports an abort the provider refused because the space
+// has accepted the blob. The blob is not parked any more, whatever the local
+// tables say; it belongs to reference accounting and is released with
+// RemoveBlob, never aborted.
+var ErrBlobAccepted = errors.New("uploader: blob accepted by the space; release it with remove")
 
 // AbortBlob abandons a parked blob via /blob/abort on the upload
 // service: sprue recovers the provider from the cause receipt chain and the
 // node releases the allocation + parked bytes. cause is the parked blob's
 // AddTask. The proof store is request-scoped when present (an S3 Abort) and
 // otherwise the store captured at park time (the session-expiry sweeper).
-// Errors are logged here (callers treat abort cleanup as best-effort and may
-// discard them).
+// A refusal because the space has accepted the blob is returned wrapping
+// [ErrBlobAccepted], so the caller can release the blob instead. Errors are
+// logged here (callers treat abort cleanup as best-effort and may discard
+// them).
 func (u *Forge) AbortBlob(ctx context.Context, space did.DID, digest multihash.Multihash, cause cid.Cid) error {
 	u.logger.Info("blob abort",
 		zap.Stringer("space", space),
@@ -224,13 +265,13 @@ func (u *Forge) AbortBlob(ctx context.Context, space did.DID, digest multihash.M
 				zap.Stringer("space", space),
 				zap.String("digest", digestutil.Format(digest)),
 			)
-		} else {
-			u.logger.Error("blob abort failed",
-				zap.Stringer("space", space),
-				zap.String("digest", digestutil.Format(digest)),
-				zap.Error(err),
-			)
+			return fmt.Errorf("uploader: aborting blob: %w", ErrBlobAccepted)
 		}
+		u.logger.Error("blob abort failed",
+			zap.Stringer("space", space),
+			zap.String("digest", digestutil.Format(digest)),
+			zap.Error(err),
+		)
 		return fmt.Errorf("uploader: aborting blob: %w", err)
 	}
 	return nil
