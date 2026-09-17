@@ -152,6 +152,14 @@ const (
 	streamMaxBackoff = time.Minute
 )
 
+const (
+	// streamScanInitial and streamScanMax bound one SSE event. The default
+	// bufio.Scanner cap is 64 KiB, which a revocation with a long delegation
+	// path can exceed; 4 MiB matches cmd/swarf/stream.go.
+	streamScanInitial = 64 * 1024
+	streamScanMax     = 4 * 1024 * 1024
+)
+
 // errStreamStopped signals the stream consumer stopped iterating.
 var errStreamStopped = errors.New("revocation stream stopped")
 
@@ -235,8 +243,9 @@ func (c *Client) Stream(ctx context.Context, from time.Time) iter.Seq2[api.Fireh
 
 // streamConn opens one SSE connection at from and emits its records. It
 // returns errStreamStopped when emit stops iteration, a connectError when no
-// stream was established, a corruptError for an undecodable payload, and nil
-// when an established connection ended for any other reason.
+// stream was established, a corruptError for a payload that is undecodable or
+// larger than streamScanMax, and nil when an established connection ended for
+// any other reason.
 func (c *Client) streamConn(ctx context.Context, from time.Time, emit func(api.FirehoseRevocation) bool) error {
 	cursor := "0"
 	if !from.IsZero() {
@@ -257,6 +266,11 @@ func (c *Client) streamConn(ctx context.Context, from time.Time, emit func(api.F
 	}
 
 	scanner := bufio.NewScanner(response.Body)
+	// A default Scanner caps a token at 64 KiB, and a revocation event can
+	// exceed that: FirehoseRevocation.Path carries a CID per delegation in the
+	// chain. cmd/swarf/stream.go has always raised the limit; this library,
+	// which hilt and ingot consume, did not. Same limit as the CLI.
+	scanner.Buffer(make([]byte, streamScanInitial), streamScanMax)
 	var event string
 	var data []string
 	for scanner.Scan() {
@@ -282,8 +296,14 @@ func (c *Client) streamConn(ctx context.Context, from time.Time, emit func(api.F
 			data = append(data, strings.TrimPrefix(value, " "))
 		}
 	}
-	// A read error means the stream was interrupted; the caller reconnects.
-	_ = scanner.Err()
+	// A read error usually means the stream was interrupted, and the caller
+	// reconnects. ErrTooLong is not that: the event is still there at the same
+	// cursor, so reconnecting hits it again forever -- the record is never
+	// yielded and no error is ever returned, which presents as a hang rather
+	// than a failure. Report it as corrupt so Stream surfaces it and stops.
+	if err := scanner.Err(); errors.Is(err, bufio.ErrTooLong) {
+		return corruptError{fmt.Errorf("streamed revocation exceeds %d bytes", streamScanMax)}
+	}
 	return nil
 }
 
