@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 19:40Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 19:50Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -370,10 +370,24 @@ only what a change affects. None is blocking; none should be answered early.
   - **`ingot` #166 is CI itest sharding**, i.e. the same work as closed #21.
     It arrives with the final pull whether or not #21 is ever revived.
 
-  **Some of this drift is our own work**, made upstream and never brought back:
-  `piri` #123 and the MinIO repoints this page records as merged. Worth checking
-  whether the monorepo already has equivalent content before treating those as
-  missing.
+  **The drift is bidirectional, and that is the part that bites.** Checked file
+  by file rather than assumed: on the MinIO work we are **ahead**, not behind.
+  Upstream `piri` #123, `sprue` #97 and `smelt` #43 all point at
+  `ghcr.io/fil-forge/minio:RELEASE.2025-10-15T17-29-55Z` — **without a digest**.
+  Ours carries the same target **plus** the digest pin, a named const, a
+  `MINIO_IMAGE` override and, in sprue, a `/minio/health/cluster` wait strategy
+  upstream does not have. smelt's "move the healthcheck off `mc`" fix is already
+  in our tree verbatim. **Nothing on `main` is made redundant by upstream.**
+
+  **So a naive `git subtree pull` can regress the pins.** It would merge
+  upstream's *unpinned* MinIO strings over our *pinned* ones. The compose case
+  is caught — `check-stack-images.sh` fails on an image without a digest — but
+  the **Go** cases are not: `piri/pkg/internal/testutil/minio.go` and
+  `sprue/internal/testutil/s3.go` sit in the population deliberately left
+  unguarded (the 367-matches decision). **A regression there would be silent**,
+  which is exactly the shape that decision accepted, and the final pull is the
+  moment it matters. Cheapest mitigation: diff the pinned-image set before and
+  after any subtree pull, and treat a shrink as a failure.
 
 - **The deferred import findings are now fixable, and that is a category worth
   knowing about.** `MONOREPO_TODO.md`'s *Findings in the imported code* holds

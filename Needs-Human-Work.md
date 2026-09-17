@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 19:40Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 19:50Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -83,6 +83,15 @@ start unasked.
 
 `ingot` is **25 behind**, including #166 — CI itest sharding, the same work as
 closed #21. It arrives with the final pull regardless.
+
+**⚠️ The final pull can silently regress the image pins.** We are *ahead* of
+upstream on MinIO: their `piri` #123, `sprue` #97 and `smelt` #43 point at the
+same image **without a digest**, while ours is pinned. `check-stack-images.sh`
+catches the compose case; the Go cases
+(`piri/pkg/internal/testutil/minio.go`, `sprue/internal/testutil/s3.go`) are in
+the population deliberately left unguarded, so a regression there is silent.
+**Diff the pinned-image set before and after any subtree pull and treat a shrink
+as a failure.**
 
 ## Needs access the agent does not have
 
