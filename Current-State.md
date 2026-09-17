@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 14:35Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 14:25Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at

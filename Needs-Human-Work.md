@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 14:35Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-17 14:25Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -73,7 +73,7 @@ and the `replaces` → `guards` rename (approved and done).
   ordinary pushes to the same remote succeed. Left for a human rather than
   routed around.
 
-  **Verified fully contained in `main` (`ff2f794d`) as of 14:35Z, safe to
+  **Verified fully contained in `main` (`ff2f794d`) as of 14:25Z, safe to
   delete now — seven of them:** `claude/bring-in-forgectl`,
   `claude/bring-in-swarf`, `claude/ci-concurrency`, `claude/ci-permissions`,
   `claude/indexer-from-head`, `claude/monorepo-todo`,
