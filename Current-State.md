@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-17 16:30Z.** Replace this page as things change; do not
+**Snapshot as of 2026-09-17 16:35Z.** Replace this page as things change; do not
 append to it. For history and reasoning, see [[Consolidation Findings]].
 
 Consolidating the Fil Forge polyrepo into a monorepo at
@@ -225,14 +225,43 @@ was one click — but no API route the agent has could do it.
    a `git subtree add`, and they touch disjoint files. One check-name change is
    outstanding for branch protection: #16's `replaces` → `guards`, already on
    `main`. (#21 would have added a second; it is closed.)
-2. **Phase 1** — release tags, `compat.yml`, publishing. This is the next
-   real phase now that the imports are done. `compat.yml` matters more than
-   it did: moving `itest` to HEAD images removed the only thing that was
-   accidentally testing compatibility against the deployed network.
-3. **`libforge`'s dissolution** is what first exercises the audience rule
+2. **The `forge-2` → `forge` rename — and it is no longer "whenever".** Phase 1
+   is gated on it, which the plan does not say. Module paths are already
+   `github.com/fil-forge/forge/*`, and a submodule tag has to be
+   `<svc>/vX.Y.Z` in the repository the path names. Tags cut in `forge-2` sit
+   at a repository no module path resolves to — `go get
+   github.com/fil-forge/forge/piri@piri/v1.2.3` looks in `fil-forge/forge`,
+   the old one, and finds nothing. **So any tag cut before the rename has to
+   be cut again after it.** Still a person's call; see [[Needs Human Work]].
+3. **Phase 1** — release tags, `compat.yml`, publishing. Bigger than the plan
+   assumed, because **the machinery it says to use does not exist here.** The
+   plan reads "cut initial release tags via the *existing* `release.yml`
+   flow"; `main` has four workflows — `ci`, `e2e`, `images`, `itest` — and
+   none of them tags, releases or publishes. What survives from the polyrepo
+   is raw material, and uneven:
+
+   | | have it |
+   |---|---|
+   | `version.json` | 8 of 10 — not `forgectl`, not `smelt` |
+   | `.goreleaser.yaml` | 4 — `indexing-service`, `ingot`, `piri`, `sprue` |
+   | `Dockerfile.release` | 4 — `hilt`, `ingot`, `sprue`, `swarf`, and **nothing builds them** |
+
+   `images.yml` also deliberately takes no `packages: write`, so fork pull
+   requests work — publishing needs its own workflow or a job split rather
+   than a flag on that one. `compat.yml` matters more than it did: moving
+   `itest` to HEAD images removed the only thing that was accidentally testing
+   compatibility against the deployed network.
+
+   **The parts that do not need the rename** — writing the release workflow
+   without cutting tags, `compat.yml`, deciding the tag scheme — can go first.
+4. **`libforge`'s dissolution** is what first exercises the audience rule
    (rule 1). Nothing currently in the repository is a pure library.
-4. **The `forge-2` → `forge` rename**, whenever this path is judged correct.
-   Waiting on a person; see [[Needs Human Work]].
+5. **Two stray per-service `.github/` directories survive**, `forgectl/` and
+   `indexing-service/`. The original seven were pruned on import; these two
+   came in later (#12, #10) and nothing looked again. They are inert — GitHub
+   reads only the repository root — but they describe a per-repo release flow
+   that does not apply, which is exactly the kind of thing someone reads and
+   believes while building Phase 1.
 
 **Do not import anything else without a decision.** `MAJOR_DECISIONS.md`
 records what is deliberately out — outward-facing libraries, forks of upstream
