@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-18 21:35Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-18 22:00Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -19,8 +19,8 @@ away, all deliberately draft so nobody else feels obliged to review first.
 
 | | what | state |
 |---|---|---|
-| [forge #13](https://github.com/fil-forge/forge/pull/13) | `finish-subtree-pull.sh` — merging is the default, `--dry-run` prints a real `git diff`, **and the deletion audit is built in** | **green, all 24 checks** |
-| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | 23/24 green on the first head, fix pushed, re-running |
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **green, all 24**, on `1a17fdc5` |
+| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | `e2e` **fixed and green**; poller-race fix ported; re-running on `d4505701` |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand | |
 
@@ -51,6 +51,9 @@ Nothing errors. Nothing logs a mismatch. **This is what a schema break looks
 like when the participants disagree by one deploy**, and it is precisely the
 failure the monorepo's e2e exists to catch — `main` is green because its
 libforge is still the singular one.
+
+**Confirmed by the fix working**: `e2e` passed on `9b3a0b00`
+([run 35394930163](https://github.com/fil-forge/forge/actions/runs/35394930163/job/105761469672)).
 
 **What it actually was here:** our pinned `ghcr.io/fil-forge/guppy:main-dev`
 digest was ten commits behind guppy's own fix. One-line re-pin, by digest:
@@ -113,12 +116,19 @@ So every indexing-service release so far has reported its version (that one flag
 was right) and `unknown` for the other three. Split the PR if you would rather
 review them apart; the commits are clean.
 
-### Still true from yesterday: the indexing-service race is not in `main`
+### The indexing-service race: ported after all, and why that changed
 
-Fixed in the draft above, **not merged**, so `up-indexing-service/main` does not
-carry it and forge #14 does not either — a faithful resync cannot. Until #106
-merges, `unit indexing-service` in forge stays intermittently red. Not ported
-ahead of upstream on purpose.
+Still not in upstream `main`, so the resync commit did not carry it and said so.
+**Then it went red on #14**, with the identical signature, and that made the
+earlier reasoning wrong for this PR: the fix exists, I wrote it, and waiting on
+my own open PR to merge is still waiting while the branch sits red for a reason
+unrelated to the resync. Ported in `d4505701`, byte for byte from upstream's
+`2c48785` — the change is entirely inside the test body and touches no import
+line, so it applied to the monorepo copy unmodified, and it no-ops when a later
+pull brings the identical change down. 30 runs under `-race -shuffle=on` on this
+tree, 0 failures.
+
+The upstream PR stays open and is still the place the fix belongs.
 
 **The first diagnosis of that race was wrong and the record should keep saying
 so.** The claim was "`poller.Stop()` races the final `Delete`". `Stop()` is not
