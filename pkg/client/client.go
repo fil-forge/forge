@@ -2,7 +2,6 @@
 package client
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -272,11 +271,11 @@ func (c *Client) streamConn(ctx context.Context, from time.Time, emit func(api.F
 		}
 	}
 	// A read error usually means the stream was interrupted, and the caller
-	// reconnects. ErrTooLong is not that: the event is still there at the same
+	// reconnects. An oversized event is not that: it is still there at the same
 	// cursor, so reconnecting hits it again forever -- the record is never
 	// yielded and no error is ever returned, which presents as a hang rather
 	// than a failure. Report it as corrupt so Stream surfaces it and stops.
-	if err := events.Err(); errors.Is(err, bufio.ErrTooLong) {
+	if err := events.Err(); errors.Is(err, sse.ErrEventTooLong) {
 		return corruptError{fmt.Errorf("streamed revocation exceeds %d bytes", sse.MaxEventBytes)}
 	}
 	return nil

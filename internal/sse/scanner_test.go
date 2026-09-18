@@ -1,7 +1,6 @@
 package sse_test
 
 import (
-	"bufio"
 	"strings"
 	"testing"
 
@@ -78,8 +77,80 @@ func TestScannerRejectsAnOversizedEvent(t *testing.T) {
 	scanner := sse.NewScanner(strings.NewReader(stream))
 
 	require.False(t, scanner.Scan())
-	require.ErrorIs(t, scanner.Err(), bufio.ErrTooLong,
+	require.ErrorIs(t, scanner.Err(), sse.ErrEventTooLong,
 		"an event past MaxEventBytes must be reported, not silently dropped")
+}
+
+// The limit is on the data, not on the line carrying it, so it lands in the
+// same place whichever bound catches it.
+func TestScannerLimitIsExactOnOneLine(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		size int
+		want error
+	}{
+		{"exactly MaxEventBytes is read", sse.MaxEventBytes, nil},
+		{"one byte past is rejected", sse.MaxEventBytes + 1, sse.ErrEventTooLong},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			data := strings.Repeat("a", test.size)
+			scanner := sse.NewScanner(strings.NewReader("event: revocation\ndata: " + data + "\n\n"))
+
+			require.Equal(t, test.want == nil, scanner.Scan())
+			if test.want == nil {
+				require.Len(t, scanner.Data(), test.size)
+				require.NoError(t, scanner.Err())
+			} else {
+				require.ErrorIs(t, scanner.Err(), test.want)
+			}
+		})
+	}
+}
+
+// The bound has to hold however the event is laid out. bufio.Scanner can only
+// cap one line, so an event assembled from many small data lines used to have
+// no bound at all: 16 MiB of 1 KiB lines scanned clean, four times over the
+// limit the package documents.
+func TestScannerRejectsAnOversizedEventSplitAcrossLines(t *testing.T) {
+	line := "data: " + strings.Repeat("a", 1024) + "\n"
+	stream := "event: revocation\n" + strings.Repeat(line, 16*1024) + "\n"
+	scanner := sse.NewScanner(strings.NewReader(stream))
+
+	require.False(t, scanner.Scan())
+	require.ErrorIs(t, scanner.Err(), sse.ErrEventTooLong)
+	require.Empty(t, scanner.Data(), "a rejected event must not be readable")
+}
+
+// Scanning stops at the first error, as bufio.Scanner does: an event the
+// reader gave up on leaves the stream mid-event, so what follows is not
+// events, and resyncing on the next blank line would report a fragment.
+func TestScannerStaysStoppedAfterAnOversizedEvent(t *testing.T) {
+	oversized := strings.Repeat("data: "+strings.Repeat("a", 1024)+"\n", 16*1024)
+	scanner := sse.NewScanner(strings.NewReader(oversized + "\nevent: revocation\ndata: {}\n\n"))
+
+	require.False(t, scanner.Scan())
+	require.False(t, scanner.Scan(), "scanning resumed after giving up")
+	require.ErrorIs(t, scanner.Err(), sse.ErrEventTooLong)
+}
+
+// The limit is on the joined data, so an event just under it still arrives
+// however many lines carry it.
+func TestScannerReadsAnEventJustUnderTheLimitAcrossLines(t *testing.T) {
+	const lines = 1024
+	// lines chunks joined by lines-1 newlines, one byte short of the limit.
+	chunk := strings.Repeat("a", (sse.MaxEventBytes-(lines-1)-1)/lines)
+	var stream strings.Builder
+	stream.WriteString("event: revocation\n")
+	for range lines {
+		stream.WriteString("data: " + chunk + "\n")
+	}
+	stream.WriteString("\n")
+	scanner := sse.NewScanner(strings.NewReader(stream.String()))
+
+	require.True(t, scanner.Scan())
+	require.NoError(t, scanner.Err())
+	require.LessOrEqual(t, len(scanner.Data()), sse.MaxEventBytes)
+	require.Equal(t, lines, strings.Count(scanner.Data(), "\n")+1)
 }
 
 func TestScannerReadsPastTheDefaultBufioLimit(t *testing.T) {
