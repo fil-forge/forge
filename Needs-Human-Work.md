@@ -11,8 +11,12 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**`main` is RED, and it is root-caused: the `ingot` itest suite does not
-reliably fit in its 25-minute timeout.** Petra supplied the job log, which the
+**`main` is RED, the cause is established, and the fix is up as
+[#11](https://github.com/fil-forge/forge/pull/11) — Petra chose sharding at
+~15:50Z.** Nothing here is a decision any more; it is review and merge. The
+rest of this section is the evidence, kept because the numbers get cited.
+
+**The `ingot` itest suite does not reliably fit in its 25-minute timeout.** Petra supplied the job log, which the
 agent could not reach. The sharpest evidence is not in the log at all — it is
 that **the identical tree passed at 21m12s and timed out at 25m09s, six minutes
 apart.**
@@ -165,8 +169,9 @@ is deliberately below the job's `timeout-minutes: 45` so the Go timeout fires
 first and dumps goroutines, "where a runner kill gives nothing". So changing it
 is a decision, not a mechanical fix.
 
-What the same-tree measurement changes: the budget has to clear the **slowest**
-run, not the typical one. Judged that way —
+**Decided: shard.** What the same-tree measurement changes is that the budget
+has to clear the **slowest** run, not the typical one — and raising the number
+only out-runs a spread that will come back. Judged that way —
 
 - **Raise it to 30m**, matching `ingot/Makefile`. One line. Preserves the
   fire-before-the-job ordering (30 ≪ 45). Against the worst run measured
@@ -183,12 +188,35 @@ Neither touches the real cost, which is that **two fifths of the run is
 booting Docker stacks** (below). That is a third option, and a much larger
 one: share a stack across the tests that do not need isolation.
 
-`main` stays red until one of them lands. The patch for the first is ready to
-push on request.
+**#11 is that change**, rebuilt on current `main` from the closed #21
+(`claude/shard-itest` untouched). Three shards is the measured optimum, not a
+guess — longest shard 25.0 min at 1, 17.4 at 2, **13.4 at 3**, back up to 14.9
+at 4, where the round-robin happens to pair `Versity` with `AWSCLI`.
+
+**Drift: none.** The diff is `.github/workflows/itest.yml` and
+`MONOREPO_TODO.md` — no file under any service prefix, so nothing in it can
+conflict with a future subtree pull. That was Petra's condition on the choice
+and it is satisfied outright.
+
+**Two claims in #21's original commit were wrong and are corrected in #11**,
+the first being the load-bearing one: *"a split by test count is a split by
+time"* (it is not — the split is 13m25s / 7m39s / 3m56s, a 3.4× spread) and
+*"the subtests run in hundredths of a second"* (`TestForgeEncryption` spends
+298.4s in its subtests). The lopsidedness is kept rather than engineered away:
+the longest shard has 46% headroom, and splitting by duration means carrying a
+per-test timing table — the hand-maintained list the `go test -list` approach
+exists to avoid.
+
+`main` stays red until #11 merges.
 
 ## Open pull requests
 
-One: **[#10](https://github.com/fil-forge/forge/pull/10)** — the
+**Two.**
+
+**[#11](https://github.com/fil-forge/forge/pull/11)** — the itest sharding
+above, the fix for red `main`. Opened 15:5xZ off `991633b0`.
+
+**[#10](https://github.com/fil-forge/forge/pull/10)** — the
 `subtree-conflicts.sh` conflict reader and its `AGENTS.md` procedure, asked for
 after the dead-file approach was rejected, then redirected from predicting
 conflicts to reading them. **Green on all four workflows** (22 checks) at
