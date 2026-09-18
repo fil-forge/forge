@@ -230,6 +230,21 @@ narrowed and still missing two real references — was already there.
 take the reversible one, flag it on the PR that makes it, and list it here to be
 confirmed rather than assumed.
 
+## Still counting: the `e2e` postgres flake
+
+Not blocking anything — recorded so nobody declares it fixed from memory. **Count
+it by derivation, not recall:** `e2e.yml`'s **run 1 in this repository is the
+merge of the fix itself** (`24b18ee5`, #27, "Make `pg_isready` probe TCP"), so
+*every* `e2e.yml` run in `fil-forge/forge` is a post-fix trial. List them and
+count.
+
+As of **15:45Z on 2026-09-18 that is 8 runs, all green.** At a 5% base rate,
+eight straight passes still had a **~66%** chance with the bug untouched
+(`0.95⁸`). That is not a verdict either. The earlier tallies on
+[[Current State]] ("a fourth pass", "~81%") were correct when written and
+counted runs from before the transplant; this section is the one to trust, and
+it is cheap to recompute.
+
 ## Subtree drift, and what to pull early
 
 **The polyrepo is not frozen** — ~45 commits across six services since the
