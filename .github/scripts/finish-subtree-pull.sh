@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Finish the merge a `git subtree pull` could not follow.
+# Run this with every `git subtree pull` -- during one that stopped with
+# conflicts, or straight after one that did not.
+#
+# It does two things, because a subtree pull can lose an upstream change in two
+# different ways and only one of them is loud.
 #
 # When we move a file out of a subtree prefix, git's rename detection stops
 # following it -- it does not see outside the prefix -- so every later upstream
@@ -18,8 +22,17 @@
 # there `git status` reports UU, mergetool works, and `git add` resolves it.
 # Nothing downstream has to be told this script was involved.
 #
-#   subtree-conflicts.sh <prefix>              merge, and write the results
-#   subtree-conflicts.sh --dry-run <prefix>    print the diffs, change nothing
+# THE SECOND THING, and the reason this is not called subtree-conflicts.sh any
+# more: when upstream DELETES a file we had moved out of the prefix, both sides
+# deleted that path, so git raises no conflict at all. The pull succeeds in
+# silence and we go on carrying a file upstream removed. Nothing driven by
+# conflicts can see that, so the audit below reads the merge itself -- upstream's
+# own diff against the previous split point -- and reports deletions whose file
+# we still have. It runs in both modes, including after a pull that had no
+# conflicts whatsoever, which is exactly when it is the only thing looking.
+#
+#   finish-subtree-pull.sh <prefix>              merge, write the results, audit
+#   finish-subtree-pull.sh --dry-run <prefix>    print the diffs, change nothing
 #
 # stdout is diffs and nothing else, so --dry-run can be read, graded or piped.
 # Notes and problems go to stderr. Exit 1 if anything needed a human.
@@ -35,13 +48,26 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-prefix=${1:?usage: subtree-conflicts.sh [--dry-run] <prefix>   (run during a conflicted subtree pull)}
+prefix=${1:?usage: finish-subtree-pull.sh [--dry-run] <prefix>   (run during or right after a subtree pull)}
 prefix=${prefix%/}
 
-git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || {
-  echo "No merge in progress. Run this while a subtree pull is conflicted." >&2
+# Which mode we are in is detected, not flagged: a conflicted pull leaves
+# MERGE_HEAD, and a finished one leaves a merge commit at HEAD whose second
+# parent is the subtree split. Asking the caller to say which would be one more
+# thing to get wrong on a day that is already going badly.
+if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1; then
+  pull_mode=conflicted
+  upstream=MERGE_HEAD
+  base=$(git merge-base HEAD MERGE_HEAD)
+elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
+  pull_mode=merged
+  upstream=HEAD^2
+  base=$(git merge-base 'HEAD^1' 'HEAD^2')
+else
+  echo "No subtree pull to finish: no merge in progress, and HEAD is not a merge." >&2
+  echo "Run this during a conflicted pull, or immediately after any pull." >&2
   exit 2
-}
+fi
 cd "$(git rev-parse --show-toplevel)"
 
 note() { printf '%s\n' "$*" >&2; }
@@ -155,12 +181,51 @@ while IFS= read -r conflicted; do
     note "merged  $conflicted -> $dest ($rc conflict(s); markers in the file, UU in git status)"
   fi
   merged=$((merged + 1)); rm -rf "$tmp"
-done < <(git status --porcelain | awk '/^DU /{print substr($0,4)}')
+done < <(
+  if [ "$pull_mode" = conflicted ]; then
+    git status --porcelain | awk '/^DU /{print substr($0,4)}'
+  fi
+)
 
-if [ "$merged" = 0 ] && [ "$unresolved" = 0 ]; then
+if [ "$pull_mode" = conflicted ] && [ "$merged" = 0 ] && [ "$unresolved" = 0 ]; then
   note "No 'deleted by us, modified by them' conflicts. Anything else here is an"
   note "ordinary content conflict: resolve it normally."
-  exit 0
 fi
-note "$merged merged, $unresolved left for a human."
-[ "$unresolved" = 0 ]
+
+# THE AUDIT. Everything above reacts to a conflict; this reads the merge.
+#
+# When upstream deletes a file we had moved out of the prefix, BOTH sides
+# deleted that path, so git raises nothing -- no conflict, no status entry,
+# nothing for a conflict-driven tool to react to. The pull succeeds and we keep
+# carrying a file upstream removed. This is the only thing that looks.
+#
+# Upstream's own history is in its own path space (no prefix), so its diff
+# against the previous split point names deletions as upstream saw them, and we
+# map each back through our prefix. -M matters: without it a rename upstream
+# reads as a delete and every one would be a false positive.
+stale=0
+while IFS= read -r gone; do
+  [ -n "$gone" ] || continue
+  old=$prefix/$gone
+  dest=$(destination_of "$old")
+  if [ -n "$dest" ]; then
+    note "STILL HERE  upstream deleted $gone; we moved it to $dest and still have it"
+    stale=$((stale + 1))
+  fi
+done < <(git diff -M --diff-filter=D --name-only "$base" "$upstream" 2>/dev/null || true)
+
+if [ "$stale" -gt 0 ]; then
+  note ""
+  note "$stale file(s) upstream deleted are still in this tree because we had moved"
+  note "them. git raised no conflict for these -- both sides deleted the old path --"
+  note "so nothing else would have mentioned them. Decide each one: upstream may have"
+  note "deleted dead code we are still carrying, or may have moved it somewhere this"
+  note "audit cannot see."
+fi
+
+if [ "$pull_mode" = merged ]; then
+  note "Audited a completed pull: $stale upstream deletion(s) we still carry."
+else
+  note "$merged merged, $unresolved left for a human, $stale upstream deletion(s) we still carry."
+fi
+[ "$unresolved" = 0 ] && [ "$stale" = 0 ]

@@ -170,19 +170,23 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 `testutil` package with a named const and an env override, not inline in a
 `_test.go`.
 
-## When a `git subtree pull` conflicts, finish the merge it could not follow
+## Run this with every `git subtree pull`
 
 ```
-.github/scripts/subtree-conflicts.sh <prefix>              merge and write
-.github/scripts/subtree-conflicts.sh --dry-run <prefix>    print the diffs only
+.github/scripts/finish-subtree-pull.sh <prefix>              merge, write, audit
+.github/scripts/finish-subtree-pull.sh --dry-run <prefix>    print the diffs only
 ```
 
-Run it **while the merge is still conflicted**. For every `deleted by us,
-modified by them` entry it finds where that file lives now and performs the
-three-way merge git would have performed if its rename detection had seen
-outside the prefix. Everything it needs is already in the index: stage 1 is the
-merge base, stage 3 is upstream, both at the old path, and our side is the file
-at its new home — an ordinary three-way merge, so `git merge-file` does it.
+Run it **during a pull that stopped with conflicts, or straight after one that
+did not** — it detects which rather than being told. A subtree pull can lose an
+upstream change in two ways and only one of them is loud, so it does two things.
+
+**The loud one.** For every `deleted by us, modified by them` entry it finds
+where that file lives now and performs the three-way merge git would have
+performed if its rename detection had seen outside the prefix. Everything it
+needs is already in the index: stage 1 is the merge base, stage 3 is upstream,
+both at the old path, and our side is the file at its new home — an ordinary
+three-way merge, so `git merge-file` does it.
 
 **It hands the result back in git's own terms.** A clean merge is written and
 staged. A conflicted one gets `--diff3` markers in the file *and* index stages
@@ -217,11 +221,19 @@ Things that are true and worth not rediscovering:
 - **A rename/delete is reported at upstream's NEW path**, which never existed in
   our history. `MERGE_HEAD` is in upstream's path space (no prefix), so its own
   diff names the rename; the script uses that to map back.
-- **One gap it cannot cover.** When upstream *deletes* a file we moved out, both
-  sides deleted the path, so git raises no conflict at all — the pull succeeds
-  silently and we keep carrying a file upstream removed. Nothing in a
-  conflict-driven tool can see that; it needs an audit that runs when nothing
-  conflicted.
+
+**The quiet one, and the reason the name changed.** When upstream *deletes*
+a file we had moved out of the prefix, **both sides deleted that path, so git
+raises no conflict at all** — no status entry, nothing to react to. The pull
+succeeds in silence and we keep carrying a file upstream removed. So the audit
+does not wait to be asked: it reads upstream's own diff against the previous
+split point and reports deletions whose file we still have. It runs in both
+modes, including after a pull with no conflicts whatsoever, which is precisely
+when it is the only thing looking. `-M` is load-bearing there — without it a
+rename upstream reads as a delete and every one is a false positive.
+
+Exit is non-zero if anything was left for a human *or* anything was flagged by
+the audit, so a caller can act on the status rather than parse prose.
 
 ## Conventions
 
