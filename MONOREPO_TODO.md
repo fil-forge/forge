@@ -404,6 +404,51 @@ wants one.
 HEAD removed the only thing that was accidentally testing compatibility against
 the deployed network.
 
+### The release flow should assert the version, not just the build
+
+`check-goreleaser-ldflags.sh` catches today's defect — four `.goreleaser.yaml`
+files naming pre-consolidation module paths — by checking that every `-X` names
+a package in the module that builds it. That is a check on the *path*. The
+release flow should eventually check the *effect*, and then this lint can go.
+
+The reason is that nothing else is loud. `cmd/link` looks the `-X` symbol up
+and gives up silently when it is missing — `addstrdata` in
+`src/cmd/link/internal/ld/data.go` returns early on `Lookup() == 0`, on absent
+type info, and on an unreachable symbol, and only *`Errorf`s* when the symbol
+exists but is not a string. The linker's own `doc.go` documents what `-X` does
+when the variable is there and says nothing about a miss. `go version -m`
+records the `-ldflags` argument either way, so the released artifact's build
+info looks correct while the binary reports its fallback. Measured on `sprue`:
+a binary built with the stale path reports `v0.0.0` from a container and
+`v0.0.6` — `version.json`'s value, read by *relative* path at runtime — from a
+checkout.
+
+**The check itself is cheap**: after goreleaser, run the host-arch binary out
+of `dist/` and require its output to contain the tag. Sub-second against a
+cross-compile. **The cost is that only half the services can be asked:**
+
+| | how to ask the binary its version |
+|---|---|
+| `piri` | `piri version`, and cobra's `--version` |
+| `ingot` | `ingot version`, and `--version` |
+| `sprue` | nothing on the CLI — `build.Version` only reaches `serverInfoHandler` |
+| `indexing-service` | nothing on the CLI — consumed in `pkg/server` and `pkg/aws` |
+
+So `sprue` and `indexing-service` want a `version` subcommand first, ~15 lines
+each modelled on `piri/cmd/cli/version.go`. Worth having anyway: operators ask
+binaries their version, and today `sprue --version` cannot answer.
+
+**Do not shortcut it by grepping the binary for the version string.** That is
+uniform without touching any service, and it tests the wrong thing — whether
+the bytes are present, not whether the program reports them. `indexing-service`
+shows why: its config injects a working `-X main.version={{.Version}}` *and* a
+broken `-X …/pkg/build.version=v{{.Version}}`, so the string is in the binary
+either way and only the `v` prefix separates them.
+
+What the assertion buys over the lint: it also catches the linker's other
+silent branches, notably a correct `-X` against a symbol that got dead-code
+eliminated.
+
 **Reference material** for all of this is `indexing-service`'s old per-repo
 workflows — `releaser.yml`, `tagpush.yml`, `release-binaries.yml`,
 `release-check.yml`, `publish-ghcr.yml` — which were inert here and have been
