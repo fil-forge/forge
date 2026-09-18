@@ -170,57 +170,58 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 `testutil` package with a named const and an env override, not inline in a
 `_test.go`.
 
-## When a `git subtree pull` conflicts, find out where the files went
+## When a `git subtree pull` conflicts, finish the merge it could not follow
 
-Run `.github/scripts/subtree-conflicts.sh <prefix>` **while the merge is still
-conflicted**. For every `deleted by us, modified by them` entry it prints where
-that file went in our history — a recorded rename, a same-basename guess, or a
-genuine delete — plus the exact upstream change to port, read from index
-stages 1 and 3.
+```
+.github/scripts/subtree-conflicts.sh <prefix>              merge and write
+.github/scripts/subtree-conflicts.sh --dry-run <prefix>    print the diffs only
+```
 
-**Add `--apply` and it does the merge for you**, wherever the destination is a
-recorded rename. Stage 1 is the merge base and stage 3 is upstream, both at the
-old path, and our side is the file at its new home: an ordinary three-way merge,
-so `git merge-file` performs it. A clean result is written and staged; a
-conflicted one gets `--diff3` markers in the file *and* index stages 1/2/3 at
-the new path, so `git status` shows `UU` there, mergetool works, and `git add`
-resolves it. **After that git owns the conflict** — nothing downstream needs to
-know the script was involved. The marker labels name the real path on each side,
-which is more than a native merge could have told you, since the move is the
-whole problem.
+Run it **while the merge is still conflicted**. For every `deleted by us,
+modified by them` entry it finds where that file lives now and performs the
+three-way merge git would have performed if its rename detection had seen
+outside the prefix. Everything it needs is already in the index: stage 1 is the
+merge base, stage 3 is upstream, both at the old path, and our side is the file
+at its new home — an ordinary three-way merge, so `git merge-file` does it.
 
-It will not apply on a same-basename guess or a true delete, will not overwrite
-a destination with uncommitted changes, and will not touch a binary. Those stay
-advisory. The flag is opt-in because a tool you run to *look* at a conflict
-should not rewrite the working tree because you ran it.
+**It hands the result back in git's own terms.** A clean merge is written and
+staged. A conflicted one gets `--diff3` markers in the file *and* index stages
+1/2/3 at the new path, so `git status` shows `UU` there, mergetool works, and
+`git add` resolves it. After that git owns the conflict; nothing downstream
+needs to know the script ran.
+
+**stdout is diffs and nothing else**, so `--dry-run` can be read, graded or
+piped. Notes and problems go to stderr. **Exit 1 if anything was left for a
+human**, which is what makes it safe to call from a script.
+
+It applies only where a rename was recorded *and* the destination verified to
+exist. It refuses a same-basename guess, a true delete, a destination with
+uncommitted changes, and a binary (where `merge-file` yields plausible garbage
+rather than failing). Those are reported and skipped, never guessed at.
 
 **Why react to the conflict rather than predict it:** you cannot predict it.
-Measured (the matrix is on the wiki):
+Measured (matrix on the wiki):
 
 | our change | prefix after | next pull |
 |---|---|---|
-| renamed a file **within** the prefix | non-empty | **clean**, rename followed |
-| moved a file **out** of the prefix | non-empty | **conflicts — even byte-identical** |
-| moved a file out, prefix left empty | empty | clean (degenerate; do not rely on it) |
+| renamed **within** the prefix | non-empty | **clean**, rename followed |
+| moved **out** of the prefix | non-empty | **conflicts — even byte-identical** |
+| moved out, prefix left empty | empty | clean (degenerate; do not rely on it) |
 
-**`git subtree pull`'s rename detection does not see outside the prefix.** A
-pure `git mv` out of `<svc>/`, with no edit at all, still conflicts on the next
-pull. So there is no property of your own commit you can inspect beforehand to
-know whether it will be a problem — but git decides exactly, during the merge,
-and the `DU` entries are that decision.
-
-What the conflict does **not** tell you is where the file went, and the
-resolution it invites — `git rm` on a resurrected file that plainly belongs
-nowhere — is the one that drops upstream's change silently, because your moved
-copy is not flagged at all. That gap is what this script closes.
-
-Two more things that are true and worth not rediscovering:
+Things that are true and worth not rediscovering:
 
 - **Splitting the move and the rewrite into separate commits does not help.** A
   three-way merge compares the merge base to each tip, not the commits between.
-- **`git rerere` records nothing here** — it only stores conflicts with
-  markers, and `modify/delete` has none. The conflict recurs on every later
-  pull that touches the file.
+- **`git rerere` records nothing here** — it only stores conflicts with markers,
+  and `modify/delete` has none.
+- **A rename/delete is reported at upstream's NEW path**, which never existed in
+  our history. `MERGE_HEAD` is in upstream's path space (no prefix), so its own
+  diff names the rename; the script uses that to map back.
+- **One gap it cannot cover.** When upstream *deletes* a file we moved out, both
+  sides deleted the path, so git raises no conflict at all — the pull succeeds
+  silently and we keep carrying a file upstream removed. Nothing in a
+  conflict-driven tool can see that; it needs an audit that runs when nothing
+  conflicted.
 
 ## Conventions
 
