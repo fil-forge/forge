@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	jsg "github.com/alanshaw/dag-json-gen"
 	ucancmd "github.com/fil-forge/libforge/commands/ucan"
 	"github.com/fil-forge/libforge/identity"
+	"github.com/fil-forge/swarf/internal/sse"
 	"github.com/fil-forge/swarf/pkg/api"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/did"
@@ -271,4 +273,86 @@ func sseEvent(t *testing.T, record api.FirehoseRevocation) string {
 	var payload bytes.Buffer
 	require.NoError(t, record.MarshalDagJSON(&payload))
 	return fmt.Sprintf("event: revocation\ndata: %s\n\n", payload.String())
+}
+
+// TestStreamLargeEvent covers the two halves of the 64 KiB scanner cap.
+//
+// A FirehoseRevocation carries a CID per delegation in the chain, so a long
+// path pushes one SSE event past the default bufio.Scanner token limit. Before
+// sse.Scanner raised the buffer, Scan stopped, ErrTooLong was discarded,
+// streamConn returned nil, and Stream reconnected at the same cursor --
+// forever, never yielding and never erroring. A hang, not a failure.
+func TestStreamLargeEvent(t *testing.T) {
+	issuer, err := identity.New("", "")
+	require.NoError(t, err)
+	cmd, err := command.Parse("/test/revoke")
+	require.NoError(t, err)
+	revocation, err := invocation.Invoke(issuer, did.Undef, cmd, nil)
+	require.NoError(t, err)
+	recordedAt := time.Now().UTC().Round(0)
+
+	// ~2000 CIDs puts the encoded event well past 64 KiB and well under 4 MiB.
+	path := make([]cid.Cid, 2000)
+	for i := range path {
+		path[i] = revocation.Link()
+	}
+	value := api.FirehoseRevocation{
+		Revoke:     revocation.Link(),
+		Path:       path,
+		Cause:      revocation.Link(),
+		RecordedAt: jsg.DagJsonTime(recordedAt),
+	}
+	var payload bytes.Buffer
+	require.NoError(t, value.MarshalDagJSON(&payload))
+	require.Greater(t, payload.Len(), 64*1024,
+		"the fixture must exceed the default scanner cap or it tests nothing")
+
+	t.Run("over the default cap is delivered", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = fmt.Fprintf(w, "event: revocation\ndata: %s\n\n", payload.String())
+		}))
+		defer server.Close()
+		serviceURL, err := url.Parse(server.URL)
+		require.NoError(t, err)
+		client, err := New(issuer.DID(), *serviceURL)
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		var streamed int
+		for record, err := range client.Stream(ctx, time.Time{}) {
+			require.NoError(t, err)
+			require.Len(t, record.Path, len(path))
+			streamed++
+			break
+		}
+		require.Equal(t, 1, streamed, "the oversized event was dropped")
+	})
+
+	t.Run("past sse.MaxEventBytes errors rather than hanging", func(t *testing.T) {
+		huge := strings.Repeat("a", sse.MaxEventBytes+1)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = fmt.Fprintf(w, "event: revocation\ndata: %s\n\n", huge)
+		}))
+		defer server.Close()
+		serviceURL, err := url.Parse(server.URL)
+		require.NoError(t, err)
+		client, err := New(issuer.DID(), *serviceURL)
+		require.NoError(t, err)
+
+		// Without the ErrTooLong branch this reconnects forever; the timeout
+		// is what distinguishes "surfaced an error" from "hung".
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		var got error
+		for _, err := range client.Stream(ctx, time.Time{}) {
+			got = err
+			break
+		}
+		require.Error(t, got)
+		require.NotErrorIs(t, got, context.DeadlineExceeded,
+			"the stream hung instead of reporting the oversized event")
+	})
 }

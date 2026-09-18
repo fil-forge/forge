@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fil-forge/swarf/internal/sse"
 	"github.com/spf13/cobra"
 )
 
@@ -75,30 +75,16 @@ func validateFrom(value string) error {
 }
 
 func writeStreamEvents(cmd *cobra.Command, body io.Reader) error {
-	scanner := bufio.NewScanner(body)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	var event string
-	var data []string
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			if event == "revocation" && len(data) > 0 {
-				if _, err := fmt.Fprintln(cmd.OutOrStdout(), strings.Join(data, "\n")); err != nil {
-					return fmt.Errorf("writing revocation event: %w", err)
-				}
-			}
-			event = ""
-			data = nil
+	events := sse.NewScanner(body)
+	for events.Scan() {
+		if events.Event() != "revocation" {
 			continue
 		}
-		if value, ok := strings.CutPrefix(line, "event:"); ok {
-			event = strings.TrimSpace(value)
-		}
-		if value, ok := strings.CutPrefix(line, "data:"); ok {
-			data = append(data, strings.TrimPrefix(value, " "))
+		if _, err := fmt.Fprintln(cmd.OutOrStdout(), events.Data()); err != nil {
+			return fmt.Errorf("writing revocation event: %w", err)
 		}
 	}
-	if err := scanner.Err(); err != nil {
+	if err := events.Err(); err != nil {
 		return fmt.Errorf("reading revocation stream: %w", err)
 	}
 	return nil
