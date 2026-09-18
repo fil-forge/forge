@@ -19,14 +19,28 @@ tidying and block nothing.
 
 ## Open pull requests
 
-Two. **[#9](https://github.com/fil-forge/forge/pull/9)** — the first PR on
-`forge` itself — and **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)**
-upstream.
+One: **[#9](https://github.com/fil-forge/forge/pull/9)**, the first PR on
+`forge` itself.
+
+**[`swarf` #17](https://github.com/fil-forge/swarf/pull/17) merged
+2026-09-18 13:51Z** as `f286fb0`, carrying both commits (`a50b142` fix,
+`406cbe0` the `internal/sse` extraction). `Go Checks` is green on the merge;
+`Go Test` and `Container` were still running. Two things follow:
+
+- **The subtree pull's one ordering constraint is satisfied.** It can now
+  bring the firehose fix in. Still Petra's to authorize — a subtree pull is a
+  rule 7 operation.
+- **The pin bumps for upstream `hilt` and `ingot` are now possible.** The
+  version they would move to, derived and then **confirmed against the module
+  proxy** rather than hand-computed:
+  `github.com/fil-forge/swarf v0.0.1-0.20260918135142-f286fb01aa10`, replacing
+  `v0.0.1-0.20260821142121-d5d1a0a56f00`. `go get github.com/fil-forge/swarf@main`
+  resolves to exactly that. Those two repos are outside this session's scope.
 
 **#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) — **22
 check runs on its head, none failing** — but GitHub reports its
-`mergeable_state` as **`blocked`**, not `clean`. (`swarf` #17, for contrast,
-reads `clean`.)
+`mergeable_state` as **`blocked`**, not `clean`. (`swarf` #17 read `clean`
+throughout, and merged without trouble.)
 
 **Worth one look, because this has bitten before.** `blocked` with everything
 green is either a required *review* — expected, and fine — or a **required

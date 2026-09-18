@@ -38,9 +38,9 @@ started.
 
 | | what | state |
 |---|---|---|
-| [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) | Firehose client hangs on an event over 64 KiB; fixed upstream, plus an `internal/sse` extraction | **Green, waiting on review** |
+| ~~[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)~~ | Firehose client hangs on an event over 64 KiB; fixed upstream, plus an `internal/sse` extraction | **Merged 2026-09-18 13:51Z** as `f286fb0` |
 | [#9](https://github.com/fil-forge/forge/pull/9) | Every goreleaser `-X` ldflag names a pre-consolidation module path, so a release would ship binaries reporting `v0.0.0`. Fix + a guard | **Open** |
-| the final `git subtree pull` | ~45 commits of upstream drift to take in one pull at the end | **Not started.** Must come *after* `swarf` #17 merges, or it brings the hang |
+| the final `git subtree pull` | ~45 commits of upstream drift to take in one pull at the end | **Not started — and its one ordering constraint is now satisfied**, since `swarf` #17 has merged |
 
 ## Ahead
 
