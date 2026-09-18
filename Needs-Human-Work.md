@@ -24,6 +24,12 @@ away, all deliberately draft so nobody else feels obliged to review first.
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand | |
 
+**A fifth PR is open and is not a draft**:
+[forge #12](https://github.com/fil-forge/forge/pull/12), the release workflow —
+written, verified, deliberately not armed. It predates the draft-everything
+instruction and is green. Left ready rather than converted, but say the word and
+it goes back to draft.
+
 ### The issue
 
 [swarf #20](https://github.com/fil-forge/swarf/issues/20) — **the revocation
