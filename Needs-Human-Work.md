@@ -11,90 +11,36 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**Both PRs are merged. #11 at 17:04Z (`9870d48a`), #10 at 19:08Z
-(`0d8fb04c`).** The sharding works and is measured.
+**Nothing. `main` (`0d8fb04c`) is green on all four workflows** — `ci`, `e2e`,
+`images` and `itest`, as of 19:20Z. Both PRs merged; the sharding is measured
+and working.
 
-**One real bug is still open: the `unit indexing-service` race below.** It is
-not infrastructure, it was never fixed, and it is the only thing that has made
-`main` red on its own merits today. On `9870d48a`, `itest`, `images` and `e2e`
-were green and `ci` was red on it alone.
+**But the indexing-service race is NOT fixed.** `ci` passed because
+`-test.shuffle` reorders every run and this one was kind. Petra's call was to
+**fix it upstream**, on the principle that upstream is still the source of truth
+for the services themselves — that work is delegated and in flight against
+`fil-forge/indexing-service`, not this repo.
 
-**`main`'s run for `0d8fb04c` started 19:08Z and is the next data point.**
-Because the race is intermittent — `-test.shuffle` reorders every run — **a
-pass there does NOT mean it is fixed.** It means the shuffle was kind. The fix
-below is still needed.
+**Standing rule from that decision, worth keeping:** when a problem turns up in
+imported code, ask *first* whether it belongs upstream, and fix it there
+whenever it makes any sense. The bug here was byte-identical to upstream's
+except the import path, so it was never the monorepo's to fix.
 
-**`itest` is fixed and measured.** Post-merge on `main`, actual against the
-prediction and against #11's own PR run:
+### What a correct diagnosis of that race needs
 
-| shard | predicted | PR run | **`main`** |
-|---|---|---|---|
-| `ingot 1/3` | 13m25s | 11m21s | **11m15s** |
-| `ingot 2/3` | 7m39s | 8m10s | **8m45s** |
-| `ingot 3/3` | 3m56s | 4m08s | **4m24s** |
-| `hilt` | — | 1m13s | 1m14s |
+Recorded because the first one did not survive contact with a test. The claim
+was "`poller.Stop()` races the final `Delete`". **Falsified:** the unfixed test
+with a 50 ms sleep *inside* the `Delete` mock hook still passed — the mock
+records a call on entry, so delaying inside `Delete` never stops it counting.
+300 runs of the unfixed test under `-race -shuffle=on` also passed on a fast,
+idle machine.
 
-Whole `itest` workflow **14m02s**, against ~28–36 min unsharded. Shard 1 lands
-within **6 seconds** across two independent runs (11m21s / 11m15s), which makes
-the "15% faster than predicted" result reproducible rather than a fluke — and
-strengthens the fresh-runner hypothesis below.
-
-### `ci` → `unit indexing-service`: a REAL race, not infrastructure
-
-```
--test.shuffle 1789751099594279797
---- FAIL: TestCachingQueuePoller_BatchProcessing (0.01s)
-    mock_CachingQueue.go:23: FAIL: Delete(string,string)
-    FAIL: 3 out of 4 expectation(s) were met.
-        The code you are testing needs to make 1 more call(s).
-```
-
-**The test waits on the wrong signal.** In
-`indexing-service/pkg/service/providercacher/cachingqueuepoller_test.go`
-(`numJobs = 11`, `batchSize = 2`), the `WaitGroup` is `Add(11)` and `Done()` is
-called inside the **`CacheProviderForIndexRecords`** hook — but the assertion
-that fails is on **`Delete`**, which the poller issues *after* the cache call
-returns. So `wg.Wait()` releases as soon as the last cache hook runs, and
-`poller.Stop()` then races the final `Delete`. One `Delete` short is exactly
-what the mock reports.
-
-**Proposed fix:** signal the WaitGroup from the `Delete` expectation instead,
-since `Delete` is the last step in the pipeline — not from the cache call.
-
-**Not #11's and not #10's**: #11's diff is `itest.yml` + `MONOREPO_TODO.md`, and
-#11's own PR run was 24/24 green ~50 minutes earlier on the same tree. This is
-pre-existing and latent; `-test.shuffle` varies the order each run, which is why
-it surfaces intermittently. **Deliberately NOT re-run** — the test body ran and
-the assertion failed, so a re-roll would mask a real bug rather than diagnose
-one.
-
-### `e2e`: BuildKit did not come up in time
-
-```
-ERROR: failed to build: waiting for BuildKit: DeadlineExceeded:
-  context deadline exceeded while waiting for connections to become ready
-```
-
-On `docker buildx build … sprue`, 20 seconds after the builder container
-started. buildkitd's own log shows it reached `running server on
-/run/buildkit/buildkitd.sock` — the daemon was up, the client could not connect
-inside the deadline. Infrastructure, and it died before any test ran, so the one
-re-run was justified. **It was spent and came back green** (attempt 2, 17:34:15Z
-on the identical commit), so this one is a confirmed flake and `e2e` on `main`
-is green.
-
-### Correcting the pattern claim from an hour ago
-
-This page said "both of today's non-code failures are container *startup*, not
-test logic." That was accurate when written and is now incomplete:
-
-- **Container startup — now three instances**, and the pattern is stronger: the
-  `itest` timeout (11 stack boots), the Ryuk reaper, and now BuildKit.
-- **Test logic — one instance**, the indexing-service race above, which does
-  *not* fit the pattern and needs a code fix rather than a reliability story.
-
-So: the startup hypothesis gains a third support, and separately there is a real
-racy test that no amount of container work would fix.
+The window must be **between the cache call returning and the handler reaching
+`queue.Delete(ctx, job.ID)`**, not inside `Delete`. The poller's handler
+(`go-ipni-tools .../queue/poller.go`, ~line 239) runs `s.handler(...)` then
+`queue.Delete(...)` sequentially per job. The experiment that was never run: in
+the unfixed test, `wg.Done()` **first** and then sleep in the cache hook — the
+original's `defer wg.Done()` delays the signal too, so the `defer` has to go.
 
 ## Open pull requests
 
