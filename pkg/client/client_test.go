@@ -355,4 +355,40 @@ func TestStreamLargeEvent(t *testing.T) {
 		require.NotErrorIs(t, got, context.DeadlineExceeded,
 			"the stream hung instead of reporting the oversized event")
 	})
+
+	// Same limit, reached the other way. bufio.Scanner can only cap a line, so
+	// an event assembled from many small data lines slipped past the cap
+	// entirely -- the consumer buffered it whole, however large it was.
+	t.Run("past sse.MaxEventBytes across many data lines errors too", func(t *testing.T) {
+		line := "data: " + strings.Repeat("a", 1024) + "\n"
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = fmt.Fprint(w, "event: revocation\n")
+			for range 16 * 1024 {
+				_, _ = fmt.Fprint(w, line)
+			}
+			_, _ = fmt.Fprint(w, "\n")
+		}))
+		defer server.Close()
+		serviceURL, err := url.Parse(server.URL)
+		require.NoError(t, err)
+		client, err := New(issuer.DID(), *serviceURL)
+		require.NoError(t, err)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		var got error
+		for _, err := range client.Stream(ctx, time.Time{}) {
+			got = err
+			break
+		}
+		require.Error(t, got)
+		require.NotErrorIs(t, got, context.DeadlineExceeded,
+			"the stream hung instead of reporting the oversized event")
+		// Not merely "some error": without the bound this event is buffered
+		// whole and then fails to decode, which would satisfy the assertion
+		// above while the megabytes were still read into memory.
+		require.ErrorContains(t, got, "exceeds",
+			"the event was buffered and rejected by the decoder, not by the size bound")
+	})
 }
