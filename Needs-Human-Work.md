@@ -64,26 +64,42 @@ have been written as a finding. What is actually known:
   `Total Memory: 15988 MB` — the documented standard public-repo shape.
 - **Ruled out:** image pulls during the test window. Zero pull/extract lines
   between 14:26:57 and 14:52:06.
-- **Not ruled out, and it may not be the machine at all.** Every test boots a
-  stack through testcontainers and waits on readiness. A run that needed an
-  extra health-check cycle somewhere would look identical from outside — that
-  is software timing, not hardware. From the red log, the first test's boot is
-  24.8s to compile and mount the ingot binary, then **70.1 seconds with
-  nothing logged at all** (14:27:31.0 "Connected to docker" → 14:28:41.1
-  "Creating container"), then the S3 endpoint is live 0.8s later. That silent
-  70s is the single largest block and the obvious place for a difference to
-  hide.
+- **Also ruled out: a retry or health-check cycle.** This page briefly floated
+  it as "bug-shaped and fixable". It is not, and the check is cheap. The
+  readiness waits are `wait.ForHTTP` / `wait.ForListeningPort` with
+  `WithStartupTimeout(2*time.Minute)` and **no `WithPollInterval`**
+  (`smelt/pkg/stack/stack.go:280-293`), and testcontainers-go v0.44.0 defaults
+  that interval to **100 ms** (`wait/wait.go:63-65`). A missed window therefore
+  costs 0.1s. Across 11 boots × 9 services that is a couple of seconds at the
+  outside — it **cannot** account for 4 minutes. Nothing changed between the
+  two runs, and nothing needed to.
 
-**What would settle it: one green `itest ingot` log.** Two comparisons decide
-it — per-test durations (uniformly ~19% slower ⇒ the machine; one or two tests
-blown up ⇒ a retry or health-check cycle) and that 70-second gap specifically.
-The agent cannot fetch it: the API returns only ~14.5 kB of trailing log, and
-the artifact blob host is blocked by the egress proxy. It needs the log zip
-from the run page, the same way the red one arrived.
+**What the boot actually spends its time on.** From the red log, the first
+test is 24.8s to compile and mount the ingot binary, then **70.1 seconds with
+nothing logged at all** (14:27:31.04 "Connected to docker" → 14:28:41.13
+"Creating container"), then the S3 endpoint is live 0.8s later. That silence is
+`docker compose` bringing ~9 containers up with its output not forwarded —
+confirmed by the window being literally empty, and by the only compose lines
+anywhere in the job being `docker version` plugin listings from the build
+steps. So it is real CPU and disk work, just invisible.
 
-This matters for the choice below only in one way, but a real one: if the cause
-is a retry cycle rather than raw speed, it is **bug-shaped and fixable**, not a
-budget to be widened.
+**What is left is the unexciting candidate: the machine.** Roughly two fifths
+of the run is container startup, it is the most host-sensitive thing in the
+suite, and it runs on a shared cloud VM. That is still a *candidate*, not a
+finding — a green `itest ingot` log would confirm it, since machine speed
+predicts a **uniform** ~19% slowdown across every test. The agent cannot fetch
+one: the API returns only ~14.5 kB of trailing log and the artifact blob host
+is blocked by the egress proxy, so it needs the zip from the run page, the way
+the red one arrived. It would confirm rather than change the picture, so it is
+worth a minute of Petra's time, not an hour.
+
+**Worth naming, because it is the opposite case.** versitygw's self-imposed 3s
+`lockWaitTime` (`tests/integration/utils.go:2654`, 38 call sites ≈ **114s of
+pure sleep**) sits inside `TestForgeVersity` — the test that ran out of budget.
+That cost is *fixed*, so it explains why the suite is long, not why it varies.
+3s → 1s takes ~76s off **every** run. It lands in versitygw, outside the
+agent's repo scope, and arrives here as a pin bump — a third lever, independent
+of the two options below.
 
 ### Where the 25 minutes go
 
