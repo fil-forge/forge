@@ -48,6 +48,22 @@ while IFS= read -r conflicted; do
     echo "   removed by  $(git log -1 --format='%h %s' "$del")"
     dest=$(git show -M20% --name-status --format= "$del" 2>/dev/null |
       awk -v p="$old" -F'\t' '$1 ~ /^R/ && $2 == p {print $3; exit}')
+
+    # A file can be moved more than once, and each hop is recorded against the
+    # path it had at the time. Stopping at the first rename therefore reports a
+    # path that no longer exists -- and reports it with no hedge, which is worse
+    # than not answering. Follow the chain until the destination is a file we
+    # actually have, or give up and fall through to the guess.
+    hops=0
+    while [ -n "$dest" ] && ! git ls-files --error-unmatch "$dest" >/dev/null 2>&1; do
+      hops=$((hops + 1))
+      if [ "$hops" -gt 10 ]; then dest=""; break; fi
+      nextdel=$(git log -1 --format=%H --diff-filter=D -- "$dest" || true)
+      if [ -z "$nextdel" ]; then dest=""; break; fi
+      echo "   then by     $(git log -1 --format='%h %s' "$nextdel")"
+      dest=$(git show -M20% --name-status --format= "$nextdel" 2>/dev/null |
+        awk -v p="$dest" -F'\t' '$1 ~ /^R/ && $2 == p {print $3; exit}')
+    done
   fi
 
   if [ -n "$dest" ]; then
@@ -67,8 +83,20 @@ while IFS= read -r conflicted; do
   # Stage 1 is the merge base, stage 3 is upstream. Their diff IS the change
   # that needs porting -- no need to look up where we last pulled from.
   echo "   the change to port:"
-  git diff ":1:$conflicted" ":3:$conflicted" 2>/dev/null |
-    sed -n '5,40p' | sed 's/^/     /' || echo "     (could not diff index stages)"
+  full=$(git diff ":1:$conflicted" ":3:$conflicted" 2>/dev/null || true)
+  if [ -z "$full" ]; then
+    echo "     (could not diff index stages)"
+  else
+    printf '%s\n' "$full" | sed -n '5,40p' | sed 's/^/     /'
+    # This is a PREVIEW, not a patch: four header lines are dropped, the rest is
+    # indented, and long changes are cut. Say how much was cut and how to get the
+    # whole thing -- a truncated hunk reads exactly like a complete one.
+    total=$(printf '%s\n' "$full" | wc -l)
+    if [ "$total" -gt 40 ]; then
+      echo "     ... $((total - 40)) more lines, not shown. The whole change:"
+      echo "         git diff ':1:$conflicted' ':3:$conflicted'"
+    fi
+  fi
   echo
 done < <(git status --porcelain | awk '/^DU /{print substr($0,4)}')
 
