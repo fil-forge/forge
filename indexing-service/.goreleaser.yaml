@@ -23,9 +23,9 @@ universal_binaries:
 archives:
   - format_overrides:
     - goos: windows
-      format: zip
+      formats: zip
     - goos: darwin
-      format: zip
+      formats: zip
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_
       {{- if eq .Os "darwin" }}mac_os
