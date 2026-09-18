@@ -340,6 +340,46 @@ narrowed and still missing two real references — was already there.
 take the reversible one, flag it on the PR that makes it, and list it here to be
 confirmed rather than assumed.
 
+## A second flake class: the testcontainers Ryuk reaper
+
+**New on 2026-09-18 at 16:33Z**, on #10's `29972ce6`. `unit piri` went red:
+
+```
+run minio: generic container: create container:
+  reaper: from container "5d98a414": wait for reaper 5d98a414: context deadline exceeded
+```
+
+It took down `TestObjectStore/minio` and panicked `TestMain` in
+`piri/pkg/store/objectstore/minio`. Ryuk is testcontainers' own cleanup
+sidecar; the failure is in starting it, before any test body ran.
+
+**Established as not #10's, rather than assumed:**
+
+- The diff from the green parent `c098486b` to the red `29972ce6` is **one
+  file**, `.github/scripts/subtree-conflicts.sh` (+33/−5).
+- That script is **referenced by no workflow at all** (`grep subtree-conflicts
+  .github/workflows/` → nothing). It is a manual tool.
+- `ci` run 47 on `c098486b` was **green**, eighteen minutes earlier, same job.
+
+**The one re-run has been spent** on it (`rerun_failed_jobs`, 16:36Z). Note the
+"never retried, deliberately" rule is `itest.yml`'s and does not cover
+`ci.yml`; and the reaper died before a test body ran, which is the other case
+that justifies a re-run.
+
+**Count this one separately from the postgres flake.** Same discipline, derive
+rather than remember: `ci.yml` run 48 is the only `unit piri` failure in 48
+runs.
+
+**Worth connecting, since it is now a pattern rather than an incident.** Both
+of today's non-code failures are container *startup*, not test logic: `itest
+ingot`'s timeout was 11 full stack boots at ~52s each, and this is a single
+sidecar failing to come up. The `TestForgeVersity` anomaly on #11 points the
+same way — it ran far faster as the first test on a fresh runner than as the
+thirteenth on a used one. **If container startup is the fragile part of this
+CI, the shared-stack item in `MONOREPO_TODO` stops being an optimisation and
+starts being a reliability fix.** That is a hypothesis with three
+circumstantial supports and no direct measurement yet.
+
 ## Still counting: the `e2e` postgres flake
 
 Not blocking anything — recorded so nobody declares it fixed from memory. **Count
