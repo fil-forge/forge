@@ -58,7 +58,23 @@ check runs on its head, none failing.
   ldflag → the injected version either way. Same binary, two different wrong
   answers by location, and the dev-checkout one looks plausible. The
   alternative offered: a release-time assertion that runs the binary and
-  checks it reports the tag, once the release workflow exists. **Her call.**
+  checks it reports the tag, once the release workflow exists. **She liked it
+  in principle and asked what it would cost**, so `8897b972` records it in
+  `MONOREPO_TODO.md` under Phase 1, with the answer: the check is sub-second,
+  but **only `piri` and `ingot` can be asked their version at all** —
+  `sprue`'s `build.Version` reaches only `serverInfoHandler`,
+  `indexing-service`'s only `pkg/server` and `pkg/aws`, so both want a
+  `version` subcommand first (~15 lines each). The entry also records the
+  shortcut not to take (grepping the binary for the string tests presence, not
+  what the program reports) and the citation for why nothing else is loud:
+  `addstrdata` in `cmd/link/internal/ld/data.go` returns early on a missing
+  symbol, on absent type info and on an unreachable one, and only `Errorf`s
+  when the symbol exists but is not a string.
+
+  #9 is now three commits, all on one subject: the fix plus its guard, the
+  corrected rationale, and this Phase 1 note. **Say if you would rather the
+  doc entry were split out** — it went here because the PR's own review
+  produced it.
 
 **The finding: every goreleaser `-X` ldflag names a pre-consolidation module
 path.**
