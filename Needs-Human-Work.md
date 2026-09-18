@@ -11,10 +11,18 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**#11 merged at 17:04Z as `9870d48a` and the sharding works. `main` is now red
-on exactly ONE thing: the `unit indexing-service` race below, which is a real
-bug and not infrastructure.** `itest`, `images` and `e2e` are all green on
-`9870d48a`.
+**Both PRs are merged. #11 at 17:04Z (`9870d48a`), #10 at 19:08Z
+(`0d8fb04c`).** The sharding works and is measured.
+
+**One real bug is still open: the `unit indexing-service` race below.** It is
+not infrastructure, it was never fixed, and it is the only thing that has made
+`main` red on its own merits today. On `9870d48a`, `itest`, `images` and `e2e`
+were green and `ci` was red on it alone.
+
+**`main`'s run for `0d8fb04c` started 19:08Z and is the next data point.**
+Because the race is intermittent — `-test.shuffle` reorders every run — **a
+pass there does NOT mean it is fixed.** It means the shuffle was kind. The fix
+below is still needed.
 
 **`itest` is fixed and measured.** Post-merge on `main`, actual against the
 prediction and against #11's own PR run:
@@ -90,69 +98,22 @@ racy test that no amount of container work would fix.
 
 ## Open pull requests
 
-**Two.**
+**None.** Both merged today:
 
-**[#11](https://github.com/fil-forge/forge/pull/11)** — the itest sharding
-above, the fix for red `main`. Opened 15:5xZ off `991633b0`.
+- **[#11](https://github.com/fil-forge/forge/pull/11)** 17:04Z as `9870d48a` —
+  itest sharding.
+- **[#10](https://github.com/fil-forge/forge/pull/10)** 19:08Z as `0d8fb04c` —
+  `subtree-conflicts.sh`, which finishes the merge a subtree pull could not
+  follow. Final interface, Petra's call: **merging is the default**,
+  `--dry-run` prints real `git diff` to stdout and writes nothing, notes go to
+  stderr, **exit 1 if anything was left for a human**. Built for an agent
+  mid-pull, not a person reading a report.
 
-**[#10](https://github.com/fil-forge/forge/pull/10)** — the
-`subtree-conflicts.sh` conflict reader and its `AGENTS.md` procedure, asked for
-after the dead-file approach was rejected, then redirected from predicting
-conflicts to reading them. **Green on all four workflows** (22 checks) at
-`a032558f`; waiting on review. `swarf` has none.
-
-Two things were fixed on it after that green run, neither of which CI could
-see:
-
-- **`AGENTS.md` said `## Conventions## Conventions`** on one line (`62af49c7`).
-  The heading stopped being a heading, so every convention under it read as
-  part of the subtree section. **No CI job reads a markdown file** — `guards`
-  runs the shell scripts under `.github/scripts/`, and that is the closest
-  thing this repo has to a linter for prose. It was caught by reading the PR's
-  own rendered diff.
-- **The description still described the design that was replaced**, including
-  a claim the second commit disproved: *"git does follow a pure move,
-  including a file hoisted out of a prefix."* It does not — that came from a
-  toy repository whose move emptied the prefix. Rewritten, with the wrong
-  sentence struck rather than deleted, since it is the reason the first design
-  looked reasonable.
-
-Both of the last two merged on 2026-09-18:
-
-- **[#9](https://github.com/fil-forge/forge/pull/9)** — merged 14:20Z as
-  `991633b0`. Three commits: the goreleaser `-X` ldflag fix and its guard, the
-  corrected rationale, and the Phase 1 note in `MONOREPO_TODO.md` on replacing
-  the lint with a release-time assertion. Merged while its CI was still
-  running, which the PR's own skippable-checks block had called: only `guards`
-  was load-bearing, and it was green. **`main`'s post-merge run is the thing to
-  watch.**
-- **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)** — merged 13:51Z
-  as `f286fb0`, carrying `a50b142` (the firehose fix) and `406cbe0` (the
-  `internal/sse` extraction).
-
-**Two consequences of the swarf merge are still live work for a person:**
-
-- **The subtree pull's one ordering constraint is satisfied** — it can now
-  bring the firehose fix in. Still Petra's to authorize; a subtree pull is a
-  rule 7 operation.
-- **The pin bumps for upstream `hilt` and `ingot`.** The version they move to,
-  derived and then **confirmed against the module proxy** rather than
-  hand-computed:
-  `github.com/fil-forge/swarf v0.0.1-0.20260918135142-f286fb01aa10`, replacing
-  `v0.0.1-0.20260821142121-d5d1a0a56f00`. `go get github.com/fil-forge/swarf@main`
-  resolves to exactly that. Both repos are outside this session's scope.
-
-**What #9's review settled, worth keeping:** a release workflow would *not*
-have caught the stale ldflags loudly. `addstrdata` in
-`src/cmd/link/internal/ld/data.go` returns early on a missing symbol, on absent
-type info and on an unreachable one, and only `Errorf`s when the symbol exists
-but is not a string; `go version -m` records the flag either way; and
-`pkg/build` reads `version.json` by *relative* path at runtime, so the same
-stale-ldflag `sprue` binary reports `v0.0.6` from a checkout and `v0.0.0` from
-a container. All measured. The replacement — run the released binary and
-require it to report the tag — is recorded in `MONOREPO_TODO.md`, along with
-the fact that only `piri` and `ingot` can be asked their version today.
-
+**Still open on #10's subject, and not built:** the post-merge audit for
+upstream deletions of files we moved. When upstream deletes a file we hoisted
+out of a prefix, both sides deleted the path, so git raises no conflict at all
+and the tool never sees it. Recoverable from `MERGE_HEAD`'s diff, but only by
+something that runs when nothing conflicted.
 ## Waiting on Petra
 
 - ~~Archive `fil-forge/forge-2`, or delete it?~~ **Done — archived 20:45Z.**
