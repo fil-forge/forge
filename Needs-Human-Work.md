@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-17 20:35Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-18 21:00Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -11,55 +11,92 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**Nothing. `main` (`0d8fb04c`) is green on all four workflows** — `ci`, `e2e`,
-`images` and `itest`, as of 19:20Z. Both PRs merged; the sharding is measured
-and working.
+**Nothing is blocked. Five things are waiting for you to look at them**, which
+is different: four draft pull requests and one issue, all opened while you were
+away, all deliberately draft so nobody else feels obliged to review first.
 
-**But the indexing-service race is NOT fixed.** `ci` passed because
-`-test.shuffle` reorders every run and this one was kind. Petra's call was to
-**fix it upstream**, on the principle that upstream is still the source of truth
-for the services themselves — that work is delegated and in flight against
-`fil-forge/indexing-service`, not this repo.
+### The four draft PRs, in the order worth reading them
 
-**Standing rule from that decision, worth keeping:** when a problem turns up in
+| | what | state |
+|---|---|---|
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | `finish-subtree-pull.sh` — merging is the default, `--dry-run` prints a real `git diff`, **and the deletion audit is built in** | **green, all 24 checks** |
+| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes | CI running |
+| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | |
+| [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand | |
+
+### The issue
+
+[swarf #20](https://github.com/fil-forge/swarf/issues/20) — **the revocation
+lookup contract**, written up rather than decided, as you asked. Three places
+answer "what does looking up a revocation by delegation CID return?" and no two
+agree: the interface does not say, PostgreSQL returns the newest row, the memory
+store keeps only one by overwriting, and the HTTP route caches the answer
+`immutable` for a year. The issue lays out both readings — *newest-matching*
+(the lookup is a mutable view, so the cache header is wrong) and *immutable*
+(the record is a fact, so the route should be keyed by cause CID) — and says
+what would settle it: **whether a second revocation of the same delegation is a
+correction of the first or an addition to it.**
+
+### One thing to know about indexing-service #106
+
+It now carries **two independent commits**, because that repository's designated
+branch is the only one I may push to and GitHub allows one PR per branch:
+
+- `2c48785` the poller flake fix (the original subject)
+- `72193d7` a `version` subcommand, **and four dead `-X` ldflags**
+
+The second half found something. `.goreleaser.yaml` was passing `-X main.version
+-X main.commit -X main.date -X main.builtBy`, and package `main` under `./cmd`
+declares none of them. **The Go linker accepts a `-X` for a symbol that does not
+exist and says nothing** — exit 0, no diagnostic, and `go version -m` still
+lists the flag. Measured on that tree:
+
+```
+-X .../pkg/build.Commit=deadbee   ->  commit: deadbee
+-X main.commit=deadbee            ->  commit: unknown
+-X main.doesnotexist=hello        ->  builds, exit 0, no output
+```
+
+So every indexing-service release so far has reported its version (that one flag
+was right) and `unknown` for the other three. Split the PR if you would rather
+review them apart; the commits are clean.
+
+### Still true from yesterday: the indexing-service race is not in `main`
+
+Fixed in the draft above, **not merged**, so `up-indexing-service/main` does not
+carry it and forge #14 does not either — a faithful resync cannot. Until #106
+merges, `unit indexing-service` in forge stays intermittently red. Not ported
+ahead of upstream on purpose.
+
+**The first diagnosis of that race was wrong and the record should keep saying
+so.** The claim was "`poller.Stop()` races the final `Delete`". `Stop()` is not
+a barrier at all: it cancels its context and then passes that cancelled context
+to `jobqueue.Shutdown`, which returns `ctx.Err()` immediately without waiting
+for workers. Probed directly — 0 of 11 deletes had happened when `Stop()`
+returned after 49µs, 11 of 11 by 300ms later. The WaitGroup was the test's only
+synchronisation.
+
+**Standing rule from Petra's decision, unchanged:** when a problem turns up in
 imported code, ask *first* whether it belongs upstream, and fix it there
-whenever it makes any sense. The bug here was byte-identical to upstream's
-except the import path, so it was never the monorepo's to fix.
-
-### What a correct diagnosis of that race needs
-
-Recorded because the first one did not survive contact with a test. The claim
-was "`poller.Stop()` races the final `Delete`". **Falsified:** the unfixed test
-with a 50 ms sleep *inside* the `Delete` mock hook still passed — the mock
-records a call on entry, so delaying inside `Delete` never stops it counting.
-300 runs of the unfixed test under `-race -shuffle=on` also passed on a fast,
-idle machine.
-
-The window must be **between the cache call returning and the handler reaching
-`queue.Delete(ctx, job.ID)`**, not inside `Delete`. The poller's handler
-(`go-ipni-tools .../queue/poller.go`, ~line 239) runs `s.handler(...)` then
-`queue.Delete(...)` sequentially per job. The experiment that was never run: in
-the unfixed test, `wg.Done()` **first** and then sleep in the cache hook — the
-original's `defer wg.Done()` delays the signal too, so the `defer` has to go.
+whenever it makes any sense.
 
 ## Open pull requests
 
-**None.** Both merged today:
+All four are listed above under Blocking. Merged earlier today, for the record:
 
 - **[#11](https://github.com/fil-forge/forge/pull/11)** 17:04Z as `9870d48a` —
   itest sharding.
 - **[#10](https://github.com/fil-forge/forge/pull/10)** 19:08Z as `0d8fb04c` —
-  `subtree-conflicts.sh`, which finishes the merge a subtree pull could not
-  follow. Final interface, Petra's call: **merging is the default**,
-  `--dry-run` prints real `git diff` to stdout and writes nothing, notes go to
-  stderr, **exit 1 if anything was left for a human**. Built for an agent
-  mid-pull, not a person reading a report.
+  the subtree merge tool. **#13 supersedes its interface**: same script, renamed
+  `finish-subtree-pull.sh`, with the audit #10 could not do.
 
-**Still open on #10's subject, and not built:** the post-merge audit for
-upstream deletions of files we moved. When upstream deletes a file we hoisted
-out of a prefix, both sides deleted the path, so git raises no conflict at all
-and the tool never sees it. Recoverable from `MERGE_HEAD`'s diff, but only by
-something that runs when nothing conflicted.
+**The gap #10 left is now closed.** When upstream deletes a file we moved out of
+a prefix, both sides deleted the path, so git raises no conflict and the pull
+succeeds in silence. #13 reads upstream's own diff against the previous split
+point instead of waiting for a conflict, runs in both modes — including after a
+pull where nothing conflicted, which is exactly when it is the only thing
+looking — and exits non-zero if it finds one.
+
 ## Waiting on Petra
 
 - ~~Archive `fil-forge/forge-2`, or delete it?~~ **Done — archived 20:45Z.**
@@ -69,12 +106,29 @@ something that runs when nothing conflicted.
   already collides**). Archiving keeps them all live. Side effect worth
   knowing: `forge-2` is read-only, so #28 stays frozen as *open* and cannot
   be closed — the archive banner is the signal, not its state.
-- ~~Where does #28 land?~~ **Decided: it does not.** The swarf fix arrives
-  with the final subtree pull once
-  [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) has merged, so
-  nothing local diverges inside `swarf/`. #28 is superseded and can be closed
-  whenever convenient. **The ordering is the thing to remember: #17 must merge
-  before the pull**, or the pull brings the hang and a second pull is needed.
+- ~~Where does #28 land?~~ **Decided: it does not — and the ordering worked
+  out.** [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) (and #18,
+  #19) merged upstream before the pull, so
+  [forge #14](https://github.com/fil-forge/forge/pull/14) brought the fix in
+  rather than the hang: `swarf/pkg/client/client.go` now reads through
+  `sse.NewScanner` and returns `ErrEventTooLong` to the caller instead of
+  discarding it. Checked in the pulled tree, not assumed from the commit
+  subjects. #28 is superseded and can be closed whenever convenient.
+
+**Three new decisions taken while you were away, all reversible, all flagged on
+the PR that makes them:**
+
+- **Two itest shardings in ingot** rather than picking one — upstream's named
+  Makefile lists and our derived round-robin. Neither subsumes the other, and
+  dropping upstream's means re-conflicting on every future pull. Details in
+  Subtree drift below.
+- **`indexing-service`'s dead ldflags fixed in the same PR as the poller flake**,
+  because the branch policy gives that repository one branch and GitHub one PR
+  per branch. Commits are clean; split if you prefer.
+- **forge #14 does not carry the indexing-service poller fix**, though I have
+  it. Upstream is the source of truth, the fix is not in upstream `main` yet,
+  and a resync that quietly runs ahead of upstream is not a resync. The cost is
+  `unit indexing-service` staying intermittently red until #106 merges.
 
 **All five earlier items were approved 2026-09-17** — the
 `replaces` → `guards` rename confirmed resolved, #17's digest reuse, #17's edits
@@ -149,29 +203,72 @@ eight straight passes still had a **~66%** chance with the bug untouched
 counted runs from before the transplant; this section is the one to trust, and
 it is cheap to recompute.
 
-## Subtree drift, and what to pull early
+## Subtree drift: done, and three things it taught
 
-**The polyrepo is not frozen** — ~45 commits across six services since the
-imports; `sprue`, `libforge` and `ucantone` all committed today. Full table on
-[[Current State]]. Policy (Petra, 2026-09-17): no regular pulls, **one final
-pull at the end**, but pull early where upstream fixes something we have hit.
+**All ten prefixes are at their upstream `main`** on
+[forge #14](https://github.com/fil-forge/forge/pull/14) — 37 commits across
+eight of them; `hilt` and `piri-signing-service` were already current.
 
-**One row meets that bar now: `smelt` `96fc212`, "postgres and openbao boot
-issues".** It is the same bug #27 fixed, found upstream two days earlier, and it
-fixes a *second* boot race we have not hit yet — `ingot-openbao-init` writing
-before raft elects a leader. The two fixes are complementary and do not
-conflict. **Pulling smelt (4 commits) is a recommendation awaiting your call**;
-an agent-initiated `git subtree pull` is a rule 7 operation and not something to
-start unasked.
+### 1. Never measure drift from commit messages
 
-`ingot` is **25 behind**, including #166 — CI itest sharding, the same work as
-closed #21. It arrives with the final pull regardless.
+**`git subtree pull` records no `git-subtree-split` trailer.** Only `git subtree
+add` does. Checked on a purpose-built fixture, because it had already fooled me:
+without `-m` the message is `Merge commit '<sha>'`, with `-m` it is exactly what
+you gave, and neither carries `git-subtree-dir:` or `git-subtree-split:`.
 
-**The final pull will not silently regress the image pins** — an earlier note
-here said it would, and that was wrong. Tested with `git merge-file` on the real
-three versions: all three files conflict loudly (piri 1, sprue 1, smelt 2), the
-digest-bearing lines survive the merge, and even resolving to *theirs* is caught
-by `staticcheck` U1000 on the orphaned const and helper. Nothing to do here.
+My first measurement grepped for those trailers and reported **91 commits across
+nine prefixes**. The truth was 37 across eight — `main` already carried
+`e6550212 subtree: pull hilt to 9815d93` and three siblings, invisible to the
+grep. Ancestry is the only sound derivation and needs no metadata:
+
+```sh
+git merge-base --is-ancestor "up-$p/main" HEAD   # up to date
+git rev-list --count "up-$p/main" --not HEAD     # how far behind
+```
+
+### 2. The quiet half of a subtree pull, and what it can cost
+
+A conflict is loud. **A cleanly-merged hunk carrying a polyrepo import path is
+silent**, and it happened in four of the eight pulls — piri 5 files, ingot 2,
+swarf 2, sprue 3.
+
+Two of those did not fail. They *resolved*:
+
+- `go mod tidy` added `github.com/fil-forge/ingot v0.0.0` to ingot's go.mod
+- `go mod tidy` added `github.com/fil-forge/sprue@506f5f6` to **sprue's own**
+  go.mod — the module depending on itself at its old published path, pinned to
+  the very commit being merged
+
+That builds, and it builds green, against a copy downloaded from the polyrepo
+instead of the tree in front of you.
+
+`swarf` also kills the assumption that this is about *added* files:
+`swarf/cmd/swarf/stream.go` already existed and had no conflict — upstream's new
+import merged into our block without touching a rewritten line.
+
+**`.github/scripts/check-module-paths.sh` (on #14) is the guard**, verified by
+failure: restoring the real unrewritten `piri/pkg/fx/app/init.go` from
+`up-piri/main` makes it report all three import lines.
+
+### 3. The image pins did not move — measured, not assumed
+
+The compose guard does not cover Go testcontainers references
+(`piri/.../testutil/minio.go`, `sprue/internal/testutil/s3.go`), so the whole
+`<image>@sha256:<64 hex>` population was snapshotted before and after:
+**97 occurrences and 40 distinct refs, both times, nothing lost or gained.**
+No new image-shaped literals in the branch's added Go lines either.
+
+The earlier note here predicting a loud conflict on those files was right in
+spirit and never got tested, because nothing upstream touched them.
+
+### One decision #14 leaves open
+
+**ingot now has two itest shardings.** Upstream added its own (#165, #166) —
+named lists in the Makefile, balanced by measured runtime, `rest` as the
+complement. Ours derives three shards by round-robin over `go test -list`, so
+there is no list to maintain at all. Both are kept, CI uses ours, and the
+Makefile and `itest/README.md` say so where someone would look. **Whether to
+keep two is yours.**
 
 ## Needs access the agent does not have
 
