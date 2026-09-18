@@ -781,6 +781,44 @@ corrected, retested picture.
   version of this section said the risk was "a bad afternoon, not a lost
   change" — that was wrong.
 
+### Can we hint git into resolving it? No — but we can remove the guess
+
+Petra asked whether the earlier commits can be reused to help. Tested:
+
+- **`git rerere` records nothing.** Enabled, conflict resolved, committed —
+  `.git/rr-cache` stayed empty, and the next pull conflicted identically. It
+  only records *content* conflicts, the kind with `<<<<<<<` markers;
+  `modify/delete` produces none. The one mechanism named for reusing a
+  resolution does not apply to this conflict.
+- **`-X find-renames`** at 50%, 30% and 10% does not rescue it.
+- There is no `--rename-hint`: git offers no way to hand a merge a rename map.
+
+**What works is not a hint. It is keeping the file at the old path, so there is
+nothing to infer.**
+
+- **Copy instead of move.** Leave `<svc>/x.go` exactly as upstream has it, copy
+  it to its new home, and rewrite only the copy. Tested across three pulls:
+  **every one clean**, each upstream change landed visibly in the old-path
+  file, and our rewritten copy was never touched.
+- **And the remedy is retroactive.** For a file already moved and rewritten —
+  the state that conflicts on every pull — restoring it at its old path with
+  its *last-pulled* content makes subsequent pulls clean again. Tested: two
+  pulls after the restore, both clean, our rewrite intact.
+
+The honest trade-offs:
+
+- **You carry a dead file**, and it has to stay dead. Without a convention or a
+  guard, someone eventually edits the wrong copy.
+- **Upstream's changes still need porting by hand** into the real copy. What
+  changes is that they arrive **conflict-free and visible in the diff** rather
+  than as a recurring conflict whose natural resolution discards them. It
+  converts *recurring conflict plus silent loss* into *visible diff plus a
+  deliberate port*.
+
+So it is not free, and for most moves it is overkill. It earns its keep for a
+file that upstream is **still actively changing** and that we have **rewritten**
+— the only combination that actually hurts.
+
 ### So what to actually do
 
 The paths have to agree again for the cost to go away. Given that our upstreams
