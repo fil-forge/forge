@@ -196,6 +196,32 @@ Neither touches the real cost, which is that **two fifths of the run is
 booting Docker stacks** (below). That is a third option, and a much larger
 one: share a stack across the tests that do not need isolation.
 
+**#11 IS GREEN — 24 of 24 checks, measured 16:10–16:25Z.** Predicted against
+actual, which is the whole point of shipping a prediction:
+
+| shard | predicted | actual | |
+|---|---|---|---|
+| `ingot 1/3` | 13m25s | **11m21s** | −15% |
+| `ingot 2/3` | 7m39s | **8m10s** | +7% |
+| `ingot 3/3` | 3m56s | **4m08s** | +5% |
+| `hilt` | — | 1m13s | |
+
+Longest shard **11m21s against a 25m timeout — 55% headroom**, where the whole
+suite had 0% and failed. The `itest` workflow went 16:10:34 → 16:25:23,
+**14m49s end to end**, against ~28–30 min unsharded.
+
+**One result does not add up, and it is worth chasing.** Shards 2 and 3 ran
++6.2% against the red-run baseline, so that run's machines were slightly
+*slower*. At that rate shard 1's other four tests should take 7m53s, leaving
+**3m28s for `TestForgeVersity` — a test that had already burned 5m59s in the
+red run without finishing.** Same code. The obvious hypothesis is that Versity
+is cheap on a fresh runner and expensive as the thirteenth stack boot on a
+machine that has already booted twelve, i.e. accumulated Docker state rather
+than the test. **Inference from arithmetic, not measurement** — confirming it
+needs shard 1's per-test log. If it holds, sharding helps more than a pure
+split predicts, and the shared-stack idea in `MONOREPO_TODO` gets more
+attractive, not less.
+
 **#11 is that change**, rebuilt on current `main` from the closed #21
 (`claude/shard-itest` untouched). Three shards is the measured optimum, not a
 guess — longest shard 25.0 min at 1, 17.4 at 2, **13.4 at 3**, back up to 14.9
