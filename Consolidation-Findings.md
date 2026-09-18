@@ -819,6 +819,32 @@ So it is not free, and for most moves it is overkill. It earns its keep for a
 file that upstream is **still actively changing** and that we have **rewritten**
 — the only combination that actually hurts.
 
+### The procedure, since there is no fix
+
+Keeping the old file around works but is a trap — a dead file someone
+eventually edits. [#10](https://github.com/fil-forge/forge/pull/10) adds
+`.github/scripts/subtree-orphans.sh` instead: derive the last-pulled commit
+from `git subtree`'s own `git-subtree-split` trailer, diff it against the
+upstream tip, and print the files upstream changed that our prefix no longer
+has. Non-zero exit if the list is not empty. **Read it before pulling, port
+each entry after, re-run to confirm.** Resolving the conflict is not porting
+the change.
+
+**Two bugs the real repository found that the toy one could not**, both worth
+remembering as a shape:
+
+- `awk` exiting early SIGPIPEs `git log`, and `pipefail` turns that into a
+  **silent** death — no output, no error, exit before the first `echo`. The
+  test history was too short to reach the early exit.
+- Files upstream *added* are missing from our prefix for an innocent reason.
+  Counting them flagged `swarf/internal/sse/scanner.go` — from last night's
+  merge — as orphaned.
+
+**The baseline it reports today:** 9 orphans across eight prefixes (`ingot` 1,
+`sprue` 6, `smelt` 2), and **every one is a per-service `.github/workflows/`
+file deleted on import**. No source file is orphaned, which is what makes a
+source file appearing in that list the signal.
+
 ### So what to actually do
 
 The paths have to agree again for the cost to go away. Given that our upstreams

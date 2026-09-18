@@ -19,7 +19,9 @@ tidying and block nothing.
 
 ## Open pull requests
 
-**None.** `forge` has zero open PRs, and so does `swarf`.
+One: **[#10](https://github.com/fil-forge/forge/pull/10)** — the
+`subtree-orphans.sh` pre-pull check and its `AGENTS.md` procedure, asked for
+after the dead-file approach was rejected. `swarf` has none.
 
 Both of the last two merged on 2026-09-18:
 
