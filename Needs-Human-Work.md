@@ -37,24 +37,28 @@ One: **[#9](https://github.com/fil-forge/forge/pull/9)**, the first PR on
   `v0.0.1-0.20260821142121-d5d1a0a56f00`. `go get github.com/fil-forge/swarf@main`
   resolves to exactly that. Those two repos are outside this session's scope.
 
-**#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) — **22
-check runs on its head, none failing** — but GitHub reports its
-`mergeable_state` as **`blocked`**, not `clean`. (`swarf` #17 read `clean`
-throughout, and merged without trouble.)
+**#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) — 22
+check runs on its head, none failing.
 
-**Worth one look, because this has bitten before.** `blocked` with everything
-green is either a required *review* — expected, and fine — or a **required
-status check that no longer reports**, which is exactly what #16's
-`replaces` → `guards` rename caused on `forge-2`. The agent cannot tell which:
-reading `branches/main/protection` returns *Resource not accessible by
-integration*. If `forge`'s branch protection was configured before the
-transplant, its required contexts describe the **old** repo's workflows, and
-a PR can sit blocked forever on a check that will never appear.
-
-The 22 contexts #9 actually reports, to compare against the rule:
-`e2e`, `guards`, `image {delegator,hilt,indexing-service,ingot,piri,piri-signing-service,sprue,swarf}`,
-`itest {hilt,ingot}`, `unit {delegator,forgectl,hilt,indexing-service,ingot,piri,piri-signing-service,smelt,sprue,swarf}`.
-Anything required that is not in that list will never report.
+- ~~`mergeable_state` reads `blocked` with everything green~~ — **resolved
+  2026-09-18: it was a required review, and Petra has removed that rule.** Not
+  the `replaces` → `guards` stale-context trap after all. The agent could not
+  tell the two apart from here, because `branches/main/protection` returns
+  *Resource not accessible by integration*.
+- **Petra asked the sharpest question on it** (thread on
+  `check-goreleaser-ldflags.sh`): if nothing caught this because there is no
+  release workflow, wouldn't adding one catch it loudly — in which case, why
+  lint? **Answer: no, and the PR's own wording was at odds with itself.**
+  `770d6843` fixes that wording. goreleaser succeeds with a stale `-X`; the
+  tag is cut and artifacts upload, and nothing in a release pipeline reads
+  back the version the binary reports. **And the fallback hides it**:
+  `pkg/build` reads `version.json` by *relative* path at runtime, so measured
+  on `sprue` — stale ldflag with no `version.json` in cwd → `v0.0.0`; stale
+  ldflag run from `sprue/` → **`v0.0.6`, `version.json`'s value**; corrected
+  ldflag → the injected version either way. Same binary, two different wrong
+  answers by location, and the dev-checkout one looks plausible. The
+  alternative offered: a release-time assertion that runs the binary and
+  checks it reports the tag, once the release workflow exists. **Her call.**
 
 **The finding: every goreleaser `-X` ldflag names a pre-consolidation module
 path.**
