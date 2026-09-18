@@ -13,8 +13,8 @@ require (
 	github.com/fil-forge/forge/hilt v0.0.0
 	github.com/fil-forge/forge/indexing-service v0.0.0
 	github.com/fil-forge/forge/swarf v0.0.0
-	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
-	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
+	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476
+	github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f
 	github.com/fil-forge/versitygw v0.0.0-20260914113944-a628e2cc628c
 	github.com/filecoin-project/go-fee v0.1.1-0.20260826122013-1c3970b90b0d
 	github.com/gofiber/fiber/v3 v3.5.0
@@ -154,6 +154,6 @@ require (
 
 replace github.com/fil-forge/forge/hilt => ../hilt
 
-replace github.com/fil-forge/forge/swarf => ../swarf
-
 replace github.com/fil-forge/forge/indexing-service => ../indexing-service
+
+replace github.com/fil-forge/forge/swarf => ../swarf

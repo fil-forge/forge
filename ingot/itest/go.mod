@@ -24,7 +24,7 @@ require (
 	github.com/cloud-portable/s3tests/packages/go v0.0.0-20260908103400-a4688c972bb0
 	github.com/fil-forge/forge/ingot v0.0.0
 	github.com/fil-forge/forge/smelt v0.0.0
-	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
+	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476
 	github.com/fil-forge/versitygw v0.0.0-20260914113944-a628e2cc628c
 	github.com/filecoin-project/go-fee v0.1.1-0.20260826122013-1c3970b90b0d
 	github.com/moby/moby/api v1.55.0
@@ -86,7 +86,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fil-forge/automobile v0.0.1 // indirect
 	github.com/fil-forge/forge/indexing-service v0.0.0 // indirect
-	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1 // indirect
+	github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f // indirect
 	github.com/filecoin-project/go-data-segment v0.0.1 // indirect
 	github.com/fsnotify/fsevents v0.2.0 // indirect
 	github.com/fvbommel/sortorder v1.1.0 // indirect
