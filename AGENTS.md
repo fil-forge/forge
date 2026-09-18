@@ -178,6 +178,22 @@ that file went in our history — a recorded rename, a same-basename guess, or a
 genuine delete — plus the exact upstream change to port, read from index
 stages 1 and 3.
 
+**Add `--apply` and it does the merge for you**, wherever the destination is a
+recorded rename. Stage 1 is the merge base and stage 3 is upstream, both at the
+old path, and our side is the file at its new home: an ordinary three-way merge,
+so `git merge-file` performs it. A clean result is written and staged; a
+conflicted one gets `--diff3` markers in the file *and* index stages 1/2/3 at
+the new path, so `git status` shows `UU` there, mergetool works, and `git add`
+resolves it. **After that git owns the conflict** — nothing downstream needs to
+know the script was involved. The marker labels name the real path on each side,
+which is more than a native merge could have told you, since the move is the
+whole problem.
+
+It will not apply on a same-basename guess or a true delete, will not overwrite
+a destination with uncommitted changes, and will not touch a binary. Those stay
+advisory. The flag is opt-in because a tool you run to *look* at a conflict
+should not rewrite the working tree because you ran it.
+
 **Why react to the conflict rather than predict it:** you cannot predict it.
 Measured (the matrix is on the wiki):
 
