@@ -11,8 +11,11 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**`main` is RED, and it is root-caused: the `ingot` itest suite has outgrown
-its timeout.** Petra supplied the job log, which the agent could not reach.
+**`main` is RED, and it is root-caused: the `ingot` itest suite does not
+reliably fit in its 25-minute timeout.** Petra supplied the job log, which the
+agent could not reach. The sharpest evidence is not in the log at all — it is
+that **the identical tree passed at 21m12s and timed out at 25m09s, six minutes
+apart.**
 
 `itest ingot` on `991633b0` ended with `panic: test timed out after 25m0s` —
 Go's whole-binary timeout from `.github/workflows/itest.yml:251`,
@@ -27,25 +30,34 @@ suite was making progress the whole way; it simply ran out of budget.
 **The numbers, and they are close.** Three measured runs of the same step,
 against a 25-minute budget:
 
-| commit | when | `itest` step | |
-|---|---|---|---|
-| `a032558f` (#10) | 09-18 15:03 | **21.9 min** | green |
-| `24b18ee5` | 09-17 | **22.9 min** | green |
-| `991633b0` (`main`) | 09-18 14:2x | **25.1 min** | **red — the timeout** |
+| commit | tree | `itest` step began | duration | |
+|---|---|---|---|---|
+| `24b18ee5` (`main`) | | 09-17 20:34 | **22m53s** | green |
+| `8897b972` (#9 head) | `051ff34b` | 09-18 **14:20:58** | **21m12s** | green |
+| `991633b0` (`main`) | `051ff34b` | 09-18 **14:26:57** | **25m09s** | **red** |
+| `a032558f` (#10 head) | | 09-18 15:03 | **21m54s** | green |
 
-The workflow's own comment says the suite was **~21m30s** when 25m was chosen.
-It is now 22–25m, so the headroom went from ~3.5 min to ~0–3 min and ordinary
-runner variance decides the outcome. A **3.2-minute spread** over three runs
-of the same suite, against a budget the slowest one exceeded, is what "sitting
-on the boundary" looks like: the red run is not an outlier, it is the top of
-the range. The fastest of the three is #10, which is `991633b0` **plus** its
-own diff — so the red run cannot be blamed on anything that has landed since
-either.
+**The two middle rows are the same tree.** `991633b0` is the merge commit of
+#9, and `git rev-parse` gives both the same tree object,
+`051ff34b9dc6539fb31b16805c0a0a468c2d8136` — byte-identical code, identical
+workflow, six minutes apart, different runners. One finished in 21m12s. The
+other did not finish at all.
+
+So this is **not** "the suite grew past 25 minutes." It is: the suite costs
+21–25 minutes depending on which runner it lands on, and **25m sits inside
+that band**. The workflow's own comment says it was ~21m30s when 25m was
+chosen; the floor has barely moved, but the spread now crosses the line.
+
+A **3m57s (19%) swing on identical work** is the number that matters, because
+it is the one no code change will fix. It also clears both #9 and #10: the
+same tree as the red run went green, and #10, which is that tree *plus* its
+own diff, went green too.
 
 ### Where the 25 minutes go
 
-Read out of the same log, so it is measurement rather than estimate. The suite
-is **strictly sequential** — `grep -c 't.Parallel()' ingot/itest/*.go` is **0**
+Read out of the same log, so it is measurement rather than estimate — but
+note it is the **slow** run, so every absolute number below is the top of the
+21–25 minute band, not the middle. The suite is **strictly sequential** — `grep -c 't.Parallel()' ingot/itest/*.go` is **0**
 — and each top-level test calls `forgeStack(t, …)`, which boots the whole smelt
 Forge stack (sprue + piri + indexer + postgres + …) in Docker.
 
@@ -105,11 +117,23 @@ is deliberately below the job's `timeout-minutes: 45` so the Go timeout fires
 first and dumps goroutines, "where a runner kill gives nothing". So changing it
 is a decision, not a mechanical fix.
 
+What the same-tree measurement changes: the budget has to clear the **slowest**
+run, not the typical one. Judged that way —
+
 - **Raise it to 30m**, matching `ingot/Makefile`. One line. Preserves the
-  fire-before-the-job ordering (30 ≪ 45) and restores ~5 min of headroom.
-  Papers over the growth.
-- **Shard the suite** — which is exactly what the closed #21 was. Addresses the
-  growth rather than the symptom, and costs more.
+  fire-before-the-job ordering (30 ≪ 45). Against the worst run measured
+  (25m09s) that is ~19% headroom; against the best (21m12s), ~42%. Papers over
+  the variance rather than removing it, and the next slow runner eats into it
+  again.
+- **Shard the suite** — which is exactly what the closed #21 was. `{Versity,
+  Encryption}` against everything else splits 11.8 / 13.2 min at *this* run's
+  speed, so even a slow runner leaves each shard around 9–11 minutes clear of
+  25m. Removes the variance problem rather than out-running it, and costs more
+  runner-minutes — the trade Petra already weighed when she closed #21.
+
+Neither touches the real cost, which is that **two fifths of the run is
+booting Docker stacks** (below). That is a third option, and a much larger
+one: share a stack across the tests that do not need isolation.
 
 `main` stays red until one of them lands. The patch for the first is ready to
 push on request.
