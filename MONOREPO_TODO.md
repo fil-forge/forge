@@ -230,6 +230,68 @@ designed, they are the worked examples of what it has to express.
 having a stale filter list, or find a third thing — perhaps splitting the
 slowest suites onto a different trigger.
 
+## Decide how much more to spend making `itest ingot` fast
+
+Sharding took it from ~28 minutes to roughly half, without touching a test.
+The rest costs something, and the something is different in each case.
+
+**Where the time actually goes**, measured rather than assumed, from the job
+log for a full run:
+
+| | |
+|---|---|
+| the Go test binary | **1257s = 20m57s** (`ok …/ingot/itest 1257.018s`) |
+| everything else | ~7 min — checkout, setup-go, vet, staticcheck, tidy, and 8 image builds |
+
+Inside those minutes: **13 top-level tests (2 of them skip), 11 full stack
+boots.** Separating boot from work needs a test whose work is all in subtests,
+and three of them are: their totals exceed their subtests by 51.1s, 51.6s and
+56.1s — the same number three times, which is the boot.
+`TestForgeDeferredMultipart` is the clean case, **58.3s to run 2.2s of
+subtests**.
+
+So boot is roughly **9.5 minutes of ~25, about two fifths** — a large minority,
+not the whole story. An earlier version of this entry said the subtests "run in
+hundredths of a second" and that the suite "is not slow"; both are wrong.
+`TestForgeEncryption` spends 298.4s inside its subtests and
+`TestForgeScenarios` 66.9s.
+
+Second measurement, separate from the above: **the same 8 images are built
+three times per pull request** — once as `images.yml`'s parallel jobs, once in
+`itest` per suite, once in `e2e`. 24 builds for 8 images.
+
+**Done: shard by test.** The matrix splits ingot across three runners, with
+each shard deriving its own tests from `go test -list` rather than from a
+hand-written `-run` regex. Separate jobs get separate Docker hosts, which
+`stack.CleanupLeaked` requires. Wall clock roughly halves. It costs
+runner-minutes: each shard rebuilds all 8 images, so three shards build them
+three times over.
+
+**Not done, and each is a real choice:**
+
+- **Build the images once and load them.** `images.yml` already builds all 8;
+  `itest` and `e2e` could `docker load` from an artifact instead of
+  rebuilding. That saves ~6 minutes in each of several jobs *and* removes the
+  multiplier sharding just added. **The win is genuinely uncertain**: 8 images
+  is likely 1–2 GB of artifact round-trip, which eats back some of it, and
+  nobody has measured that. A registry would be faster, but `images.yml`
+  deliberately takes no `packages: write` so that fork pull requests work —
+  taking this path reopens a decision already made on purpose.
+- **Share one stack across tests.** Nine of the thirteen call plain
+  `forgeStack(t)` with no custom config; only four need their own
+  (`config-retention.yaml`, `withSmallBlobConfig`, `withMultipartTTLConfig`).
+  Booting once and sharing removes about eight boots — **the largest single
+  win available, 8 to 16 minutes** — but it changes test isolation, needs
+  per-test bucket and tenant namespacing, and a flaky itest is the one thing
+  this job exists to catch. Real work, not a tidy-up.
+
+**The choice.** Whether to spend runner-minutes to buy wall clock (the current
+trade), spend engineering time on the shared stack instead (better return,
+higher risk), or measure the artifact path first and decide with a number.
+Worth noting the trend the sharding does not change: every service brought
+in-repo adds an image build to this job, so the fixed ~6 minutes grows while
+the variable part shrinks.
+
 ---
 
 ## Decide how much further to go on CI wall clock
