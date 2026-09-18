@@ -40,6 +40,14 @@ against a 25-minute budget:
 | `8897b972` (#9 head) | `051ff34b` | 09-18 **14:20:58** | **21m12s** | green |
 | `991633b0` (`main`) | `051ff34b` | 09-18 **14:26:57** | **25m09s** | **red** |
 | `a032558f` (#10 head) | | 09-18 15:03 | **21m54s** | green |
+| `62af49c7` (#10 head) | | 09-18 15:34 | **21m11s** | green |
+
+**Five runs now, and the shape is a tail, not an even spread.** Four greens sit
+in a 1m42s band (21m11s – 22m53s); the one red is **2m16s above the highest of
+them**. Calling it a "21–25 minute band" was loose — typical is ~21–23, with an
+occasional excursion that reached 25m09s. That makes the red run look more like
+one unlucky runner than a suite creeping upward, and it is the better argument
+for sharding: a budget set against typical cost is a budget the tail eats.
 
 **The two middle rows are the same tree.** `991633b0` is the merge commit of
 #9, and `git rev-parse` gives both the same tree object,
