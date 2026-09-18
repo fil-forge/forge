@@ -43,15 +43,47 @@ against a 25-minute budget:
 workflow, six minutes apart, different runners. One finished in 21m12s. The
 other did not finish at all.
 
-So this is **not** "the suite grew past 25 minutes." It is: the suite costs
-21–25 minutes depending on which runner it lands on, and **25m sits inside
-that band**. The workflow's own comment says it was ~21m30s when 25m was
-chosen; the floor has barely moved, but the spread now crosses the line.
+So this is **not** "the suite grew past 25 minutes." It is: the same work
+costs anywhere from 21m12s to over 25m, and **25m sits inside that band**. The
+workflow's own comment says it was ~21m30s when 25m was chosen; the floor has
+barely moved, but the spread now crosses the line.
 
-A **3m57s (19%) swing on identical work** is the number that matters, because
-it is the one no code change will fix. It also clears both #9 and #10: the
-same tree as the red run went green, and #10, which is that tree *plus* its
-own diff, went green too.
+It also clears both #9 and #10: the same tree as the red run went green, and
+#10, which is that tree *plus* its own diff, went green too.
+
+**What causes the 3m57s swing is NOT established**, and an earlier version of
+this page said "depending on which runner it lands on" as though it were. That
+was shorthand for the variable that has not been identified, and it should not
+have been written as a finding. What is actually known:
+
+- Each job gets a fresh ephemeral VM. The four `itest ingot` jobs ran on four
+  distinct runner IDs (`1000031610`, `1000032094`, `1000032112`, `1000032209`),
+  all labelled `ubuntu-24.04`.
+- **On paper they are identical.** The red job's own log reports runner image
+  `ubuntu24/20260907.300`, `Ubuntu 24.04.5 LTS`, `CPUs: 4`,
+  `Total Memory: 15988 MB` — the documented standard public-repo shape.
+- **Ruled out:** image pulls during the test window. Zero pull/extract lines
+  between 14:26:57 and 14:52:06.
+- **Not ruled out, and it may not be the machine at all.** Every test boots a
+  stack through testcontainers and waits on readiness. A run that needed an
+  extra health-check cycle somewhere would look identical from outside — that
+  is software timing, not hardware. From the red log, the first test's boot is
+  24.8s to compile and mount the ingot binary, then **70.1 seconds with
+  nothing logged at all** (14:27:31.0 "Connected to docker" → 14:28:41.1
+  "Creating container"), then the S3 endpoint is live 0.8s later. That silent
+  70s is the single largest block and the obvious place for a difference to
+  hide.
+
+**What would settle it: one green `itest ingot` log.** Two comparisons decide
+it — per-test durations (uniformly ~19% slower ⇒ the machine; one or two tests
+blown up ⇒ a retry or health-check cycle) and that 70-second gap specifically.
+The agent cannot fetch it: the API returns only ~14.5 kB of trailing log, and
+the artifact blob host is blocked by the egress proxy. It needs the log zip
+from the run page, the same way the red one arrived.
+
+This matters for the choice below only in one way, but a real one: if the cause
+is a retry cycle rather than raw speed, it is **bug-shaped and fixable**, not a
+budget to be widened.
 
 ### Where the 25 minutes go
 
