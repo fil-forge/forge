@@ -19,140 +19,43 @@ tidying and block nothing.
 
 ## Open pull requests
 
-One: **[#9](https://github.com/fil-forge/forge/pull/9)**, the first PR on
-`forge` itself.
+**None.** `forge` has zero open PRs, and so does `swarf`.
 
-**[`swarf` #17](https://github.com/fil-forge/swarf/pull/17) merged
-2026-09-18 13:51Z** as `f286fb0`, carrying both commits (`a50b142` fix,
-`406cbe0` the `internal/sse` extraction). `Go Checks` is green on the merge;
-`Go Test` and `Container` were still running. Two things follow:
+Both of the last two merged on 2026-09-18:
 
-- **The subtree pull's one ordering constraint is satisfied.** It can now
-  bring the firehose fix in. Still Petra's to authorize — a subtree pull is a
+- **[#9](https://github.com/fil-forge/forge/pull/9)** — merged 14:20Z as
+  `991633b0`. Three commits: the goreleaser `-X` ldflag fix and its guard, the
+  corrected rationale, and the Phase 1 note in `MONOREPO_TODO.md` on replacing
+  the lint with a release-time assertion. Merged while its CI was still
+  running, which the PR's own skippable-checks block had called: only `guards`
+  was load-bearing, and it was green. **`main`'s post-merge run is the thing to
+  watch.**
+- **[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)** — merged 13:51Z
+  as `f286fb0`, carrying `a50b142` (the firehose fix) and `406cbe0` (the
+  `internal/sse` extraction).
+
+**Two consequences of the swarf merge are still live work for a person:**
+
+- **The subtree pull's one ordering constraint is satisfied** — it can now
+  bring the firehose fix in. Still Petra's to authorize; a subtree pull is a
   rule 7 operation.
-- **The pin bumps for upstream `hilt` and `ingot` are now possible.** The
-  version they would move to, derived and then **confirmed against the module
-  proxy** rather than hand-computed:
+- **The pin bumps for upstream `hilt` and `ingot`.** The version they move to,
+  derived and then **confirmed against the module proxy** rather than
+  hand-computed:
   `github.com/fil-forge/swarf v0.0.1-0.20260918135142-f286fb01aa10`, replacing
   `v0.0.1-0.20260821142121-d5d1a0a56f00`. `go get github.com/fil-forge/swarf@main`
-  resolves to exactly that. Those two repos are outside this session's scope.
+  resolves to exactly that. Both repos are outside this session's scope.
 
-**#9 is green on all four workflows** (`ci`, `e2e`, `itest`, `images`) — 22
-check runs on its head, none failing.
-
-- ~~`mergeable_state` reads `blocked` with everything green~~ — **resolved
-  2026-09-18: it was a required review, and Petra has removed that rule.** Not
-  the `replaces` → `guards` stale-context trap after all. The agent could not
-  tell the two apart from here, because `branches/main/protection` returns
-  *Resource not accessible by integration*.
-- **Petra asked the sharpest question on it** (thread on
-  `check-goreleaser-ldflags.sh`): if nothing caught this because there is no
-  release workflow, wouldn't adding one catch it loudly — in which case, why
-  lint? **Answer: no, and the PR's own wording was at odds with itself.**
-  `770d6843` fixes that wording. goreleaser succeeds with a stale `-X`; the
-  tag is cut and artifacts upload, and nothing in a release pipeline reads
-  back the version the binary reports. **And the fallback hides it**:
-  `pkg/build` reads `version.json` by *relative* path at runtime, so measured
-  on `sprue` — stale ldflag with no `version.json` in cwd → `v0.0.0`; stale
-  ldflag run from `sprue/` → **`v0.0.6`, `version.json`'s value**; corrected
-  ldflag → the injected version either way. Same binary, two different wrong
-  answers by location, and the dev-checkout one looks plausible. The
-  alternative offered: a release-time assertion that runs the binary and
-  checks it reports the tag, once the release workflow exists. **She liked it
-  in principle and asked what it would cost**, so `8897b972` records it in
-  `MONOREPO_TODO.md` under Phase 1, with the answer: the check is sub-second,
-  but **only `piri` and `ingot` can be asked their version at all** —
-  `sprue`'s `build.Version` reaches only `serverInfoHandler`,
-  `indexing-service`'s only `pkg/server` and `pkg/aws`, so both want a
-  `version` subcommand first (~15 lines each). The entry also records the
-  shortcut not to take (grepping the binary for the string tests presence, not
-  what the program reports) and the citation for why nothing else is loud:
-  `addstrdata` in `cmd/link/internal/ld/data.go` returns early on a missing
-  symbol, on absent type info and on an unreachable one, and only `Errorf`s
-  when the symbol exists but is not a string.
-
-  #9 is now three commits, all on one subject: the fix plus its guard, the
-  corrected rationale, and this Phase 1 note. **Say if you would rather the
-  doc entry were split out** — it went here because the PR's own review
-  produced it.
-
-**The finding: every goreleaser `-X` ldflag names a pre-consolidation module
-path.**
-17 of 21, across all four `.goreleaser.yaml` files. The linker does not object
-to an `-X` whose import path matches nothing — it exits 0 and silently leaves
-the variable at its default — so a release cut from today's tree would ship
-binaries reporting **`v0.0.0`** (piri, sprue, indexing-service) or **`dev`**
-(ingot). Proven on a real binary, not argued: `sprue/cmd` built with the stale
-path contains the injected string **0 times**, with the corrected path
-**once**. And `go version -m` records the `-ldflags` argument either way, so
-the released artifact's build info would look correct. The fix derives each
-path from the config's own `go.mod`; `check-goreleaser-ldflags.sh` re-derives
-it in CI and fails if it finds no `-X` flags at all.
-
-Deliberately left in #9 because they are entangled with the release flow's
-design: `ingot` and `sprue` publish to `ghcr.io/fil-forge/<svc>` while the
-monorepo's convention is `ghcr.io/fil-forge/forge/<svc>`, and none of the four
-sets `release.disable`, which the old `release.yml` depended on.
-
-**Also in #9: a branch-name choice to confirm.** The session's designated
-branch for this repo is `claude/forge-monorepo-poc-p9w0yr`, but that branch
-sits on the **pre-orphan lineage** with unmerged commits sharing no history
-with today's `main` — rebasing them would be meaningless and force-pushing
-would destroy them. Used `claude/goreleaser-ldflags` instead; say if you want
-it moved.
-
-`forge` had no open PRs before this, and
-[#28](https://github.com/fil-forge/forge-2/pull/28) on `forge-2` is superseded
-(see below) — it can be closed.
-
-**#17 took a review and grew a second commit** (`406cbe0`, **5/5 green**). Petra's note: the
-duplicated buffer limits and the comment explaining the duplication were the
-wrong shape. The duplication ran deeper than the constants — `cmd/swarf` and
-`pkg/client` had the *same* SSE loop — so the framing moved to a new
-`internal/sse`, whose `Scanner` reads events the way `bufio.Scanner` reads
-lines. Both call sites collapse to the one step that differs. Two behaviours
-of the old loop were checked rather than assumed and written down there: an
-event carrying no data is not dispatched (which the event stream format
-requires, not an accident), and fields other than `event`/`data` are ignored —
-including the `id:` line `pkg/fx` writes before every revocation.
-
-`406cbe0` first came back red, and **not from the refactor**: `proxy.golang.org`
-cut the `gitlab.com/yawning/tuplehash` zip mid-transfer (`stream error: stream
-ID 321; INTERNAL_ERROR`), so `cmd/swarf`, `itest` and `pkg/fx` — the three
-packages that reach `secp256k1-voi` — reported `[setup failed]` without
-compiling. Ruled out rather than assumed: **every added test ran and passed in
-that same job** (`TestScannerReadsEvents` 8/8, the two size tests 1/1 each,
-`TestStreamLargeEvent` 3/3), the commit changes no dependencies, and `Go
-Checks` and `Container` were green on the same SHA. A module download dying
-before any test body runs is the one sanctioned re-run; it passed on attempt 2.
-**That re-run is spent** — a second failure on this commit would be real. #27 merged as `24b18ee5`, so the postgres healthcheck fix and
-its guard are live, and `e2e` has now passed twice on the fix (still weak
-evidence: two passes had a ~90% chance even unfixed). #25 and #26
-merged, so the layer cache is live on `main` (`95e83665`) and its numbers are
-recorded: **23s warm** against a 7m34s baseline, the `e2e` job 13m10s → 5m29s.
-Three caveats travel with that, on [[Current State]] and in #26: the warm run was
-a same-commit re-run so it is the **ceiling not the average**, the cold path is
-~3 min *worse*, and **the cache size has not been checked against GitHub's 10 GB
-limit** — that one needs `gh cache list` or the Actions cache API, neither of
-which the agent can reach from here.
-
-**Each one now opens with a block naming the checks that are safe to merge
-without waiting for** — see [[Current State]] for why, and what makes it more
-than a feeling.
-
-| | what | state |
-|---|---|---|
-| [#28](https://github.com/fil-forge/forge-2/pull/28) | **swarf's firehose client dropped oversized events and then hung** — default 64 KiB scanner cap, `ErrTooLong` discarded, so `Stream` reconnected at the same cursor forever. hilt and ingot both link it in production. | `52648c29`, **22/22 green**. **Now also open upstream** as [`fil-forge/swarf` #17](https://github.com/fil-forge/swarf/pull/17) (`a50b142`, **5/5 green**) — the identical patch, re-verified in both directions against upstream's own tree. That was the part that mattered: upstream `hilt` and `ingot` pin a swarf version that has the bug, so #28 alone fixes the copy nobody deploys. **Still yours:** review and merge swarf #17, then a pin bump in each consumer — the same shape as the versitygw `lockWaitTime` item. **Three sibling findings are left deliberately**: the `immutable` cache on a mutable route, the memory-vs-PostgreSQL `Get` divergence, and the 10s settle window. Each is a **contract decision** — I would rather you chose than have me encode one. |
-
-**No check-name change is outstanding.** #16's `replaces` → `guards` is merged,
-live, and confirmed resolved (2026-09-17). #21 would have added a second
-(`itest ingot` → `itest ingot 1/3`…) but is closed, so that one returns only if
-the branch is revived. #27 adds a *step* to the existing `guards` job, which
-changes no check name. Worth re-reading this line before enabling required
-checks.
-
-**Nothing is left to import**, and nothing should be started. `MAJOR_DECISIONS.md`
-records what is deliberately out.
+**What #9's review settled, worth keeping:** a release workflow would *not*
+have caught the stale ldflags loudly. `addstrdata` in
+`src/cmd/link/internal/ld/data.go` returns early on a missing symbol, on absent
+type info and on an unreachable one, and only `Errorf`s when the symbol exists
+but is not a string; `go version -m` records the flag either way; and
+`pkg/build` reads `version.json` by *relative* path at runtime, so the same
+stale-ldflag `sprue` binary reports `v0.0.6` from a checkout and `v0.0.0` from
+a container. All measured. The replacement — run the released binary and
+require it to report the tag — is recorded in `MONOREPO_TODO.md`, along with
+the fact that only `piri` and `ingot` can be asked their version today.
 
 ## Waiting on Petra
 

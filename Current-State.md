@@ -9,7 +9,8 @@ Consolidating the Fil Forge polyrepo into a monorepo at
 
 ## The move to `forge` is done
 
-**`fil-forge/forge`'s `main` is `24b18ee5`** — the monorepo. Petra pushed it at
+**`fil-forge/forge`'s `main` is `991633b0`** (it was `24b18ee5` at the
+transplant; #9 merged on top 2026-09-18 14:20Z) — the monorepo. Petra pushed it at
 20:21Z and closed forge [#6](https://github.com/fil-forge/forge/pull/6),
 [#7](https://github.com/fil-forge/forge/pull/7) and
 [#8](https://github.com/fil-forge/forge/pull/8), the pre-fork chain whose base

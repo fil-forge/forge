@@ -9,7 +9,8 @@ and the evidence, [[Needs Human Work]] has what is waiting on a person,
 still released on its own cadence.
 
 **Where we are:** Phase 0 is done, the move to `forge` is done, Phase 1 has
-started.
+started. **`forge` has no open PRs**; the only thing in flight is the final
+subtree pull, which is now unblocked.
 
 ---
 
@@ -39,7 +40,7 @@ started.
 | | what | state |
 |---|---|---|
 | ~~[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)~~ | Firehose client hangs on an event over 64 KiB; fixed upstream, plus an `internal/sse` extraction | **Merged 2026-09-18 13:51Z** as `f286fb0` |
-| [#9](https://github.com/fil-forge/forge/pull/9) | Every goreleaser `-X` ldflag names a pre-consolidation module path, so a release would ship binaries reporting `v0.0.0`. Fix + a guard | **Open** |
+| ~~[#9](https://github.com/fil-forge/forge/pull/9)~~ | Every goreleaser `-X` ldflag named a pre-consolidation module path, so a release would have shipped binaries reporting `v0.0.0`. Fix, a guard, and the Phase 1 note on replacing it | **Merged 2026-09-18 14:20Z** as `991633b0` |
 | the final `git subtree pull` | ~45 commits of upstream drift to take in one pull at the end | **Not started — and its one ordering constraint is now satisfied**, since `swarf` #17 has merged |
 
 ## Ahead
