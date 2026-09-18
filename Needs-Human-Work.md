@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-18 22:00Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-18 22:10Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -11,16 +11,17 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**Nothing is blocked. Five things are waiting for you to look at them**, which
-is different: four draft pull requests and one issue, all opened while you were
-away, all deliberately draft so nobody else feels obliged to review first.
+**Nothing is blocked, nothing is red, and five things are waiting for you to
+look at them**: four draft pull requests and one issue, all opened while you
+were away, all deliberately draft so nobody else feels obliged to review first.
+**Both forge PRs are green on all 24 checks**, as is #12.
 
 ### The four draft PRs, in the order worth reading them
 
 | | what | state |
 |---|---|---|
 | [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **green, all 24**, on `1a17fdc5` |
-| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | `e2e` **fixed and green**; poller-race fix ported; re-running on `d4505701` |
+| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | **green, all 24**, on `d4505701` |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand | |
 
