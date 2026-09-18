@@ -170,6 +170,37 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 `testutil` package with a named const and an env override, not inline in a
 `_test.go`.
 
+## Before every `git subtree pull`, list what has nowhere to land
+
+Run `.github/scripts/subtree-orphans.sh <prefix> <remote> [ref]` first. It
+prints the files upstream changed that our prefix no longer has — because we
+moved or deleted them — and exits non-zero if there are any.
+
+This exists because git cannot help with that case and neither can we hint it
+into helping. Measured, not assumed (the evidence is on the wiki):
+
+- Git **does** follow a pure move, including a file hoisted out of a prefix.
+- It stops following once the moved file is **rewritten**, and then reports
+  `modify/delete` **at the unprefixed path** — `svc.go`, not `svc/svc.go` —
+  so the resolver is handed a path that exists nowhere in this layout.
+- Splitting the move and the rewrite into separate commits does not help: a
+  three-way merge compares the merge base to each tip, not the commits between.
+- Pulling in between helps only that one pull. **The conflict recurs on every
+  later pull that touches the file.**
+- `git rerere` records nothing — it only stores content conflicts, and
+  `modify/delete` has no conflict markers.
+- **The conflict is loud; the data loss is not.** Deleting the resurrected file
+  and keeping ours is what anyone would do, and it drops upstream's change
+  silently.
+
+So the procedure is: **read the list before pulling, port each entry
+deliberately after, and re-run to confirm.** Resolving the conflict is not
+porting the change.
+
+Today every orphan across all eight prefixes is a per-service
+`.github/workflows/` file deleted on import — nothing we need. That is the
+useful baseline: a *source* file appearing in this list is the signal.
+
 ## Conventions
 
 - **Never hand-transcribe a digest or a sha.** Resolve and apply it with one
