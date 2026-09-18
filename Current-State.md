@@ -157,6 +157,15 @@ Seven rules that have actually decided things:
    `git subtree pull` adds that service's new commits behind a merge. That is
    the feature.
 
+   **Keeping the pulls tractable is a separate concern**, and one that grows
+   as we edit inside the imported prefixes. Measured rather than assumed, in
+   [[Consolidation Findings]]: git follows a pure move — including a file
+   hoisted *out* of a service prefix — but loses the thread once the moved file
+   is rewritten, and **splitting the move and the rewrite into separate commits
+   does not help**, because a three-way merge only compares the merge base to
+   each tip. Pulling in between does. The failure is a loud `modify/delete`
+   conflict either way.
+
    When the base moves under such a branch, it is **rebuilt**: replay it onto
    the new base, re-running each `git subtree pull` so the merge is recreated
    rather than flattened or imported as content. Not merged — merging the base

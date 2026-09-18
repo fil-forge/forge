@@ -729,6 +729,54 @@ the key must include the stack's identity, not just the repository's.
 
 ---
 
+## Keeping `git subtree pull` tractable while we edit imported code
+
+Raised by Petra 2026-09-18, and worth having as measurements rather than
+folklore, because the obvious advice turns out to be wrong. **Tested in
+throwaway repos** (git 2.43.0, `ort` strategy) — a fake upstream, a fake
+monorepo with the subtree added, a divergent edit on each side, then
+`git subtree pull`:
+
+| | the monorepo did | the pull |
+|---|---|---|
+| A | renamed a file **inside** the prefix | **clean** — upstream's change landed on the new path |
+| C | moved it **out** of the prefix, into `shared/` | **clean** — git followed it across the boundary |
+| B | moved **and rewrote** it, one commit | **conflict** (`modify/delete`) |
+| D | moved and rewrote it in **two separate commits** | **conflict, identical to B** |
+| E | moved it, **pulled**, then rewrote | **clean** |
+
+Four things fall out:
+
+- **Git follows a pure move, including out of the subtree prefix.** The
+  expectation that crossing the prefix boundary would break it was wrong:
+  `git subtree pull` merges into the whole tree, so rename detection sees the
+  whole tree. Hoisting a file from `<svc>/` into a shared package — exactly
+  what Phase 3 does — costs nothing by itself.
+- **What breaks it is similarity, not location.** Once the moved file is
+  rewritten past the rename-detection threshold, git sees a delete and an
+  unrelated add.
+- **Splitting the move and the rewrite into separate commits does not help.**
+  This is the counterintuitive one, and the advice most people would give. A
+  three-way merge compares the **merge base** against each side's **tip**; the
+  intermediate commits are not consulted, so two commits and one commit
+  produce exactly the same net diff and exactly the same conflict.
+- **What does help is pulling in between.** Case E: move, pull, then rewrite.
+  The pull happens while the rename is still cheap to follow, and the rewrite
+  lands on a file that already carries upstream's change.
+
+Lowering the threshold did not rescue case D — `-X find-renames` at 50%, 30%
+and 10% all still conflicted, despite the two files being ~52% similar by
+character ratio. Not pursued further, since `git subtree`'s own strategy
+options may interact; the practical rule does not depend on it.
+
+**The failure is loud, which is the saving grace.** A `modify/delete` conflict
+names the file and leaves upstream's version in the tree at the old path.
+Nothing here is silent, so the risk is a bad afternoon, not a lost change.
+
+**So the rule is: pull before you rewrite moved code**, and treat the window
+between moving a file and the next pull as the cheap one. It is not a reason
+to avoid moving files.
+
 ## Working principles that fell out of this
 
 1. **A green check is a claim about what ran, not about what is correct.** Ask
