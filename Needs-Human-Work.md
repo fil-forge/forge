@@ -24,17 +24,23 @@ in sequence over 19 minutes (14:27:06 → 14:46:06), and `TestForgeVersity` was
 in the panic, `DeleteObject_nested_dir_object`, had been running **0s**. The
 suite was making progress the whole way; it simply ran out of budget.
 
-**The numbers, and they are close:**
+**The numbers, and they are close.** Three measured runs of the same step,
+against a 25-minute budget:
 
-| | `itest` step |
-|---|---|
-| `24b18ee5` (green) | **22.9 min** |
-| `991633b0` (red) | **25.1 min** — the timeout |
-| budget | 25 min |
+| commit | when | `itest` step | |
+|---|---|---|---|
+| `a032558f` (#10) | 09-18 15:03 | **21.9 min** | green |
+| `24b18ee5` | 09-17 | **22.9 min** | green |
+| `991633b0` (`main`) | 09-18 14:2x | **25.1 min** | **red — the timeout** |
 
 The workflow's own comment says the suite was **~21m30s** when 25m was chosen.
-It is now 23–25m, so the headroom went from ~3.5 min to ~0–2 min and ordinary
-runner variance decides the outcome.
+It is now 22–25m, so the headroom went from ~3.5 min to ~0–3 min and ordinary
+runner variance decides the outcome. A **3.2-minute spread** over three runs
+of the same suite, against a budget the slowest one exceeded, is what "sitting
+on the boundary" looks like: the red run is not an outlier, it is the top of
+the range. The fastest of the three is #10, which is `991633b0` **plus** its
+own diff — so the red run cannot be blamed on anything that has landed since
+either.
 
 **Two things in the repo point the same way:**
 
@@ -68,8 +74,26 @@ push on request.
 ## Open pull requests
 
 One: **[#10](https://github.com/fil-forge/forge/pull/10)** — the
-`subtree-orphans.sh` pre-pull check and its `AGENTS.md` procedure, asked for
-after the dead-file approach was rejected. `swarf` has none.
+`subtree-conflicts.sh` conflict reader and its `AGENTS.md` procedure, asked for
+after the dead-file approach was rejected, then redirected from predicting
+conflicts to reading them. **Green on all four workflows** (22 checks) at
+`a032558f`; waiting on review. `swarf` has none.
+
+Two things were fixed on it after that green run, neither of which CI could
+see:
+
+- **`AGENTS.md` said `## Conventions## Conventions`** on one line (`62af49c7`).
+  The heading stopped being a heading, so every convention under it read as
+  part of the subtree section. **No CI job reads a markdown file** — `guards`
+  runs the shell scripts under `.github/scripts/`, and that is the closest
+  thing this repo has to a linter for prose. It was caught by reading the PR's
+  own rendered diff.
+- **The description still described the design that was replaced**, including
+  a claim the second commit disproved: *"git does follow a pure move,
+  including a file hoisted out of a prefix."* It does not — that came from a
+  toy repository whose move emptied the prefix. Rewritten, with the wrong
+  sentence struck rather than deleted, since it is the reason the first design
+  looked reasonable.
 
 Both of the last two merged on 2026-09-18:
 
