@@ -11,47 +11,59 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**`main` is RED.** `itest ingot` failed on `991633b0` (the #9 merge) at
-2026-09-18 14:52Z. `itest hilt` passed; `ci`, `e2e` and `images` are green.
+**`main` is RED, and it is root-caused: the `ingot` itest suite has outgrown
+its timeout.** Petra supplied the job log, which the agent could not reach.
 
-**What is established:**
+`itest ingot` on `991633b0` ended with `panic: test timed out after 25m0s` —
+Go's whole-binary timeout from `.github/workflows/itest.yml:251`,
+`go test -count=1 -v -timeout 25m ./...`.
 
-- `itest` was **green on the previous `main`**, `24b18ee5`. Those are the only
-  two `itest` runs on `main` ever, so there is **no flake baseline** — one pass,
-  one failure.
-- **#9's diff cannot plausibly reach it.** It changed four `.goreleaser.yaml`
-  files, added one shell script, added two lines to `ci.yml`'s `guards` job,
-  and edited `MONOREPO_TODO.md`. `itest.yml` is a separate workflow that reads
-  none of them; no Go code, no Dockerfile, no compose file, no test changed.
-  **Structural, not proof** — the failure itself has not been read.
+**Nothing hung.** At the alarm, twelve top-level tests had run; eleven passed
+in sequence over 19 minutes (14:27:06 → 14:46:06), and `TestForgeVersity` was
+6 minutes into its own subtests, each completing in 0.2–3s. The subtest named
+in the panic, `DeleteObject_nested_dir_object`, had been running **0s**. The
+suite was making progress the whole way; it simply ran out of budget.
 
-**What is blocked: reading the failure.** Three routes, all closed from this
-session:
+**The numbers, and they are close:**
 
-- The GitHub API caps job-log content at ~14.5 kB, which is entirely
-  post-job cleanup — the `itest` step's output is further up.
-- The check-run annotation says only `Process completed with exit code 1`, and
-  the check-run `output.summary` is empty.
-- The raw log and the uploaded artifacts live on
-  `productionresultssa7.blob.core.windows.net`, which **the agent proxy denies**
-  — a 403 on CONNECT, visible in the proxy's own `recentRelayFailures`.
+| | `itest` step |
+|---|---|
+| `24b18ee5` (green) | **22.9 min** |
+| `991633b0` (red) | **25.1 min** — the timeout |
+| budget | 25 min |
 
-**What a person can do in seconds that the agent cannot:** open the job, or
-download the **`itest-ingot-container-logs`** artifact (ID `10554380358`) the
-job already uploaded, and read what actually failed.
+The workflow's own comment says the suite was **~21m30s** when 25m was chosen.
+It is now 23–25m, so the headroom went from ~3.5 min to ~0–2 min and ordinary
+runner variance decides the outcome.
 
-**One discriminator is already running, for free.** [#10](https://github.com/fil-forge/forge/pull/10)'s
-`itest` is in flight on a branch that differs from `main` only by a shell
-script and an `AGENTS.md` section. **If it fails the same way, the failure is
-`main`'s rather than #9's.** Holding the one sanctioned re-run until that
-lands, rather than spending it on a guess.
+**Two things in the repo point the same way:**
 
+- **`ingot/Makefile:28` uses `-timeout 30m`.** CI is five minutes stricter than
+  the repo's own local target, so a contributor running `make` would never see
+  this.
+- **The workflow forbids retrying, deliberately:** *"Never retried,
+  deliberately: a retry here would mask a flaky suite, which is the one thing
+  this job exists to see."* So the re-run the agent was holding would have been
+  against stated repo intent — and would not have been a diagnosis anyway.
 
-Nothing else proceeds until these do.
+**Not #9's doing.** Its diff was four `.goreleaser.yaml` files, a shell script,
+two lines of `ci.yml` and `MONOREPO_TODO.md`; none is read by `itest.yml`.
 
-*Nothing blocking.* **The import phase is closed** — #12 merged as `7ccafeab`
-and all ten in-scope modules are on `main`. The two open PRs are follow-on
-tidying and block nothing.
+### The decision, which is Petra's
+
+The 25m is a *reasoned* number, not an accident — the same comment explains it
+is deliberately below the job's `timeout-minutes: 45` so the Go timeout fires
+first and dumps goroutines, "where a runner kill gives nothing". So changing it
+is a decision, not a mechanical fix.
+
+- **Raise it to 30m**, matching `ingot/Makefile`. One line. Preserves the
+  fire-before-the-job ordering (30 ≪ 45) and restores ~5 min of headroom.
+  Papers over the growth.
+- **Shard the suite** — which is exactly what the closed #21 was. Addresses the
+  growth rather than the symptom, and costs more.
+
+`main` stays red until one of them lands. The patch for the first is ready to
+push on request.
 
 ## Open pull requests
 
