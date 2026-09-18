@@ -48,10 +48,11 @@ jobs:
       # ones. pkg/stack/cleanup.go says as much ("For single-suite test
       # machines this is safe"). A matrix gives each job its own Docker host;
       # folding these into one job would have them tear each other down.
-      # ingot is split across runners because its cost is stack boots, not
-      # tests: 13 top-level tests, 13 boots, ~1-2 min each (stack_test.go says
-      # so in its own log line), which was 21 of the job's 28 minutes. Splitting
-      # divides that almost linearly. hilt runs whole -- it is ~8 minutes.
+      # ingot is split across runners because it no longer fits: it timed out
+      # at 25m on 991633b0. 13 top-level tests (2 skip), each booting a full
+      # smelt stack. Measured from that job's log: ~52s of boot per test, so
+      # ~9.5 min of the ~25 is stack startup and the rest is test work.
+      # hilt runs whole -- it is ~1.5 minutes.
       #
       # Which tests each shard runs is DERIVED, not listed: see the itest step.
       # A hand-written -run regex per shard is a list a new test can fall out
@@ -274,8 +275,16 @@ jobs:
           # everything. `shards: 1` selects all of them, so hilt takes this
           # same path unsharded (NR % 1 is always 0).
           #
-          # Cost here is one stack boot per top-level test, so a split by test
-          # count is a split by time; nothing cleverer is needed.
+          # Round-robin splits by test COUNT, which is not a split by time --
+          # do not read it as one. Measured on the 991633b0 log, this list
+          # divides 13m25s / 7m39s / 3m56s, a 3.4x spread, because Versity
+          # (~6m) and Encryption (5m50s) are 47% of the suite between them and
+          # land wherever the alphabet puts them. It is nonetheless the right
+          # trade: the longest shard has 46% headroom against the 25m below,
+          # and the alternative -- splitting by duration -- means carrying a
+          # table of per-test timings, which is the hand-maintained list this
+          # whole approach exists to avoid. Revisit only if a shard approaches
+          # the timeout, not because the split looks lopsided.
           all=$(go test -list '^Test' ./... | grep '^Test' | sort)
           mine=$(printf '%s\n' "$all" | awk -v k="$SHARD" -v s="$SHARDS" 'NR % s == k % s')
           if [ -z "$mine" ]; then

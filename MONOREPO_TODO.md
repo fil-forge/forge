@@ -243,10 +243,18 @@ log for a full run:
 | the Go test binary | **1257s = 20m57s** (`ok …/ingot/itest 1257.018s`) |
 | everything else | ~7 min — checkout, setup-go, vet, staticcheck, tidy, and 8 image builds |
 
-Inside those 21 minutes: **13 top-level tests, 13 full stack boots**, and
-`stack_test.go` logs what each costs — `booting the smelt Forge stack (~1-2
-min…)`. The subtests themselves run in hundredths of a second. The suite is
-not slow; booting the stack thirteen times is.
+Inside those minutes: **13 top-level tests (2 of them skip), 11 full stack
+boots.** Separating boot from work needs a test whose work is all in subtests,
+and three of them are: their totals exceed their subtests by 51.1s, 51.6s and
+56.1s — the same number three times, which is the boot.
+`TestForgeDeferredMultipart` is the clean case, **58.3s to run 2.2s of
+subtests**.
+
+So boot is roughly **9.5 minutes of ~25, about two fifths** — a large minority,
+not the whole story. An earlier version of this entry said the subtests "run in
+hundredths of a second" and that the suite "is not slow"; both are wrong.
+`TestForgeEncryption` spends 298.4s inside its subtests and
+`TestForgeScenarios` 66.9s.
 
 Second measurement, separate from the above: **the same 8 images are built
 three times per pull request** — once as `images.yml`'s parallel jobs, once in
