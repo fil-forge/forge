@@ -58,6 +58,8 @@ jobs:
         run: .github/scripts/check-stack-images.sh
       - name: every pg_isready healthcheck probes TCP
         run: .github/scripts/check-pg-healthchecks.sh
+      - name: every goreleaser -X ldflag names a package in its module
+        run: .github/scripts/check-goreleaser-ldflags.sh
       - name: gofmt
         run: |
           unformatted=$(gofmt -s -l .)
