@@ -12,10 +12,26 @@
 # that actually needed it. This answers "where did it go", and prints the exact
 # change to port, taken from the index rather than re-derived.
 #
-# Usage: subtree-conflicts.sh <prefix>
+# With --apply it does not just report: for every file whose destination is a
+# recorded rename, it performs the three-way merge git would have performed if
+# its rename detection had seen outside the prefix, writing the result to the
+# file's real home -- conflict markers and all where the two sides overlap --
+# and leaving the index in the state git itself would have left it.
+#
+# Usage: subtree-conflicts.sh [--apply] <prefix>
 set -euo pipefail
 
-prefix=${1:?usage: subtree-conflicts.sh <prefix>   (run during a conflicted subtree pull)}
+apply=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --apply) apply=1; shift ;;
+    --) shift; break ;;
+    -*) echo "unknown flag: $1" >&2; exit 2 ;;
+    *) break ;;
+  esac
+done
+
+prefix=${1:?usage: subtree-conflicts.sh [--apply] <prefix>   (run during a conflicted subtree pull)}
 prefix=${prefix%/}
 
 git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || {
@@ -24,6 +40,65 @@ git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || {
 }
 
 cd "$(git rev-parse --show-toplevel)"
+
+# Perform the merge git would have performed had it followed the rename.
+#
+# The three inputs are already sitting in the index: stage 1 is the merge base
+# and stage 3 is upstream, both at the OLD path, and our side is the file at its
+# new home. That is an ordinary three-way merge, so `git merge-file` does it --
+# same engine, same markers, and its exit status is the number of conflicts.
+#
+# Afterwards the index is left the way git leaves a merge it did itself: a clean
+# result is staged, and a conflicted one gets stages 1/2/3 at the NEW path, so
+# `git status` reports UU there, mergetool works on it, and `git add` resolves
+# it. Nothing here is a private convention the rest of git has to be told about.
+merge_into() {
+  local conflicted=$1 dest=$2 mode ours rc tmp
+  if ! git diff --quiet -- "$dest" 2>/dev/null; then
+    echo "   NOT APPLIED — $dest has uncommitted changes; refusing to overwrite."
+    return 1
+  fi
+  # merge-file is a line-based text merge; on a binary it produces plausible
+  # garbage rather than failing, which is the worst way to be wrong.
+  if ! git show ":3:$conflicted" | grep -Iq . 2>/dev/null; then
+    echo "   NOT APPLIED — upstream's version is binary; merge by hand."
+    return 1
+  fi
+  read -r mode ours _ <<<"$(git ls-files -s "$dest")"
+  tmp=$(mktemp -d)
+  git show ":1:$conflicted" > "$tmp/base"
+  git show ":3:$conflicted" > "$tmp/theirs"
+  git show ":0:$dest"       > "$tmp/ours"
+
+  rc=0
+  git merge-file -p --diff3 \
+    -L "ours: $dest" -L "base: $conflicted" -L "upstream: $conflicted" \
+    "$tmp/ours" "$tmp/base" "$tmp/theirs" > "$tmp/merged" || rc=$?
+
+  if [ "$rc" -lt 0 ] 2>/dev/null || [ "$rc" -gt 127 ]; then
+    echo "   NOT APPLIED — git merge-file failed (rc=$rc); merge by hand."
+    rm -rf "$tmp"; return 1
+  fi
+
+  cat "$tmp/merged" > "$dest"
+  git rm -q --force "$conflicted"
+
+  if [ "$rc" = 0 ]; then
+    git add -- "$dest"
+    echo "   APPLIED CLEANLY into $dest, and staged. $conflicted removed."
+  else
+    # Re-create the conflict at the path it belongs to, so git owns it from here.
+    git update-index --force-remove "$dest"
+    printf '%s %s %d\t%s\n' "$mode" "$(git hash-object -w "$tmp/base")"   1 "$dest" \
+                              "$mode" "$ours"                              2 "$dest" \
+                              "$mode" "$(git hash-object -w "$tmp/theirs")" 3 "$dest" |
+      git update-index --index-info
+    echo "   APPLIED WITH $rc CONFLICT(S) into $dest — markers are in the file."
+    echo "               git status now shows it as UU; resolve and git add it."
+  fi
+  rm -rf "$tmp"
+  return 0
+}
 
 found=0
 while IFS= read -r conflicted; do
@@ -68,7 +143,12 @@ while IFS= read -r conflicted; do
 
   if [ -n "$dest" ]; then
     echo "   RENAMED to  $dest"
+    if [ "$apply" = 1 ]; then
+      merge_into "$conflicted" "$dest" || true
+      continue
+    fi
     echo "   PORT INTO   $dest, then: git rm $conflicted"
+    echo "               or re-run with --apply to have this done for you"
   else
     guesses=$(git ls-files "*/$(basename "$conflicted")" | grep -v "^$prefix/" | head -3 || true)
     if [ -n "$guesses" ]; then
@@ -107,4 +187,10 @@ if [ "$found" = 0 ]; then
 fi
 
 echo "$found file(s) upstream changed have no file at their old path."
-echo "Deleting the conflicted path alone resolves the merge and drops the change."
+if [ "$apply" = 1 ]; then
+  echo "Applied where a rename was recorded. Anything left above needs a human:"
+  echo "a guess is not good enough to merge on, and a true delete has no target."
+else
+  echo "Deleting the conflicted path alone resolves the merge and drops the change."
+  echo "Re-run with --apply to merge the recorded renames automatically."
+fi
