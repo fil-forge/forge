@@ -771,9 +771,15 @@ corrected, retested picture.
 
 ### Two things that make it nastier than "a loud conflict"
 
-- **The conflict surfaces at the unprefixed path.** It is reported as
-  `DU svc.go` at the **repository root** — not `svc/svc.go` — so the resolver
-  is handed a path that corresponds to nothing in the monorepo's layout.
+- **The conflict points at the old path, and which old path depends on where
+  the file went.** Moved *within* the prefix, it is `DU svc/svc.go`. Moved
+  *out* of the prefix, it is **`DU svc.go` at the repository root** — a path
+  that corresponds to nothing in this layout. Either way upstream's full
+  version of the file is written into the working tree there.
+- **The file that actually needs the change shows nothing.** Our moved copy is
+  not conflicted, not modified, and absent from `git status` entirely. The only
+  thing the conflict invites is `git rm` on a stale file that plainly does not
+  belong — which is exactly the resolution that loses the change.
 - **The natural resolution silently drops the upstream change.** Deleting the
   resurrected root file and keeping ours is what anyone would do, and in the
   test that is exactly how upstream's `change-2` failed to reach
