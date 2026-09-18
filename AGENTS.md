@@ -220,6 +220,27 @@ Things that are true and worth not rediscovering:
 - **A rename/delete is reported at upstream's NEW path**, which never existed in
   our history. `MERGE_HEAD` is in upstream's path space (no prefix), so its own
   diff names the rename; the script uses that to map back.
+- **`git subtree pull` records no `git-subtree-split` trailer.** Only `add`
+  does. Without `-m` the message is `Merge commit '<sha>'`; with `-m` it is
+  exactly what you gave. So **never measure drift by grepping commit
+  messages** — that misses every pull since the import. Measured that way once
+  and got 91 commits across nine prefixes when the answer was 37 across eight.
+  Ancestry needs no metadata and cannot be fooled:
+
+  ```sh
+  git merge-base --is-ancestor "up-$p/main" HEAD   # up to date
+  git rev-list --count "up-$p/main" --not HEAD     # how far behind
+  ```
+
+- **The conflicts are the loud half.** A hunk that merges CLEANLY can still
+  carry `github.com/fil-forge/<svc>/...`, the polyrepo path, because it never
+  touched a line we had rewritten — true of files upstream added and of files
+  that merely gained an import. Four of the eight prefixes in one resync had
+  one. Two did not fail: `go mod tidy` RESOLVED them, in one case adding
+  `github.com/fil-forge/sprue` to sprue's own go.mod, pinned to the commit
+  being merged. That builds green against code downloaded from the polyrepo.
+  `check-module-paths.sh` is the only thing that reports it; run it after every
+  pull, before you trust a build.
 - **One gap it cannot cover.** When upstream *deletes* a file we moved out, both
   sides deleted the path, so git raises no conflict at all — the pull succeeds
   silently and we keep carrying a file upstream removed. Nothing in a
