@@ -361,14 +361,16 @@ sidecar; the failure is in starting it, before any test body ran.
   .github/workflows/` → nothing). It is a manual tool.
 - `ci` run 47 on `c098486b` was **green**, eighteen minutes earlier, same job.
 
-**The one re-run has been spent** on it (`rerun_failed_jobs`, 16:36Z). Note the
-"never retried, deliberately" rule is `itest.yml`'s and does not cover
-`ci.yml`; and the reaper died before a test body ran, which is the other case
-that justifies a re-run.
+**The one re-run has been spent, and it came back GREEN** (`rerun_failed_jobs`
+16:36Z, attempt 2 green at 16:38Z on the identical commit). That is the
+confirmation the re-run existed to get: a flake, not a defect, and #10 is green
+again at `29972ce6`. Note the "never retried, deliberately" rule is
+`itest.yml`'s and does not cover `ci.yml`; and the reaper died before a test
+body ran, which is the other case that justifies a re-run.
 
 **Count this one separately from the postgres flake.** Same discipline, derive
-rather than remember: `ci.yml` run 48 is the only `unit piri` failure in 48
-runs.
+rather than remember: `ci.yml` run 48 attempt 1 is the only `unit piri` failure
+in 48 runs, and attempt 2 of that same run passed. One occurrence is not a rate.
 
 **Worth connecting, since it is now a pattern rather than an incident.** Both
 of today's non-code failures are container *startup*, not test logic: `itest
