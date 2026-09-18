@@ -11,8 +11,10 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**#11 merged at 17:04Z as `9870d48a` and the sharding works — but `main` is
-still red, for two new and unrelated reasons.**
+**#11 merged at 17:04Z as `9870d48a` and the sharding works. `main` is now red
+on exactly ONE thing: the `unit indexing-service` race below, which is a real
+bug and not infrastructure.** `itest`, `images` and `e2e` are all green on
+`9870d48a`.
 
 **`itest` is fixed and measured.** Post-merge on `main`, actual against the
 prediction and against #11's own PR run:
@@ -69,7 +71,9 @@ On `docker buildx build … sprue`, 20 seconds after the builder container
 started. buildkitd's own log shows it reached `running server on
 /run/buildkit/buildkitd.sock` — the daemon was up, the client could not connect
 inside the deadline. Infrastructure, and it died before any test ran, so the one
-re-run is justified and **has been spent** (17:2xZ).
+re-run was justified. **It was spent and came back green** (attempt 2, 17:34:15Z
+on the identical commit), so this one is a confirmed flake and `e2e` on `main`
+is green.
 
 ### Correcting the pattern claim from an hour ago
 
