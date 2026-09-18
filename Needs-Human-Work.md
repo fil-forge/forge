@@ -11,6 +11,42 @@ pruned once it stops being useful.
 
 ## Blocking
 
+**`main` is RED.** `itest ingot` failed on `991633b0` (the #9 merge) at
+2026-09-18 14:52Z. `itest hilt` passed; `ci`, `e2e` and `images` are green.
+
+**What is established:**
+
+- `itest` was **green on the previous `main`**, `24b18ee5`. Those are the only
+  two `itest` runs on `main` ever, so there is **no flake baseline** — one pass,
+  one failure.
+- **#9's diff cannot plausibly reach it.** It changed four `.goreleaser.yaml`
+  files, added one shell script, added two lines to `ci.yml`'s `guards` job,
+  and edited `MONOREPO_TODO.md`. `itest.yml` is a separate workflow that reads
+  none of them; no Go code, no Dockerfile, no compose file, no test changed.
+  **Structural, not proof** — the failure itself has not been read.
+
+**What is blocked: reading the failure.** Three routes, all closed from this
+session:
+
+- The GitHub API caps job-log content at ~14.5 kB, which is entirely
+  post-job cleanup — the `itest` step's output is further up.
+- The check-run annotation says only `Process completed with exit code 1`, and
+  the check-run `output.summary` is empty.
+- The raw log and the uploaded artifacts live on
+  `productionresultssa7.blob.core.windows.net`, which **the agent proxy denies**
+  — a 403 on CONNECT, visible in the proxy's own `recentRelayFailures`.
+
+**What a person can do in seconds that the agent cannot:** open the job, or
+download the **`itest-ingot-container-logs`** artifact (ID `10554380358`) the
+job already uploaded, and read what actually failed.
+
+**One discriminator is already running, for free.** [#10](https://github.com/fil-forge/forge/pull/10)'s
+`itest` is in flight on a branch that differs from `main` only by a shell
+script and an `AGENTS.md` section. **If it fails the same way, the failure is
+`main`'s rather than #9's.** Holding the one sanctioned re-run until that
+lands, rather than spending it on a guess.
+
+
 Nothing else proceeds until these do.
 
 *Nothing blocking.* **The import phase is closed** — #12 merged as `7ccafeab`
