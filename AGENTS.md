@@ -160,9 +160,12 @@ wrong are worth more than the ones that did not.
 The `guards` job runs the `check-*.sh` scripts in `.github/scripts/`. **That
 directory is the list** — this file deliberately does not enumerate them,
 because a hand-maintained copy of a derivable list is the thing that goes
-stale (rule 3). Each script's header says what it enforces and why. Between
-them they cover in-repo `replace` directives, Dockerfile `FROM` pins and
-compose `image:` pins.
+stale (rule 3). Each script's header says what it enforces and why: read the
+directory, not this paragraph.
+
+It used to end with a summary of what they cover between them. By the time a
+sixth guard arrived, that sentence named three of five — which is rule 3
+happening to the very paragraph that states it. Gone rather than extended.
 
 Image references in **Go** are deliberately unguarded — every pattern narrow
 enough to avoid hundreds of false positives also misses real references, and
