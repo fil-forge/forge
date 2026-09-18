@@ -115,6 +115,22 @@ while IFS= read -r conflicted; do
   [ "$old" != "$conflicted" ] &&
     echo "   (reported unprefixed; it was $old before we moved it out)"
 
+  # A rename/delete conflict is reported at UPSTREAM's new path, which never
+  # existed in our history, so asking our log about it finds nothing and the
+  # answer comes out as "DELETED, not moved" -- confidently wrong. MERGE_HEAD
+  # is in upstream's own path space (no prefix), so its diff against the split
+  # point names the rename, and that gives us the path we actually had.
+  if ! git log -1 --format=%H --diff-filter=D -- "$old" | grep -q .; then
+    upnew=${conflicted#"$prefix"/}
+    upold=$(git diff -M --name-status "$(git merge-base HEAD MERGE_HEAD)" MERGE_HEAD 2>/dev/null |
+      awk -v n="$upnew" -F'\t' '$1 ~ /^R/ && $3 == n {print $2; exit}')
+    if [ -n "$upold" ]; then
+      echo "   upstream RENAMED it  $upold -> $upnew"
+      old=$prefix/$upold
+      echo "   so look for          $old"
+    fi
+  fi
+
   # Where did it go? The commit that removed it, asked with a permissive
   # threshold, since a move plus a rewrite scores low.
   del=$(git log -1 --format=%H --diff-filter=D -- "$old" || true)
@@ -143,12 +159,16 @@ while IFS= read -r conflicted; do
 
   if [ -n "$dest" ]; then
     echo "   RENAMED to  $dest"
-    if [ "$apply" = 1 ]; then
-      merge_into "$conflicted" "$dest" || true
+    # Only skip the listing when the merge actually happened. A refusal --
+    # binary, or a destination with uncommitted changes -- is exactly when the
+    # change-to-port below is needed, so it must not be swallowed.
+    if [ "$apply" = 1 ] && merge_into "$conflicted" "$dest"; then
       continue
     fi
-    echo "   PORT INTO   $dest, then: git rm $conflicted"
-    echo "               or re-run with --apply to have this done for you"
+    if [ "$apply" = 0 ]; then
+      echo "   PORT INTO   $dest, then: git rm $conflicted"
+      echo "               or re-run with --apply to have this done for you"
+    fi
   else
     guesses=$(git ls-files "*/$(basename "$conflicted")" | grep -v "^$prefix/" | head -3 || true)
     if [ -n "$guesses" ]; then
@@ -165,7 +185,15 @@ while IFS= read -r conflicted; do
   echo "   the change to port:"
   full=$(git diff ":1:$conflicted" ":3:$conflicted" 2>/dev/null || true)
   if [ -z "$full" ]; then
-    echo "     (could not diff index stages)"
+    # Empty is not the same as failed, and on a rename/delete it is the normal
+    # case: stages 1 and 3 hold the same blob because upstream moved the file
+    # without touching it. Saying "could not diff" there reads as a tool error.
+    if git rev-parse -q --verify ":1:$conflicted" >/dev/null 2>&1 &&
+       git rev-parse -q --verify ":3:$conflicted" >/dev/null 2>&1; then
+      echo "     (none — upstream changed the path, not the contents)"
+    else
+      echo "     (could not diff index stages)"
+    fi
   else
     printf '%s\n' "$full" | sed -n '5,40p' | sed 's/^/     /'
     # This is a PREVIEW, not a patch: four header lines are dropped, the rest is
