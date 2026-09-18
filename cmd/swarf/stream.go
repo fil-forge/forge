@@ -77,11 +77,16 @@ func validateFrom(value string) error {
 func writeStreamEvents(cmd *cobra.Command, body io.Reader) error {
 	events := sse.NewScanner(body)
 	for events.Scan() {
-		if events.Event() != "revocation" {
-			continue
-		}
-		if _, err := fmt.Fprintln(cmd.OutOrStdout(), events.Data()); err != nil {
-			return fmt.Errorf("writing revocation event: %w", err)
+		switch events.Event() {
+		case "revocation":
+			if _, err := fmt.Fprintln(cmd.OutOrStdout(), events.Data()); err != nil {
+				return fmt.Errorf("writing revocation event: %w", err)
+			}
+		case "error":
+			// The service reports a stream it cannot continue as an error
+			// event and then closes. Ignoring it ends the command at exit 0,
+			// indistinguishable from reaching the end of the data.
+			return fmt.Errorf("revocation stream: %s", events.Data())
 		}
 	}
 	if err := events.Err(); err != nil {
