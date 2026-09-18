@@ -740,10 +740,21 @@ version claimed that pulling before rewriting a moved file fixes the problem.
 It does not — it fixes *that* pull and no later one. What follows is the
 corrected, retested picture.
 
+**And wrong a second time, for the same reason: a toy repository.** The first
+correction claimed git follows a pure move *out* of a prefix. It does not —
+that result came from a scenario where the move emptied the prefix entirely,
+which is degenerate. With the prefix still holding other files, as any real one
+does:
+
+| our change | prefix after | next pull |
+|---|---|---|
+| renamed a file **within** the prefix | non-empty | **clean**, rename followed |
+| moved a file **out** of the prefix | non-empty | **CONFLICTS — even byte-identical** |
+| moved a file out, prefix left **empty** | empty | clean — degenerate, and the source of the bad result |
+
 | | the monorepo did | the pull |
 |---|---|---|
 | A | renamed a file **inside** the prefix | **clean** |
-| C | moved it **out** of the prefix, into `shared/` | **clean** — git followed it across the boundary |
 | B | moved **and rewrote** it, one commit | **conflict** (`modify/delete`) |
 | D | moved and rewrote it in **two separate commits** | **conflict, identical to B** |
 | F | moved, **pulled**, rewrote, **pulled again** | pull 1 clean; **pull 2 conflicts** |
@@ -751,11 +762,11 @@ corrected, retested picture.
 
 ### What holds
 
-- **Git follows a pure move, including out of the subtree prefix.** The
-  expectation that crossing the prefix boundary would break it was wrong:
-  `git subtree pull` merges into the whole tree, so rename detection sees the
-  whole tree. Hoisting a file from `<svc>/` into a shared package — what
-  Phase 3 does — costs nothing *by itself*, and keeps costing nothing.
+- **`git subtree pull`'s rename detection does not see outside the prefix.** A
+  pure `git mv` out of `<svc>/`, with no edit at all, conflicts on the next
+  pull. Hoisting a file into a shared package — what Phase 3 does — is **not**
+  free, which is the opposite of what this page said twice.
+- **Renames *within* a prefix are followed**, and stay followed.
 - **What breaks it is similarity, not location.** Once the moved file is
   rewritten past the rename-detection threshold, git sees a delete and an
   unrelated add. `-X find-renames` at 50%, 30% and 10% did not rescue it.
@@ -825,7 +836,26 @@ So it is not free, and for most moves it is overkill. It earns its keep for a
 file that upstream is **still actively changing** and that we have **rewritten**
 — the only combination that actually hurts.
 
-### The procedure, since there is no fix
+### The procedure: react to the conflict, do not predict it
+
+**Predicting is not possible**, which is the practical consequence of the
+correction above: no property of your own commit tells you whether it will
+conflict, since a byte-identical move out of a prefix does. But git decides
+exactly, during the merge, and the `DU` entries *are* that decision.
+
+So the tool runs **during** a conflicted pull, not before it:
+`.github/scripts/subtree-conflicts.sh <prefix>`
+([#10](https://github.com/fil-forge/forge/pull/10)). For each `deleted by us,
+modified by them` entry it prints the commit that removed the file, the rename
+destination where one was recorded, a same-basename candidate where none was,
+or a genuine delete — plus the exact change to port, read from index stages 1
+and 3.
+
+An earlier version of this section proposed a pre-pull scanner. It was
+replaced: it duplicated a decision git makes better, and it carried the wrong
+assumption about moves out of a prefix.
+
+### The older framing, kept for the reasoning
 
 Keeping the old file around works but is a trap — a dead file someone
 eventually edits. [#10](https://github.com/fil-forge/forge/pull/10) adds
