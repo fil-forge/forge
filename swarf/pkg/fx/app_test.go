@@ -2,6 +2,7 @@ package fx
 
 import (
 	"context"
+	"errors"
 	"iter"
 	"net/http"
 	"net/http/httptest"
@@ -29,6 +30,7 @@ import (
 	"github.com/fil-forge/ucantone/validator"
 	"github.com/ipfs/go-cid"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/require"
 )
 
@@ -95,6 +97,59 @@ func TestFirehoseRouteStreamsRecords(t *testing.T) {
 	require.Equal(t, revocation.Link(), event.Cause)
 	require.True(t, event.RecordedAt.Time().Equal(recordedAt))
 	require.NotContains(t, response.Body.String(), `"revocation"`)
+}
+
+// A store failure mid-stream has to reach whatever reports errors. The
+// response commits 200 before the first record, so the status can never carry
+// the failure -- the error the handler returns is the only thing an error
+// handler or a request logger ever sees, and on nil a failed stream is
+// indistinguishable from a clean one.
+func TestFirehoseRouteReportsAStoreFailure(t *testing.T) {
+	id, err := identity.New("", "")
+	require.NoError(t, err)
+	source := &firehoseTestStore{err: errors.New("getting revocations: connection refused")}
+	e := newEchoServer(id, server.NewHTTP(id), source)
+	logged := observeRequests(e)
+
+	response := httptest.NewRecorder()
+	e.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/revocations/0", nil))
+
+	require.ErrorContains(t, logged().Error, "getting revocations: connection refused",
+		"a store failure was invisible to the request logger")
+	require.Equal(t, http.StatusOK, logged().Status,
+		"the status is committed before the stream and cannot report this")
+	require.Contains(t, response.Body.String(), "event: error",
+		"the client must still be told")
+}
+
+// A canceled request is the consumer hanging up, not a failure, and must not
+// be reported as one.
+func TestFirehoseRouteDoesNotReportACanceledRequest(t *testing.T) {
+	id, err := identity.New("", "")
+	require.NoError(t, err)
+	source := &firehoseTestStore{err: context.Canceled}
+	e := newEchoServer(id, server.NewHTTP(id), source)
+	logged := observeRequests(e)
+
+	e.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/revocations/0", nil))
+
+	require.NoError(t, logged().Error)
+}
+
+// observeRequests reports what request-logging middleware sees, which is what
+// logs and metrics are built on.
+func observeRequests(e *echo.Echo) func() middleware.RequestLoggerValues {
+	var values middleware.RequestLoggerValues
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus:   true,
+		LogError:    true,
+		HandleError: true,
+		LogValuesFunc: func(_ echo.Context, v middleware.RequestLoggerValues) error {
+			values = v
+			return nil
+		},
+	}))
+	return func() middleware.RequestLoggerValues { return values }
 }
 
 func TestRevocationRouteReturnsDAGJSON(t *testing.T) {
@@ -219,7 +274,10 @@ func TestValidateRevocationPath(t *testing.T) {
 
 type firehoseTestStore struct {
 	record store.RevocationRecord
-	from   time.Time
+	// err, when set, is yielded instead of record, as a store failing
+	// mid-stream does.
+	err  error
+	from time.Time
 }
 
 func (s *firehoseTestStore) Add(context.Context, ucan.Invocation, []ucan.Delegation) error {
@@ -233,6 +291,10 @@ func (s *firehoseTestStore) Get(context.Context, cid.Cid) (store.RevocationRecor
 func (s *firehoseTestStore) Stream(_ context.Context, from time.Time) iter.Seq2[store.RevocationRecord, error] {
 	s.from = from
 	return func(yield func(store.RevocationRecord, error) bool) {
+		if s.err != nil {
+			yield(store.RevocationRecord{}, s.err)
+			return
+		}
 		yield(s.record, nil)
 	}
 }
