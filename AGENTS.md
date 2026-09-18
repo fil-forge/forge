@@ -170,38 +170,43 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 `testutil` package with a named const and an env override, not inline in a
 `_test.go`.
 
-## Before every `git subtree pull`, list what has nowhere to land
+## When a `git subtree pull` conflicts, find out where the files went
 
-Run `.github/scripts/subtree-orphans.sh <prefix> <remote> [ref]` first. It
-prints the files upstream changed that our prefix no longer has — because we
-moved or deleted them — and exits non-zero if there are any.
+Run `.github/scripts/subtree-conflicts.sh <prefix>` **while the merge is still
+conflicted**. For every `deleted by us, modified by them` entry it prints where
+that file went in our history — a recorded rename, a same-basename guess, or a
+genuine delete — plus the exact upstream change to port, read from index
+stages 1 and 3.
 
-This exists because git cannot help with that case and neither can we hint it
-into helping. Measured, not assumed (the evidence is on the wiki):
+**Why react to the conflict rather than predict it:** you cannot predict it.
+Measured (the matrix is on the wiki):
 
-- Git **does** follow a pure move, including a file hoisted out of a prefix.
-- It stops following once the moved file is **rewritten**, and then reports
-  `modify/delete` **at the unprefixed path** — `svc.go`, not `svc/svc.go` —
-  so the resolver is handed a path that exists nowhere in this layout.
-- Splitting the move and the rewrite into separate commits does not help: a
+| our change | prefix after | next pull |
+|---|---|---|
+| renamed a file **within** the prefix | non-empty | **clean**, rename followed |
+| moved a file **out** of the prefix | non-empty | **conflicts — even byte-identical** |
+| moved a file out, prefix left empty | empty | clean (degenerate; do not rely on it) |
+
+**`git subtree pull`'s rename detection does not see outside the prefix.** A
+pure `git mv` out of `<svc>/`, with no edit at all, still conflicts on the next
+pull. So there is no property of your own commit you can inspect beforehand to
+know whether it will be a problem — but git decides exactly, during the merge,
+and the `DU` entries are that decision.
+
+What the conflict does **not** tell you is where the file went, and the
+resolution it invites — `git rm` on a resurrected file that plainly belongs
+nowhere — is the one that drops upstream's change silently, because your moved
+copy is not flagged at all. That gap is what this script closes.
+
+Two more things that are true and worth not rediscovering:
+
+- **Splitting the move and the rewrite into separate commits does not help.** A
   three-way merge compares the merge base to each tip, not the commits between.
-- Pulling in between helps only that one pull. **The conflict recurs on every
-  later pull that touches the file.**
-- `git rerere` records nothing — it only stores content conflicts, and
-  `modify/delete` has no conflict markers.
-- **The conflict is loud; the data loss is not.** Deleting the resurrected file
-  and keeping ours is what anyone would do, and it drops upstream's change
-  silently.
+- **`git rerere` records nothing here** — it only stores conflicts with
+  markers, and `modify/delete` has none. The conflict recurs on every later
+  pull that touches the file.
 
-So the procedure is: **read the list before pulling, port each entry
-deliberately after, and re-run to confirm.** Resolving the conflict is not
-porting the change.
-
-Today every orphan across all eight prefixes is a per-service
-`.github/workflows/` file deleted on import — nothing we need. That is the
-useful baseline: a *source* file appearing in this list is the signal.
-
-## Conventions
+## Conventions## Conventions
 
 - **Never hand-transcribe a digest or a sha.** Resolve and apply it with one
   script reading its own output, and read shas rather than completing a prefix.
