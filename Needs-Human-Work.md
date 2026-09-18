@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-18 21:00Z.** Everything on this page is waiting on a person —
+**Updated 2026-09-18 21:35Z.** Everything on this page is waiting on a person —
 either because it is a judgement call, or because the agent cannot perform the
 action. Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -20,9 +20,55 @@ away, all deliberately draft so nobody else feels obliged to review first.
 | | what | state |
 |---|---|---|
 | [forge #13](https://github.com/fil-forge/forge/pull/13) | `finish-subtree-pull.sh` — merging is the default, `--dry-run` prints a real `git diff`, **and the deletion audit is built in** | **green, all 24 checks** |
-| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes | CI running |
+| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | 23/24 green on the first head, fix pushed, re-running |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand | |
+
+### What #14's `e2e` caught, which is the most useful thing today
+
+`e2e` went red on #14's first head, and the cause is worth knowing even if the
+PR never merges.
+
+**`libforge` renamed `/ucan/conclude`'s argument and its CBOR key on
+2026-09-17:**
+
+| libforge | field |
+|---|---|
+| `63f5b20` (09-14) — what `main` pins | `Receipt cid.Cid` &nbsp;`cborgen:"receipt"` |
+| `96b4969` (09-17) — what #14 pins | `Receipts []cid.Cid` &nbsp;`cborgen:"receipts"` |
+
+sprue took it in `de71035` (#98), ingot in #167, guppy in `02e997f` (#60) — all
+three on the same day. **A renamed CBOR key does not fail to decode. It decodes
+to nothing**: the old key is simply absent and `Receipts` comes back empty. So a
+server one commit ahead of its client concludes nothing, never calls
+`/blob/accept`, and the client polls for a receipt that will never exist:
+
+```
+polling accept receipt: receipt for bafyrei… was not found after 6 attempts
+```
+
+Nothing errors. Nothing logs a mismatch. **This is what a schema break looks
+like when the participants disagree by one deploy**, and it is precisely the
+failure the monorepo's e2e exists to catch — `main` is green because its
+libforge is still the singular one.
+
+**What it actually was here:** our pinned `ghcr.io/fil-forge/guppy:main-dev`
+digest was ten commits behind guppy's own fix. One-line re-pin, by digest:
+`sha256:4d8950d8…` (`sha-d74fd06-dev`) → `sha256:a44c1800…`
+(`sha-02e997f-dev`). The snapshot manifest names the old digest too and was
+left alone — it records which images *wrote* that snapshot's state in August.
+
+**A correction worth keeping**, since the first comment on the PR is wrong and
+stays in the thread: I first reported that guppy had *not* adopted the new
+schema and that #14 was blocked on a guppy change and a republish. Wrong — I
+had read a stale local branch as guppy's `main`. Guppy was already fixed; only
+our pin was old.
+
+**For Petra, the real question this raises:** four repositories changed a wire
+format on one day, and the only thing that noticed a mismatch was an
+end-to-end test in a fourth repository. Nothing in any of the four would have
+told you. Worth deciding whether that is acceptable before Phase 1's compat
+suite, not after.
 
 **A fifth PR is open and is not a draft**:
 [forge #12](https://github.com/fil-forge/forge/pull/12), the release workflow —
