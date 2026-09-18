@@ -9,11 +9,18 @@
 # fallback (v0.0.0 for piri, sprue and indexing-service; "dev" for ingot) while
 # the tag and the GitHub release say otherwise.
 #
-# That is not hypothetical. Consolidation rewrote every module from
-# github.com/fil-forge/<svc> to github.com/fil-forge/forge/<svc>, including the
-# comment in each pkg/build/version.go naming the ldflag -- but not the
-# .goreleaser.yaml that comment points at. Nothing builds these files today,
-# because there is no release workflow yet, so nothing caught it.
+# A release workflow would not catch it either, which is why this is a lint and
+# not a TODO. goreleaser succeeds, the tag is cut, the artifacts upload --
+# nothing in a release pipeline reads back the version the binary reports. And
+# the fallback actively hides it: pkg/build reads version.json by RELATIVE path
+# at runtime, so one binary built with the stale ldflag reports version.json's
+# value from a checkout and v0.0.0 from a container, where cwd is /. That reads
+# as a deployment problem rather than a build one.
+#
+# Consolidation rewrote every module from github.com/fil-forge/<svc> to
+# github.com/fil-forge/forge/<svc>, including the comment in each
+# pkg/build/version.go naming the ldflag -- but not the .goreleaser.yaml that
+# comment points at.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
