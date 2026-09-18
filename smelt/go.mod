@@ -4,8 +4,8 @@ go 1.27.0
 
 require (
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
-	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
+	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476
+	github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v0.0.0-20150723085316-0dad96c0b94f
 	github.com/spf13/cobra v1.10.2

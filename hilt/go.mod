@@ -6,8 +6,8 @@ require (
 	github.com/alanshaw/dag-json-gen v0.0.9
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/fil-forge/forge/swarf v0.0.0
-	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
-	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
+	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476
+	github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f
 	github.com/ipfs/go-cid v0.6.2
 	github.com/jackc/pgerrcode v0.0.0-20250907135507-afb5586c32a6
 	github.com/jackc/pgx/v5 v5.10.0
