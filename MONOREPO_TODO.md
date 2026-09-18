@@ -520,6 +520,47 @@ so that fork pull requests work, so publishing needs its own workflow or a job
 split rather than a flag on that one.
 
 
+### The tag scheme Go requires is one goreleaser cannot read
+
+Two requirements that do not currently meet. Both measured, not looked up.
+
+**Go requires a subdirectory prefix.** A module at `piri/` is served from the
+tag `piri/vX.Y.Z`, not `vX.Y.Z`. That is not a convention, it is the fetcher:
+`cmd/go/internal/modfetch/coderepo.go:538` reads *"Tag must have a prefix
+matching codeDir"* and builds `tagPrefix = r.codeDir + "/"`. All ten services
+are in subdirectories, so all ten would need it.
+
+**goreleaser OSS cannot parse such a tag.** Measured on v2.18.2:
+
+| | |
+|---|---|
+| tag `piri/v1.2.3`, plain build | `⨯ failed to parse tag 'piri/v1.2.3' as semver` |
+| same, with `GORELEASER_CURRENT_TAG` set | identical failure — it is not an escape hatch |
+| same, with `--snapshot` | "runs", and calls the version `piri/v1.2.3-SNAPSHOT-bb5b7f5` |
+| a `monorepo:` block with `tag_prefix` | `field monorepo not found in type config.Project` |
+
+That last row is the crux: `monorepo.tag_prefix` exists to solve exactly this
+and is **GoReleaser Pro**. The OSS binary has no such field.
+
+**What someone has to choose.** Not urgent, because the conflict only bites if
+something consumes a forge module *by version*, and today nothing does —
+`guppy`, `ucantone`, `libforge` and `automobile` all still pin the polyrepo
+paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
+
+- **Pay for goreleaser Pro** and use `monorepo.tag_prefix`. Smallest change,
+  costs money, and buys a thing only Go module consumers need.
+- **Do not tag for Go at all.** Release these as binaries and images, which is
+  what they are; keep `<svc>/vX.Y.Z` in reserve for the day someone wants
+  `go get github.com/fil-forge/forge/<svc>`. Costs nothing now and defers the
+  decision to the moment it has a concrete requester.
+- **Drive goreleaser without a tag**, templating the version from an
+  environment variable rather than `{{.Version}}`. Keeps OSS and the Go scheme,
+  at the cost of rewriting the ldflags in all four configs and losing
+  goreleaser's changelog.
+
+The second is what `release.yml` assumes today: it reads the version from
+`version.json`, never creates a tag, and defaults to `--snapshot`.
+
 # Findings in the imported code
 
 Problems noticed while bringing a service in, and deliberately not fixed by
