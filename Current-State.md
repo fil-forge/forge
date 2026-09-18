@@ -164,8 +164,10 @@ Seven rules that have actually decided things:
    hoisted *out* of a service prefix — but loses the thread once the moved file
    is rewritten, and **splitting the move and the rewrite into separate commits
    does not help**, because a three-way merge only compares the merge base to
-   each tip. Pulling in between does. The failure is a loud `modify/delete`
-   conflict either way.
+   each tip. **Pulling in between helps only that one pull** — the conflict
+   recurs on every later pull that touches the file, it surfaces at the
+   *unprefixed* root path, and the obvious resolution drops upstream's change
+   silently. The conflict is loud; the data loss is not.
 
    When the base moves under such a branch, it is **rebuilt**: replay it onto
    the new base, re-running each `git subtree pull` so the merge is recreated

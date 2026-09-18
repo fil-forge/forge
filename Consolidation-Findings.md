@@ -731,51 +731,69 @@ the key must include the stack's identity, not just the repository's.
 
 ## Keeping `git subtree pull` tractable while we edit imported code
 
-Raised by Petra 2026-09-18, and worth having as measurements rather than
-folklore, because the obvious advice turns out to be wrong. **Tested in
-throwaway repos** (git 2.43.0, `ort` strategy) — a fake upstream, a fake
-monorepo with the subtree added, a divergent edit on each side, then
-`git subtree pull`:
+Raised by Petra 2026-09-18. **Tested in throwaway repos** (git 2.43.0, `ort`
+strategy): a fake upstream, a fake monorepo with the subtree added, a divergent
+edit on each side, then `git subtree pull`.
+
+**This section was wrong when first written, and Petra caught it.** The first
+version claimed that pulling before rewriting a moved file fixes the problem.
+It does not — it fixes *that* pull and no later one. What follows is the
+corrected, retested picture.
 
 | | the monorepo did | the pull |
 |---|---|---|
-| A | renamed a file **inside** the prefix | **clean** — upstream's change landed on the new path |
+| A | renamed a file **inside** the prefix | **clean** |
 | C | moved it **out** of the prefix, into `shared/` | **clean** — git followed it across the boundary |
 | B | moved **and rewrote** it, one commit | **conflict** (`modify/delete`) |
 | D | moved and rewrote it in **two separate commits** | **conflict, identical to B** |
-| E | moved it, **pulled**, then rewrote | **clean** |
+| F | moved, **pulled**, rewrote, **pulled again** | pull 1 clean; **pull 2 conflicts** |
+| F′ | …resolved that, then upstream changed the file again | **conflicts again** |
 
-Four things fall out:
+### What holds
 
 - **Git follows a pure move, including out of the subtree prefix.** The
   expectation that crossing the prefix boundary would break it was wrong:
   `git subtree pull` merges into the whole tree, so rename detection sees the
-  whole tree. Hoisting a file from `<svc>/` into a shared package — exactly
-  what Phase 3 does — costs nothing by itself.
+  whole tree. Hoisting a file from `<svc>/` into a shared package — what
+  Phase 3 does — costs nothing *by itself*, and keeps costing nothing.
 - **What breaks it is similarity, not location.** Once the moved file is
   rewritten past the rename-detection threshold, git sees a delete and an
-  unrelated add.
-- **Splitting the move and the rewrite into separate commits does not help.**
-  This is the counterintuitive one, and the advice most people would give. A
+  unrelated add. `-X find-renames` at 50%, 30% and 10% did not rescue it.
+- **Splitting the move and the rewrite into separate commits does not help.** A
   three-way merge compares the **merge base** against each side's **tip**; the
-  intermediate commits are not consulted, so two commits and one commit
-  produce exactly the same net diff and exactly the same conflict.
-- **What does help is pulling in between.** Case E: move, pull, then rewrite.
-  The pull happens while the rename is still cheap to follow, and the rewrite
-  lands on a file that already carries upstream's change.
+  intermediate commits are not consulted, so the net diff is identical.
+- **Pulling in between helps only that one pull.** The merge base for the
+  *next* pull is upstream's tip at the last pull, where the file still sits at
+  its old path — so the rename has to be detected again, and fails again.
+- **And it recurs.** Resolving the conflict teaches git nothing. Every later
+  pull in which upstream touches that file conflicts the same way. Tested to
+  four pulls.
 
-Lowering the threshold did not rescue case D — `-X find-renames` at 50%, 30%
-and 10% all still conflicted, despite the two files being ~52% similar by
-character ratio. Not pursued further, since `git subtree`'s own strategy
-options may interact; the practical rule does not depend on it.
+### Two things that make it nastier than "a loud conflict"
 
-**The failure is loud, which is the saving grace.** A `modify/delete` conflict
-names the file and leaves upstream's version in the tree at the old path.
-Nothing here is silent, so the risk is a bad afternoon, not a lost change.
+- **The conflict surfaces at the unprefixed path.** It is reported as
+  `DU svc.go` at the **repository root** — not `svc/svc.go` — so the resolver
+  is handed a path that corresponds to nothing in the monorepo's layout.
+- **The natural resolution silently drops the upstream change.** Deleting the
+  resurrected root file and keeping ours is what anyone would do, and in the
+  test that is exactly how upstream's `change-2` failed to reach
+  `shared/svc.go`. The *conflict* is loud; the **data loss is not**. An earlier
+  version of this section said the risk was "a bad afternoon, not a lost
+  change" — that was wrong.
 
-**So the rule is: pull before you rewrite moved code**, and treat the window
-between moving a file and the next pull as the cheap one. It is not a reason
-to avoid moving files.
+### So what to actually do
+
+The paths have to agree again for the cost to go away. Given that our upstreams
+are being retired and **the plan is one final pull**, the exposure is bounded
+and the rule is narrow:
+
+- Moving files is fine, and moving them out of a prefix is fine.
+- **A file that is both moved and rewritten will conflict at the final pull**,
+  at a root path, and will drop upstream's change unless it is hand-ported.
+  Keep a list of those files as they happen, rather than rediscovering them
+  under a conflict.
+- Where upstream is still live and the file still matters, making the *same*
+  move upstream is what removes the divergence permanently. Not tested here.
 
 ## Working principles that fell out of this
 
