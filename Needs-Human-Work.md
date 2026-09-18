@@ -42,6 +42,49 @@ the range. The fastest of the three is #10, which is `991633b0` **plus** its
 own diff — so the red run cannot be blamed on anything that has landed since
 either.
 
+### Where the 25 minutes go
+
+Read out of the same log, so it is measurement rather than estimate. The suite
+is **strictly sequential** — `grep -c 't.Parallel()' ingot/itest/*.go` is **0**
+— and each top-level test calls `forgeStack(t, …)`, which boots the whole smelt
+Forge stack (sprue + piri + indexer + postgres + …) in Docker.
+
+| test | wall clock | breakdown |
+|---|---|---|
+| `TestForgeVersity` | **≥5m59s** | unfinished — ran last, out of budget |
+| `TestForgeEncryption` | 349.5s | 298.4s in subtests, 51.1s not |
+| `TestForgeDeleteReleasesNetworkBlob` | 171.4s | no subtests |
+| `TestForgeAWSCLI` | 125.0s | no subtests |
+| `TestForgeScenarios` | 118.5s | 66.9s in subtests, 51.6s not |
+| `TestForgeMultipartExpiryShred` | 93.9s | no subtests |
+| `TestForgeReadAfterCatalogRetention` | 59.4s | no subtests |
+| `TestForgeDeferredMultipart` | 58.3s | **2.2s in subtests, 56.1s not** |
+| `TestForgeCopyAuthorization` | 57.3s | no subtests |
+| `TestForgeReadAfterEviction` | 55.4s | no subtests |
+| `TestForgeNativeProvision` | 52.0s | no subtests |
+| `TestForgeMaxSizePart`, `TestForgeS3Compat` | skipped | |
+
+Ten completed tests = **19m01s**. Plus Versity's 5m59s = **24m59s** against a
+25m00s budget. It did not overshoot by a lot; it overshot by a second, on the
+last test.
+
+**Three things follow, and they bear on the choice:**
+
+1. **Roughly two fifths of the run is stack boot.** The three tests whose work is in
+   subtests each carry 51.1s, 51.6s and 56.1s that no subtest accounts for —
+   the same number three times, which is the fixed cost of booting and tearing
+   down a stack. `TestForgeDeferredMultipart` is the clean case: **58.3s to run
+   2.2s of subtests.** Extrapolated across the 11 tests that boot one, that is
+   roughly **9.5 minutes, ~39% of the suite**, spent starting Docker stacks.
+   (Measured three times; extrapolated to the other eight, which have no
+   subtests to separate boot from work.)
+2. **`t.Parallel()` is not the cheap way out.** Parallel top-level tests would
+   mean several full Forge stacks on one runner at once. Worth knowing before
+   anyone suggests it as a one-line alternative.
+3. **A 2-way shard falls out almost balanced.** `{Versity, Encryption}` is
+   11.8 min and everything else is 13.2 min — the two longest tests are 47% of
+   the suite. That is the split, if sharding is the answer.
+
 **Two things in the repo point the same way:**
 
 - **`ingot/Makefile:28` uses `-timeout 30m`.** CI is five minutes stricter than
