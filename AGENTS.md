@@ -206,7 +206,7 @@ Two more things that are true and worth not rediscovering:
   markers, and `modify/delete` has none. The conflict recurs on every later
   pull that touches the file.
 
-## Conventions## Conventions
+## Conventions
 
 - **Never hand-transcribe a digest or a sha.** Resolve and apply it with one
   script reading its own output, and read shas rather than completing a prefix.
