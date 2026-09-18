@@ -11,237 +11,78 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**`main` is RED, the cause is established, and the fix is up as
-[#11](https://github.com/fil-forge/forge/pull/11) — Petra chose sharding at
-~15:50Z.** Nothing here is a decision any more; it is review and merge. The
-rest of this section is the evidence, kept because the numbers get cited.
+**#11 merged at 17:04Z as `9870d48a` and the sharding works — but `main` is
+still red, for two new and unrelated reasons.**
 
-**The `ingot` itest suite does not reliably fit in its 25-minute timeout.** Petra supplied the job log, which the
-agent could not reach. The sharpest evidence is not in the log at all — it is
-that **the identical tree passed at 21m12s and timed out at 25m09s, six minutes
-apart.**
+**`itest` is fixed and measured.** Post-merge on `main`, actual against the
+prediction and against #11's own PR run:
 
-`itest ingot` on `991633b0` ended with `panic: test timed out after 25m0s` —
-Go's whole-binary timeout from `.github/workflows/itest.yml:251`,
-`go test -count=1 -v -timeout 25m ./...`.
-
-**Nothing hung.** At the alarm, twelve top-level tests had run; eleven passed
-in sequence over 19 minutes (14:27:06 → 14:46:06), and `TestForgeVersity` was
-6 minutes into its own subtests, each completing in 0.2–3s. The subtest named
-in the panic, `DeleteObject_nested_dir_object`, had been running **0s**. The
-suite was making progress the whole way; it simply ran out of budget.
-
-**The numbers, and they are close.** Three measured runs of the same step,
-against a 25-minute budget:
-
-| commit | tree | `itest` step began | duration | |
-|---|---|---|---|---|
-| `24b18ee5` (`main`) | | 09-17 20:34 | **22m53s** | green |
-| `8897b972` (#9 head) | `051ff34b` | 09-18 **14:20:58** | **21m12s** | green |
-| `991633b0` (`main`) | `051ff34b` | 09-18 **14:26:57** | **25m09s** | **red** |
-| `a032558f` (#10 head) | | 09-18 15:03 | **21m54s** | green |
-| `62af49c7` (#10 head) | | 09-18 15:34 | **21m11s** | green |
-
-**Five runs now, and the shape is a tail, not an even spread.** Four greens sit
-in a 1m42s band (21m11s – 22m53s); the one red is **2m16s above the highest of
-them**. Calling it a "21–25 minute band" was loose — typical is ~21–23, with an
-occasional excursion that reached 25m09s. That makes the red run look more like
-one unlucky runner than a suite creeping upward, and it is the better argument
-for sharding: a budget set against typical cost is a budget the tail eats.
-
-**The two middle rows are the same tree.** `991633b0` is the merge commit of
-#9, and `git rev-parse` gives both the same tree object,
-`051ff34b9dc6539fb31b16805c0a0a468c2d8136` — byte-identical code, identical
-workflow, six minutes apart, different runners. One finished in 21m12s. The
-other did not finish at all.
-
-So this is **not** "the suite grew past 25 minutes." It is: the same work
-costs anywhere from 21m12s to over 25m, and **25m sits inside that band**. The
-workflow's own comment says it was ~21m30s when 25m was chosen; the floor has
-barely moved, but the spread now crosses the line.
-
-It also clears both #9 and #10: the same tree as the red run went green, and
-#10, which is that tree *plus* its own diff, went green too.
-
-**What causes the 3m57s swing is NOT established**, and an earlier version of
-this page said "depending on which runner it lands on" as though it were. That
-was shorthand for the variable that has not been identified, and it should not
-have been written as a finding. What is actually known:
-
-- Each job gets a fresh ephemeral VM. The four `itest ingot` jobs ran on four
-  distinct runner IDs (`1000031610`, `1000032094`, `1000032112`, `1000032209`),
-  all labelled `ubuntu-24.04`.
-- **On paper they are identical.** The red job's own log reports runner image
-  `ubuntu24/20260907.300`, `Ubuntu 24.04.5 LTS`, `CPUs: 4`,
-  `Total Memory: 15988 MB` — the documented standard public-repo shape.
-- **Ruled out:** image pulls during the test window. Zero pull/extract lines
-  between 14:26:57 and 14:52:06.
-- **Also ruled out: a retry or health-check cycle.** This page briefly floated
-  it as "bug-shaped and fixable". It is not, and the check is cheap. The
-  readiness waits are `wait.ForHTTP` / `wait.ForListeningPort` with
-  `WithStartupTimeout(2*time.Minute)` and **no `WithPollInterval`**
-  (`smelt/pkg/stack/stack.go:280-293`), and testcontainers-go v0.44.0 defaults
-  that interval to **100 ms** (`wait/wait.go:63-65`). A missed window therefore
-  costs 0.1s. Across 11 boots × 9 services that is a couple of seconds at the
-  outside — it **cannot** account for 4 minutes. Nothing changed between the
-  two runs, and nothing needed to.
-
-**What the boot actually spends its time on.** From the red log, the first
-test is 24.8s to compile and mount the ingot binary, then **70.1 seconds with
-nothing logged at all** (14:27:31.04 "Connected to docker" → 14:28:41.13
-"Creating container"), then the S3 endpoint is live 0.8s later. That silence is
-`docker compose` bringing ~9 containers up with its output not forwarded —
-confirmed by the window being literally empty, and by the only compose lines
-anywhere in the job being `docker version` plugin listings from the build
-steps. So it is real CPU and disk work, just invisible.
-
-**What is left is the unexciting candidate: the machine.** Roughly two fifths
-of the run is container startup, it is the most host-sensitive thing in the
-suite, and it runs on a shared cloud VM. That is still a *candidate*, not a
-finding — a green `itest ingot` log would confirm it, since machine speed
-predicts a **uniform** ~19% slowdown across every test. The agent cannot fetch
-one: the API returns only ~14.5 kB of trailing log and the artifact blob host
-is blocked by the egress proxy, so it needs the zip from the run page, the way
-the red one arrived. It would confirm rather than change the picture, so it is
-worth a minute of Petra's time, not an hour.
-
-**Worth naming, because it is the opposite case.** versitygw's self-imposed 3s
-`lockWaitTime` (`tests/integration/utils.go:2654`, 38 call sites ≈ **114s of
-pure sleep**) sits inside `TestForgeVersity` — the test that ran out of budget.
-That cost is *fixed*, so it explains why the suite is long, not why it varies.
-3s → 1s takes ~76s off **every** run. It lands in versitygw, outside the
-agent's repo scope, and arrives here as a pin bump — a third lever, independent
-of the two options below.
-
-### Where the 25 minutes go
-
-Read out of the same log, so it is measurement rather than estimate — but
-note it is the **slow** run, so every absolute number below is the top of the
-21–25 minute band, not the middle. The suite is **strictly sequential** — `grep -c 't.Parallel()' ingot/itest/*.go` is **0**
-— and each top-level test calls `forgeStack(t, …)`, which boots the whole smelt
-Forge stack (sprue + piri + indexer + postgres + …) in Docker.
-
-| test | wall clock | breakdown |
-|---|---|---|
-| `TestForgeVersity` | **≥5m59s** | unfinished — ran last, out of budget |
-| `TestForgeEncryption` | 349.5s | 298.4s in subtests, 51.1s not |
-| `TestForgeDeleteReleasesNetworkBlob` | 171.4s | no subtests |
-| `TestForgeAWSCLI` | 125.0s | no subtests |
-| `TestForgeScenarios` | 118.5s | 66.9s in subtests, 51.6s not |
-| `TestForgeMultipartExpiryShred` | 93.9s | no subtests |
-| `TestForgeReadAfterCatalogRetention` | 59.4s | no subtests |
-| `TestForgeDeferredMultipart` | 58.3s | **2.2s in subtests, 56.1s not** |
-| `TestForgeCopyAuthorization` | 57.3s | no subtests |
-| `TestForgeReadAfterEviction` | 55.4s | no subtests |
-| `TestForgeNativeProvision` | 52.0s | no subtests |
-| `TestForgeMaxSizePart`, `TestForgeS3Compat` | skipped | |
-
-Ten completed tests = **19m01s**. Plus Versity's 5m59s = **24m59s** against a
-25m00s budget. It did not overshoot by a lot; it overshot by a second, on the
-last test.
-
-**Three things follow, and they bear on the choice:**
-
-1. **Roughly two fifths of the run is stack boot.** The three tests whose work is in
-   subtests each carry 51.1s, 51.6s and 56.1s that no subtest accounts for —
-   the same number three times, which is the fixed cost of booting and tearing
-   down a stack. `TestForgeDeferredMultipart` is the clean case: **58.3s to run
-   2.2s of subtests.** Extrapolated across the 11 tests that boot one, that is
-   roughly **9.5 minutes, ~39% of the suite**, spent starting Docker stacks.
-   (Measured three times; extrapolated to the other eight, which have no
-   subtests to separate boot from work.)
-2. **`t.Parallel()` is not the cheap way out.** Parallel top-level tests would
-   mean several full Forge stacks on one runner at once. Worth knowing before
-   anyone suggests it as a one-line alternative.
-3. **A 2-way shard falls out almost balanced.** `{Versity, Encryption}` is
-   11.8 min and everything else is 13.2 min — the two longest tests are 47% of
-   the suite. That is the split, if sharding is the answer.
-
-**Two things in the repo point the same way:**
-
-- **`ingot/Makefile:28` uses `-timeout 30m`.** CI is five minutes stricter than
-  the repo's own local target, so a contributor running `make` would never see
-  this.
-- **The workflow forbids retrying, deliberately:** *"Never retried,
-  deliberately: a retry here would mask a flaky suite, which is the one thing
-  this job exists to see."* So the re-run the agent was holding would have been
-  against stated repo intent — and would not have been a diagnosis anyway.
-
-**Not #9's doing.** Its diff was four `.goreleaser.yaml` files, a shell script,
-two lines of `ci.yml` and `MONOREPO_TODO.md`; none is read by `itest.yml`.
-
-### The decision, which is Petra's
-
-The 25m is a *reasoned* number, not an accident — the same comment explains it
-is deliberately below the job's `timeout-minutes: 45` so the Go timeout fires
-first and dumps goroutines, "where a runner kill gives nothing". So changing it
-is a decision, not a mechanical fix.
-
-**Decided: shard.** What the same-tree measurement changes is that the budget
-has to clear the **slowest** run, not the typical one — and raising the number
-only out-runs a spread that will come back. Judged that way —
-
-- **Raise it to 30m**, matching `ingot/Makefile`. One line. Preserves the
-  fire-before-the-job ordering (30 ≪ 45). Against the worst run measured
-  (25m09s) that is ~19% headroom; against the best (21m12s), ~42%. Papers over
-  the variance rather than removing it, and the next slow runner eats into it
-  again.
-- **Shard the suite** — which is exactly what the closed #21 was. `{Versity,
-  Encryption}` against everything else splits 11.8 / 13.2 min at *this* run's
-  speed, so even a slow runner leaves each shard around 9–11 minutes clear of
-  25m. Removes the variance problem rather than out-running it, and costs more
-  runner-minutes — the trade Petra already weighed when she closed #21.
-
-Neither touches the real cost, which is that **two fifths of the run is
-booting Docker stacks** (below). That is a third option, and a much larger
-one: share a stack across the tests that do not need isolation.
-
-**#11 IS GREEN — 24 of 24 checks, measured 16:10–16:25Z.** Predicted against
-actual, which is the whole point of shipping a prediction:
-
-| shard | predicted | actual | |
+| shard | predicted | PR run | **`main`** |
 |---|---|---|---|
-| `ingot 1/3` | 13m25s | **11m21s** | −15% |
-| `ingot 2/3` | 7m39s | **8m10s** | +7% |
-| `ingot 3/3` | 3m56s | **4m08s** | +5% |
-| `hilt` | — | 1m13s | |
+| `ingot 1/3` | 13m25s | 11m21s | **11m15s** |
+| `ingot 2/3` | 7m39s | 8m10s | **8m45s** |
+| `ingot 3/3` | 3m56s | 4m08s | **4m24s** |
+| `hilt` | — | 1m13s | 1m14s |
 
-Longest shard **11m21s against a 25m timeout — 55% headroom**, where the whole
-suite had 0% and failed. The `itest` workflow went 16:10:34 → 16:25:23,
-**14m49s end to end**, against ~28–30 min unsharded.
+Whole `itest` workflow **14m02s**, against ~28–36 min unsharded. Shard 1 lands
+within **6 seconds** across two independent runs (11m21s / 11m15s), which makes
+the "15% faster than predicted" result reproducible rather than a fluke — and
+strengthens the fresh-runner hypothesis below.
 
-**One result does not add up, and it is worth chasing.** Shards 2 and 3 ran
-+6.2% against the red-run baseline, so that run's machines were slightly
-*slower*. At that rate shard 1's other four tests should take 7m53s, leaving
-**3m28s for `TestForgeVersity` — a test that had already burned 5m59s in the
-red run without finishing.** Same code. The obvious hypothesis is that Versity
-is cheap on a fresh runner and expensive as the thirteenth stack boot on a
-machine that has already booted twelve, i.e. accumulated Docker state rather
-than the test. **Inference from arithmetic, not measurement** — confirming it
-needs shard 1's per-test log. If it holds, sharding helps more than a pure
-split predicts, and the shared-stack idea in `MONOREPO_TODO` gets more
-attractive, not less.
+### `ci` → `unit indexing-service`: a REAL race, not infrastructure
 
-**#11 is that change**, rebuilt on current `main` from the closed #21
-(`claude/shard-itest` untouched). Three shards is the measured optimum, not a
-guess — longest shard 25.0 min at 1, 17.4 at 2, **13.4 at 3**, back up to 14.9
-at 4, where the round-robin happens to pair `Versity` with `AWSCLI`.
+```
+-test.shuffle 1789751099594279797
+--- FAIL: TestCachingQueuePoller_BatchProcessing (0.01s)
+    mock_CachingQueue.go:23: FAIL: Delete(string,string)
+    FAIL: 3 out of 4 expectation(s) were met.
+        The code you are testing needs to make 1 more call(s).
+```
 
-**Drift: none.** The diff is `.github/workflows/itest.yml` and
-`MONOREPO_TODO.md` — no file under any service prefix, so nothing in it can
-conflict with a future subtree pull. That was Petra's condition on the choice
-and it is satisfied outright.
+**The test waits on the wrong signal.** In
+`indexing-service/pkg/service/providercacher/cachingqueuepoller_test.go`
+(`numJobs = 11`, `batchSize = 2`), the `WaitGroup` is `Add(11)` and `Done()` is
+called inside the **`CacheProviderForIndexRecords`** hook — but the assertion
+that fails is on **`Delete`**, which the poller issues *after* the cache call
+returns. So `wg.Wait()` releases as soon as the last cache hook runs, and
+`poller.Stop()` then races the final `Delete`. One `Delete` short is exactly
+what the mock reports.
 
-**Two claims in #21's original commit were wrong and are corrected in #11**,
-the first being the load-bearing one: *"a split by test count is a split by
-time"* (it is not — the split is 13m25s / 7m39s / 3m56s, a 3.4× spread) and
-*"the subtests run in hundredths of a second"* (`TestForgeEncryption` spends
-298.4s in its subtests). The lopsidedness is kept rather than engineered away:
-the longest shard has 46% headroom, and splitting by duration means carrying a
-per-test timing table — the hand-maintained list the `go test -list` approach
-exists to avoid.
+**Proposed fix:** signal the WaitGroup from the `Delete` expectation instead,
+since `Delete` is the last step in the pipeline — not from the cache call.
 
-`main` stays red until #11 merges.
+**Not #11's and not #10's**: #11's diff is `itest.yml` + `MONOREPO_TODO.md`, and
+#11's own PR run was 24/24 green ~50 minutes earlier on the same tree. This is
+pre-existing and latent; `-test.shuffle` varies the order each run, which is why
+it surfaces intermittently. **Deliberately NOT re-run** — the test body ran and
+the assertion failed, so a re-roll would mask a real bug rather than diagnose
+one.
+
+### `e2e`: BuildKit did not come up in time
+
+```
+ERROR: failed to build: waiting for BuildKit: DeadlineExceeded:
+  context deadline exceeded while waiting for connections to become ready
+```
+
+On `docker buildx build … sprue`, 20 seconds after the builder container
+started. buildkitd's own log shows it reached `running server on
+/run/buildkit/buildkitd.sock` — the daemon was up, the client could not connect
+inside the deadline. Infrastructure, and it died before any test ran, so the one
+re-run is justified and **has been spent** (17:2xZ).
+
+### Correcting the pattern claim from an hour ago
+
+This page said "both of today's non-code failures are container *startup*, not
+test logic." That was accurate when written and is now incomplete:
+
+- **Container startup — now three instances**, and the pattern is stronger: the
+  `itest` timeout (11 stack boots), the Ryuk reaper, and now BuildKit.
+- **Test logic — one instance**, the indexing-service race above, which does
+  *not* fit the pattern and needs a code fix rather than a reliability story.
+
+So: the startup hypothesis gains a third support, and separately there is a real
+racy test that no amount of container work would fix.
 
 ## Open pull requests
 
