@@ -160,9 +160,12 @@ wrong are worth more than the ones that did not.
 The `guards` job runs the `check-*.sh` scripts in `.github/scripts/`. **That
 directory is the list** — this file deliberately does not enumerate them,
 because a hand-maintained copy of a derivable list is the thing that goes
-stale (rule 3). Each script's header says what it enforces and why. Between
-them they cover in-repo `replace` directives, Dockerfile `FROM` pins and
-compose `image:` pins.
+stale (rule 3). Each script's header says what it enforces and why: read the
+directory, not this paragraph.
+
+It used to end with a summary of what they cover between them. By the time a
+sixth guard arrived, that sentence named three of five — which is rule 3
+happening to the very paragraph that states it. Gone rather than extended.
 
 Image references in **Go** are deliberately unguarded — every pattern narrow
 enough to avoid hundreds of false positives also misses real references, and
@@ -217,6 +220,27 @@ Things that are true and worth not rediscovering:
 - **A rename/delete is reported at upstream's NEW path**, which never existed in
   our history. `MERGE_HEAD` is in upstream's path space (no prefix), so its own
   diff names the rename; the script uses that to map back.
+- **`git subtree pull` records no `git-subtree-split` trailer.** Only `add`
+  does. Without `-m` the message is `Merge commit '<sha>'`; with `-m` it is
+  exactly what you gave. So **never measure drift by grepping commit
+  messages** — that misses every pull since the import. Measured that way once
+  and got 91 commits across nine prefixes when the answer was 37 across eight.
+  Ancestry needs no metadata and cannot be fooled:
+
+  ```sh
+  git merge-base --is-ancestor "up-$p/main" HEAD   # up to date
+  git rev-list --count "up-$p/main" --not HEAD     # how far behind
+  ```
+
+- **The conflicts are the loud half.** A hunk that merges CLEANLY can still
+  carry `github.com/fil-forge/<svc>/...`, the polyrepo path, because it never
+  touched a line we had rewritten — true of files upstream added and of files
+  that merely gained an import. Four of the eight prefixes in one resync had
+  one. Two did not fail: `go mod tidy` RESOLVED them, in one case adding
+  `github.com/fil-forge/sprue` to sprue's own go.mod, pinned to the commit
+  being merged. That builds green against code downloaded from the polyrepo.
+  `check-module-paths.sh` is the only thing that reports it; run it after every
+  pull, before you trust a build.
 - **One gap it cannot cover.** When upstream *deletes* a file we moved out, both
   sides deleted the path, so git raises no conflict at all — the pull succeeds
   silently and we keep carrying a file upstream removed. Nothing in a

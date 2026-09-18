@@ -52,6 +52,8 @@ jobs:
           cache-dependency-path: smelt/go.sum
       - name: every in-repo require has a replace
         run: .github/scripts/check-replaces.sh
+      - name: every in-repo module reference uses its monorepo path
+        run: .github/scripts/check-module-paths.sh
       - name: every external base image is pinned by digest
         run: .github/scripts/check-base-images.sh
       - name: every pulled compose image is pinned by digest

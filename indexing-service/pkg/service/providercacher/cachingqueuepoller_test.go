@@ -55,8 +55,11 @@ func TestCachingQueuePoller_BatchProcessing(t *testing.T) {
 	}
 	mockQueue.EXPECT().Read(mock.Anything, batchSize).Return(batch, nil).Times(fullBatches)
 	mockQueue.EXPECT().Read(mock.Anything, batchSize).Return(batch[:lastBatchSize], nil).Once()
+	// Closed once the poll loop has issued the final Read and parked on it.
+	parked := make(chan struct{})
 	mockQueue.EXPECT().Read(mock.Anything, batchSize).Return([]queue.WithID[providercacher.ProviderCachingJob]{}, nil).
 		Run(func(ctx context.Context, _ int) {
+			close(parked)
 			<-ctx.Done()
 		}).
 		Return([]queue.WithID[providercacher.ProviderCachingJob]{}, nil).
@@ -67,14 +70,20 @@ func TestCachingQueuePoller_BatchProcessing(t *testing.T) {
 
 	mockCacher.EXPECT().
 		CacheProviderForIndexRecords(mock.Anything, testJob.Job.Provider, testJob.Job.Index).
-		Run(func(ctx context.Context, _ model.ProviderResult, _ blobindex.ShardedDagIndex) {
-			defer wg.Done()
-		}).
 		Return(nil).
 		Times(numJobs)
 
+	// Signal completion from Delete, not from the cache call. The poller's job
+	// handler runs the cache call and then Delete sequentially in one goroutine,
+	// so a WaitGroup fed by the cache call is released while Delete is still
+	// pending. Delete is the job's last step, and testify counts a call before
+	// running its Run hook, so signalling here means every Delete is recorded by
+	// the time Wait returns.
 	mockQueue.EXPECT().
 		Delete(mock.Anything, testJob.ID).
+		Run(func(ctx context.Context, _ string) {
+			defer wg.Done()
+		}).
 		Return(nil).
 		Times(numJobs)
 
@@ -86,7 +95,14 @@ func TestCachingQueuePoller_BatchProcessing(t *testing.T) {
 	require.NoError(t, err)
 
 	poller.Start()
+	// Stop() is not a barrier for work already in flight: it cancels the root
+	// context and then calls the job queue's Shutdown with that same, already
+	// cancelled context, so Shutdown returns immediately instead of waiting for
+	// the workers to drain. Every expectation this test makes therefore has to
+	// be satisfied before Stop() is called: all jobs fully processed, and the
+	// poll loop parked on its final Read.
 	wg.Wait()
+	<-parked
 	poller.Stop()
 }
 

@@ -26,7 +26,7 @@ require (
 	github.com/fil-forge/forge/hilt v0.0.0
 	github.com/fil-forge/forge/smelt v0.0.0
 	github.com/fil-forge/forge/swarf v0.0.0
-	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
+	github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f
 	github.com/stretchr/testify v1.12.1
 )
 
@@ -78,7 +78,7 @@ require (
 	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe // indirect
+	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476 // indirect
 	github.com/filecoin-project/go-data-segment v0.0.1 // indirect
 	github.com/fsnotify/fsevents v0.2.0 // indirect
 	github.com/fvbommel/sortorder v1.1.0 // indirect

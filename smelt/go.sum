@@ -116,10 +116,10 @@ github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 h1:XBBHcIb256gUJ
 github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203/go.mod h1:E1jcSv8FaEny+OP/5k9UxZVw9YFWGj7eI4KR/iOBqCg=
 github.com/felixge/httpsnoop v1.1.0 h1:3YtUj32ZZkqZtt3sZZsClsymw/QDuVfpNhoA31zeORc=
 github.com/felixge/httpsnoop v1.1.0/go.mod h1:Zqxgdd+1Rkcz8euOqdr7lqgCRJztwr5hp9vDSi5UZCE=
-github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe h1:lz/ZzYTcoFmQaB8Rm/Dv5uf3e8nTWpb3ZYzFHHXkT9w=
-github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe/go.mod h1:09nIz6/BJD0Qdb8YrLwVeNQwQprTCFWVPULL3c5CNJs=
-github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1 h1:Tzy3lZ7+LAyVK4+qyWM97UMOtnXx05Wdn+rcTDLdBDE=
-github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1/go.mod h1:aX35jlUs3hnWAhigjO8z9kMPiYnkW3XOW8iVoJyz7cg=
+github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476 h1:cGqoD31GjO/qM5f2fQE29ov9NPYd655KKOM/b8amhag=
+github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476/go.mod h1:09nIz6/BJD0Qdb8YrLwVeNQwQprTCFWVPULL3c5CNJs=
+github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f h1:AaxuCR3E1rkF5VmIskbmu2ETcfgY+YlKMyLwc9j6rpQ=
+github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f/go.mod h1:aX35jlUs3hnWAhigjO8z9kMPiYnkW3XOW8iVoJyz7cg=
 github.com/filecoin-project/go-data-segment v0.0.1 h1:1wmDxOG4ubWQm3ZC1XI5nCon5qgSq7Ra3Rb6Dbu10Gs=
 github.com/filecoin-project/go-data-segment v0.0.1/go.mod h1:H0/NKbsRxmRFBcLibmABv+yFNHdmtl5AyplYLnb0Zv4=
 github.com/filecoin-project/go-fil-commcid v0.3.1 h1:4EfxpHSlvtkOqa9weG2Yt5kxFmPib2xU7Uc9Lbqk7fs=
