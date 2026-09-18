@@ -318,7 +318,11 @@ func firehoseHandler(revocations store.RevocationStore) echo.HandlerFunc {
 					return nil
 				}
 				writeFirehoseError(response, err)
-				return nil
+				// The response committed 200 before the stream began, so the
+				// status cannot carry this. Returning the error is the only
+				// thing an error handler or request logger ever sees; on nil
+				// a failed stream is indistinguishable from a clean one.
+				return fmt.Errorf("streaming revocations: %w", err)
 			}
 			if err := writeFirehoseRecord(response, record); err != nil {
 				return err
