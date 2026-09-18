@@ -175,6 +175,9 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 ```
 .github/scripts/finish-subtree-pull.sh <prefix>              merge, write, audit
 .github/scripts/finish-subtree-pull.sh --dry-run <prefix>    print the diffs only
+
+.github/scripts/resolve-rewrite-conflicts.sh                 take upstream + rewrite
+.github/scripts/resolve-rewrite-conflicts.sh --dry-run       say what it would take
 ```
 
 Run it **during a pull that stopped with conflicts, or straight after one that
@@ -234,6 +237,36 @@ rename upstream reads as a delete and every one is a false positive.
 
 Exit is non-zero if anything was left for a human *or* anything was flagged by
 the audit, so a caller can act on the status rather than parse prose.
+
+## The other half of the conflicts: `resolve-rewrite-conflicts.sh`
+
+Everything above is about files we moved out of a prefix. The far more common
+conflict is the one this repository creates by existing: every service's
+imports were rewritten from `github.com/fil-forge/<svc>` to
+`github.com/fil-forge/forge/<svc>`, so a pull conflicts on every file where
+upstream touched that import block. **Fourteen of them in one resync**, each
+the same non-decision.
+
+`resolve-rewrite-conflicts.sh` takes upstream's file and re-applies the
+rewrite — but only where that is provably safe.
+
+**The check is the point, not the fix.** It is safe only if our side carries
+nothing upstream could disagree with, so the script verifies per file that
+`rewrite(base)` is *exactly* ours, and refuses with a diff when it is not.
+`go.mod` and `go.sum` fail it every time, which is the check working: those
+carry real decisions (siblings at `v0.0.0` with `replace ../<svc>`, a unified
+libforge) that have to be re-applied by hand.
+
+`gofmt` normalises both sides for `.go` files, and that is load-bearing, not
+tidiness: the rewrite makes a path longer, which can move it within its import
+group, and `gofmt` sorts groups. Without normalising, a file whose only
+difference *is* the rewrite compares unequal and gets refused.
+
+**Neither tool sees the third class.** A hunk can merge *cleanly* and still
+carry a polyrepo import path, because it never touched a line we had rewritten
+— true of a file upstream added and of an existing file that merely gained an
+import. Nothing conflicts, so nothing reports it. `check-module-paths.sh` is
+what does; run it after every pull, before trusting a build.
 
 ## Conventions
 
