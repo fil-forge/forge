@@ -519,6 +519,57 @@ live in the polyrepo. Note `images.yml` deliberately takes no `packages: write`
 so that fork pull requests work, so publishing needs its own workflow or a job
 split rather than a flag on that one.
 
+## Decide whether service images should report what they are
+
+Every service binary in this repository reads build metadata that nothing sets
+when the image is built. `pkg/build` (or its equivalent) declares `Version`,
+`Commit`, `Date` and `BuiltBy`, the code reads them, and a container reports:
+
+```
+version: v0.0.0-unknown
+commit: unknown
+built at: unknown
+built by: unknown
+```
+
+Three independent causes, each pre-existing and inherited from the polyrepo:
+
+1. No Dockerfile passes a `-X` linker flag. Measured across all nine
+   Dockerfiles here: **eight service images inject nothing**; only
+   `smelt/systems/stress-tester` does, and it is a test harness rather than a
+   service.
+2. `.dockerignore` excludes `version.json` in several services, so the
+   development fallback that reads it fails and the version falls back to
+   `v0.0.0`.
+3. `.dockerignore` also excludes `.git`, so the compiler stamps no
+   `vcs.revision` and the revision helper reports `unknown`.
+
+Released goreleaser binaries are unaffected — they inject all four correctly.
+This is images only.
+
+**Why it waits.** Fixing it is not one change repeated eight times. The values
+have to come from somewhere, and the right source differs by workflow: a build
+check on a pull request has a commit but no version, a publish on `main` has
+both, and a release already gets them from goreleaser. Choosing means deciding
+whether images are expected to be self-describing at all, or whether the tag
+and digest are the identity and the binary need not agree. That is a question
+about how this repository publishes, which Phase 1 has not settled.
+
+It is also worth doing once rather than eight times: a shared `ARG`/`-X` block
+would be the first thing every service Dockerfile has in common, which is a
+small architectural commitment rather than a tidy-up.
+
+**Before it waits too long.** The one implementation that works is guppy's —
+`ARG VERSION/COMMIT/DATE/BUILT_BY` feeding four `-X` flags — and guppy is being
+archived (`MAJOR_DECISIONS.md`, the CLI is not a product). Copy the pattern out
+before the repository goes, or reconstruct it later from scratch.
+
+**The choice.** Give every service image the metadata from a shared pattern;
+or decide images identify themselves by tag and digest alone and delete the
+unused variables rather than leaving code that reads values nothing sets; or
+do it per-service as each one's release flow is settled.
+
+
 
 # Findings in the imported code
 
