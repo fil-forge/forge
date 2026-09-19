@@ -4,6 +4,7 @@
 - [[Plan]] ← the one-page map
 - [[Current State]] ← the detail
 - [[Needs Human Work]] 👤
+- [[Wins]] ← for the end-of-process report
 - [[Consolidation Findings]]
   - Blind spots (B1–B8)
   - Latent issues (L1–L12)

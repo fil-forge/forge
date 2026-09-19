@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-19 17:30Z.** Everything here is waiting on a person — either
+**Updated 2026-09-19 18:10Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -11,23 +11,30 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**One thing is blocked on a permission; eight pull requests and one issue are
-waiting for you.** Per your call on 2026-09-19, **`forge` PRs are fully Open**
-when they look ready — you are the only one looking at them right now — while
+**Nothing is blocked. Nine pull requests and one issue are waiting for you.**
+Per your call on 2026-09-19, **`forge` PRs are fully Open** when they look
+ready — you are the only one looking at them right now — while
 **upstream PRs stay draft** so other engineers do not spend time on them before
 you have given them a pass.
 
-**Blocked, and it is one permission:** trimming
-[indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106)
-back to just the poller fix needs a `git push --force-with-lease`, which the
-auto-mode classifier refuses as "[Git Destructive]". The split you asked for is
-otherwise done — [#107](https://github.com/fil-forge/indexing-service/pull/107)
+~~**Blocked on one permission**, the force-push to trim
+indexing-service #106.~~ **Resolved without it, and no permission is needed.**
+The split is done: [#107](https://github.com/fil-forge/indexing-service/pull/107)
 carries the version work, cherry-picked onto `main` and **verified
-byte-identical to the original commit** before anything was dropped, so nothing
-is at risk either way. #106 just still shows both commits until that push
-lands. A Bash permission rule for `git push --force-with-lease` unblocks it;
-the alternative is a revert commit, which leaves #106's *diff* right but its
-history confusing.
+byte-identical to the original commit**; #106 then took a plain revert of that
+commit (`38923a3`), so **its net diff against `main` is now the one test
+file**, which is what review reads. Reverting rather than rewriting cost only a
+noisier commit list on a draft PR, and a squash merge erases even that.
+
+Worth recording for next time, since you asked how to grant the permission:
+**in this session none of the usual routes would have worked.** Per the
+[settings docs](https://code.claude.com/docs/en/settings), a cloud session does
+not read `~/.claude/settings.json` or `.claude/settings.local.json` at all, and
+a session with **several repositories starts above the clones**, so from each
+repository's `.claude/settings.json` it loads only plugins and marketplaces —
+**not permission rules**. This session has eighteen repositories attached. The
+routes that would work are a server-managed setting, an environment variable on
+the cloud environment, or simply doing the push yourself.
 
 `sprue` #106 was red for about eighteen hours before I caught it — see *How
 sprue went red for eighteen hours*, which is as much about a gap in my own
@@ -39,10 +46,11 @@ checking as about the bug.
 |---|---|---|
 | [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Open**, green all 24, on `1a17fdc5` |
 | [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below. **This is the one that gates Phase 1.** | **Open**, green all 24, on `d4505701` |
-| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake. **Still shows the version commit too** until the force-push above | draft, green all 9, on `72193d78` |
+| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, and **now only that** — net diff is one test file | draft, on `38923a3` |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `4857e93` |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix | **Open**, on `claude/build-metadata-todo` |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today
