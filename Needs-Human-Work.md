@@ -1,8 +1,8 @@
 # Needs human work
 
-**Updated 2026-09-18 22:10Z.** Everything on this page is waiting on a person —
-either because it is a judgement call, or because the agent cannot perform the
-action. Work that is merely unfinished does not belong here; see
+**Updated 2026-09-19 14:40Z.** Everything here is waiting on a person — either
+because it is a judgement call, or because the agent cannot perform the action.
+Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
 each item exists.
 
@@ -11,10 +11,14 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**Nothing is blocked, nothing is red, and five things are waiting for you to
-look at them**: four draft pull requests and one issue, all opened while you
+**Nothing is blocked, nothing is red now, and five things are waiting for you
+to look at them**: four draft pull requests and one issue, all opened while you
 were away, all deliberately draft so nobody else feels obliged to review first.
-**Both forge PRs are green on all 24 checks**, as is #12.
+All four are green, and #12 is too.
+
+**One of them was not, for eighteen hours.** `sprue` #106 broke sprue's
+container build on push and I missed it — see *How sprue went red for eighteen
+hours*, which is as much about a gap in my own checking as about the bug.
 
 ### The four draft PRs, in the order worth reading them
 
@@ -22,8 +26,8 @@ were away, all deliberately draft so nobody else feels obliged to review first.
 |---|---|---|
 | [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **green, all 24**, on `1a17fdc5` |
 | [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | **green, all 24**, on `d4505701` |
-| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | |
-| [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand | |
+| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | **green, all 9** (`Build Check` included), on `72193d78` |
+| [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | **green** on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today
 
@@ -79,6 +83,81 @@ suite, not after.
 written, verified, deliberately not armed. It predates the draft-everything
 instruction and is green. Left ready rather than converted, but say the word and
 it goes back to draft.
+
+### How sprue went red for eighteen hours, and what it says about my checking
+
+`sprue` #106 — the `version` subcommand — broke sprue's **container build**
+the moment it was pushed, and I did not notice until 14:34Z today. It had been
+red since 2026-09-18 20:46Z. That is about eighteen hours.
+
+**The break.** `cmd/version.go` is the first *second* file in sprue's
+`package main`. Both Dockerfile stages and `make build` spelled the build as
+`go build ... ./cmd/main.go` — a **file**, not a package. `go help build`:
+*"If the arguments to build are a list of .go files from a single directory,
+build treats them as a list of source files specifying a single package."* One
+file listed, one file compiled, so `version.go` never reached the compiler:
+
+```
+cmd/main.go:37:21: undefined: versionCmd
+```
+
+It had never mattered, because `cmd/` had only ever held one file of its own.
+The imports of `cmd/client` and `cmd/identity` were fine throughout — separate
+packages resolve normally. Only a **sibling file in the same package**
+disappears. Fixed in `2e8f17c` by naming the package in all three places;
+`.goreleaser.yaml` already said `main: ./cmd` and was always right, so no
+released binary was ever affected. No other fil-forge repo spells a build this
+way — checked Dockerfiles, Makefiles and workflow YAML across eleven
+repositories, and the grep pattern was validated against the pre-fix line so
+the empty result is a true negative rather than a broken search.
+
+**Worth sitting with**: `go build ./...`, `go vet ./...`, `gofmt`, `go test
+./...`, and `go-check`/`go-test` on ubuntu, macos and windows were **all green
+on the broken tree**. Package-level checks cannot see a file-level build. The
+container build was the only thing in the world that could, and it did — which
+is an argument for the monorepo's CI covering container builds and not only
+`go build ./...`.
+
+**The gap was mine.** My hourly check-in polled the three `forge` PRs and
+nothing else, even though the trigger is named "forge #13/#14 + upstream
+drafts". The evidence was sitting on this page the whole time: the state column
+for both upstream rows in the table above was **blank**, and I never filled it
+in. A derived list would have had no blank to leave. The check now covers all
+five and reports CI per PR.
+
+### A decision for you: a containerised sprue reports nothing
+
+Found while fixing the above, **not** fixed, because it is a design call and a
+wider diff than that PR. A sprue running in a container answers:
+
+```
+version: v0.0.0-unknown
+commit: unknown
+built at: unknown
+built by: unknown
+```
+
+Every field dead, from three independent pre-existing causes:
+
+1. Neither Dockerfile stage passes any `-X` flag, so `Commit`, `Date` and
+   `BuiltBy` keep their `"unknown"` defaults.
+2. `.dockerignore` excludes `version.json`, so `pkg/build`'s development
+   fallback `readVersionFromFile()` fails and `version` falls back to
+   `defaultVersion` (`v0.0.0`).
+3. `.dockerignore` also excludes `.git`, so the compiler stamps no
+   `vcs.revision` and `pkg/internal/revision` reports `unknown`.
+
+Observed rather than inferred — built under the same conditions
+(`-buildvcs=false`, no `-X`, run from a cwd without `version.json`) to produce
+exactly that output. **Released goreleaser binaries are unaffected**; this is
+containers only.
+
+It matters because it cuts against why the subcommand was added: a release
+check that runs the binary and asks it what it is. That check works on release
+artifacts and would learn nothing from an image. Fixing it means plumbing
+`VERSION`/`COMMIT`/`DATE` through as buildx `ARG`s and deciding where they come
+from in `Build Check` versus the publish workflow — which is your call, not
+mine to make inside a PR about a subcommand.
 
 ### The issue
 
@@ -188,10 +267,13 @@ the PR that makes them:**
 - **`indexing-service`'s dead ldflags fixed in the same PR as the poller flake**,
   because the branch policy gives that repository one branch and GitHub one PR
   per branch. Commits are clean; split if you prefer.
-- **forge #14 does not carry the indexing-service poller fix**, though I have
-  it. Upstream is the source of truth, the fix is not in upstream `main` yet,
-  and a resync that quietly runs ahead of upstream is not a resync. The cost is
-  `unit indexing-service` staying intermittently red until #106 merges.
+- ~~**forge #14 does not carry the indexing-service poller fix**~~ —
+  **reversed, and the reversal is the current state.** It does carry it, as
+  `d4505701`. The original reasoning (upstream is the source of truth; a resync
+  that runs ahead of upstream is not a resync) stopped holding the moment the
+  branch actually went red for a reason unrelated to the resync, with a fix I
+  had already written sitting in an open PR. Full account under *The
+  indexing-service race* above.
 
 **All five earlier items were approved 2026-09-17** — the
 `replaces` → `guards` rename confirmed resolved, #17's digest reuse, #17's edits
