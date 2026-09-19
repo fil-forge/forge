@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-19 14:40Z.** Everything here is waiting on a person — either
+**Updated 2026-09-19 17:30Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 Work that is merely unfinished does not belong here; see
 [[Current State]] for the broad picture and [[Consolidation Findings]] for why
@@ -11,23 +11,39 @@ pruned once it stops being useful.
 
 ## Blocking
 
-**Nothing is blocked, nothing is red now, and five things are waiting for you
-to look at them**: four draft pull requests and one issue, all opened while you
-were away, all deliberately draft so nobody else feels obliged to review first.
-All four are green, and #12 is too.
+**One thing is blocked on a permission; eight pull requests and one issue are
+waiting for you.** Per your call on 2026-09-19, **`forge` PRs are fully Open**
+when they look ready — you are the only one looking at them right now — while
+**upstream PRs stay draft** so other engineers do not spend time on them before
+you have given them a pass.
 
-**One of them was not, for eighteen hours.** `sprue` #106 broke sprue's
-container build on push and I missed it — see *How sprue went red for eighteen
-hours*, which is as much about a gap in my own checking as about the bug.
+**Blocked, and it is one permission:** trimming
+[indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106)
+back to just the poller fix needs a `git push --force-with-lease`, which the
+auto-mode classifier refuses as "[Git Destructive]". The split you asked for is
+otherwise done — [#107](https://github.com/fil-forge/indexing-service/pull/107)
+carries the version work, cherry-picked onto `main` and **verified
+byte-identical to the original commit** before anything was dropped, so nothing
+is at risk either way. #106 just still shows both commits until that push
+lands. A Bash permission rule for `git push --force-with-lease` unblocks it;
+the alternative is a revert commit, which leaves #106's *diff* right but its
+history confusing.
 
-### The four draft PRs, in the order worth reading them
+`sprue` #106 was red for about eighteen hours before I caught it — see *How
+sprue went red for eighteen hours*, which is as much about a gap in my own
+checking as about the bug.
+
+### The pull requests, in the order worth reading them
 
 | | what | state |
 |---|---|---|
-| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **green, all 24**, on `1a17fdc5` |
-| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below | **green, all 24**, on `d4505701` |
-| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, **plus** a `version` subcommand and an ldflags fix (two topics, one branch — see below) | **green, all 9** (`Build Check` included), on `72193d78` |
-| [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | **green** on `2e8f17c`, after being red on `a50db97` |
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Open**, green all 24, on `1a17fdc5` |
+| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below. **This is the one that gates Phase 1.** | **Open**, green all 24, on `d4505701` |
+| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake. **Still shows the version commit too** until the force-push above | draft, green all 9, on `72193d78` |
+| [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
+| [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `4857e93` |
+| [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
+| [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today
 
@@ -106,10 +122,25 @@ The imports of `cmd/client` and `cmd/identity` were fine throughout — separate
 packages resolve normally. Only a **sibling file in the same package**
 disappears. Fixed in `2e8f17c` by naming the package in all three places;
 `.goreleaser.yaml` already said `main: ./cmd` and was always right, so no
-released binary was ever affected. No other fil-forge repo spells a build this
-way — checked Dockerfiles, Makefiles and workflow YAML across eleven
-repositories, and the grep pattern was validated against the pre-fix line so
-the empty result is a true negative rather than a broken search.
+released binary was ever affected.
+
+**And the survey I ran off the back of it was wrong — the correction is worth
+more than the original claim.** I wrote that no other fil-forge repo spells a
+build this way, across eleven repositories, and noted that the grep pattern was
+validated against the pre-fix line so the empty result was a true negative.
+The pattern was fine. **The corpus was not**: the survey ran over the
+repositories checked out in the session, and `hilt` and `ingot` were not among
+them, so it could not have found either. Validating the pattern made a negative
+feel proven that had never been tested against the population I was claiming
+about.
+
+Re-run once both were cloned: **`hilt` had the identical spelling** in both
+Dockerfile stages, latent for exactly the reason sprue's was — `cmd/` holds one
+`.go` file today, and `cmd/client/` is a separate package that resolves
+normally. Fixed in [hilt#77](https://github.com/fil-forge/hilt/pull/77), with
+the break reproduced first by dropping a throwaway second file into
+`package main`. `ingot` correctly builds `./cmd/ingot`. Of the twelve
+repositories now checked, sprue and hilt were the two.
 
 **Worth sitting with**: `go build ./...`, `go vet ./...`, `gofmt`, `go test
 ./...`, and `go-check`/`go-test` on ubuntu, macos and windows were **all green
@@ -123,12 +154,32 @@ nothing else, even though the trigger is named "forge #13/#14 + upstream
 drafts". The evidence was sitting on this page the whole time: the state column
 for both upstream rows in the table above was **blank**, and I never filled it
 in. A derived list would have had no blank to leave. The check now covers all
-five and reports CI per PR.
+eight and reports CI, mergeability and review threads per PR.
 
-### A decision for you: a containerised sprue reports nothing
+### A decision for you: containers report no build metadata, in six of seven
 
 Found while fixing the above, **not** fixed, because it is a design call and a
-wider diff than that PR. A sprue running in a container answers:
+wider diff than that PR.
+
+**Your instruction on this was "if sprue is different from the others, issue an
+upstream PR to bring it in line — sprue will have just missed it." It is not
+different, so that instruction does not apply as written.** Checked every
+service's actual `go build` invocation, continuation lines included:
+
+| | injects `-X` build metadata |
+|---|---|
+| `guppy` | **yes** — `ARG VERSION/COMMIT/DATE/BUILT_BY` → four `-X` flags |
+| `piri`, `sprue`, `ingot`, `hilt`, `swarf`, `indexing-service` | **no** — `-ldflags="-s -w"` only |
+
+sprue did not miss something the others got right; **guppy is the only one that
+did it at all**. A PR to sprue alone would make it two of seven rather than fix
+the class. (My first pass at this survey reported guppy as a "no" too — a
+single-line grep against a `-ldflags` that continues across lines. Corrected.)
+
+My suggestion, not yet acted on: one PR per repo from a shared pattern copied
+off guppy's Dockerfile. That is six PRs, so it wants your word first.
+
+A sprue running in a container answers:
 
 ```
 version: v0.0.0-unknown
@@ -159,10 +210,81 @@ artifacts and would learn nothing from an image. Fixing it means plumbing
 from in `Build Check` versus the publish workflow — which is your call, not
 mine to make inside a PR about a subcommand.
 
+### Nothing will ever tell you an in-house dependency is stale
+
+The most useful thing cloning `hilt` and `ingot` turned up, and it is not the
+bump itself.
+
+You unblocked me to bump a swarf pin that was a month old. The interesting
+question is why it got that way, and the answer is that **no automation in the
+fleet can see an in-house Go dependency fall behind.**
+
+Measured, on `ingot`, which has a weekly `gomod` dependabot:
+
+> **35 of its last 100 pull requests are dependabot's. Zero of the 35 bump a
+> `fil-forge/*` module.** All 35 are third-party — aws-sdk, moby, openbao,
+> pgx, fasthttp.
+
+`hilt` has no dependabot config at all.
+
+The cause is tagging, and it is not about privacy — `swarf` is a public repo:
+
+| repo | tags | latest |
+|---|---|---|
+| `swarf`, `hilt`, `ingot` | 1 | `v0.0.0` |
+| `sprue`, `libforge`, `ucantone`, `smelt`, `guppy` | 0 | — |
+| `piri` | 1 | `v0.2.4` |
+| `indexing-service` | 1 | `v1.13.4` |
+
+The 35-vs-0 count is measured; the mechanism below is inference from that
+table, though it is not a subtle one. A pseudo-version like
+`v0.0.1-0.20260821142121-d5d1a0a56f00` sorts **above** `v0.0.0` — it is a
+prerelease of `v0.0.1`, and `v0.0.1 > v0.0.0` — so for `swarf`, `hilt` and
+`ingot` there is no higher tagged version for dependabot to offer. For the five
+repos with no tags at all there is nothing to target whatsoever. Dependabot
+does not chase untagged commits on a default branch.
+
+**So eight of ten repos have in-house dependencies that no tooling will ever
+flag as behind.** Every `fil-forge/*` bump across the fleet is a manual
+pseudo-version edit by whoever happens to look, and the month-old swarf pin was
+the normal outcome of that, not an oversight by anyone.
+
+**Why this matters beyond the bump:** it is an independent argument for Phase 1
+step 1, "cut initial release tags". Until now that step was justified only from
+the consolidation plan's own sequencing. This says the polyrepo has a live
+supply-chain blind spot that tagging closes, monorepo or not — and it is the
+second time in two days that a cross-repo staleness went unnoticed until
+something unrelated tripped over it (the first being the `/ucan/conclude` key
+rename, below).
+
 ### The issue
 
 [swarf #20](https://github.com/fil-forge/swarf/issues/20) — **the revocation
-lookup contract**, written up rather than decided, as you asked. Three places
+lookup contract. You asked whether `ucan-wg/revocation` answers it. It does.**
+
+[UCAN Revocation v1.0.0-rc.1](https://github.com/ucan-wg/revocation), line 111,
+verbatim:
+
+> _Revocations MUST be immutable and irreversible._ Recipients of revocations
+> SHOULD treat them as a monotonically-growing set. If a Revocation was issued
+> in error, it MUST NOT be retracted — a new, unique UCAN delegation MAY be
+> issued (e.g. by updating the nonce or changing the time bounds). This prevents
+> confusion as the revocation moves through the network and makes revocation
+> stores append-only and highly amenable to caching and gossip.
+
+So the question the issue posed — is a second revocation of the same delegation
+a *correction* of the first or an *addition* to it? — is settled: **an
+addition.** Append-only, monotonically growing. That makes **both** current
+behaviours wrong for the same reason: PostgreSQL returning the newest row, and
+the memory store keeping one by overwriting.
+
+It sharpens the cache header rather than settling it. Once a delegation has
+*any* revocation the answer is permanently yes, so caching a **positive** answer
+`immutable` for a year is correct and caching a **negative** one is not. The
+spec gives the semantics; it does not dictate the API shape — whether the lookup
+returns the newest record, all records, or a boolean is still ours to pick.
+
+The original write-up, before the spec was consulted: Three places
 answer "what does looking up a revocation by delegation CID return?" and no two
 agree: the interface does not say, PostgreSQL returns the newest row, the memory
 store keeps only one by overwriting, and the HTTP route caches the answer
