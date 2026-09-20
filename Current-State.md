@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-20 21:55Z.** Replace this page as things change; do
+**Snapshot as of 2026-09-20 22:15Z.** Replace this page as things change; do
 not append to it. For history and reasoning, see [[Consolidation Findings]].
 
 *That rule had been broken: the page named `main` as three different commits in
@@ -280,6 +280,30 @@ the class.
   branch imports. Also an upstream dependency bump that landed nowhere, because
   the module it targeted no longer carries that require.
 - **#15/#16**: below.
+
+**#12's round five is now fully worked, and its last two findings were the
+sharpest.** Its meta-guard — the thing that exists so the assertion script is
+executed by *something* — stayed **green** when three of the fixes it protects
+were deleted from the script under test: the FATAL exit for an unassertable
+binary, the "released at the fallback" refusal, and the "cannot find the
+fallback" refusal. Two causes, both the same shape as everything else on this
+list: three of its four tests asserted only `exit != 0`, so they could not tell
+*refused for the reason under test* from *failed for any reason*; and its
+fixture was one well-behaved binary, which made three whole branches
+unreachable. Rewritten to nine assertions that each grep for their own
+sentence.
+
+**And my first version of the new stdin test passed with the bug present**,
+because the stdin-eating binary sorted *after* the one it was meant to
+swallow — a test for "swallows what comes after" with nothing after it.
+Fixture order, not fixture count. That is the fourth time in this batch that a
+fix needed a second pass, and the third that a check rather than a reviewer
+caught it.
+
+Also on #12: the release job now runs **`contents: read`**. Nothing at that
+head could use more, and it is a second fail-closed mechanism independent of
+the skip list — if a future edit drops `publish` from the skips, the token
+still cannot create the release.
 
 Two results worth keeping from earlier in the practice. On [#12](https://github.com/fil-forge/forge/pull/12), four
 rounds and a structural cause: the script it adds was called only from a
