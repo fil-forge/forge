@@ -521,9 +521,9 @@ split rather than a flag on that one.
 
 ## Decide whether service images should report what they are
 
-Every service binary in this repository reads build metadata that nothing sets
-when the image is built. `pkg/build` (or its equivalent) declares `Version`,
-`Commit`, `Date` and `BuiltBy`, the code reads them, and a container reports:
+Every service binary here reads build metadata that nothing sets when the image
+is built. `pkg/build` (or `internal/build`) declares `version`, `Commit`, `Date`
+and `BuiltBy`, the code reads them, and a container reports:
 
 ```
 version: v0.0.0-unknown
@@ -532,44 +532,80 @@ built at: unknown
 built by: unknown
 ```
 
-Three independent causes, each pre-existing and inherited from the polyrepo:
+**The symptom.** Eight service Dockerfiles — `delegator`, `hilt`,
+`indexing-service`, `ingot`, `piri`, `piri-signing-service`, `sprue`, `swarf` —
+and not one passes a `-X`. The only Dockerfile in the repository that does is
+`smelt/systems/stress-tester/Dockerfile`, a test harness rather than a service.
+(There are thirteen Dockerfiles in total; the other four are
+`Dockerfile.release`, which package a goreleaser-built binary instead of
+compiling one, and inherit whatever goreleaser stamped.)
 
-1. No Dockerfile passes a `-X` linker flag. Measured across all nine
-   Dockerfiles here: **eight service images inject nothing**; only
-   `smelt/systems/stress-tester` does, and it is a test harness rather than a
-   service.
-2. `.dockerignore` excludes `version.json` in several services, so the
-   development fallback that reads it fails and the version falls back to
-   `v0.0.0`.
-3. `.dockerignore` also excludes `.git`, so the compiler stamps no
-   `vcs.revision` and the revision helper reports `unknown`.
+**One cause, not three.** Nothing passes `-X`, and neither fallback can stand in
+for it:
 
-Released goreleaser binaries are unaffected — they inject all four correctly.
-This is images only.
+- The development fallback reads `version.json` **by relative path, at runtime,
+  from `init()`**. No `prod` stage sets a `WORKDIR` or copies `version.json` —
+  each one `COPY`s the binary and nothing else — so cwd is `/`, the open fails,
+  and the version falls back to the package default (`v0.0.0` for `hilt`,
+  `indexing-service`, `piri`, `sprue` and `swarf`; `"dev"` for `ingot`).
+- The revision helper reads `vcs.revision` from `debug.ReadBuildInfo()`, which
+  the toolchain records only when it compiles inside a git checkout. No
+  Dockerfile `COPY`s `.git` into its builder, so there is nothing to record.
 
-**Why it waits.** Fixing it is not one change repeated eight times. The values
-have to come from somewhere, and the right source differs by workflow: a build
-check on a pull request has a commit but no version, a publish on `main` has
-both, and a release already gets them from goreleaser. Choosing means deciding
-whether images are expected to be self-describing at all, or whether the tag
-and digest are the identity and the binary need not agree. That is a question
-about how this repository publishes, which Phase 1 has not settled.
+An earlier draft of this entry blamed `.dockerignore` for both of those. It does
+not cause either. Only `piri/.dockerignore` and `sprue/.dockerignore` list
+`version.json` at all, Docker reads only the `.dockerignore` at the **build
+context root** — and `images.yml` builds `piri` with `context: .`, so
+`piri/.dockerignore` is never read. `swarf` has no `.dockerignore` at all and
+reports `unknown` exactly like the rest.
 
-It is also worth doing once rather than eight times: a shared `ARG`/`-X` block
-would be the first thing every service Dockerfile has in common, which is a
-small architectural commitment rather than a tidy-up.
+**It was never only images, either.** Three Makefiles — `hilt`, `piri`,
+`sprue` — injected four `-X` flags each at `github.com/fil-forge/<svc>`, the
+pre-consolidation module path, so `make build` produced an unstamped binary
+too; `piri-signing-service` injected three into `main` symbols nobody had
+declared. That is the same defect #9 fixed in the four `.goreleaser.yaml`
+files, applied to half the corpus, and the guard that was supposed to catch it
+globbed `.goreleaser.y*ml` only. Fixed in #16, which also widens the guard;
+not part of this open question.
 
-**Before it waits too long.** The one implementation that works is guppy's —
-`ARG VERSION/COMMIT/DATE/BUILT_BY` feeding four `-X` flags — and guppy is being
-archived (`MAJOR_DECISIONS.md`, the CLI is not a product). Copy the pattern out
-before the repository goes, or reconstruct it later from scratch.
+**Nothing here publishes an image yet.** `images.yml` is `push: false` and takes
+no `packages: write`; no other workflow pushes. So today this shows up in the
+images that `e2e` and `itest` build, and in local builds — not in anything
+that ships.
 
-**The choice.** Give every service image the metadata from a shared pattern;
-or decide images identify themselves by tag and digest alone and delete the
-unused variables rather than leaving code that reads values nothing sets; or
-do it per-service as each one's release flow is settled.
+**What a release does get.** Four services have a goreleaser config —
+`indexing-service`, `ingot`, `piri`, `sprue` — and all four stamp the right
+package since #9. `ingot` and `sprue` additionally ship release *images*
+(`dockers:` → `Dockerfile.release`), which package that stamped binary, so their
+released images do report themselves. `hilt/Dockerfile.release` and
+`swarf/Dockerfile.release` exist but nothing references them — dead files
+inherited from the polyrepo. `delegator`, `forgectl`, `piri-signing-service` and
+`smelt` have no build-metadata package at all, so there is nothing to stamp.
 
+**Why it waits.** What is left is a publishing question, not a build one:
+whether an image is expected to describe itself, or whether the tag and digest
+are its identity and the binary need not agree. If it is expected to, each field
+needs a source per workflow — a pull request build has a commit but no version,
+a publish on `main` has both, a release already has them from goreleaser — and
+a shared `ARG`/`-X` block would be the first thing every service Dockerfile has
+in common, which is a small architectural commitment rather than a tidy-up.
+Phase 1 has not settled that.
 
+**The worked example is in a repository being archived.** `guppy` is the only
+Dockerfile in the fleet with `ARG VERSION/COMMIT/DATE/BUILT_BY` feeding four
+`-X` flags, and — the more useful half — its
+`.github/workflows/publish-ghcr.yml` answers the per-workflow question with
+three concrete stanzas: `VERSION=pr-<n>` with the head sha for a pull
+request, `VERSION=main` with `github.sha` for a `main` publish, and
+`VERSION=v<meta.version>` for a release. `guppy` is being
+dismantled and archived (`MAJOR_DECISIONS.md`). The flag list itself is
+reconstructible from four in-repo Makefiles; the workflow plumbing is the part
+worth copying out before the repository goes.
+
+**The choice.** Give every service image the metadata from a shared pattern; or
+decide images identify themselves by tag and digest alone, and delete the
+variables rather than leaving code that reads values nothing sets; or do it
+per-service as each one's release flow is settled.
 
 # Findings in the imported code
 
