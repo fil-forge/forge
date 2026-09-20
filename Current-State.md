@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-20 20:51Z.** Replace this page as things change; do
+**Snapshot as of 2026-09-20 21:55Z.** Replace this page as things change; do
 not append to it. For history and reasoning, see [[Consolidation Findings]].
 
 *That rule had been broken: the page named `main` as three different commits in
@@ -249,8 +249,39 @@ flag as behind**, and that is an argument for cutting release tags that holds
 whether or not the monorepo happens.
 
 **Every `forge` pull request now gets an adversarial review before Petra reads
-it** — her instruction of 2026-09-20, and standing for every one we open. Two
-results so far. On [#12](https://github.com/fil-forge/forge/pull/12), four
+it** — her instruction of 2026-09-20, and standing for every one we open. **All
+five have now had a round, and every one found something real.** The pattern
+across them is sharper than any single finding: **four of the defects were in
+fixes made by the round before**, each of which had fixed one instance and not
+the class.
+
+- **#12**, round five: `--skip=publish` does **not** skip goreleaser's docker
+  build (`docker` is its own skip value in v2.18.2; measured — 2m24s and a
+  failure, versus 15s with it skipped). Round four had deleted the QEMU and
+  buildx steps on my assertion that it did. Also: a probed binary that reads
+  stdin swallowed the loop's heredoc and truncated the list of binaries to
+  check; the version regex escaped only `.` while `release.yml` admits `+`;
+  `dist/` was gitignored only by piri, so every other service's released
+  binaries were stamped `vcs.modified=true` and would advertise `-dirty`. And
+  the fix for that regex broke the positive case — **caught by the meta-guard
+  this PR adds**, which is the first time a check rather than a reviewer found
+  one of these.
+- **#13**, round two: **my round-one fix for the audit anchoring reproduced the
+  bug it replaced.** "Second parent contains the split" is true of every
+  ordinary PR merge, so all six pulled prefixes anchored on the same unrelated
+  merge and the prefix argument was inert. One extra test fixes it. Also:
+  `gofmt`'s exit status was never checked, so a file it cannot parse was
+  truncated to **zero bytes** and reported `TAKE`; and the URL rewrite rule is
+  gone entirely, because the tree does not agree with itself about which URLs
+  should point at `forge`.
+- **#14**, round one: a test arrived behind `//go:build itest` and runs
+  **nowhere** — not in the suite, the shard enumeration, `vet`, staticcheck or
+  `make itest`. It is the benchmark for the batched `/ucan/conclude` work this
+  branch imports. Also an upstream dependency bump that landed nowhere, because
+  the module it targeted no longer carries that require.
+- **#15/#16**: below.
+
+Two results worth keeping from earlier in the practice. On [#12](https://github.com/fil-forge/forge/pull/12), four
 rounds and a structural cause: the script it adds was called only from a
 dispatch-only workflow, so **nothing in CI had ever executed it**, and three
 portability bugs had shipped inside it unseen. On

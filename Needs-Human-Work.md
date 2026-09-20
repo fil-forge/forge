@@ -141,6 +141,7 @@ the same failure mode as the eighteen-hour sprue miss, two weeks apart.
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `4857e93` |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
 | [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Second push corrects four wrong claims its own review found** | **Open**, on `8972b1f6` |
+| [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Open**, on `claude/release-workflow` |
 | [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Open**, on `f0a97d03` |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
