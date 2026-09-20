@@ -16,12 +16,21 @@ name: release
 # needed. Arming it later is an `on:` block; making the ownership call is the
 # part that is actually hard.
 #
-# WHAT IS AND IS NOT VERIFIED. Every shell step here has been run. Nothing
-# goreleaser does has been: there is no goreleaser binary in the environment
-# this was written in, and no dispatch has been run. The flags below are
-# reasoned from goreleaser's documented behaviour and from the measurements in
-# MONOREPO_TODO.md, not observed. The first dispatch is the test, and it should
-# be a dry run.
+# WHAT IS AND IS NOT VERIFIED, precisely, because a vague claim here is worse
+# than none in a repository whose rule 5 is "a green check is a claim about
+# what ran".
+#
+#   Run: every shell step below, and the assertion script, against fixtures.
+#   Run earlier, on another machine: `goreleaser check` over all four configs
+#     and the tag-parsing measurements in MONOREPO_TODO.md (goreleaser v2.18.2).
+#     That is where the `format:` -> `formats:` fix came from.
+#   NOT run: this workflow. No dispatch has happened, in either mode. The flag
+#     combinations below are reasoned from goreleaser's documented behaviour and
+#     from those measurements; they have not been observed together.
+#
+# An earlier revision of this header said flatly that no goreleaser binary was
+# available. That contradicted the PR's own `goreleaser check` result in the
+# same diff, which is the sort of thing this file is supposed to catch.
 
 on:
   workflow_dispatch:
@@ -67,6 +76,13 @@ jobs:
       # derivations of one list that disagree is rule 3 happening twice: the
       # guard would lint a `.goreleaser.yml` service and pass, giving every
       # impression it was wired in, and a dispatch for it would then be refused.
+      #
+      # The depth bound is a REMAINING difference, and deliberate: the guard
+      # lints configs at any depth, while a releasable *service* is a top-level
+      # directory. All four configs sit at depth 2 today, so nothing diverges
+      # yet -- but a nested one (ingot/itest/.goreleaser.yaml, say) would be
+      # linted and not dispatchable, which is the same shape as the spelling
+      # bug. If one ever appears, this is the note that says it was known.
       - name: resolve the service
         id: svc
         env:
@@ -88,7 +104,13 @@ jobs:
           fi
           echo "dir=$svc" >> "$GITHUB_OUTPUT"
 
-          cfg=$(find "$svc" -maxdepth 1 \( -name '.goreleaser.yaml' -o -name '.goreleaser.yml' \) | head -1)
+          # `-print -quit`, not `| head -1`: head exits on its first line, find
+          # takes SIGPIPE, and pipefail turns that into a step failure with no
+          # message at all. find stopping itself has no pipe to break. This job
+          # always runs on ubuntu, so GNU find's -quit is available.
+          cfg=$(find "$svc" -maxdepth 1 \
+            \( -name '.goreleaser.yaml' -o -name '.goreleaser.yml' \) \
+            -print -quit)
 
           # DERIVED, not tabulated: a config that builds darwin with cgo cannot
           # be cross-compiled from linux, so it needs a macOS runner. A service
@@ -149,10 +171,15 @@ jobs:
           # the changelog; a shallow clone makes it invent both.
           fetch-depth: 0
 
+      # ci.yml carries a measured note for this repository: setup-go resolves
+      # its dependency file from the root, there is no root go.sum, and
+      # go.work.sum is gitignored -- so a bare `cache: true` restores nothing
+      # and fails only as a warning. Point it at the service being built.
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.work
           cache: true
+          cache-dependency-path: ${{ needs.plan.outputs.dir }}/go.sum
 
       # ingot and sprue build linux/arm64 images whose Dockerfile.release runs
       # `apt-get`, which means executing arm64 binaries. The default docker
@@ -184,11 +211,19 @@ jobs:
       # piri/v0.2.5 both present and HEAD at v0.2.5, an existence check passes
       # while goreleaser derives v0.2.5 from `git describe` and the assertion
       # below checks for v0.2.4 -- publishing one version and verifying another.
+      # Via env, not `${{ }}` interpolated into the script. The `case` that
+      # validates version.json is `v[0-9]*`, whose `*` matches anything after
+      # the first digit, so a version.json value reaches shell in a job with
+      # write tokens. The `service` input is already handled this way; the
+      # file-derived value was not.
       - name: require the tag, at this commit, for a real release
         if: ${{ !inputs.dry_run }}
+        env:
+          DIR: ${{ needs.plan.outputs.dir }}
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
           set -euo pipefail
-          tag="${{ needs.plan.outputs.dir }}/${{ needs.plan.outputs.version }}"
+          tag="$DIR/$VERSION"
           if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
             echo "::error::tag '$tag' does not exist. Create it first --" \
                  "this workflow deliberately will not."
@@ -210,15 +245,22 @@ jobs:
       # goreleaser's snapshot template (`0.0.1-SNAPSHOT-<sha>`) and then
       # asserted against version.json, which could never match -- the
       # documented-safe default could not pass.
+      # PINNED. An earlier revision of this file used
+      # `go run github.com/goreleaser/goreleaser/v2@latest`, which resolves and
+      # executes third-party code at run time in a job holding contents:write
+      # and packages:write, and would silently pick up a v3. Rule 2 -- pin what
+      # we don't own -- and every measurement this workflow reasons from was
+      # taken on v2.18.2, so that is what it runs.
       - name: build (publishing nothing yet)
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: v2.18.2
+          workdir: ${{ needs.plan.outputs.dir }}
+          args: release --clean --skip=validate,publish,sign,announce
         env:
           GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          cd "${{ needs.plan.outputs.dir }}"
-          go run github.com/goreleaser/goreleaser/v2@latest release \
-            --clean --skip=validate,publish,sign,announce
 
       # This runs BEFORE anything is published, which is the whole point. When
       # it trailed `goreleaser release`, a stale -X meant the assets were
@@ -229,16 +271,36 @@ jobs:
             "${{ needs.plan.outputs.dir }}/dist" \
             "${{ needs.plan.outputs.version }}"
 
-      # Only now, and only for real. The rebuild is a known cost: goreleaser has
-      # no documented resume-from-dist, and correct ordering is worth more than
-      # one duplicated build. If a later goreleaser gains one, use it.
+      # PUBLISHING IS CLOSED, and this is not a placeholder -- it is the answer
+      # to something a review found that invalidates the obvious implementation.
+      #
+      # goreleaser's release pipe calls GitHub's create-release API with
+      # TagName: ctx.Git.CurrentTag, and sets TargetCommitish only when a config
+      # asks for it -- none of the four do. GitHub creates a tag that does not
+      # exist. So feeding it the plain semver (which is what makes the version
+      # stamping work, above) would have it create an UNPREFIXED `v0.2.4` at the
+      # default branch head: exactly the tag this workflow's header promises it
+      # never creates, in the namespace ten services share.
+      #
+      # It is worse than that. All four configs set `release: mode:
+      # keep-existing`, and hilt, ingot and swarf all carry v0.0.0 in
+      # version.json. Releasing a second service at a version the first already
+      # used would upload its artifacts into the first service's release rather
+      # than failing.
+      #
+      # Both are consequences of publishing GitHub Releases from a monorepo with
+      # one tag namespace, and neither is fixable by a flag here. The choice --
+      # per-service `release: disable: true` plus some other artifact home, or a
+      # tag scheme goreleaser and Go both accept -- belongs with the ownership
+      # decision this workflow is already waiting on. Until then the build and
+      # the assertion above are the useful part, and they run in both modes.
       - name: publish
         if: ${{ !inputs.dry_run }}
-        env:
-          GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
-          cd "${{ needs.plan.outputs.dir }}"
-          go run github.com/goreleaser/goreleaser/v2@latest release \
-            --clean --skip=validate
+          echo "::error::Publishing is deliberately closed. goreleaser would" \
+               "create an unprefixed tag in a namespace ten services share," \
+               "and keep-existing would merge artifacts into another service's" \
+               "release. See the comment above this step, and MONOREPO_TODO's" \
+               "Phase 1 entry. The build and version assertion above have run" \
+               "and are the part that is ready."
+          exit 1
