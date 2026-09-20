@@ -215,6 +215,55 @@ for both upstream rows in the table above was **blank**, and I never filled it
 in. A derived list would have had no blank to leave. The check now covers all
 eight and reports CI, mergeability and review threads per PR.
 
+### What the review found on #13, which is worse than #12's
+
+The subtree tools had **the same class of silent hole they were built to
+close**, and a fixture proved both.
+
+**The audit read the wrong merge.** It bound to `HEAD^2` without checking that
+HEAD's merge belonged to the prefix it was asked about. A resync pulls eight
+prefixes, so **seven of eight audits looked at some other prefix's pull**, found
+nothing, and exited 0 — while a file upstream had deleted sat in the tree. A
+mistyped prefix passed for exactly the same reason. That is the failure #13
+exists to prevent, inside #13.
+
+Fixed by anchoring on the prefix's own subtree-**add**: `git subtree pull`
+records no trailer, only `add` does, and the add's `git-subtree-split` names the
+upstream root — so every later pull of that prefix has a second parent
+descending from it, and no other prefix's does.
+
+**My first fix for it was wrong in the same shape**, and only the fixture
+caught it. I took "the most recent merge whose diff is confined to the prefix"
+— but when upstream deletes a file we had already moved out, **the merge changes
+nothing on our side, so its diff is empty**. An empty diff is precisely the case
+the audit exists for, and the heuristic skipped it. Reading would not have found
+that.
+
+**The rewrite tool wrote 404s into the tree.** It turned
+`https://github.com/fil-forge/piri/releases/download/v1/piri.tar.gz` into
+`.../fil-forge/forge/releases/download/...` and reported success. That URL is
+live in `piri/deploy/.../install-from-release.sh`. The rule now fires only for a
+bare repository URL. Worth keeping: **17 tracked files still carry un-rewritten
+service URLs**, so the monorepo never applied that rule — leaving them for a
+human is correct, not a gap.
+
+And it was locale-dependent. The service alternation was built in collation
+order, so under `en_US.UTF-8` `piri` preceded `piri-signing-service` and matched
+inside it, rewriting those URLs to `forge-signing-service` — a repository that
+does not exist. Same script, different answer per machine.
+
+Plus: `git show | grep -Iq .` returns 141 under `pipefail` for any text file
+past the pipe buffer, so every large **text** file was declared binary and
+refused (`go.sum`, `cbor_gen.go`); the rename-limit warning went to
+`/dev/null`, so when git stops doing rename detection every upstream rename
+reads as a delete; and `finish-subtree-pull.sh <prefix> --dry-run` ignored the
+flag and wrote anyway.
+
+**One cross-PR dependency you should know about:** #13's `AGENTS.md` told agents
+to run `check-module-paths.sh`, which exists only on **#14's** branch. Whichever
+merges first, that instruction dangled. Replaced with the grep it stands for
+plus a note saying where the script comes from.
+
 ### A decision for you: containers report no build metadata, in six of seven
 
 Found while fixing the above, **not** fixed, because it is a design call and a
