@@ -31,6 +31,33 @@ name: release
 # An earlier revision of this header said flatly that no goreleaser binary was
 # available. That contradicted the PR's own `goreleaser check` result in the
 # same diff, which is the sort of thing this file is supposed to catch.
+#
+# AND WHAT A FIRST DISPATCH WILL DO, which an earlier revision of this file
+# said and a later one deleted. Restored, because it is the single most useful
+# sentence here for whoever presses the button:
+#
+#   THE DEFAULT DRY RUN IS RED FOR ALL FOUR SERVICES TODAY. Not broken --
+#   refusing, on purpose, and each for a different reason:
+#
+#     indexing-service   reaches the assertion and exits 1, NOT ASSERTED:
+#                        cmd/main.go is a urfave/cli App with no Version and no
+#                        version command, so the binary cannot be asked what it
+#                        is.
+#     sprue              the same, from the other framework: a cobra root with
+#                        no `version` subcommand and no Version field.
+#     ingot              would reach the assertion and pass; it has a version
+#                        surface. Its dist also carries images, which is why
+#                        `docker` is in the skip list below.
+#     piri               macos-14 only, and its build time inside
+#                        timeout-minutes: 40 is unmeasured -- it cross-compiles
+#                        darwin/amd64 + darwin/arm64 with cgo against curio and
+#                        lotus, then a universal binary, then two linux builds.
+#                        This is the one genuine unknown.
+#
+#   The fix for the first two is ~15 lines each, modelled on
+#   piri/cmd/cli/version.go, and it is deliberately NOT bundled into this pull
+#   request: softening the assertion to make them pass is the one change that
+#   would make this whole file decorative.
 
 on:
   workflow_dispatch:
