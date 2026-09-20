@@ -203,7 +203,12 @@ while IFS= read -r bin; do
   # quantifier: with only `.` escaped, want=v1.2.3+meta FAILED to match a
   # correct binary reporting v1.2.3+meta, and MATCHED a stale one reporting
   # v1.2.33meta. Wrong in both directions on the same input.
-  want_re=$(printf '%s' "$want_bare" | sed 's/[][.^$*+?(){}|\\]/\\&/g')
+  # The backslash goes EARLY in the bracket expression, not next to the closing
+  # `]`: GNU sed reads `\\]` as an escaped bracket, so the class never closes and
+  # sed dies with "unterminated `s' command" -- which made want_re empty and the
+  # assertion reject a correct binary. Caught by the meta-guard's positive test,
+  # which is the one direction a lint of this script can actually check.
+  want_re=$(printf '%s' "$want_bare" | sed 's/[][\\.^$*+?(){}|]/\\&/g')
   if printf '%s' "$out" | grep -qE "(^|[^0-9.])v?${want_re}([^0-9.]|\$)"; then
     echo "ok        $name reports $want"
     asserted=$((asserted + 1))
