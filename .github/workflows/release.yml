@@ -15,6 +15,13 @@ name: release
 # release path is exercised now rather than discovered on the day it is first
 # needed. Arming it later is an `on:` block; making the ownership call is the
 # part that is actually hard.
+#
+# WHAT IS AND IS NOT VERIFIED. Every shell step here has been run. Nothing
+# goreleaser does has been: there is no goreleaser binary in the environment
+# this was written in, and no dispatch has been run. The flags below are
+# reasoned from goreleaser's documented behaviour and from the measurements in
+# MONOREPO_TODO.md, not observed. The first dispatch is the test, and it should
+# be a dry run.
 
 on:
   workflow_dispatch:
@@ -28,56 +35,78 @@ on:
         type: boolean
         default: true
 
-# Dispatch-only, so unlike images.yml there is no fork-pull-request case to
-# protect: images.yml withholds packages:write precisely so fork PRs still run,
-# and that reasoning does not reach a workflow that only a collaborator can
-# start by hand.
-permissions:
-  contents: write
-  packages: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.service }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  # Split from `release` because `runs-on` is fixed when a job starts, and the
+  # right runner is a property of the service: piri's .goreleaser.yaml builds
+  # darwin with CGO_ENABLED=1, and its own header says that "cannot be
+  # cross-compiled from linux". A single hardcoded ubuntu runner cannot build
+  # the one service in the fleet that has a real published tag.
+  plan:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      dir: ${{ steps.svc.outputs.dir }}
+      version: ${{ steps.ver.outputs.version }}
+      runner: ${{ steps.svc.outputs.runner }}
+      needs_docker: ${{ steps.svc.outputs.needs_docker }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          # goreleaser reads tags and commit history to derive the version and
-          # the changelog; a shallow clone makes it invent both.
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.work
-          cache: true
 
       # Which services are releasable is DERIVED from which ones carry a
       # goreleaser config, so a service that gains or loses one needs no edit
       # here. A free-text input is validated against that list rather than a
       # `type: choice`, because a choice list is exactly the hand-maintained
       # list this repository keeps getting wrong.
+      #
+      # Both spellings, because `check-goreleaser-ldflags.sh` accepts both. Two
+      # derivations of one list that disagree is rule 3 happening twice: the
+      # guard would lint a `.goreleaser.yml` service and pass, giving every
+      # impression it was wired in, and a dispatch for it would then be refused.
       - name: resolve the service
         id: svc
         env:
           SERVICE: ${{ inputs.service }}
         run: |
           set -euo pipefail
-          mapfile -t releasable < <(find . -mindepth 2 -maxdepth 2 -name '.goreleaser.yaml' \
-            -printf '%h\n' | sed 's|^\./||' | sort)
+          mapfile -t releasable < <(find . -mindepth 2 -maxdepth 2 \
+            \( -name '.goreleaser.yaml' -o -name '.goreleaser.yml' \) \
+            -printf '%h\n' | sed 's|^\./||' | sort -u)
           printf 'releasable: %s\n' "${releasable[*]}"
           svc=${SERVICE%/}
+          found=
           for r in "${releasable[@]}"; do
-            if [ "$r" = "$svc" ]; then
-              echo "dir=$svc" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+            [ "$r" = "$svc" ] && found=1 && break
           done
-          echo "::error::'$svc' has no .goreleaser.yaml. Releasable: ${releasable[*]}"
-          exit 1
+          if [ -z "$found" ]; then
+            echo "::error::'$svc' has no goreleaser config. Releasable: ${releasable[*]}"
+            exit 1
+          fi
+          echo "dir=$svc" >> "$GITHUB_OUTPUT"
+
+          cfg=$(find "$svc" -maxdepth 1 \( -name '.goreleaser.yaml' -o -name '.goreleaser.yml' \) | head -1)
+
+          # DERIVED, not tabulated: a config that builds darwin with cgo cannot
+          # be cross-compiled from linux, so it needs a macOS runner. A service
+          # that gains or drops a darwin cgo build moves itself.
+          if grep -q 'darwin' "$cfg" && grep -q 'CGO_ENABLED=1' "$cfg"; then
+            echo "runner=macos-14" >> "$GITHUB_OUTPUT"
+          else
+            echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Likewise for Docker: only a config with a `dockers:` block needs
+          # buildx, QEMU and a registry login.
+          if grep -q '^dockers:' "$cfg"; then
+            echo "needs_docker=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needs_docker=false" >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
 
       # The version comes from the service's own version.json, which is the
       # convention every one of these repos already used upstream (ipdxco's
@@ -101,39 +130,115 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Releasing ${{ steps.svc.outputs.dir }} $v"
 
-      # A real release needs the tag to exist already. This workflow does not
-      # create one: tagging is the act that says "this is released", and it
-      # stays a deliberate human step rather than a side effect of a dispatch.
-      - name: require the tag, for a real release
+  release:
+    needs: plan
+    runs-on: ${{ needs.plan.outputs.runner }}
+    # Dispatch-only, so unlike images.yml there is no fork-pull-request case to
+    # protect: images.yml withholds packages:write precisely so fork PRs still
+    # run, and that reasoning does not reach a workflow that only a collaborator
+    # can start by hand. The dry-run path still gets them, because a job's
+    # permissions are fixed before `inputs` can be read; the dry run never
+    # reaches a step that uses either.
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # goreleaser reads tags and commit history to derive the version and
+          # the changelog; a shallow clone makes it invent both.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+
+      # ingot and sprue build linux/arm64 images whose Dockerfile.release runs
+      # `apt-get`, which means executing arm64 binaries. The default docker
+      # driver rejects a foreign --platform and no binfmt is registered without
+      # QEMU, so both are needed -- images.yml already sets buildx up for the
+      # same reason. Skipped entirely for a config with no `dockers:` block.
+      - uses: docker/setup-qemu-action@v3
+        if: needs.plan.outputs.needs_docker == 'true'
+      - uses: docker/setup-buildx-action@v3
+        if: needs.plan.outputs.needs_docker == 'true'
+
+      # goreleaser's GITHUB_TOKEN reaches the GitHub Releases API only; its
+      # docker publisher shells out to `docker push`, which reads
+      # ~/.docker/config.json. Without this a real release creates the GitHub
+      # release and *then* fails to push images.
+      - uses: docker/login-action@v3
+        if: needs.plan.outputs.needs_docker == 'true' && !inputs.dry_run
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # A real release needs the tag to exist already, AND to point at the
+      # commit being built. This workflow does not create one: tagging is the
+      # act that says "this is released", and it stays a deliberate human step
+      # rather than a side effect of a dispatch.
+      #
+      # Checking existence alone is not enough. With piri/v0.2.4 and
+      # piri/v0.2.5 both present and HEAD at v0.2.5, an existence check passes
+      # while goreleaser derives v0.2.5 from `git describe` and the assertion
+      # below checks for v0.2.4 -- publishing one version and verifying another.
+      - name: require the tag, at this commit, for a real release
         if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
-          tag="${{ steps.svc.outputs.dir }}/${{ steps.ver.outputs.version }}"
+          tag="${{ needs.plan.outputs.dir }}/${{ needs.plan.outputs.version }}"
           if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
             echo "::error::tag '$tag' does not exist. Create it first --" \
                  "this workflow deliberately will not."
             exit 1
           fi
-          echo "found $tag"
+          at=$(git rev-parse "refs/tags/$tag^{commit}")
+          if [ "$at" != "$GITHUB_SHA" ]; then
+            echo "::error::tag '$tag' is at $at, but this run is building" \
+                 "$GITHUB_SHA. Release from the tagged commit."
+            exit 1
+          fi
+          echo "found $tag at $at"
 
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: '~> v2'
-          workdir: ${{ steps.svc.outputs.dir }}
-          # --snapshot builds without a tag and refuses to publish, which is
-          # what makes the default safe to run at any time on any commit.
-          args: >-
-            release --clean
-            ${{ inputs.dry_run && '--snapshot --skip=publish,sign,announce' || '' }}
+      # goreleaser cannot parse a `<svc>/vX.Y.Z` tag: MONOREPO_TODO.md records
+      # `failed to parse tag 'piri/v1.2.3' as semver` against a real run. So it
+      # is never shown one. GORELEASER_CURRENT_TAG carries the plain semver from
+      # version.json, which is the same string the assertion checks for, so the
+      # stamped version matches in BOTH modes. Previously the dry run stamped
+      # goreleaser's snapshot template (`0.0.1-SNAPSHOT-<sha>`) and then
+      # asserted against version.json, which could never match -- the
+      # documented-safe default could not pass.
+      - name: build (publishing nothing yet)
         env:
+          GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd "${{ needs.plan.outputs.dir }}"
+          go run github.com/goreleaser/goreleaser/v2@latest release \
+            --clean --skip=validate,publish,sign,announce
 
-      # The check that matters. Everything above proves the build ran; this
-      # proves the artifact says what it was built to say. See the script header
-      # for why nothing else is loud about a stale -X.
+      # This runs BEFORE anything is published, which is the whole point. When
+      # it trailed `goreleaser release`, a stale -X meant the assets were
+      # already live and already wrong; the job just went red afterwards.
       - name: assert the binaries report their version
         run: |
           .github/scripts/assert-released-version.sh \
-            "${{ steps.svc.outputs.dir }}/dist" \
-            "${{ steps.ver.outputs.version }}"
+            "${{ needs.plan.outputs.dir }}/dist" \
+            "${{ needs.plan.outputs.version }}"
+
+      # Only now, and only for real. The rebuild is a known cost: goreleaser has
+      # no documented resume-from-dist, and correct ordering is worth more than
+      # one duplicated build. If a later goreleaser gains one, use it.
+      - name: publish
+        if: ${{ !inputs.dry_run }}
+        env:
+          GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd "${{ needs.plan.outputs.dir }}"
+          go run github.com/goreleaser/goreleaser/v2@latest release \
+            --clean --skip=validate

@@ -422,11 +422,19 @@ The seven services pruned earlier carry no equivalent risk: the only
 ## Phase 1 needs machinery this repository does not have
 
 The consolidation plan says to "cut initial release tags … via the *existing*
-`release.yml` flow". **There is no `release.yml`.** `main` has four workflows —
-`ci`, `e2e`, `images`, `itest` — and none of them tags, releases or publishes.
-The plan treated `forge` at `f60dd59` as a starting point that already had that
-apparatus; this repository was built from subtree imports instead, and the
-apparatus was never part of them.
+`release.yml` flow". **There was no `release.yml`**; `main` had four workflows —
+`ci`, `e2e`, `images`, `itest` — and none of them tagged, released or
+published. The plan treated `forge` at `f60dd59` as a starting point that
+already had that apparatus; this repository was built from subtree imports
+instead, and the apparatus was never part of them.
+
+**There is one now, and it is deliberately not armed** — dispatch-only, dry-run
+by default, and it never creates a tag. It does not close this entry. What it
+supplies is the build-and-verify path; what remains is the part that was always
+the hard bit, and it is a decision rather than a workflow: **while the polyrepo
+still releases these same services, a tag cut here gives each one two sources
+of truth.** Until that is settled, nothing should be tagged in this
+repository.
 
 What survives is raw material, and it is uneven:
 
@@ -471,7 +479,20 @@ the deployed network.
 `check-goreleaser-ldflags.sh` catches today's defect — four `.goreleaser.yaml`
 files naming pre-consolidation module paths — by checking that every `-X` names
 a package in the module that builds it. That is a check on the *path*. The
-release flow should eventually check the *effect*, and then this lint can go.
+release flow should check the *effect*, and then this lint can go.
+
+**Built, as `.github/scripts/assert-released-version.sh`.** Keeping this entry
+because the lint has *not* gone: the assertion can only speak for services whose
+binaries answer a version probe, which is the "only half the services can be
+asked" problem below, so the two overlap rather than one replacing the other.
+
+One thing the measurement below turned out to predict exactly. It records that
+a stale-path binary reports `v0.0.0` from a container and `v0.0.6` from a
+checkout, because the fallback reads `version.json` by *relative* path. The
+first version of the assertion script did not pin its working directory, and
+goreleaser runs inside `<svc>/` — so run there, the fallback found the file and
+the script said `ok` to the exact defect it exists to catch. It now pins cwd to
+the repository root. Reproduced both directions on a fixture before fixing.
 
 The reason is that nothing else is loud. `cmd/link` looks the `-X` symbol up
 and gives up silently when it is missing — `addstrdata` in
