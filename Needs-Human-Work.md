@@ -50,7 +50,7 @@ checking as about the bug.
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `4857e93` |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
-| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix | **Open**, on `claude/build-metadata-todo` |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix | **Open**, green all 24, on `daf716fe` |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today

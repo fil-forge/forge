@@ -1,7 +1,12 @@
 # Current state
 
-**Snapshot as of 2026-09-17 20:35Z.** Replace this page as things change; do not
-append to it. For history and reasoning, see [[Consolidation Findings]].
+**Snapshot as of 2026-09-20 16:20Z.** Replace this page as things change; do
+not append to it. For history and reasoning, see [[Consolidation Findings]].
+
+*That rule had been broken: the page named `main` as three different commits in
+three places, each true when written. The state-bearing sections below were
+rewritten on 2026-09-20 rather than appended to. If you find a fourth SHA
+further down, it is stale — `main` is `0d8fb04c`.*
 
 Consolidating the Fil Forge polyrepo into a monorepo at
 [`fil-forge/forge`](https://github.com/fil-forge/forge). The plan is
@@ -9,64 +14,20 @@ Consolidating the Fil Forge polyrepo into a monorepo at
 
 ## The move to `forge` is done
 
-**`fil-forge/forge`'s `main` is `991633b0`** (it was `24b18ee5` at the
-transplant; #9 merged on top 2026-09-18 14:20Z) — the monorepo. Petra pushed it at
-20:21Z and closed forge [#6](https://github.com/fil-forge/forge/pull/6),
+Old news now, kept in one paragraph. `fil-forge/forge` is the monorepo; Petra
+pushed it there on 2026-09-17 and closed
+[#6](https://github.com/fil-forge/forge/pull/6),
 [#7](https://github.com/fil-forge/forge/pull/7) and
 [#8](https://github.com/fil-forge/forge/pull/8), the pre-fork chain whose base
-history `main` no longer contains. `fil-forge/forge` has **no open PRs**. Her
-description — the rename "was really pushing commits back to the original repo"
-— matches what the remotes show: `forge-2` was never renamed, it was copied
-from, and both repositories still exist.
+history `main` no longer contains. `forge-2` was copied from, never renamed,
+and is **archived rather than deleted** so its PR links still resolve. Module
+paths `github.com/fil-forge/forge/*` are correct at the repository they name;
+the interim wrongness the plan flagged is over. **This wiki lives on `forge`.**
 
-**This wiki now lives on `forge`.** Its `wiki` branch is `d9c8f3b2`,
-fast-forwarded there at 20:31Z; it had been one commit behind, missing this
-section's predecessor. `forge-2`'s copy is frozen at the same commit. Work from
-`forge`.
-
-What follows:
-
-- **Module paths `github.com/fil-forge/forge/*` are correct at the repo they
-  name.** The interim wrongness the plan flagged — an external `go get`
-  resolving at a repo that does not have the code — is over.
-- **The monorepo's CI ran on `forge` for the first time, cold**, and the cold
-  prediction held. Actions caches are per-repository, so nothing `forge-2`
-  warmed carried over. `ci` **9m14s green** (run 36, on top of old-forge's own
-  35); `images` **3m04s green**; `e2e`'s eight image builds **10m42s** against
-  the 11m21s cold figure measured on `forge-2`. The per-image split is the
-  useful part: **piri 5m52s**, then hilt 10s, ingot 7s, sprue 5s, swarf 6s —
-  they share piri's layers — and delegator 1m21s, piri-signing-service 1m10s,
-  indexing-service 1m51s, which do not. **`e2e` went green at 20:39Z, 17m30s
-  end to end** — a cold run costs roughly triple a warm one. That is a
-  **fourth** `e2e` pass on #27's postgres fix, and four passes still had a ~81%
-  chance even unfixed at a 5% base rate: **not a verdict.** Keep counting.
-  `itest` finished green at **20:57Z** — `hilt` in 14m02s, `ingot` taking the
-  full 36 minutes. Not a failure, and not news: ingot's itest being the long
-  pole is exactly what the closed #21 was about, and it is the job to look at
-  first if sharding is ever reconsidered.
-
-  **So `fil-forge/forge`'s first CI sweep on the transplanted `main` is green
-  across all four workflows** — `ci`, `images`, `e2e`, `itest` — from a
-  completely cold cache.
-- **`compat.yml` is scheduled on `forge`** and last ran green at 12:16Z against
-  the *old* `f60dd596`. Its next scheduled run is the first against the
-  monorepo tree, and nobody has seen that happen.
-- **[#28](https://github.com/fil-forge/forge-2/pull/28) is superseded.**
-  Decided 2026-09-17: the swarf fix comes in with the final subtree pull, once
-  [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) has merged. That is
-  the better outcome — it leaves **no local divergence inside `swarf/`** to
-  carry through every future pull, which is the standing cost the image pins
-  already pay. It does create one ordering constraint: **the pull only picks
-  the fix up if #17 merged first.** Pull before that and the monorepo ships the
-  hang and needs a second pull.
-- **The branch-deletion list is still only on `forge-2`**, `claude/shard-itest`
-  included — which must **not** be deleted.
-- **⚠️ Do not rewrite this wiki's `forge-2` PR links to point at `forge`.**
-  They name 11 distinct PRs (#2, #15–#17, #19–#22, #25, #27, #28) across 16
-  places, and those numbers are `forge-2`'s. `forge` has its own #1–#8, so
-  **#2 already collides**, and `forge`'s numbering will climb into the rest.
-  The links resolve only while `fil-forge/forge-2` exists: **archive it rather
-  than delete it**, unless the record 404ing is acceptable.
+The cold-CI prediction held when it first ran there: `ci` 9m14s, `images`
+3m04s, `e2e`'s eight image builds 10m42s against an 11m21s estimate, with
+`piri` 5m52s of it and every other image under 10s. Actions caches are
+per-repository, so nothing `forge-2` warmed carried over.
 
 ## Approach
 
@@ -225,104 +186,92 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is at `24b18ee5`, and the import phase is closed.** All **ten**
-in-scope modules are subtree-merged with their histories, module paths
-rewritten, `go.work`, per-module CI, library pins unified, every subtree
-resynced to its upstream head, images pinned by digest, the checks the
-per-service `.github/` directories took with them restored, and the stack
-booting in CI from images built at HEAD.
+**`main` is `0d8fb04c` and the import phase is closed.** All **ten** in-scope
+modules are subtree-merged with their histories, module paths rewritten,
+`go.work` in place, per-module CI, library pins unified, images pinned by
+digest, the checks the per-service `.github/` directories took with them
+restored, and the stack booting in CI from images built at HEAD.
 
-`git ls-tree main` now lists: `delegator`, `forgectl`, `hilt`,
-`indexing-service`, `ingot`, `piri`, `piri-signing-service`, `smelt`,
-`sprue`, `swarf`.
+`git ls-tree main` lists: `delegator`, `forgectl`, `hilt`, `indexing-service`,
+`ingot`, `piri`, `piri-signing-service`, `smelt`, `sprue`, `swarf`.
 
-Merged since the last snapshot, in order: **#20** (a root `AGENTS.md` +
-`CLAUDE.md`), **#17** (the 5 straggler image pins + `check-stack-images.sh`),
-**#22** (the skippable-checks practice in `AGENTS.md`), **#19** (test image pins
-into `testutil`), **#23** (three `MONOREPO_TODO.md` entries) and **#24** (the
-last two per-service `.github/` directories) — `main` is `144b3162`. Before
-those: #12 (forgectl, the tenth and last module), #15, #16, and earlier #3
-(swarf), #9, #8, #10 (indexing-service), #11 and #14.
+Merged onto `main` since the last revision of this page, newest first:
 
-**The repository now has a root `AGENTS.md`**, which is where the rules below
-also live in one-line form, and which says of itself that it is scaffolding for
-the construction rather than a guide to the finished monorepo.
-
-One open. **#27 merged** (`24b18ee5`), so the postgres healthcheck fix and its guard are live:
-
-| PR | branch | what |
+| | merged | what |
 |---|---|---|
-| [#28](https://github.com/fil-forge/forge-2/pull/28) | `claude/swarf-firehose-scanner` `52648c29`, **22/22 green** | swarf's firehose client dropped oversized events and hung; fixed with the limits `cmd/swarf` already used |
-| [`swarf` #17](https://github.com/fil-forge/swarf/pull/17) | `claude/firehose-scanner-buffer` `a50b142`, **5/5 green** | **upstream**, the identical patch — see *The deferred import findings* below |
+| [#10](https://github.com/fil-forge/forge/pull/10) | 2026-09-18 19:08Z | the subtree merge tool. **[#13](https://github.com/fil-forge/forge/pull/13) supersedes its interface** — same script, renamed `finish-subtree-pull.sh`, with the deletion audit #10 could not do |
+| [#11](https://github.com/fil-forge/forge/pull/11) | 2026-09-18 17:04Z | shard `itest ingot` across three runners |
+| [#9](https://github.com/fil-forge/forge/pull/9) | 2026-09-18 14:20Z | every goreleaser `-X` ldflag named a pre-consolidation module path; a release would have shipped binaries reporting `v0.0.0` |
 
-**The layer cache is live on `main`** (#25) and its numbers are recorded (#26):
-23s warm against a 7m34s baseline, with the caveats below. **#27** is the
-follow-on that the cache work turned up — chasing #25's `e2e` red to its root
-found a real bug, not a flake.
+**Nine pull requests are open and green**, four on `forge` and five upstream.
+[[Plan]] has the table; [[Needs Human Work]] has what each needs from a person.
+The one that matters for sequencing is
+[#14](https://github.com/fil-forge/forge/pull/14), **the final subtree
+resync** — 37 commits across eight prefixes, every prefix now at its upstream
+`main`. Phase 1 waits on it.
 
-**Pre-rename work, run while Petra is away** (2026-09-17 16:40–17:25Z): #23, #24,
-#25, #26 and #27. Deliberately *not* attempted, with reasons: the release workflow itself
-(unverifiable until tags can be cut, and an unrunnable workflow is the
-silent-green shape this repo keeps deleting), `compat.yml` (needs published
-images to test against), the tag scheme (long-lived and hard to reverse — a
-recommendation, not a decision an agent should take), and building the
-`Dockerfile.release` files (they are goreleaser-shaped and need the release flow
-first).
+**Two corrections to earlier revisions of this page**, both since verified
+against the tree rather than asserted:
 
-**[#21](https://github.com/fil-forge/forge-2/pull/21) (sharding `itest ingot`)
-was closed unmerged**, 16:21Z, for simplicity — it was green and measured, but
-it bought ~25% of wall clock for ~43% more runner-minutes, four `itest` jobs of
-flake surface instead of two, and a check-name change to remember. The branch
-`claude/shard-itest` survives at `e0205346`, so reviving it is a reopen, not a
-rebuild. **What it measured is the lasting part, and it is below.**
+- It said **two stray per-service `.github/` directories survive**, in
+  `forgectl/` and `indexing-service/`. They do not; both are pruned. Checked
+  by listing every top-level directory's tree, not by grep.
+- It said `MONOREPO_TODO.md` carries **seven** whole-repo questions. It
+  carries **eleven** (twelve once [#15](https://github.com/fil-forge/forge/pull/15)
+  lands), counted from the file between its two `#` headings.
 
-**Every pull request now opens with a block naming the checks a reviewer can
-merge without waiting for, and why** — Petra's idea (2026-09-17), and the
-interim for the path-filtering question. It is manual on purpose: a `paths:`
-list goes stale silently when a module gains a dependency, and a path-filtered
-job reports *skipped*, which never satisfies a required status check. A block
-rewritten per push has neither fault, and it can say things no path pattern
-can — the one on #21 (now closed) said "`itest` already passed on `f4c5c21f`
-and `git diff f4c5c21f HEAD -- .github/` is empty", which is a fact about two
-shas, not a path.
+**What #14's `e2e` caught is the most useful thing the resync produced.**
+`libforge` renamed `/ucan/conclude`'s argument and its CBOR key on 2026-09-17 —
+`Receipt cid.Cid`/`receipt` became `Receipts []cid.Cid`/`receipts` — and sprue,
+ingot and guppy all adopted it the same day. **A renamed CBOR key does not fail
+to decode; it decodes to nothing.** A server one commit ahead of its client
+concludes nothing, never calls `/blob/accept`, and the client polls for a
+receipt that will never exist. Nothing errors and nothing logs a mismatch. The
+monorepo's `e2e` was the only thing positioned to notice, because it is the
+only place that runs every participant against one `libforge`. The cause here
+was a ten-commit-stale image digest, not a code change; re-pinned, `e2e` green.
 
-Two conditions make it work rather than just feel good. **Derive it, do not
-assert it** — the closure here is not obvious, which is the whole reason CI is
-unfiltered, and `ingot → indexing-service` and `delegator → forgectl` were both
-invisible in `go.mod`. And **state what it costs when wrong**: the checks still
-run, so an ignored check that goes red leaves `main` red, and the reviewer is
-the one taking that trade. The blocks are kept — when real filtering is
-designed they are the worked examples of what it must express, and the ones
-that turn out wrong are worth more than the ones that do not.
-[#22](https://github.com/fil-forge/forge-2/pull/22) puts it in `AGENTS.md`.
+**Work done upstream while this was in flight**, because upstream is still the
+source of truth for the services: sprue's container build (it compiled a single
+`.go` file, so a newly added `cmd/version.go` was silently dropped), the same
+latent bug found and fixed in `hilt`, indexing-service's four dead `-X` ldflags
+and its poller flake, and a month-stale `swarf` pin in both `hilt` and `ingot`
+that was keeping three firehose fixes out of production.
 
-**#12's merge needed a human**, and the reason is worth keeping: GitHub had it
-registered as a *stacked* pull request from when its base was
-`claude/indexer-from-head`, and that registration outlived both #11 merging and
-the retarget to `main`. REST merge, auto-merge and changing the base all
-refused. The web UI's own button uses the endpoint the error points at, so it
-was one click — but no API route the agent has could do it.
+**And the reason that pin was stale is a finding in its own right.** `ingot` has
+weekly gomod dependabot; **35 of its last 100 pull requests are dependabot's and
+zero bump a `fil-forge/*` module.** `hilt` has no dependabot config at all. The
+cause is tagging, not privacy — `swarf` is public. `swarf`, `hilt` and `ingot`
+each carry exactly one tag, `v0.0.0`, which sorts *below* the pseudo-version
+already pinned; `sprue`, `libforge`, `ucantone`, `smelt` and `guppy` have none.
+So **eight of ten repositories have in-house dependencies no tooling will ever
+flag as behind**, and that is an argument for cutting release tags that holds
+whether or not the monorepo happens.
 
-**Polyrepo MinIO repoints are all merged**: `smelt`,
-[indexing-service#96](https://github.com/fil-forge/indexing-service/pull/96),
-[piri#123](https://github.com/fil-forge/piri/pull/123),
-[sprue#97](https://github.com/fil-forge/sprue/pull/97).
+**Every pull request still opens with a block naming the checks a reviewer can
+merge without waiting for, and why** — Petra's practice, and the interim for the
+path-filtering question. Two conditions make it work rather than just feel good:
+**derive it, do not assert it** (the closure is not obvious, which is why CI is
+unfiltered at all — `ingot → indexing-service` and `delegator → forgectl` were
+both invisible in `go.mod`), and **state what it costs when wrong** (the checks
+still run, so an ignored check going red leaves `main` red, and the reviewer
+took that trade). `AGENTS.md` carries it.
 
 ## Next
 
-1. **Merge #19, #22, #23, #24 and #25** — none carries a `git subtree add` and
-   they touch disjoint files, so any order. Only **#25** can fail; the other
-   four are documentation or deletions nothing reads. One check-name change is
-   outstanding for branch protection: #16's `replaces` → `guards`, already on
-   `main`. (#21 would have added a second; it is closed.)
-2. **The `forge-2` → `forge` rename — and it is no longer "whenever".** Phase 1
-   is gated on it, which the plan does not say. Module paths are already
-   `github.com/fil-forge/forge/*`, and a submodule tag has to be
-   `<svc>/vX.Y.Z` in the repository the path names. Tags cut in `forge-2` sit
-   at a repository no module path resolves to — `go get
-   github.com/fil-forge/forge/piri@piri/v1.2.3` looks in `fil-forge/forge`,
-   the old one, and finds nothing. **So any tag cut before the rename has to
-   be cut again after it.** Still a person's call; see [[Needs Human Work]].
+1. **Review the nine open pull requests.** Nothing here is blocked on the
+   agent; all nine are green and clean. Read
+   [#14](https://github.com/fil-forge/forge/pull/14) first — it is the final
+   subtree resync and **Phase 1 is gated on it landing**. Then
+   [#13](https://github.com/fil-forge/forge/pull/13), which supersedes the
+   merged #10's interface. The five upstream ones stay draft until they have
+   been looked at, so nobody else spends time first. [[Needs Human Work]] has
+   the per-PR detail.
+2. ~~**The `forge-2` → `forge` rename**~~ — **done**, and the reasoning it
+   turned on is worth keeping: a submodule tag has to be `<svc>/vX.Y.Z` in the
+   repository the module path names, so any tag cut in `forge-2` would have had
+   to be cut again afterwards. That hazard is gone; tags can now be cut where
+   they resolve.
 3. **Phase 1** — release tags, `compat.yml`, publishing. Bigger than the plan
    assumed, because **the machinery it says to use does not exist here.** The
    plan reads "cut initial release tags via the *existing* `release.yml`
@@ -379,22 +328,32 @@ was one click — but no API route the agent has could do it.
    without cutting tags, `compat.yml`, deciding the tag scheme — can go first.
 4. **`libforge`'s dissolution** is what first exercises the audience rule
    (rule 1). Nothing currently in the repository is a pure library.
-5. **Two stray per-service `.github/` directories survive**, `forgectl/` and
-   `indexing-service/`. The original seven were pruned on import; these two
-   came in later (#12, #10) and nothing looked again. They are inert — GitHub
-   reads only the repository root — but they describe a per-repo release flow
-   that does not apply, which is exactly the kind of thing someone reads and
-   believes while building Phase 1.
+5. ~~**Two stray per-service `.github/` directories survive**~~ — **they do
+   not.** Re-checked on 2026-09-20 by listing every top-level directory's tree:
+   all are pruned. The earlier claim was wrong, and the way it was wrong is the
+   recurring one on this project — a claim derived over a set that was not the
+   set it purported to be.
+6. **Cut release tags, and not only for Phase 1.** Eight of ten repositories
+   have in-house Go dependencies that no automation can see are stale, because
+   their modules carry either no tag or only a `v0.0.0` that sorts below the
+   pseudo-version already pinned. Measured above. This is an independent reason
+   to tag, separate from the plan's own sequencing.
 
 **Do not import anything else without a decision.** `MAJOR_DECISIONS.md`
 records what is deliberately out — outward-facing libraries, forks of upstream
 software, and things being retired — and every module it listed as in is now
 in.
 
-`MONOREPO_TODO.md` carries **seven** whole-repo questions: the s3-compat
-report pipeline, Renovate, hilt's build context, the macOS run,
-`stress-tester` coverage, turning `SA4006` back on, and whether CI should run
-only what a change affects. None is blocking; none should be answered early.
+`MONOREPO_TODO.md` carries **eleven** whole-repo questions — counted from the
+file, not remembered: the s3-compat report pipeline, Renovate, hilt's build
+context, `stress-tester` coverage, the macOS run, turning `SA4006` back on,
+whether CI should run only what a change affects, how much further to push
+`itest ingot`, how much further to push CI wall clock, reproducing forgectl's
+mainnet metrics jobs before the polyrepo is archived, and the machinery Phase 1
+needs that this repository does not have.
+[#15](https://github.com/fil-forge/forge/pull/15) adds a twelfth: service
+images report no build metadata. None is blocking; none should be answered
+early.
 
 ## Known debt
 

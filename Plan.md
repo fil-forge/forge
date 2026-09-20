@@ -8,9 +8,12 @@ and the evidence, [[Needs Human Work]] has what is waiting on a person,
 [`fil-forge/forge`](https://github.com/fil-forge/forge), with each service
 still released on its own cadence.
 
-**Where we are:** Phase 0 is done, the move to `forge` is done, Phase 1 has
-started. **`forge` has no open PRs**; the only thing in flight is the final
-subtree pull, which is now unblocked.
+**Where we are:** Phase 0 is done, the move to `forge` is done, and the final
+subtree pull is done too — it is
+[#14](https://github.com/fil-forge/forge/pull/14), green and open. **Phase 1 is
+gated on that landing**, and #14 is gated on review. `main` is `0d8fb04c`;
+**four PRs are open on `forge` and five upstream.** Nothing is blocked on the
+agent.
 
 ---
 
@@ -31,17 +34,39 @@ subtree pull, which is now unblocked.
 - **External images are digest-pinned; in-repo services build from HEAD.**
 - **Layer cache measured**, not assumed: 23s warm against a 7m34s baseline,
   ~10m42s cold. Caches are per-repository, so `forge` started cold.
-- **The move to `fil-forge/forge` is complete** — `main` is `24b18ee5` there,
-  the old `#6`/`#7`/`#8` chain is closed, and `forge-2` is archived (not
-  deleted, so its PR links still resolve).
+- **The move to `fil-forge/forge` is complete** — the old `#6`/`#7`/`#8` chain
+  is closed and `forge-2` is archived (not deleted, so its PR links still
+  resolve). `main` has moved on since: `991633b0` (#9), `9870d48a` (#11),
+  and now **`0d8fb04c`** (#10).
+- **Every subtree is resynced to its upstream `main`** — 37 commits across
+  eight prefixes, measured by ancestry rather than by grepping commit messages.
+  Done as work; awaiting review as #14.
 
 ## In flight
 
+**Nine open pull requests, all green.** On `forge` they are fully Open; upstream
+they stay draft until Petra has passed on them, so nobody else spends time
+first.
+
 | | what | state |
 |---|---|---|
-| ~~[`swarf` #17](https://github.com/fil-forge/swarf/pull/17)~~ | Firehose client hangs on an event over 64 KiB; fixed upstream, plus an `internal/sse` extraction | **Merged 2026-09-18 13:51Z** as `f286fb0` |
-| ~~[#9](https://github.com/fil-forge/forge/pull/9)~~ | Every goreleaser `-X` ldflag named a pre-consolidation module path, so a release would have shipped binaries reporting `v0.0.0`. Fix, a guard, and the Phase 1 note on replacing it | **Merged 2026-09-18 14:20Z** as `991633b0` |
-| the final `git subtree pull` | ~45 commits of upstream drift to take in one pull at the end | **Not started — and its one ordering constraint is now satisfied**, since `swarf` #17 has merged |
+| [forge #12](https://github.com/fil-forge/forge/pull/12) | a release workflow: written, verified, **deliberately not armed** | Open, 24/24 |
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` | Open, 24/24 |
+| **[forge #14](https://github.com/fil-forge/forge/pull/14)** | **the final subtree resync** — 37 commits across eight prefixes. Caught a live cross-repo wire break. **Phase 1 waits on this** | Open, 24/24 |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one `MONOREPO_TODO.md` entry: service images report no build metadata | Open, 24/24 |
+| [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand, **plus the container build it broke** | draft, 8/8 |
+| [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, root-caused not re-run | draft, 9/9 |
+| [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | a `version` subcommand + **four dead `-X` ldflags** | draft, 9/9 |
+| [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits, **plus the same `./cmd/main.go` bug sprue had** | draft, 8/8 |
+| [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits; ingot consumes the firehose directly | draft, 17/17 |
+
+Merged since the last revision of this page: **#9** (goreleaser ldflags),
+**#11** (sharding `itest ingot`), **#10** (the subtree merge tool — **#13
+supersedes its interface**).
+
+One issue, no PR: [swarf #20](https://github.com/fil-forge/swarf/issues/20),
+the revocation lookup contract. The spec settles the semantics; the API shape
+is still a choice. See [[Needs Human Work]].
 
 ## Ahead
 
