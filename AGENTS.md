@@ -281,9 +281,13 @@ svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s|' "${d%/}"; done)
 grep -rnE "github\.com/fil-forge/(${svcs%|})([^A-Za-z0-9_-]|$)" <prefix>/
 ```
 
-Derived from the directories with a `go.mod` — the same set `go.work` lists and
-the same one `resolve-rewrite-conflicts.sh` builds — rather than typed out, so
-a service added or renamed needs no edit here (rule 3).
+Derived from the top-level directories with a `go.mod` — the same set
+`resolve-rewrite-conflicts.sh` builds — rather than typed out, so a service
+added or renamed needs no edit here (rule 3). Not the same set as `go.work`,
+which also lists `hilt/itest` and `ingot/itest`; those are caught anyway by
+their parent's alternative. Add `| grep -v 'https\?://'` if you only want
+module paths: most of the hits are repository URLs the monorepo deliberately
+left pointing at their own repositories.
 
 **A guard script for this does not exist on this branch.** An earlier revision
 of this paragraph named `check-module-paths.sh` as though it did; it is added by

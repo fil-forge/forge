@@ -35,10 +35,18 @@ set -uo pipefail
 
 dry=0
 case "${1:-}" in
-  --dry-run|-n) dry=1 ;;
+  --dry-run|-n) dry=1; shift ;;
   "") ;;
   *) echo "usage: resolve-rewrite-conflicts.sh [--dry-run]" >&2; exit 2 ;;
 esac
+# Refused, not ignored. The sibling script had this exact fault -- a trailing
+# argument silently dropped -- and it was fixed there in the round that left it
+# here, in the other half of the same pull request.
+if [ "$#" -gt 0 ]; then
+  echo "unexpected argument(s): $*" >&2
+  echo "usage: resolve-rewrite-conflicts.sh [--dry-run]   (it takes no prefix)" >&2
+  exit 2
+fi
 
 cd "$(git rev-parse --show-toplevel)"
 
@@ -77,27 +85,38 @@ svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s\n' "${d%/}"; done \
   | awk '{ print length, $0 }' | sort -rn -k1,1 | cut -d' ' -f2- | paste -sd'|')
 [ -n "$svcs" ] || { echo "no modules found -- is this the repository root?" >&2; exit 2; }
 
-# Two rules. Both are deliberately narrower than they look, because the wide
-# versions corrupt real content.
+# ONE rule: an IMPORT PATH gains the forge/ prefix, never inside a URL.
 #
-# 1. A BARE repository URL becomes the forge repository URL. `(?![\w/-])` is
-#    load-bearing: without it
-#    `https://github.com/fil-forge/piri/releases/download/v1/piri.tar.gz`
-#    became `https://github.com/fil-forge/forge/releases/download/...`, a 404,
-#    and the script wrote that into the tree and reported success. That exact
-#    URL is live in piri/deploy/.../install-from-release.sh.
+# There used to be a second rule turning a bare `https://github.com/fil-forge/
+# <svc>` into the forge repository URL, and it is gone because it cannot be
+# made correct. It went through two rounds:
 #
-# 2. An IMPORT PATH gains the forge/ prefix -- but never inside a URL. The
-#    lookbehinds stop rule 2 picking up what rule 1 deliberately declined, so a
-#    URL with a path is left entirely alone and the file goes to a human.
+#   round 1 shipped it unbounded, and
+#   `https://github.com/fil-forge/piri/releases/download/v1/piri.tar.gz`
+#   became a 404 that the script wrote into the tree and reported success on;
 #
-# That URLs with paths are left alone is the right answer, not a gap: the
-# monorepo itself never rewrote them. 17 tracked files still carry
-# `https://github.com/fil-forge/<svc>/...`, so "ours == rewrite(base)" is
-# simply false for them and a human should look.
+#   round 2 added `(?![A-Za-z0-9_/-])`, which fixed that one suffix and not the
+#   class -- `.` and end-of-line are not in the character class, so
+#   `https://github.com/fil-forge/piri.git` still became
+#   `https://github.com/fil-forge/forge.git`, the wrong repository, and a bare
+#   URL at the end of a line still collapsed to the monorepo. Eleven tracked
+#   lines are in that shape today: git clone commands in piri's deploy
+#   scripts and piri-signing-service's and smelt's READMEs, and
+#   piri/docs/mkdocs.yml's repo_url.
+#
+# The deeper problem is that the tree does not agree with itself. Commit
+# 2b2bd5f2 ("Fix the repo URLs the module rewrite corrupted") rewrote exactly
+# three Go build-info constants to .../forge and deliberately left the other
+# eleven pointing at their own repositories -- and the two classes are
+# indistinguishable by pattern. A rule that guesses is wrong on one of them.
+#
+# So: no rule. Rule 2's lookbehinds already leave every URL alone, so a file
+# whose only difference is a URL is simply not "base plus the rewrite" and goes
+# to a human with a diff. That is the refusal working, not a gap. Seventeen
+# tracked files carry a fil-forge service URL in one form or the other; each is
+# a decision the script cannot make.
 rewrite() {
   perl -pe "
-    s{https://github\\.com/fil-forge/(?:$svcs)(?![A-Za-z0-9_/-])}{https://github.com/fil-forge/forge}g;
     s{(?<!https://)(?<!http://)github\\.com/fil-forge/(?!forge/)($svcs)(?![A-Za-z0-9_-])}{github.com/fil-forge/forge/\$1}g;
   "
 }
@@ -118,9 +137,17 @@ while IFS= read -r f; do
   git show ":2:$f" > "$t/ours"   2>/dev/null || { echo "LEFT  $f: deleted on our side; finish-subtree-pull.sh reports these"; left=$((left+1)); rm -rf "$t"; continue; }
   git show ":3:$f" > "$t/theirs" 2>/dev/null || { echo "LEFT  $f: deleted upstream; resolve by hand"; left=$((left+1)); rm -rf "$t"; continue; }
 
+  # gofmt's STATUS, not just its output. On a .go file it cannot parse it
+  # writes nothing and fails -- and nothing here looked, so all three sides
+  # normalised to EMPTY, `cmp` compared two empty files and passed, and the
+  # write truncated a real file to zero bytes while printing TAKE and exiting
+  # 0. The comment above claimed the opposite. Caught on a fixture carrying a
+  # deliberate parser-error file.
   rewrite < "$t/base" > "$t/base_rw"
-  norm "$t/base_rw" > "$t/base_n"
-  norm "$t/ours"    > "$t/ours_n"
+  if ! norm "$t/base_rw" > "$t/base_n" || ! norm "$t/ours" > "$t/ours_n"; then
+    echo "LEFT  $f: gofmt could not parse it, so ours cannot be compared; merge by hand"
+    left=$((left + 1)); rm -rf "$t"; continue
+  fi
 
   if ! cmp -s "$t/base_n" "$t/ours_n"; then
     echo "LEFT  $f: ours differs from the base by more than the rewrite:"
@@ -129,7 +156,10 @@ while IFS= read -r f; do
   fi
 
   rewrite < "$t/theirs" > "$t/out_raw"
-  norm "$t/out_raw" > "$t/out"
+  if ! norm "$t/out_raw" > "$t/out"; then
+    echo "LEFT  $f: gofmt could not parse upstream's side; merge by hand"
+    left=$((left + 1)); rm -rf "$t"; continue
+  fi
 
   if [ "$dry" = 1 ]; then
     echo "TAKE  $f: ours is base+rewrite only; would take upstream and re-apply it"

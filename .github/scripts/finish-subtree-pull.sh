@@ -48,7 +48,12 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-prefix=${1:?usage: finish-subtree-pull.sh [--dry-run] <prefix>   (run during or right after a subtree pull)}
+if [ $# -eq 0 ]; then
+  echo "usage: $(basename "$0") [--dry-run] <prefix>" >&2
+  echo "exit 2 means it refused to run; exit 1 means it ran and found something." >&2
+  exit 2
+fi
+prefix=$1
 prefix=${prefix%/}
 shift
 # Refuse trailing arguments rather than ignoring them. The option loop stops at
@@ -102,10 +107,28 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     exit 2
   fi
 
+  # Two conditions, and the second is the one that makes the first mean
+  # anything. "$c^2 contains $split" alone is satisfied by ANY merge whose
+  # second parent descends from the subtree add -- which is every ordinary
+  # "Merge pull request #N" on main, because a feature branch cut after the add
+  # contains the add, and the add contains upstream's history. Measured: with
+  # only the first test, ingot, piri, hilt, smelt, sprue and delegator ALL
+  # anchored on 0d8fb04c, PR #10's merge, which touches two files under
+  # .github/. The prefix argument was inert. That is the same fault as the
+  # "diff confined to the prefix" attempt above, arrived at from the other
+  # direction, and it survived a review round.
+  #
+  # A real `git subtree pull` merge has upstream's tip as its second parent,
+  # and upstream has never heard of this monorepo, so $add is NOT an ancestor
+  # of it. A monorepo feature branch always is. That one test separates them.
+  # Verified against origin/main: all ten prefixes resolve to their own pull
+  # merge, or to their own add when they have never been pulled.
   merge=
   for c in $(git rev-list --merges --max-count=200 HEAD); do
     git rev-parse -q --verify "$c^2" >/dev/null 2>&1 || continue
-    if git merge-base --is-ancestor "$split" "$c^2" 2>/dev/null; then merge=$c; break; fi
+    git merge-base --is-ancestor "$split" "$c^2" 2>/dev/null || continue
+    git merge-base --is-ancestor "$add"   "$c^2" 2>/dev/null && continue
+    merge=$c; break
   done
   if [ -z "$merge" ]; then
     echo "Found no merge of '$prefix''s upstream in the last 200 merges." >&2
@@ -135,7 +158,11 @@ fi
 cd "$(git rev-parse --show-toplevel)"
 
 rename_warn=$(mktemp "${TMPDIR:-/tmp}/finish-subtree-rename.XXXXXX")
-trap 'rm -f "$rename_warn"' EXIT
+# One trap for both, set once. Two traps means the second REPLACES the first,
+# so the per-file `trap 'rm -rf "$tmp"'` inside the merge loop used to discard
+# this one and leak $rename_warn on every run that merged anything.
+tmp=""
+trap 'rm -f "$rename_warn"; [ -n "$tmp" ] && rm -rf "$tmp"' EXIT
 
 # Where does <old path> live now? Follows our rename chain, verifying each hop
 # against the index: a file can be moved more than once, and each hop is
@@ -207,12 +234,16 @@ while IFS= read -r conflicted; do
   # large TEXT file was declared binary and refused. go.sum and generated
   # cbor_gen.go routinely exceed 64 KiB. Measured: 164 KB of text gives 141
   # through the pipe and 0 through process substitution.
-  if ! grep -Iq . < <(git show ":3:$conflicted" 2>/dev/null); then
+  # `grep -Iq .` needs a non-empty LINE, so an empty file and a blank-lines-only
+  # file both failed it and were refused as binary. Test emptiness first, then
+  # look for a NUL the way grep -I decides.
+  if [ -n "$(git show ":3:$conflicted" 2>/dev/null | head -c 1)" ] \
+     && ! grep -Iq . < <(git show ":3:$conflicted" 2>/dev/null); then
     note "SKIP  $conflicted -> $dest: binary, merge by hand"
     unresolved=$((unresolved + 1)); continue
   fi
 
-  tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+  tmp=$(mktemp -d)
   mkdir -p "$tmp/$(dirname "$dest")"
   git show ":1:$conflicted" > "$tmp/base"
   git show ":3:$conflicted" > "$tmp/theirs"
@@ -282,6 +313,20 @@ while IFS= read -r gone; do
   if [ -n "$dest" ]; then
     note "STILL HERE  upstream deleted $gone; we moved it to $dest and still have it"
     stale=$((stale + 1))
+    continue
+  fi
+  # No recorded rename does NOT mean no move. Move a file out of the prefix and
+  # substantially rewrite it in the same commit and git records D+A even at
+  # -M20%, so destination_of comes back empty -- and this loop used to say
+  # nothing at all, on the one failure mode the whole script exists for. The
+  # loud path already probes for this case and prints SKIP; the audit did not.
+  # Same probe here, so a genuine delete stays quiet (nothing outside the
+  # prefix has that basename) and a rewritten move is named.
+  cands=$(git ls-files "*/$(basename "$gone")" | grep -v "^$prefix/" || true)
+  if [ -n "$cands" ]; then
+    note "VERIFY      upstream deleted $gone; no rename was recorded, but these exist"
+    note "            outside the prefix: $(echo "$cands" | tr '\n' ' ')"
+    stale=$((stale + 1))
   fi
 done < <(git diff -M --diff-filter=D --name-only "$base" "$upstream" 2>"$rename_warn" || true)
 
@@ -308,9 +353,19 @@ if [ "$stale" -gt 0 ]; then
   note "audit cannot see."
 fi
 
+unmerged=0
+if [ "$pull_mode" = conflicted ]; then
+  unmerged=$(git ls-files -u | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
+fi
+
 if [ "$pull_mode" = merged ]; then
   note "Audited a completed pull: $stale upstream deletion(s) we still carry."
 else
-  note "$merged merged, $unresolved left for a human, $stale upstream deletion(s) we still carry."
+  note "$merged merged, $unresolved left for a human, $unmerged path(s) still unmerged, $stale upstream deletion(s) we still carry."
 fi
-[ "$unresolved" = 0 ] && [ "$stale" = 0 ]
+
+# $unmerged, not just $unresolved. The status used to count only the DU class,
+# so a pull whose conflicts were ordinary content conflicts -- the common case,
+# fourteen of them in one resync -- exited 0 with the merge unresolved, and a
+# caller acting on the status per AGENTS.md committed it.
+[ "$unresolved" = 0 ] && [ "$stale" = 0 ] && [ "$unmerged" = 0 ]
