@@ -137,7 +137,13 @@ run_probe() {
   # for piri) rejects the bare GNU form. That would have made every probe
   # return nothing and the run blame the wrong services.
   out_file=$(mktemp "${TMPDIR:-/tmp}/assert-released.XXXXXX")
-  "$@" >"$out_file" 2>&1 &
+  # </dev/null is load-bearing. This loop is driven by a heredoc, so without it
+  # the child inherits that heredoc on fd 0 -- and a binary that reads stdin
+  # (a cobra command with no args, say) swallows the rest of the list. Measured
+  # on three fixtures with the middle one doing `cat >/dev/null`: the third
+  # binary, which carried the exact defect this script exists for, was never
+  # probed and the script exited 0 saying "2 binary/binaries asserted".
+  "$@" </dev/null >"$out_file" 2>&1 &
   pid=$!
   waited=0
   while kill -0 "$pid" 2>/dev/null; do
@@ -192,7 +198,12 @@ while IFS= read -r bin; do
   # GNU-ism -- a silent no-op on BSD sed, on the runner this file claims to
   # support -- and was unreachable anyway.
   want_bare=${want#v}
-  want_re=$(printf '%s' "$want_bare" | sed 's/\./\\./g')
+  # Every ERE metacharacter, not just the dot. release.yml deliberately admits
+  # `+` in a version (its reject class is [^0-9A-Za-z.+-]), and `+` is a
+  # quantifier: with only `.` escaped, want=v1.2.3+meta FAILED to match a
+  # correct binary reporting v1.2.3+meta, and MATCHED a stale one reporting
+  # v1.2.33meta. Wrong in both directions on the same input.
+  want_re=$(printf '%s' "$want_bare" | sed 's/[][.^$*+?(){}|\\]/\\&/g')
   if printf '%s' "$out" | grep -qE "(^|[^0-9.])v?${want_re}([^0-9.]|\$)"; then
     echo "ok        $name reports $want"
     asserted=$((asserted + 1))

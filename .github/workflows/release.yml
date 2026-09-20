@@ -232,15 +232,32 @@ jobs:
           cache: true
           cache-dependency-path: ${{ needs.plan.outputs.dir }}/go.sum
 
-      # NO DOCKER STEPS, deliberately, and this is a correction rather than an
-      # omission. An earlier revision added setup-qemu, setup-buildx and a ghcr
-      # login here, reasoning that ingot and sprue build linux/arm64 images whose
-      # Dockerfile.release runs apt-get. But goreleaser's docker pipe is a
-      # *Publisher*, and `--skip=publish` is passed in both modes below -- so no
-      # image is built either way and all three steps were dead weight, ~1min of
-      # setup nothing used. `needs_docker` is still derived, because the plan job
-      # uses it to refuse a macOS+Docker service, and because the steps come back
-      # the day publishing opens.
+      # NO DOCKER STEPS, and `docker` is in the skip list below -- which is the
+      # part an earlier revision of this comment got wrong.
+      #
+      # That revision deleted setup-qemu and setup-buildx claiming goreleaser's
+      # docker pipe is a *Publisher*, so `--skip=publish` already covered it.
+      # It does not. `docker` is its own skip value in goreleaser v2.18.2:
+      #
+      #   valid options are announce, archive, aur, ..., docker, ..., publish, ...
+      #
+      # and running the real ingot config with exactly the flags below, on a
+      # machine with no docker daemon:
+      #
+      #   • docker images
+      #     • building docker image   image=ghcr.io/fil-forge/ingot:0.0.0-arm64
+      #     • building docker image   image=ghcr.io/fil-forge/ingot:0.0.0-amd64
+      #   ⨯ release failed after 2m24s
+      #
+      # The docker PUSH is a publisher; the docker BUILD is not. On an ubuntu
+      # runner, which does have a daemon, the build would have proceeded --
+      # spending minutes on images this workflow says it does not build, and
+      # then failing on the arm64 one for want of the binfmt handler that the
+      # deleted setup-qemu step installed. Both mistakes at once.
+      #
+      # So: skip it explicitly. When publishing is armed, three things come
+      # back together and not separately -- setup-qemu, setup-buildx, and
+      # dropping `docker` from the skip list.
       #
       # The consequence worth stating: a green dry run says nothing about
       # `Dockerfile.release` or the arm64 emulation. Exercising those needs
@@ -302,7 +319,7 @@ jobs:
           distribution: goreleaser
           version: v2.18.2
           workdir: ${{ needs.plan.outputs.dir }}
-          args: release --clean --skip=validate,publish,sign,announce
+          args: release --clean --skip=validate,publish,sign,announce,docker
         env:
           GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
           # Not on the dry-run path. goreleaser's env pipe does not require the
