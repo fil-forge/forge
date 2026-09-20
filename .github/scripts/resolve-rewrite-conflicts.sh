@@ -42,24 +42,63 @@ esac
 
 cd "$(git rev-parse --show-toplevel)"
 
+# Exit 0, not 2. AGENTS.md tells an agent to run both scripts with every pull,
+# and a clean pull is the common case -- so "no merge in progress" is "nothing
+# to do", not a finding. Exiting 2 made the documented pair return non-zero
+# after every clean pull, in a section that also says a caller can act on the
+# status rather than parse prose.
 git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || {
-  echo "No merge in progress. Run this during a conflicted subtree pull." >&2
+  echo "No merge in progress -- nothing for this script to resolve." >&2
+  exit 0
+}
+
+# Probed once, loudly. `norm` used to fall back to `cat` on any gofmt failure
+# with the message discarded, so on a machine with no Go the normalisation this
+# script calls load-bearing silently vanished -- and every .go file was then
+# refused with a message asserting a judgement about its contents that had not
+# been made.
+command -v gofmt >/dev/null 2>&1 || {
+  echo "gofmt is not on PATH, and the .go comparison depends on it: the rewrite" >&2
+  echo "lengthens an import path, which can move it within its group, and gofmt" >&2
+  echo "is what makes the two sides comparable. Refusing rather than silently" >&2
+  echo "comparing unformatted bytes and blaming the file." >&2
   exit 2
 }
 
 # The services are the top-level directories with a go.mod -- the same set
 # go.work lists. Nothing here needs updating when one is added.
-svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s\n' "${d%/}"; done | paste -sd'|')
+# LONGEST FIRST, and this is not cosmetic. The glob's order follows the
+# locale's collation: under C it happens to yield piri-signing-service before
+# piri, under en_US.UTF-8 it yields piri first -- and then `piri` matches inside
+# `piri-signing-service`, rewriting it to `forge-signing-service`, a repository
+# that does not exist. Same script, different answer per machine. Sorting by
+# length removes the dependence entirely.
+svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s\n' "${d%/}"; done \
+  | awk '{ print length, $0 }' | sort -rn -k1,1 | cut -d' ' -f2- | paste -sd'|')
 [ -n "$svcs" ] || { echo "no modules found -- is this the repository root?" >&2; exit 2; }
 
-# Two rules, in order. The URL one first, because the import rule would
-# otherwise turn a repository URL into .../forge/<svc>, which is a 404 that
-# services serve out of GET /. (?!forge/) makes it idempotent; libforge is
-# untouched because it is not one of the prefixes.
+# Two rules. Both are deliberately narrower than they look, because the wide
+# versions corrupt real content.
+#
+# 1. A BARE repository URL becomes the forge repository URL. `(?![\w/-])` is
+#    load-bearing: without it
+#    `https://github.com/fil-forge/piri/releases/download/v1/piri.tar.gz`
+#    became `https://github.com/fil-forge/forge/releases/download/...`, a 404,
+#    and the script wrote that into the tree and reported success. That exact
+#    URL is live in piri/deploy/.../install-from-release.sh.
+#
+# 2. An IMPORT PATH gains the forge/ prefix -- but never inside a URL. The
+#    lookbehinds stop rule 2 picking up what rule 1 deliberately declined, so a
+#    URL with a path is left entirely alone and the file goes to a human.
+#
+# That URLs with paths are left alone is the right answer, not a gap: the
+# monorepo itself never rewrote them. 17 tracked files still carry
+# `https://github.com/fil-forge/<svc>/...`, so "ours == rewrite(base)" is
+# simply false for them and a human should look.
 rewrite() {
   perl -pe "
-    s{https://github\\.com/fil-forge/(?:$svcs)\\b}{https://github.com/fil-forge/forge}g;
-    s{github\\.com/fil-forge/(?!forge/)($svcs)\\b}{github.com/fil-forge/forge/\$1}g;
+    s{https://github\\.com/fil-forge/(?:$svcs)(?![A-Za-z0-9_/-])}{https://github.com/fil-forge/forge}g;
+    s{(?<!https://)(?<!http://)github\\.com/fil-forge/(?!forge/)($svcs)(?![A-Za-z0-9_-])}{github.com/fil-forge/forge/\$1}g;
   "
 }
 
@@ -68,7 +107,9 @@ while IFS= read -r f; do
   [ -n "$f" ] || continue
   t=$(mktemp -d)
 
-  norm() { case "$f" in *.go) gofmt "$1" 2>/dev/null || cat "$1" ;; *) cat "$1" ;; esac; }
+  # gofmt's own failure on a file is meaningful (it does not parse), so it is
+  # not swallowed here either -- that file goes to a human.
+  norm() { case "$f" in *.go) gofmt "$1" ;; *) cat "$1" ;; esac; }
 
   if ! git show ":1:$f" > "$t/base" 2>/dev/null; then
     echo "LEFT  $f: no merge base (add/add conflict)"
@@ -93,8 +134,19 @@ while IFS= read -r f; do
   if [ "$dry" = 1 ]; then
     echo "TAKE  $f: ours is base+rewrite only; would take upstream and re-apply it"
   else
-    cat "$t/out" > "$f"
-    git add -- "$f"
+    # Checked. Neither was, under `set -uo pipefail` with no -e: a failed write
+    # left the conflict-marked file in place and `git add` then staged content
+    # containing <<<<<<< markers, while the script counted it resolved and
+    # exited 0 -- so a caller acting on the status committed an unresolved
+    # merge.
+    if ! cat "$t/out" > "$f"; then
+      echo "LEFT  $f: could not write the resolved content" >&2
+      left=$((left + 1)); rm -rf "$t"; continue
+    fi
+    if ! git add -- "$f"; then
+      echo "LEFT  $f: wrote the resolved content but could not stage it" >&2
+      left=$((left + 1)); rm -rf "$t"; continue
+    fi
     echo "TAKE  $f: ours is base+rewrite only; took upstream and re-applied it"
   fi
   took=$((took + 1)); rm -rf "$t"

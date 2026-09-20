@@ -170,7 +170,7 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 `testutil` package with a named const and an env override, not inline in a
 `_test.go`.
 
-## Run this with every `git subtree pull`
+## Run these with every `git subtree pull`
 
 ```
 .github/scripts/finish-subtree-pull.sh <prefix>              merge, write, audit
@@ -179,6 +179,14 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 .github/scripts/resolve-rewrite-conflicts.sh                 take upstream + rewrite
 .github/scripts/resolve-rewrite-conflicts.sh --dry-run       say what it would take
 ```
+
+**Flags come before the prefix.** `finish-subtree-pull.sh <prefix> --dry-run`
+used to ignore the flag and write anyway; it now refuses the trailing argument.
+
+The first runs after **every** pull, conflicted or not — the audit is the whole
+point and it only has something to say when nothing conflicted. The second is
+conflicted-pull-only, and exits 0 saying so if there is no merge in progress, so
+running the pair unconditionally is safe.
 
 Run it **during a pull that stopped with conflicts, or straight after one that
 did not** — it detects which rather than being told. A subtree pull can lose an
@@ -265,8 +273,19 @@ difference *is* the rewrite compares unequal and gets refused.
 **Neither tool sees the third class.** A hunk can merge *cleanly* and still
 carry a polyrepo import path, because it never touched a line we had rewritten
 — true of a file upstream added and of an existing file that merely gained an
-import. Nothing conflicts, so nothing reports it. `check-module-paths.sh` is
-what does; run it after every pull, before trusting a build.
+import. Nothing conflicts, so nothing reports it. So after every pull, before
+trusting a build, sweep the prefix for them:
+
+```
+grep -rn 'github\.com/fil-forge/\(piri\|sprue\|hilt\|ingot\|swarf\|smelt\|delegator\|forgectl\|indexing-service\|piri-signing-service\)\b' <prefix>/
+```
+
+**A guard script for this does not exist on this branch.** An earlier revision
+of this paragraph named `check-module-paths.sh` as though it did; it is added by
+the subtree-resync pull request, not this one, and `.github/scripts/` is the
+list (rule 3) — a reader who looked there found nothing and either skipped the
+step or assumed it had run. When that script lands, this block becomes a call to
+it.
 
 ## Conventions
 
