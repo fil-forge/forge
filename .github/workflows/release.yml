@@ -115,18 +115,41 @@ jobs:
           # DERIVED, not tabulated: a config that builds darwin with cgo cannot
           # be cross-compiled from linux, so it needs a macOS runner. A service
           # that gains or drops a darwin cgo build moves itself.
-          if grep -q 'darwin' "$cfg" && grep -q 'CGO_ENABLED=1' "$cfg"; then
+          #
+          # Two independent greps over the whole file were not this test: every
+          # config mentions darwin somewhere (a format_override, a comment), so
+          # any config that set CGO_ENABLED=1 for a LINUX build would have been
+          # routed to macOS, where that linux cgo build cannot be done. Read the
+          # builds: list properly instead.
+          # PyYAML is present on the ubuntu runner image; this job always runs
+          # there. Parsing the config beats grepping it -- see above.
+          needs_macos=$(python3 -c "import sys,yaml;c=yaml.safe_load(open(sys.argv[1])) or {};print('true' if any('darwin' in (b.get('goos') or []) and 'CGO_ENABLED=1' in ' '.join(b.get('env') or []) for b in (c.get('builds') or [])) else 'false')" "$cfg")
+          if [ "$needs_macos" = "true" ]; then
             echo "runner=macos-14" >> "$GITHUB_OUTPUT"
           else
             echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
           fi
 
-          # Likewise for Docker: only a config with a `dockers:` block needs
-          # buildx, QEMU and a registry login.
-          if grep -q '^dockers:' "$cfg"; then
+          # Likewise for Docker: only a config with a docker block needs buildx,
+          # QEMU and a registry login. Both spellings, since v2 accepts
+          # `dockers_v2:` and missing it would skip QEMU for an arm64 build --
+          # the same two-spellings class handled above for the config filename.
+          if grep -qE '^dockers(_v2)?:' "$cfg"; then
             echo "needs_docker=true" >> "$GITHUB_OUTPUT"
           else
             echo "needs_docker=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Refuse a combination that cannot run rather than letting it surface
+          # as a buildx failure six steps later: GitHub's macOS runners ship no
+          # Docker daemon. Nothing hits this today -- piri is the only macOS
+          # service and has no docker block -- but both values above are built
+          # to move themselves, so nothing stops a future edit producing it.
+          if [ "$needs_macos" = "true" ] && grep -qE '^dockers(_v2)?:' "$cfg"; then
+            echo "::error::$svc needs a macOS runner (darwin cgo build) and also" \
+                 "builds Docker images. GitHub's macOS runners have no Docker" \
+                 "daemon, so this cannot be released by this workflow as configured."
+            exit 1
           fi
           cat "$GITHUB_OUTPUT"
 
@@ -265,11 +288,15 @@ jobs:
       # This runs BEFORE anything is published, which is the whole point. When
       # it trailed `goreleaser release`, a stale -X meant the assets were
       # already live and already wrong; the job just went red afterwards.
+      # Via env for the same reason as the tag step above. The previous revision
+      # fixed that step, wrote a comment saying so, and left this one -- which
+      # takes the identical file-derived value into an identical shell.
       - name: assert the binaries report their version
+        env:
+          DIR: ${{ needs.plan.outputs.dir }}
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
-          .github/scripts/assert-released-version.sh \
-            "${{ needs.plan.outputs.dir }}/dist" \
-            "${{ needs.plan.outputs.version }}"
+          .github/scripts/assert-released-version.sh "$DIR/dist" "$VERSION"
 
       # PUBLISHING IS CLOSED, and this is not a placeholder -- it is the answer
       # to something a review found that invalidates the obvious implementation.

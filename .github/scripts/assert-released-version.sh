@@ -83,8 +83,12 @@ while IFS= read -r rel; do
     *"$host_os"*) ;;
     *) continue ;;
   esac
+  # `*all*` unanchored matched any binary whose NAME contains "all" -- wallet,
+  # install, smallfoo -- and selected cross-compiled artifacts that then failed
+  # to exec and were reported as missing a version subcommand. goreleaser's
+  # universal binaries live under `<id>_darwin_all`, so match that, not "all".
   case "$rel" in
-    *"$host_arch"*|*all*) ;;
+    *"$host_arch"*|*_darwin_all|*_darwin_all/*) ;;
     *) continue ;;
   esac
   bins="$bins$dist_abs/$rel
@@ -104,12 +108,38 @@ fi
 asserted=0
 unassertable=""
 
-# A portable 10-second cap. GNU `timeout` is not on macOS; perl is on both
-# runners. Needed because the binary set is derived: a future service whose root
-# command serves rather than erroring on an unknown argument would otherwise
-# block until GitHub's six-hour limit, with a release half-published.
+# A portable 10-second cap, done the only way that works here.
+#
+# GNU `timeout` is not on macOS. perl's `alarm` across an `exec` is portable but
+# USELESS against these binaries: Go's runtime registers SIGALRM as _SigNotify
+# with no _SigKill, so with nobody calling signal.Notify the signal is swallowed
+# and the process runs on. Measured -- `alarm 3` against a sleeping Go binary
+# was still alive at 15s, while the identical call against /bin/sleep died at 3s
+# with "Alarm clock". Every binary probed here is a Go binary, so the previous
+# revision's cap bounded nothing at all.
+#
+# Background the probe, poll, and SIGKILL. No coreutils, no signal handling in
+# the child, works in bash 3.2.
 run_probe() {
-  perl -e 'alarm shift @ARGV; exec @ARGV or exit 127' 10 "$@" 2>&1
+  local out_file status pid waited
+  out_file=$(mktemp)
+  "$@" >"$out_file" 2>&1 &
+  pid=$!
+  waited=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [ "$waited" -ge 10 ]; then
+      kill -9 "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      rm -f "$out_file"
+      return 124
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  wait "$pid"; status=$?
+  cat "$out_file"
+  rm -f "$out_file"
+  return $status
 }
 
 while IFS= read -r bin; do
@@ -138,7 +168,14 @@ while IFS= read -r bin; do
     continue
   fi
 
-  if printf '%s' "$out" | grep -qF -- "$want"; then
+  # Compared with the leading `v` stripped from both sides. `want` always has
+  # one (the workflow enforces `case v[0-9]*`), but goreleaser's {{.Version}}
+  # does not, and whether the binary echoes a `v` is a property of each config's
+  # ldflags rather than of goreleaser. indexing-service stamps both forms. A
+  # correctly built binary reporting `1.13.4` against a want of `v1.13.4` would
+  # otherwise be reported as a stale-ldflag build defect and block the release.
+  want_bare=${want#v}
+  if printf '%s' "$out" | sed 's/\bv\([0-9]\)/\1/g' | grep -qF -- "$want_bare"; then
     echo "ok        $name reports $want"
     asserted=$((asserted + 1))
   else
@@ -152,22 +189,30 @@ done <<EOF
 $bins
 EOF
 
+# FATAL, not a warning. It was a warning, and that left a hole big enough to
+# drive the whole defect through: with one good binary and one whose -X was
+# dead, the good one incremented `asserted`, the dead one fell into this bucket
+# because its fallback ("dev", ingot's) is not version-shaped, and the script
+# exited 0. A guard over part of a chain reads exactly like a guard over the
+# chain -- rule 5. If a binary cannot be asked, this check cannot speak for the
+# release, and says so.
 if [ -n "$unassertable" ]; then
-  echo
+  echo >&2
   echo "NOT ASSERTED:$unassertable" >&2
-  echo "  These binaries answered neither \`version\` nor \`--version\` with anything" >&2
-  echo "  version-shaped, so nothing here checked what they report." >&2
+  echo "  These binaries answered neither \`version\` nor \`--version\` with" >&2
+  echo "  anything version-shaped, so nothing here checked what they report --" >&2
+  echo "  which is indistinguishable from a build whose -X did nothing." >&2
+  echo >&2
+  echo "  sprue and indexing-service are in this state today. Both have a" >&2
+  echo "  version subcommand in flight upstream (sprue#106, indexing-service" >&2
+  echo "  #107); the fix is to take those pulls, not to soften this to a skip." >&2
+  exit 1
 fi
 
 if [ "$asserted" -eq 0 ]; then
   echo "Nothing was asserted. Treating that as a failure rather than a pass," >&2
   echo "because a version check that checked no version would be worse than" >&2
   echo "none: it would report green over exactly the defect it exists for." >&2
-  echo >&2
-  echo "This currently blocks sprue and indexing-service, whose binaries answer" >&2
-  echo "no version probe. Both have a subcommand in flight upstream --" >&2
-  echo "sprue#106 and indexing-service#107 -- and the fix here is to take those" >&2
-  echo "pulls, not to soften this into a skip." >&2
   exit 1
 fi
 echo

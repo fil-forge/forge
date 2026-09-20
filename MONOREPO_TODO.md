@@ -783,7 +783,7 @@ are in subdirectories, so all ten would need it.
 | | |
 |---|---|
 | tag `piri/v1.2.3`, plain build | `⨯ failed to parse tag 'piri/v1.2.3' as semver` |
-| same, with `GORELEASER_CURRENT_TAG` set | identical failure — it is not an escape hatch |
+| same, with `GORELEASER_CURRENT_TAG` set to the **prefixed** tag `piri/v1.2.3` | identical failure — setting the variable does not make goreleaser accept a non-semver value |
 | same, with `--snapshot` | "runs", and calls the version `piri/v1.2.3-SNAPSHOT-bb5b7f5` |
 | a `monorepo:` block with `tag_prefix` | `field monorepo not found in type config.Project` |
 
@@ -797,6 +797,15 @@ paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
 
 - **Pay for goreleaser Pro** and use `monorepo.tag_prefix`. Smallest change,
   costs money, and buys a thing only Go module consumers need.
+**What this table does not settle, and `release.yml` depends on.** Every row
+above was measured with a *prefixed* value. goreleaser's git pipe consults
+`GORELEASER_CURRENT_TAG` before `git describe`, so setting it to the **plain**
+semver (`v1.2.3`) should sidestep the parse entirely — which is exactly what the
+workflow does. That has **not** been measured. If it turns out to be wrong, the
+workflow's build step fails on the first dry run, which is the cheapest possible
+place to find out; but the row above should not be read as evidence that it
+already has been tried.
+
 - **Do not tag for Go at all.** Release these as binaries and images, which is
   what they are; keep `<svc>/vX.Y.Z` in reserve for the day someone wants
   `go get github.com/fil-forge/forge/<svc>`. Costs nothing now and defers the
@@ -807,7 +816,14 @@ paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
   goreleaser's changelog.
 
 The second is what `release.yml` assumes today: it reads the version from
-`version.json`, never creates a tag, and defaults to `--snapshot`.
+`version.json` and never itself creates a tag. It no longer uses `--snapshot`
+in either mode — that stamped goreleaser's own `X.Y.Z-SNAPSHOT-<sha>` template
+and then asserted against `version.json`, so the documented-safe default could
+never pass its own check. And **publishing is closed** in that workflow, because
+goreleaser's release pipe creates the GitHub release's tag itself: fed the plain
+semver it would create an unprefixed `v0.2.4` in the namespace ten services
+share. That is the same one-tag-namespace problem this section is about, arriving
+from the other direction.
 
 # Findings in the imported code
 
