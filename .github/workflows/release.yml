@@ -233,15 +233,25 @@ jobs:
       # falls back only on 404/410, and proxy.golang.org drops HTTP/2 streams
       # (golang/go#51323). The pipe form falls back on any error.
       GOPROXY: "https://proxy.golang.org|direct"
-    # Dispatch-only, so unlike images.yml there is no fork-pull-request case to
-    # protect: images.yml withholds packages:write precisely so fork PRs still
-    # run, and that reasoning does not reach a workflow that only a collaborator
-    # can start by hand. The dry-run path still gets them, because a job's
-    # permissions are fixed before `inputs` can be read; the dry run never
-    # reaches a step that uses either.
+    # READ ONLY, because at this head nothing here can use more. The ghcr login
+    # is gone, `docker` and `publish` are both skipped so goreleaser creates no
+    # release and pushes no image (it runs happily with GITHUB_TOKEN unset --
+    # measured), and the publish step only echoes and exits 1. A third-party
+    # binary was running in a job holding contents:write and packages:write for
+    # no reason, and in real mode was handed the token as well.
+    #
+    # This is a SECOND fail-closed mechanism, independent of the skip list: if
+    # a future edit drops `publish` from the skips, goreleaser still cannot
+    # create the release, because the token cannot write.
+    #
+    # A job's permissions are fixed before `inputs` can be read, so this cannot
+    # differ by mode. When publishing is armed, contents:write and
+    # packages:write come back with it -- along with setup-qemu, setup-buildx
+    # and dropping `docker` from the skip list. The earlier reasoning for
+    # granting them (dispatch-only, so unlike images.yml no fork-pull-request
+    # case to protect) is still sound; it just does not make them needed yet.
     permissions:
-      contents: write
-      packages: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
