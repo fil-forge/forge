@@ -40,6 +40,57 @@ the cloud environment, or simply doing the push yourself.
 sprue went red for eighteen hours*, which is as much about a gap in my own
 checking as about the bug.
 
+### Review-before-you-look is now the practice, and its first result
+
+Petra's instruction, 2026-09-20: **run a review on every `forge` PR we open and
+work its findings before she reads it.** Done for
+[#12](https://github.com/fil-forge/forge/pull/12) so far; #13, #14 and #15 are
+next.
+
+**It found more than expected, and the headline is not any single bug.** Four
+rounds, each finding real defects, several verified by *executing* rather than
+reading. The structural cause is one sentence:
+
+> `assert-released-version.sh` is called only from `release.yml`, which is
+> dispatch-only and has never been dispatched. **Nothing in CI had ever
+> executed it.**
+
+Three separate portability bugs shipped in that one file as a result — `mapfile`
+(bash 4, absent from the macOS runner the workflow routes piri to), a perl
+`alarm` cap that Go binaries ignore outright, and `mktemp` with no template
+(GNU-only). Each was found by reading, because nothing ran. That is now fixed at
+the root: `check-assert-released-version.sh` runs it in the `guards` job against
+a fixture built on the fly, asserting all four directions, and it was verified
+to go red when the script is broken two different ways.
+
+Worth knowing beyond this PR:
+
+- **The release built in Go workspace mode.** `go list -m all` for
+  indexing-service differs on **1402 lines** between workspace mode and
+  `GOWORK=off`. `ci.yml` pins `GOWORK=off`; `release.yml` did not, so the
+  artifact released would not have been the artifact CI proved green. Rule 4.
+- **goreleaser creates the tag**, via the GitHub release API, which is why
+  publishing in that workflow is now closed rather than merely unarmed. Fed the
+  plain semver it would create an unprefixed `v0.2.4` in the namespace ten
+  services share, and all four configs set `release: mode: keep-existing`, so a
+  second service at the same version would upload into the first's release.
+  That is the one-tag-namespace problem arriving from a direction the plan did
+  not anticipate.
+- **Four dead `-X main.*` ldflags** in `indexing-service/.goreleaser.yaml` —
+  package `main` declares none of them, and `check-goreleaser-ldflags.sh` passes
+  them because it special-cases `main`. The live instance of the exact defect
+  the PR is about, inside the one config the PR edits.
+- **Three of the defects were mine, introduced while fixing the round before.**
+  `@latest` replacing a pinned action in a job with write tokens; routing piri
+  to a macOS runner the script could not run on; and a header claiming no
+  goreleaser was available while the same diff contained a `goreleaser check`
+  result. All recorded in the commit messages rather than quietly corrected.
+
+**The judgement this leaves for Petra:** #12 took four rounds on five files and
+was still yielding real findings at the fourth. It probably should not merge
+until a dispatch has actually run — which is cheap, dry-run by default, and now
+the only thing that can exercise goreleaser's behaviour at all.
+
 ### The pull requests, in the order worth reading them
 
 | | what | state |
