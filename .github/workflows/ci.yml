@@ -62,6 +62,8 @@ jobs:
         run: .github/scripts/check-pg-healthchecks.sh
       - name: every goreleaser -X ldflag names a package in its module
         run: .github/scripts/check-goreleaser-ldflags.sh
+      - name: the release version assertion fails on a dead ldflag, and passes on a live one
+        run: .github/scripts/check-assert-released-version.sh
       - name: gofmt
         run: |
           unformatted=$(gofmt -s -l .)

@@ -135,17 +135,18 @@ jobs:
           # `dockers_v2:` and missing it would skip QEMU for an arm64 build --
           # the same two-spellings class handled above for the config filename.
           if grep -qE '^dockers(_v2)?:' "$cfg"; then
-            echo "needs_docker=true" >> "$GITHUB_OUTPUT"
+            needs_docker=true
           else
-            echo "needs_docker=false" >> "$GITHUB_OUTPUT"
+            needs_docker=false
           fi
+          echo "needs_docker=$needs_docker" >> "$GITHUB_OUTPUT"
 
           # Refuse a combination that cannot run rather than letting it surface
           # as a buildx failure six steps later: GitHub's macOS runners ship no
           # Docker daemon. Nothing hits this today -- piri is the only macOS
           # service and has no docker block -- but both values above are built
           # to move themselves, so nothing stops a future edit producing it.
-          if [ "$needs_macos" = "true" ] && grep -qE '^dockers(_v2)?:' "$cfg"; then
+          if [ "$needs_macos" = "true" ] && [ "$needs_docker" = "true" ]; then
             echo "::error::$svc needs a macOS runner (darwin cgo build) and also" \
                  "builds Docker images. GitHub's macOS runners have no Docker" \
                  "daemon, so this cannot be released by this workflow as configured."
@@ -168,16 +169,43 @@ jobs:
             exit 1
           fi
           v=$(jq -er .version "$f")
+          # Strict, because this value reaches both shell and GITHUB_OUTPUT.
+          # `case v[0-9]*` permitted anything after the first digit, including a
+          # NEWLINE -- and a newline in a GITHUB_OUTPUT write injects further
+          # outputs. A version.json of "v1.0.0\nrunner=evil" set `runner`, which
+          # is what `runs-on:` reads. Reject anything outside the semver charset.
           case "$v" in
             v[0-9]*) ;;
             *) echo "::error::$f has version '$v', which is not vX.Y.Z"; exit 1 ;;
           esac
+          if printf '%s' "$v" | LC_ALL=C grep -qE '[^0-9A-Za-z.+-]|^$' \
+             || [ "$v" != "$(printf '%s' "$v" | tr -d '\n')" ]; then
+            echo "::error::$f has a version containing characters outside" \
+                 "[0-9A-Za-z.+-]. Refusing rather than passing it to shell."
+            exit 1
+          fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Releasing ${{ steps.svc.outputs.dir }} $v"
 
   release:
     needs: plan
     runs-on: ${{ needs.plan.outputs.runner }}
+    # In line with e2e (25), images (40) and itest (45). Without it a hung
+    # goreleaser or a stalled module fetch sits for GitHub's 6-hour default,
+    # on a macOS runner for piri.
+    timeout-minutes: 40
+    env:
+      # THE ARTIFACT MUST BE THE ONE CI PROVED. go.work at the root puts a
+      # service build in workspace mode, which resolves a different module
+      # graph: measured on this tree, `go list -m all` for indexing-service
+      # differs on 1402 lines between the two modes. ci.yml pins GOWORK=off for
+      # exactly this reason, and ingot's own CLAUDE.md says to release with it.
+      # Rule 4, test what ships.
+      GOWORK: "off"
+      # As ci.yml, e2e.yml and itest.yml all do: the comma-separated default
+      # falls back only on 404/410, and proxy.golang.org drops HTTP/2 streams
+      # (golang/go#51323). The pipe form falls back on any error.
+      GOPROXY: "https://proxy.golang.org|direct"
     # Dispatch-only, so unlike images.yml there is no fork-pull-request case to
     # protect: images.yml withholds packages:write precisely so fork PRs still
     # run, and that reasoning does not reach a workflow that only a collaborator
@@ -204,26 +232,20 @@ jobs:
           cache: true
           cache-dependency-path: ${{ needs.plan.outputs.dir }}/go.sum
 
-      # ingot and sprue build linux/arm64 images whose Dockerfile.release runs
-      # `apt-get`, which means executing arm64 binaries. The default docker
-      # driver rejects a foreign --platform and no binfmt is registered without
-      # QEMU, so both are needed -- images.yml already sets buildx up for the
-      # same reason. Skipped entirely for a config with no `dockers:` block.
-      - uses: docker/setup-qemu-action@v3
-        if: needs.plan.outputs.needs_docker == 'true'
-      - uses: docker/setup-buildx-action@v3
-        if: needs.plan.outputs.needs_docker == 'true'
-
-      # goreleaser's GITHUB_TOKEN reaches the GitHub Releases API only; its
-      # docker publisher shells out to `docker push`, which reads
-      # ~/.docker/config.json. Without this a real release creates the GitHub
-      # release and *then* fails to push images.
-      - uses: docker/login-action@v3
-        if: needs.plan.outputs.needs_docker == 'true' && !inputs.dry_run
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      # NO DOCKER STEPS, deliberately, and this is a correction rather than an
+      # omission. An earlier revision added setup-qemu, setup-buildx and a ghcr
+      # login here, reasoning that ingot and sprue build linux/arm64 images whose
+      # Dockerfile.release runs apt-get. But goreleaser's docker pipe is a
+      # *Publisher*, and `--skip=publish` is passed in both modes below -- so no
+      # image is built either way and all three steps were dead weight, ~1min of
+      # setup nothing used. `needs_docker` is still derived, because the plan job
+      # uses it to refuse a macOS+Docker service, and because the steps come back
+      # the day publishing opens.
+      #
+      # The consequence worth stating: a green dry run says nothing about
+      # `Dockerfile.release` or the arm64 emulation. Exercising those needs
+      # --snapshot (which stamps a version the assertion cannot check) or a
+      # separate build, and is a real gap rather than a solved problem.
 
       # A real release needs the tag to exist already, AND to point at the
       # commit being built. This workflow does not create one: tagging is the
@@ -283,7 +305,11 @@ jobs:
           args: release --clean --skip=validate,publish,sign,announce
         env:
           GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Not on the dry-run path. goreleaser's env pipe does not require the
+          # token when publishing is skipped, and the permissions comment above
+          # claims the dry run reaches no step that uses one -- which was untrue
+          # while this was unconditional.
+          GITHUB_TOKEN: ${{ !inputs.dry_run && secrets.GITHUB_TOKEN || '' }}
 
       # This runs BEFORE anything is published, which is the whole point. When
       # it trailed `goreleaser release`, a stale -X meant the assets were

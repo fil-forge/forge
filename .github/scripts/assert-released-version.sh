@@ -52,7 +52,18 @@ default=$(
       "$svc_dir/pkg/build" "$svc_dir/internal/build" 2>/dev/null || true; } \
     | grep -oE '"[^"]+"' | tr -d '"' | head -1 || true
 )
-if [ -n "$default" ] && [ "$default" = "$want" ]; then
+if [ -z "$default" ]; then
+  echo "CANNOT ASSERT: could not find $(basename "$svc_dir")'s compiled-in fallback" >&2
+  echo "  version under pkg/build or internal/build, so there is no way to tell" >&2
+  echo "  a correctly stamped binary from one whose -X did nothing." >&2
+  echo >&2
+  echo "  Refusing rather than proceeding: a guard that cannot find what it" >&2
+  echo "  compares against is a guard that passes everything. delegator and" >&2
+  echo "  piri-signing-service are in this state, and become dispatchable the" >&2
+  echo "  day either gains a .goreleaser.yaml." >&2
+  exit 1
+fi
+if [ "$default" = "$want" ]; then
   echo "CANNOT ASSERT: $(basename "$svc_dir") is being released at $want, which is" >&2
   echo "  also its compiled-in fallback ($default). A binary whose -X did nothing" >&2
   echo "  reports exactly that, so a match here would prove nothing and this" >&2
@@ -122,7 +133,10 @@ unassertable=""
 # the child, works in bash 3.2.
 run_probe() {
   local out_file status pid waited
-  out_file=$(mktemp)
+  # A template, because BSD mktemp (macos-14, which this script is routed to
+  # for piri) rejects the bare GNU form. That would have made every probe
+  # return nothing and the run blame the wrong services.
+  out_file=$(mktemp "${TMPDIR:-/tmp}/assert-released.XXXXXX")
   "$@" >"$out_file" 2>&1 &
   pid=$!
   waited=0
@@ -168,14 +182,18 @@ while IFS= read -r bin; do
     continue
   fi
 
-  # Compared with the leading `v` stripped from both sides. `want` always has
-  # one (the workflow enforces `case v[0-9]*`), but goreleaser's {{.Version}}
-  # does not, and whether the binary echoes a `v` is a property of each config's
-  # ldflags rather than of goreleaser. indexing-service stamps both forms. A
-  # correctly built binary reporting `1.13.4` against a want of `v1.13.4` would
-  # otherwise be reported as a stale-ldflag build defect and block the release.
+  # Anchored, not a substring match. `grep -F v1.13.4` is satisfied by a
+  # binary reporting v1.13.40, and v0.1.10 satisfies a want of v0.1.1 -- so
+  # a stale -X can pass simply by sharing a prefix with the real version.
+  #
+  # The leading v is optional on the binary's side: goreleaser's {{.Version}}
+  # carries none, and whether a config re-adds it is per-config. An earlier
+  # revision normalised that with `sed 's/\bv\([0-9]\)/\1/g'`, which is a
+  # GNU-ism -- a silent no-op on BSD sed, on the runner this file claims to
+  # support -- and was unreachable anyway.
   want_bare=${want#v}
-  if printf '%s' "$out" | sed 's/\bv\([0-9]\)/\1/g' | grep -qF -- "$want_bare"; then
+  want_re=$(printf '%s' "$want_bare" | sed 's/\./\\./g')
+  if printf '%s' "$out" | grep -qE "(^|[^0-9.])v?${want_re}([^0-9.]|\$)"; then
     echo "ok        $name reports $want"
     asserted=$((asserted + 1))
   else
@@ -203,9 +221,8 @@ if [ -n "$unassertable" ]; then
   echo "  anything version-shaped, so nothing here checked what they report --" >&2
   echo "  which is indistinguishable from a build whose -X did nothing." >&2
   echo >&2
-  echo "  sprue and indexing-service are in this state today. Both have a" >&2
-  echo "  version subcommand in flight upstream (sprue#106, indexing-service" >&2
-  echo "  #107); the fix is to take those pulls, not to soften this to a skip." >&2
+  echo "  The fix is to give each of those a version subcommand (~15 lines," >&2
+  echo "  modelled on piri/cmd/cli/version.go), not to soften this to a skip." >&2
   exit 1
 fi
 
