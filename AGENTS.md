@@ -183,14 +183,14 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 **Flags come before the prefix.** `finish-subtree-pull.sh <prefix> --dry-run`
 used to ignore the flag and write anyway; it now refuses the trailing argument.
 
-The first runs after **every** pull, conflicted or not — the audit is the whole
-point and it only has something to say when nothing conflicted. The second is
-conflicted-pull-only, and exits 0 saying so if there is no merge in progress, so
-running the pair unconditionally is safe.
+The first runs after **every** pull, conflicted or not, and detects which it is
+rather than being told — the audit is the whole point and it only has something
+to say when nothing conflicted. The second is conflicted-pull-only, and exits 0
+saying so when there is no merge in progress, so running the pair
+unconditionally is safe.
 
-Run it **during a pull that stopped with conflicts, or straight after one that
-did not** — it detects which rather than being told. A subtree pull can lose an
-upstream change in two ways and only one of them is loud, so it does two things.
+A subtree pull can lose an upstream change in two ways, and only one of them is
+loud, so the first script does two things.
 
 **The loud one.** For every `deleted by us, modified by them` entry it finds
 where that file lives now and performs the three-way merge git would have
@@ -276,9 +276,14 @@ carry a polyrepo import path, because it never touched a line we had rewritten
 import. Nothing conflicts, so nothing reports it. So after every pull, before
 trusting a build, sweep the prefix for them:
 
+```sh
+svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s|' "${d%/}"; done)
+grep -rnE "github\.com/fil-forge/(${svcs%|})([^A-Za-z0-9_-]|$)" <prefix>/
 ```
-grep -rn 'github\.com/fil-forge/\(piri\|sprue\|hilt\|ingot\|swarf\|smelt\|delegator\|forgectl\|indexing-service\|piri-signing-service\)\b' <prefix>/
-```
+
+Derived from the directories with a `go.mod` — the same set `go.work` lists and
+the same one `resolve-rewrite-conflicts.sh` builds — rather than typed out, so
+a service added or renamed needs no edit here (rule 3).
 
 **A guard script for this does not exist on this branch.** An earlier revision
 of this paragraph named `check-module-paths.sh` as though it did; it is added by
