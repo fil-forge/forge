@@ -44,8 +44,10 @@ checking as about the bug.
 
 Petra's instruction, 2026-09-20: **run a review on every `forge` PR we open and
 work its findings before she reads it.** Done for
-[#12](https://github.com/fil-forge/forge/pull/12) so far; #13, #14 and #15 are
-next.
+[#12](https://github.com/fil-forge/forge/pull/12) (four rounds) and
+[#15](https://github.com/fil-forge/forge/pull/15) (one round, below);
+[#13](https://github.com/fil-forge/forge/pull/13) has had one round and needs a
+second; #14 and the new #16 are in flight.
 
 **It found more than expected, and the headline is not any single bug.** Four
 rounds, each finding real defects, several verified by *executing* rather than
@@ -91,6 +93,43 @@ was still yielding real findings at the fourth. It probably should not merge
 until a dispatch has actually run — which is cheap, dry-run by default, and now
 the only thing that can exercise goreleaser's behaviour at all.
 
+### The second result: the review's most useful find was in a document
+
+#15 adds **one Markdown entry and no code**, which is the least promising thing
+to review. Its review found the entry wrong in four ways, and one of those
+corrections turned out to name a live defect in the tree:
+
+- **`.dockerignore` was not a cause**, and the entry blamed it for two of
+  three. The version fallback is a *runtime* read of `version.json` by relative
+  path from `init()`, and no `prod` stage sets a `WORKDIR` or copies the file —
+  so cwd is `/` and the open fails whatever the build context held. Only piri's
+  and sprue's `.dockerignore` name `version.json` at all, and Docker reads only
+  the one at the **context root**, which for piri is the repository root. The
+  missing `vcs.revision` is the same shape: no Dockerfile `COPY`s `.git`, and
+  `swarf` has no `.dockerignore` whatsoever and reports `unknown` like the rest.
+- **"This is images only" was false.** The survey behind that sentence read
+  Dockerfiles and never looked at a Makefile. `hilt`, `piri` and `sprue` each
+  injected four `-X` flags at `github.com/fil-forge/<svc>`, the
+  pre-consolidation path, so `make build` produced an unstamped binary too; and
+  `piri-signing-service` injected three into `main` symbols nobody declared.
+  **That is the same defect #9 fixed for goreleaser, applied to half the
+  corpus** — and `check-goreleaser-ldflags.sh` globbed `.goreleaser.y*ml`, so
+  nothing was watching the other half. Now
+  [#16](https://github.com/fil-forge/forge/pull/16).
+- `piri/Makefile`'s build target named `github.com/fil-forge/piri/cmd`, which
+  does not resolve. **`make build` in `piri/` has failed outright since
+  consolidation** and nobody noticed, because no CI job runs `make`.
+- Smaller: "nine Dockerfiles" omitted the four `Dockerfile.release` files (it is
+  thirteen); `ingot`'s and `sprue`'s *released* images are stamped, because
+  their `dockers:` stanza packages the goreleaser binary; and the
+  `MAJOR_DECISIONS.md` line the entry quoted for guppy is not in that file.
+
+**What this says about the practice**, which is the part worth keeping: the
+review was aimed at a document and found a code defect, because checking a
+claim meant running the command the claim was made from. The original survey
+was a `grep` whose *pattern* had been validated and whose *corpus* never was —
+the same failure mode as the eighteen-hour sprue miss, two weeks apart.
+
 ### The pull requests, in the order worth reading them
 
 | | what | state |
@@ -101,7 +140,8 @@ the only thing that can exercise goreleaser's behaviour at all.
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `4857e93` |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
-| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix | **Open**, green all 24, on `daf716fe` |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Second push corrects four wrong claims its own review found** | **Open**, on `8972b1f6` |
+| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **Stacked on #12** | **Open**, on `f0a97d03` |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today
@@ -266,6 +306,14 @@ plus a note saying where the script comes from.
 
 ### A decision for you: containers report no build metadata, in six of seven
 
+> **Corrected 2026-09-20.** Two claims below are wrong and are kept, struck
+> through in prose rather than deleted, because the correction is the useful
+> part. (1) "Checked every service's actual `go build` invocation" — it checked
+> **Dockerfiles only**; four Makefiles also inject `-X`, three of them at a dead
+> path, now [#16](https://github.com/fil-forge/forge/pull/16). (2) The three
+> numbered causes are one cause: nothing passes `-X`, and `.dockerignore` is
+> irrelevant to both fallbacks. See the review section above for the detail.
+
 Found while fixing the above, **not** fixed, because it is a design call and a
 wider diff than that PR.
 
@@ -308,8 +356,10 @@ Every field dead, from three independent pre-existing causes:
 
 Observed rather than inferred — built under the same conditions
 (`-buildvcs=false`, no `-X`, run from a cwd without `version.json`) to produce
-exactly that output. **Released goreleaser binaries are unaffected**; this is
-containers only.
+exactly that output. ~~**Released goreleaser binaries are unaffected**; this is
+containers only.~~ Wrong in both directions: `ingot`'s and `sprue`'s released
+*images* are stamped, and `make build` was unstamped for three services. See
+the correction note at the top of this section.
 
 It matters because it cuts against why the subcommand was added: a release
 check that runs the binary and asks it what it is. That check works on release

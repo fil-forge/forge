@@ -44,16 +44,16 @@ agent.
 
 ## In flight
 
-**Nine open pull requests, all green.** On `forge` they are fully Open; upstream
-they stay draft until Petra has passed on them, so nobody else spends time
-first.
+**Ten open pull requests.** On `forge` they are fully Open; upstream they stay
+draft until Petra has passed on them, so nobody else spends time first.
 
 | | what | state |
 |---|---|---|
 | [forge #12](https://github.com/fil-forge/forge/pull/12) | a release workflow: written, verified, **deliberately not armed** | Open, 24/24 |
 | [forge #13](https://github.com/fil-forge/forge/pull/13) | `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` | Open, 24/24 |
 | **[forge #14](https://github.com/fil-forge/forge/pull/14)** | **the final subtree resync** — 37 commits across eight prefixes. Caught a live cross-repo wire break. **Phase 1 waits on this** | Open, 24/24 |
-| [forge #15](https://github.com/fil-forge/forge/pull/15) | one `MONOREPO_TODO.md` entry: service images report no build metadata | Open, 24/24 |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one `MONOREPO_TODO.md` entry: service images report no build metadata. Its own review found the entry wrong four ways; corrected on the branch | Open |
+| [forge #16](https://github.com/fil-forge/forge/pull/16) | four Makefiles injected `-X` at a dead path and one at symbols nobody declared; the guard globbed `.goreleaser.y*ml` and never looked. **Stacked on #12** | Open |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand, **plus the container build it broke** | draft, 8/8 |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, root-caused not re-run | draft, 9/9 |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | a `version` subcommand + **four dead `-X` ldflags** | draft, 9/9 |
@@ -92,7 +92,7 @@ import is uneven raw material:
 |---|---|
 | `version.json` | 8 of 10 — not `forgectl`, not `smelt` |
 | `.goreleaser.yaml` | 4 — `indexing-service`, `ingot`, `piri`, `sprue` |
-| `Dockerfile.release` | 4 — `hilt`, `ingot`, `sprue`, `swarf`, and **nothing builds them** |
+| `Dockerfile.release` | 4 — `hilt`, `ingot`, `sprue`, `swarf`. **Two are live**: `ingot`'s and `sprue`'s `dockers:` stanzas build them, packaging the goreleaser binary, so those released images *are* stamped. `hilt`'s and `swarf`'s are referenced by nothing |
 
 The parts that need no further gate — writing the release workflow without
 cutting tags, `compat.yml`, deciding the tag scheme — can go first.

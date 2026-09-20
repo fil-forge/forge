@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-20 16:20Z.** Replace this page as things change; do
+**Snapshot as of 2026-09-20 20:51Z.** Replace this page as things change; do
 not append to it. For history and reasoning, see [[Consolidation Findings]].
 
 *That rule had been broken: the page named `main` as three different commits in
@@ -203,7 +203,7 @@ Merged onto `main` since the last revision of this page, newest first:
 | [#11](https://github.com/fil-forge/forge/pull/11) | 2026-09-18 17:04Z | shard `itest ingot` across three runners |
 | [#9](https://github.com/fil-forge/forge/pull/9) | 2026-09-18 14:20Z | every goreleaser `-X` ldflag named a pre-consolidation module path; a release would have shipped binaries reporting `v0.0.0` |
 
-**Nine pull requests are open and green**, four on `forge` and five upstream.
+**Ten pull requests are open**, five on `forge` and five upstream.
 [[Plan]] has the table; [[Needs Human Work]] has what each needs from a person.
 The one that matters for sequencing is
 [#14](https://github.com/fil-forge/forge/pull/14), **the final subtree
@@ -248,6 +248,23 @@ So **eight of ten repositories have in-house dependencies no tooling will ever
 flag as behind**, and that is an argument for cutting release tags that holds
 whether or not the monorepo happens.
 
+**Every `forge` pull request now gets an adversarial review before Petra reads
+it** — her instruction of 2026-09-20, and standing for every one we open. Two
+results so far. On [#12](https://github.com/fil-forge/forge/pull/12), four
+rounds and a structural cause: the script it adds was called only from a
+dispatch-only workflow, so **nothing in CI had ever executed it**, and three
+portability bugs had shipped inside it unseen. On
+[#15](https://github.com/fil-forge/forge/pull/15) — one Markdown entry, no
+code — the review found the entry wrong in four ways, and checking one of the
+corrections turned up a live defect: `hilt`, `piri` and `sprue` inject four
+`-X` flags each at the pre-consolidation module path, `piri-signing-service`
+injects three into symbols nobody declared, and `piri`'s `make build` target
+does not resolve at all. That is the same defect #9 fixed for goreleaser,
+applied to half the corpus, with a guard that globbed `.goreleaser.y*ml` and so
+never looked — now [#16](https://github.com/fil-forge/forge/pull/16). **The
+lesson is the one from the eighteen-hour sprue miss, two weeks on: a `grep`
+whose pattern was validated and whose corpus was not.**
+
 **Every pull request still opens with a block naming the checks a reviewer can
 merge without waiting for, and why** — Petra's practice, and the interim for the
 path-filtering question. Two conditions make it work rather than just feel good:
@@ -259,8 +276,8 @@ took that trade). `AGENTS.md` carries it.
 
 ## Next
 
-1. **Review the nine open pull requests.** Nothing here is blocked on the
-   agent; all nine are green and clean. Read
+1. **Review the ten open pull requests.** Nothing here is blocked on the
+   agent. Read
    [#14](https://github.com/fil-forge/forge/pull/14) first — it is the final
    subtree resync and **Phase 1 is gated on it landing**. Then
    [#13](https://github.com/fil-forge/forge/pull/13), which supersedes the

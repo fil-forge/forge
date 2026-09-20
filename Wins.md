@@ -9,8 +9,9 @@ Kept current as things land. The sibling pages are for doing the work:
 [[Needs Human Work]] is what is waiting on a person, [[Consolidation Findings]]
 is the running log of blind spots and latent issues.
 
-**Updated 2026-09-20 16:20Z.** Nothing has changed since 2026-09-19 18:00Z;
-all nine pull requests are green and waiting on review.
+**Updated 2026-09-20 20:51Z.** Ten pull requests open. New since the last
+revision: **#9 below**, found by reviewing a documentation-only pull request.
+Entry 11 has been corrected — two of its claims were wrong.
 
 ## Why these count
 
@@ -156,9 +157,47 @@ semantics are not.
 
 ---
 
+### 9. Four Makefiles stamped nothing, and the guard said "all"
+
+[#9](https://github.com/fil-forge/forge/pull/9) rewrote the four
+`.goreleaser.yaml` files from `github.com/fil-forge/<svc>` to
+`github.com/fil-forge/forge/<svc>` when consolidation changed every module
+path, and added a lint. It fixed one instance of the defect, not the class:
+
+| | injected into | module is |
+|---|---|---|
+| `hilt/Makefile` | `github.com/fil-forge/hilt/pkg/build` | `github.com/fil-forge/forge/hilt` |
+| `piri/Makefile` | `github.com/fil-forge/piri/pkg/build` | `github.com/fil-forge/forge/piri` |
+| `sprue/Makefile` | `github.com/fil-forge/sprue/pkg/build` | `github.com/fil-forge/forge/sprue` |
+
+Twelve dead flags. Same silence as entry 4 — `cmd/link` takes an `-X` for a
+package that does not exist and says nothing — so `make build` in any of the
+three produced a binary its own flags had not touched.
+`piri-signing-service/Makefile` injected three more into `main` symbols
+`main.go` never declared. And **`piri`'s `make build` did not work at all**: it
+names `github.com/fil-forge/piri/cmd`, which does not resolve. It has been
+broken since consolidation and nobody noticed, because no CI job runs `make`.
+
+**The lint could not have caught any of it.** `check-goreleaser-ldflags.sh`
+globbed `.goreleaser.y*ml`, so Makefiles were outside its corpus, and it
+special-cased `-X main.…` as always fine, so the seven undeclared `main`
+symbols passed too — while its closing line said *"All N `-X` ldflags name a
+package in the module that builds them"*, which reads as a claim about the
+repository. Replaced in
+[forge#16](https://github.com/fil-forge/forge/pull/16) with one whose corpus is
+a `git grep` over every tracked file and which checks that the symbol exists
+and is a string var, verified by breaking the tree six ways.
+
+**How it was found is the point.** By reviewing a pull request that adds one
+Markdown file and no code. The entry claimed the problem was images-only; the
+claim behind that was a `grep` whose pattern had been validated and whose
+corpus — Dockerfiles, no Makefiles — never was. Checking it found the bug.
+
+---
+
 ## Not solved
 
-### 9. Nothing can tell you an in-house dependency is stale
+### 10. Nothing can tell you an in-house dependency is stale
 
 The biggest finding, and entirely open.
 
@@ -179,20 +218,36 @@ anyone's oversight.
 This is an independent argument for cutting release tags — one that holds
 whether or not the monorepo happens.
 
-### 10. Containers report no build metadata, in six of seven services
+### 11. Containers report no build metadata
 
 A containerised sprue answers `v0.0.0-unknown` / `unknown` / `unknown` /
-`unknown`. Three independent causes: no `-X` flags in either Dockerfile stage,
-`.dockerignore` excluding `version.json` (killing the development fallback),
-and `.dockerignore` excluding `.git` (so no `vcs.revision` is stamped).
+`unknown`, and so does every other service image here.
 
-**sprue is not the outlier.** `guppy` is the only service that injects build
-metadata into its image at all; `piri`, `sprue`, `ingot`, `hilt`, `swarf` and
-`indexing-service` all build with `-ldflags="-s -w"` and nothing else. Fixing
-one would make it two of seven rather than fix the class.
+**One cause, not three** — an earlier version of this entry said three, and
+blamed `.dockerignore` for two of them. Nothing passes a `-X`, and neither
+fallback can stand in: the version fallback is a *runtime* read of
+`version.json` by relative path, and no `prod` stage has a `WORKDIR` or a copy
+of the file, so cwd is `/` and the open fails whatever the build context held;
+`vcs.revision` is absent because no Dockerfile `COPY`s `.git` into its builder.
+`swarf` has no `.dockerignore` at all and reports `unknown` like the rest.
 
-Awaiting a decision: six PRs from a shared pattern copied off guppy's
-Dockerfile.
+**sprue is not the outlier.** `guppy` is the only service whose *Dockerfile*
+injects build metadata; the other eight build with `-ldflags="-s -w"` and
+nothing else. Fixing sprue alone would have made it two of nine.
+
+Two further corrections worth carrying into the report, because the first
+version of this entry got them wrong. It is **not images-only** — that half is
+entry 9 above, now fixed. And `ingot`'s and `sprue`'s *released* images **are**
+stamped, because their `dockers:` stanza packages the goreleaser binary rather
+than compiling.
+
+What remains is a decision, not a bug: whether an image is expected to describe
+itself at all, and if so where each field comes from in each workflow. Recorded
+in `MONOREPO_TODO.md` by
+[forge#15](https://github.com/fil-forge/forge/pull/15). The worked answer
+exists — `guppy`'s `publish-ghcr.yml` has a stanza for a pull request, a `main`
+publish and a release — and `guppy` is being archived, so it is worth copying
+out before the repository goes.
 
 ---
 
