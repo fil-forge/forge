@@ -53,7 +53,7 @@ draft until Petra has passed on them, so nobody else spends time first.
 | [forge #13](https://github.com/fil-forge/forge/pull/13) | `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` | Open, 24/24 |
 | **[forge #14](https://github.com/fil-forge/forge/pull/14)** | **the final subtree resync** — 37 commits across eight prefixes. Caught a live cross-repo wire break. **Phase 1 waits on this** | Open, 24/24 |
 | [forge #15](https://github.com/fil-forge/forge/pull/15) | one `MONOREPO_TODO.md` entry: service images report no build metadata. Its own review found the entry wrong four ways; corrected on the branch | Open |
-| [forge #16](https://github.com/fil-forge/forge/pull/16) | four Makefiles injected `-X` at a dead path and one at symbols nobody declared; the guard globbed `.goreleaser.y*ml` and never looked. **Stacked on #12** | Open |
+| [forge #16](https://github.com/fil-forge/forge/pull/16) | four Makefiles injected `-X` at a dead path and one at symbols nobody declared; the guard globbed `.goreleaser.y*ml` and never looked. **Stacked on #12, and not optionally** — it edits two files that exist only on #12's branch, so **#12 merges first** | Open |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand, **plus the container build it broke** | draft, 8/8 |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, root-caused not re-run | draft, 9/9 |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | a `version` subcommand + **four dead `-X` ldflags** | draft, 9/9 |
