@@ -13,14 +13,13 @@
   ],
   "packageRules": [
     {
-      "description": "In-repo libraries must hold the same version in every module. ci.yml does not check that; a split is only visible as a build failure somewhere else, so keep each bump to a single PR that moves every module's go.mod together rather than one PR per module landing at a different time. Everything else in Go is left to the default of one PR per dependency, which is the cadence the per-service dependabot configs used before the consolidation dropped them.",
+      "description": "In-repo libraries must hold the same version in every module. ci.yml does not check that; a split is only visible as a build failure somewhere else, so keep each bump to a single PR that moves every module's go.mod together rather than one PR per module landing at a different time. Everything else in Go is left to the default of one PR per dependency, which is the cadence the per-service dependabot configs used before the consolidation dropped them. github.com/fil-forge/swarf was listed here and is gone: it is in-repo now as github.com/fil-forge/forge/swarf, so the entry matched nothing.",
       "matchManagers": [
         "gomod"
       ],
       "matchPackageNames": [
         "github.com/fil-forge/libforge",
         "github.com/fil-forge/ucantone",
-        "github.com/fil-forge/swarf",
         "github.com/fil-forge/versitygw",
         "github.com/fil-forge/go-ipni-tools"
       ],

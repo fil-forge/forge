@@ -27,24 +27,24 @@ packages:
           structname: MockIpniFinder
           filename: mock_IpniFinder.go
           pkgname: extmocks
-  github.com/fil-forge/indexing-service/pkg/service/blobindexlookup:
+  github.com/fil-forge/forge/indexing-service/pkg/service/blobindexlookup:
     interfaces:
       BlobIndexLookup: {}
-  github.com/fil-forge/indexing-service/pkg/service/contentclaims:
+  github.com/fil-forge/forge/indexing-service/pkg/service/contentclaims:
     config:
       structname: MockContentClaims{{.InterfaceName}}
       filename: "mock_ContentClaims{{.InterfaceName}}.go"
     interfaces:
       Finder: {}
       Service: {}
-  github.com/fil-forge/indexing-service/pkg/service/providercacher:
+  github.com/fil-forge/forge/indexing-service/pkg/service/providercacher:
     interfaces:
       CachingQueue: {}
       ProviderCacher: {}
-  github.com/fil-forge/indexing-service/pkg/service/providerindex:
+  github.com/fil-forge/forge/indexing-service/pkg/service/providerindex:
     interfaces:
       ProviderIndex: {}
-  github.com/fil-forge/indexing-service/pkg/types:
+  github.com/fil-forge/forge/indexing-service/pkg/types:
     interfaces:
       ContentClaimsCache: {}
       ContentClaimsStore: {}

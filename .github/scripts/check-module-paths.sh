@@ -26,9 +26,18 @@
 #                                       value out of GET /, so a wrong one is
 #                                       a 404 with our name on it)
 #
-# Only Go sources and go.mod are checked. Docs and deploy scripts still point
-# at the polyrepo URLs on purpose -- those repositories still exist and still
-# serve the releases those documents describe.
+# WHAT IS CHECKED, EXACTLY, because "Go sources and go.mod" read as "everything
+# that is not a doc" and three other file types were wrong in the tree when
+# this was written:
+#
+#   checked      *.go, go.mod
+#   NOT checked  Makefile, *.yaml, *.json, *.sh, go.sum
+#
+# Docs and deploy scripts are deliberately out: those repositories still exist
+# and still serve the releases those documents describe. The others were an
+# oversight, and are handled here rather than left implied -- .mockery.yaml and
+# renovate.json are rewritten by this pull request, and the three Makefiles
+# with dead -X ldflags are #16, which also adds the guard for that class.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -38,9 +47,14 @@ svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s\n' "${d%/}"; done | past
 
 status=0
 
-if hits=$(grep -rnE "github\.com/fil-forge/($svcs)\b" \
+# `grep -o` then filter the MATCH, not the line. `grep -v` on the whole line
+# dropped any line carrying a polyrepo path AND a monorepo path together --
+# which is what an import block looks like mid-rewrite -- so the guard passed
+# over exactly the file a half-finished rewrite produces. Verified on a fixture
+# before and after.
+if hits=$(grep -rnoE "github\.com/fil-forge/($svcs)(\b|$)" \
             --include='*.go' --include='go.mod' . \
-          | grep -v 'github\.com/fil-forge/forge/'); then
+          | grep -v ':github\.com/fil-forge/forge$'); then
   echo "Polyrepo module paths in Go sources:"
   printf '%s\n' "$hits"
   echo
