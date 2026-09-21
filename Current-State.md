@@ -291,6 +291,34 @@ so. **Four have reported. Three were not satisfied, and every one of the three
 found defects that round two's fixes had introduced** — which is the argument
 for the round, and the argument for never having skipped it.
 
+**Why forge#12 would not converge, and the fix that makes it.** Petra asked
+whether seven rounds meant the reviews were being picky about wording. They
+were not: across rounds five to seven, **eight findings were code that would
+have shipped broken and four were documentation that was outright false. None
+was style.** Raising the bar would have filtered nothing.
+
+But the non-convergence was real and had one cause. `release.yml` carried a
+hand-maintained, per-service narration of what a default dry run does — and
+**four consecutive rounds found that summary contradicting its own sub-bullets**
+("red for all four" beside a bullet saying ingot passes; then "the only service
+whose dry run can go green" beside a bullet saying piri would too). Each round
+fixed the sentence. None removed the reason a sentence can be wrong.
+
+It was a restatement of a fact that changes whenever the skip list or the
+assertion changes — **rule 3 in prose**, and handled five times as rule 5's
+"fix the instance, not the class". The structure regenerated the defect, so no
+amount of care in the wording could have converged.
+
+The per-service status is now gone, replaced by the deriving command the
+workflow already runs:
+
+    .github/scripts/assert-released-version.sh "<svc>/dist" "<version>"
+
+What stays is why each service cannot be asserted, which is a property of that
+service's own code and does not move when this file does. **The distinction
+worth keeping: the code findings on #12 each converged in one round. Only the
+prose did not, and only because it was derivable fact written out by hand.**
+
 **Petra costed the practice on 2026-09-21 and approved four changes to it.**
 The measured price is ~230k subagent tokens and 14-42 minutes per round; six
 rounds landed that day. What it bought was five load-bearing findings, all the

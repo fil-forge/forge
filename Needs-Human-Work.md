@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-21 15:50Z.** Everything here is waiting on a person — either
+**Updated 2026-09-21 16:45Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -181,15 +181,15 @@ the same failure mode as the eighteen-hour sprue miss, two weeks apart.
 
 | | what | state |
 |---|---|---|
-| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Draft** — round four running. On `8897649a`; round three found three blocking defects, all three introduced by round two's fixes |
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Draft** — round four running. On `a1c684d0`; round three found three blocking defects, all three introduced by round two's fixes |
 | [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below. **This is the one that gates Phase 1.** | **OPEN and signed off** — its reviewer re-checked the current head and posted its approval. **Green all 24 on `d7f00ba9`**, first pass, no re-runs. **Round two is satisfied; nothing blocking.** (At `a032681d`, `itest hilt` had been red once on a Docker Hub connection reset and passed on its one re-run) |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, and **now only that** — net diff is one test file | draft, on `38923a3` |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `6584213` — `main` merged in after hilt#76 landed |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
 | [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Third revision.** The first was wrong four ways; the second fixed those and introduced two more, and left five it had missed. An independent review found all ten; every number in the entry is now derived by a command quoted beside it | **Draft** — round two running. On `f0ed73db`, the third revision; round one found ten problems, seven blocking |
-| [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Draft** — round seven running. On `60cdb98c`; round six found the meta-guard not covering the one fix made in the same push as its own rewrite |
-| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Draft** — round four running. On `df8dcb54`, rebased onto #12's new head; round three found the guard counting lines, so it checked a quarter again and printed the round-one sentence verbatim |
+| [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Draft** — round seven running. On `3b60610f`; round six found the meta-guard not covering the one fix made in the same push as its own rewrite |
+| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Draft** — round four running. On `17614b7c`, rebased onto #12's new head; round three found the guard counting lines, so it checked a quarter again and printed the round-one sentence verbatim |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today
