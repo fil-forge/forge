@@ -11,4 +11,4 @@
   - Went better (G1–G4)
   - Open items (O1–O4)
   - Working principles
-- [[MinIO Image Removal]] ⚠️
+- [[MinIO Image Removal]] ✔ resolved

@@ -1,12 +1,15 @@
 # Current state
 
-**Snapshot as of 2026-09-21 12:10Z.** Replace this page as things change; do
-not append to it. For history and reasoning, see [[Consolidation Findings]].
+**Snapshot as of 2026-09-21 12:25Z, Monday morning.** For history and
+reasoning, see [[Consolidation Findings]].
 
-*That rule had been broken: the page named `main` as three different commits in
-three places, each true when written. The state-bearing sections below were
-rewritten on 2026-09-20 rather than appended to. If you find a fourth SHA
-further down, it is stale — `main` is `0d8fb04c`.*
+<!-- UPKEEP, for whoever maintains this page:
+     Replace this page as things change; do not append to it.
+
+     That rule had been broken once: the page named `main` as three different
+     commits in three places, each true when it was written. The state-bearing
+     sections were rewritten on 2026-09-20 rather than appended to. If a stale
+     sha ever appears further down, that is the failure mode to look for. -->
 
 Consolidating the Fil Forge polyrepo into a monorepo at
 [`fil-forge/forge`](https://github.com/fil-forge/forge). The plan is
@@ -203,7 +206,10 @@ Merged onto `main` since the last revision of this page, newest first:
 | [#11](https://github.com/fil-forge/forge/pull/11) | 2026-09-18 17:04Z | shard `itest ingot` across three runners |
 | [#9](https://github.com/fil-forge/forge/pull/9) | 2026-09-18 14:20Z | every goreleaser `-X` ldflag named a pre-consolidation module path; a release would have shipped binaries reporting `v0.0.0` |
 
-**Ten pull requests are open**, five on `forge` and five upstream.
+**Ten pull requests are open and every one is green**, five on `forge` and
+five upstream. Nothing has been red since Sunday evening, nothing is blocked on
+the agent, and every review finding raised against the five `forge` PRs has
+been worked and pushed. **They are waiting on you and on nothing else.**
 [[Plan]] has the table; [[Needs Human Work]] has what each needs from a person.
 The one that matters for sequencing is
 [#14](https://github.com/fil-forge/forge/pull/14), **the final subtree

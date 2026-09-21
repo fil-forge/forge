@@ -1,17 +1,35 @@
 # Needs human work
 
-**Updated 2026-09-19 18:10Z.** Everything here is waiting on a person — either
+**Updated 2026-09-21 12:25Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
-Work that is merely unfinished does not belong here; see
-[[Current State]] for the broad picture and [[Consolidation Findings]] for why
-each item exists.
+See [[Current State]] for the broad picture and [[Consolidation Findings]] for
+why each item exists.
 
-Kept current as things move. Items leave via **Recently cleared**, which is
-pruned once it stops being useful.
+<!-- UPKEEP: work that is merely unfinished does not belong on this page — it
+     belongs in issues. Items leave via **Recently cleared**, which is pruned
+     once it stops being useful. Kept current as things move. -->
+
+## Since you last looked (Sunday 16:10Z → Monday 12:25Z)
+
+Four things, none of which needs an answer — they are here so the morning read
+is one glance:
+
+1. **Every `forge` PR got an adversarial review, and every one found something
+   real.** The sharpest finding was that **four of the defects were in fixes
+   made by the round before**. All of them are fixed and pushed. Detail below
+   and on [[Current State]].
+2. **`forge`#16 is new** — four Makefiles injected `-X` ldflags that stamped
+   nothing, and `piri`'s `make build` did not resolve its own target. It is
+   **hard-stacked on #12**, which must merge first.
+3. **hilt#76 (bajtos's) merged** at 11:29Z, which left our hilt#77 behind its
+   base. Merged `main` in, verified, pushed; it is green again.
+4. **`forge#14` went red once overnight** — a Docker Hub connection reset
+   pulling `redis`, before any test body ran. It passed on its one re-run.
 
 ## Blocking
 
-**Nothing is blocked. Nine pull requests and one issue are waiting for you.**
+**Nothing is blocked. Ten pull requests and one issue are waiting for you,
+and all ten are green.**
 Per your call on 2026-09-19, **`forge` PRs are fully Open** when they look
 ready — you are the only one looking at them right now — while
 **upstream PRs stay draft** so other engineers do not spend time on them before

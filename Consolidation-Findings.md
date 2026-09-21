@@ -9,7 +9,11 @@ implicit assumption about how the repositories relate to each other to become
 explicit, and most of them turn out to be wrong in some small way nobody had
 occasion to notice.
 
-Entries cite `file:line` at the commit where they were found. Last updated 2026-09-15.
+Entries cite `file:line` at the commit where they were found. **Last updated
+2026-09-15** — the weekend of 2026-09-20/21 produced a further batch, from the
+adversarial review of every open `forge` PR, and those are on [[Current State]]
+and [[Wins]] rather than folded in here yet. They sharpen principle 10 below
+more than they add new kinds.
 
 ---
 

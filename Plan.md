@@ -12,8 +12,8 @@ still released on its own cadence.
 subtree pull is done too — it is
 [#14](https://github.com/fil-forge/forge/pull/14), green and open. **Phase 1 is
 gated on that landing**, and #14 is gated on review. `main` is `0d8fb04c`;
-**four PRs are open on `forge` and five upstream.** Nothing is blocked on the
-agent.
+**five PRs are open on `forge` and five upstream, all ten green.** Nothing is
+blocked on the agent.
 
 ---
 

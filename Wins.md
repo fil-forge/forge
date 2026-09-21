@@ -5,13 +5,16 @@ that were broken before it started — most of them in the polyrepo itself, not
 in the monorepo being built. Each one says plainly whether it is **solved** or
 **not solved**, because a list where everything is a win is not worth reading.
 
-Kept current as things land. The sibling pages are for doing the work:
-[[Needs Human Work]] is what is waiting on a person, [[Consolidation Findings]]
-is the running log of blind spots and latent issues.
+The sibling pages are for doing the work: [[Needs Human Work]] is what is
+waiting on a person, [[Consolidation Findings]] is the running log of blind
+spots and latent issues.
 
-**Updated 2026-09-20 20:51Z.** Ten pull requests open. New since the last
-revision: **#9 below**, found by reviewing a documentation-only pull request.
-Entry 11 has been corrected — two of its claims were wrong.
+<!-- UPKEEP: kept current as things land. Each entry says plainly whether it is
+     solved or not solved; do not quietly promote an unsolved one. -->
+
+**Updated 2026-09-21 12:25Z.** Ten pull requests open, all green. New since
+the last revision: **entry 9**, found by reviewing a documentation-only pull
+request. **Entry 11 has been corrected** — two of its claims were wrong.
 
 ## Why these count
 
