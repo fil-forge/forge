@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-21 15:40Z.** Everything here is waiting on a person — either
+**Updated 2026-09-21 15:50Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -22,15 +22,23 @@ Five things. Only the first changes what the PRs are waiting on:
    the defects found this weekend were in fixes made by the round before**. Five
    rounds are running now against the current heads, each holding the previous
    report and asked to end with an explicit verdict. [[Current State]] has the
-   head-by-head table. **Four have reported, three of them not satisfied, and
-   all three found defects that the previous round's fixes had introduced.**
-   #14 is the one that passed. #13's three blocking defects were *all* in
-   round two's fixes; #16's guard printed its round-one output again, word
-   for word, because round two's fix was verified on a fixture whose shape
-   does not match this repository's; #15's rewrite fixed four errors and
-   introduced two. All four worked and pushed — #13 `8897649a`,
-   #14 `d7f00ba9`, #15 `f0ed73db`, #16 `259f60c1`, `guards` green on each.
-   #12's sixth round is still running.
+   head-by-head table. **All five reported; four were not satisfied, and every
+   one of the four found defects that the previous round's fixes had
+   introduced.** #14 is the one that passed, and it is now signed off and Open.
+   #13's three blocking defects were *all* in round two's fixes; #16's guard
+   printed its round-one output again, word for word, because round two's fix
+   was verified on a fixture whose shape does not match this repository's;
+   #15's rewrite fixed four errors and introduced two; and **#12's meta-guard
+   did not cover the one fix made in the same push as the guard's own rewrite**
+   — the sharpest of the weekend. All worked and pushed, and a further round is
+   running on the four not yet signed off.
+
+   **Two new signals, both yours, so you can tell at a glance what is ready:**
+   a satisfied reviewer now posts its own `[From Claude:]` approval comment on
+   the PR and an unsatisfied one posts nothing; and a `forge` PR stays a
+   **draft** while a review is open, going **Open** only when its reviewer
+   signs off. Everything here is attributed to one GitHub user, so a real
+   approval would carry no information — these do.
 2. **Every `forge` PR got an adversarial review, and every one found something
    real.** The sharpest finding was that **four of the defects were in fixes
    made by the round before**. All of them are fixed and pushed — but see item
@@ -173,15 +181,15 @@ the same failure mode as the eighteen-hour sprue miss, two weeks apart.
 
 | | what | state |
 |---|---|---|
-| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Open**, green all 24, on `563c27b5` — round two |
-| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below. **This is the one that gates Phase 1.** | **Open**, **green all 24 on `d7f00ba9`**, first pass, no re-runs. **Round two is satisfied; nothing blocking.** (At `a032681d`, `itest hilt` had been red once on a Docker Hub connection reset and passed on its one re-run) |
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Draft** — round four running. On `8897649a`; round three found three blocking defects, all three introduced by round two's fixes |
+| [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below. **This is the one that gates Phase 1.** | **OPEN and signed off** — its reviewer re-checked the current head and posted its approval. **Green all 24 on `d7f00ba9`**, first pass, no re-runs. **Round two is satisfied; nothing blocking.** (At `a032681d`, `itest hilt` had been red once on a Docker Hub connection reset and passed on its one re-run) |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, and **now only that** — net diff is one test file | draft, on `38923a3` |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `6584213` — `main` merged in after hilt#76 landed |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
-| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Third revision.** The first was wrong four ways; the second fixed those and introduced two more, and left five it had missed. An independent review found all ten; every number in the entry is now derived by a command quoted beside it | **Open**, on `f0ed73db` (third revision; 22 of 24 green, two `itest ingot` shards still running, nothing red) |
-| [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Open**, green all 24, on `06e49742` — round five complete |
-| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Open**, on `259f60c1` — round three: the guard counted lines, so it checked a quarter again and printed the round-one sentence; CI running |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Third revision.** The first was wrong four ways; the second fixed those and introduced two more, and left five it had missed. An independent review found all ten; every number in the entry is now derived by a command quoted beside it | **Draft** — round two running. On `f0ed73db`, the third revision; round one found ten problems, seven blocking |
+| [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Draft** — round seven running. On `60cdb98c`; round six found the meta-guard not covering the one fix made in the same push as its own rewrite |
+| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Draft** — round four running. On `df8dcb54`, rebased onto #12's new head; round three found the guard counting lines, so it checked a quarter again and printed the round-one sentence verbatim |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today

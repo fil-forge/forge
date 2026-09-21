@@ -291,6 +291,24 @@ so. **Four have reported. Three were not satisfied, and every one of the three
 found defects that round two's fixes had introduced** — which is the argument
 for the round, and the argument for never having skipped it.
 
+**The practice now has two signals, both Petra's, both added 2026-09-21 after
+the first full round.** The problem they solve: everything in this repository is
+attributed to one GitHub user, so a real GitHub approval carries no information
+about who approved.
+
+1. **A satisfied reviewer posts its own approval comment on the PR** — exactly
+   one issue comment, `[From Claude:]` prefixed, naming the round and the head
+   sha, what the verdict rests on, and what it deliberately did not verify. An
+   unsatisfied reviewer posts **nothing** and reports back instead. So the
+   comment's existence is the fact: her signal that the PR is ready to read,
+   and mine that the round is closed.
+2. **A `forge` PR stays a draft while an agent review is open, and goes Open
+   when that reviewer is satisfied.** Draft is the visible half of the same
+   signal. All five were drafted; **#14 is the first to come back Open.**
+
+Together they replace the thing that failed all weekend — a PR looking finished
+because nobody had looked at it again.
+
 The tally, because the shape is the finding:
 
 | PR | round | verdict | new defects **in the previous round's fixes** |
@@ -299,11 +317,20 @@ The tally, because the shape is the finding:
 | #15 | one | not satisfied | 2 of 10 (7 blocking) |
 | #13 | three | not satisfied | **3 of 3 blocking** |
 | #16 | three | not satisfied | 2 blocking, both partial fixes |
-| #12 | six | *running* | — |
+| #12 | six | not satisfied | 1 of 3 blocking, and it is the sharpest of the weekend |
 
-All four are worked and pushed: #13 `8897649a`, #14 `d7f00ba9`, #15 `f0ed73db`,
-#16 `259f60c1`. `guards` is green on every one, which is the job that actually
-runs #16's guard.
+**All five are worked and pushed**, and a further round is running on the four
+that are not yet signed off: #12 `60cdb98c`, #13 `8897649a`, #15 `f0ed73db`,
+#16 `df8dcb54` (rebased onto #12's new head, rule 6). **#14 is done** — its
+reviewer re-checked `d7f00ba9`, posted its approval, and the PR is Open.
+
+**#12's round six is the one to read if you read only one.** Its meta-guard
+exists so the assertion script is executed by *something*, and its header lists
+the fixes it covers. Four landed in the previous push; three were listed. The
+fourth was the ERE escaping — which round five had asked for **by name**.
+Reverting that one line left the guard printing nine `ok`s and exit 0 while the
+assertion accepted a stale binary. A guard that lists what it protects is making
+a claim, and the claim was three-quarters true.
 
 **#14 is the first PR any reviewer has declared itself satisfied with.** All
 three round-one fixes hold, and the round re-derived each rather than accepting
