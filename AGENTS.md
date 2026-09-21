@@ -235,7 +235,10 @@ by ancestry and by path space alike, which is every signal available locally.
 Four successive review rounds each proposed a heuristic and each was measured
 wrong. What the script does is refuse where it can see the problem (the merge
 base lands in our path space) and say what "never pulled" rests on where it
-cannot. Do not add a fifth heuristic; [[Needs Human Work]] carries it.
+cannot. **That is the decision, not an open question:** no fork-back is expected
+against these ten upstreams, so the case is left unhandled on purpose. Do not
+add a fifth heuristic. Reopen it only if an upstream actually merges this
+repository's history — and then the fix is a remote, not another local signal.
 
 **Why react to the conflict rather than predict it:** you cannot predict it.
 Measured (matrix on the wiki):

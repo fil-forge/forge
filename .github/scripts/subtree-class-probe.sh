@@ -18,8 +18,15 @@
 #     .github/scripts/subtree-class-probe.sh .github/scripts/finish-subtree-pull.sh
 #
 # Every row must read PASS, **and this script exits non-zero if any does not**.
+#
+# ONE LINE OF THE SCRIPT IS UNCOVERED and saying so is cheaper than implying it
+# is not: deleting the anchor scan's `--is-ancestor "$split" "$c^2"` leaves every
+# row here green. Nothing below builds the shape that would red it -- a merge
+# newer than the pull whose second parent neither descends from the add's split
+# nor looks like a branch of this repository, which takes an unrelated-history
+# merge to construct. The other rejection tests are each covered by a row.
 # Enumerate the anchoring / range / dry-run / binary / trailer / destination
-# class for finish-subtree-pull.sh. Sixteen cases, each building a throwaway
+# class for finish-subtree-pull.sh. Seventeen cases, each building a throwaway
 # upstream+monorepo pair.
 # A case passes when the script's OUTPUT is right, not merely its exit code --
 # that distinction is the whole reason this exists.
@@ -100,11 +107,18 @@ git-subtree-dir: svc' ) >/dev/null 2>&1
 chk "a commit QUOTING the trailer is not the add" "$d/mono" 'STILL HERE.*shared/b\.go'
 
 # The same, quoting BOTH trailers at line start. Requiring both was the previous
-# fix and it is not enough: the quoted split is captured, every real candidate
-# then fails `--is-ancestor "$split"`, and the script exits 2 with "Found no
-# merge of 'svc''s upstream in the last 200 merges" about a prefix whose file IS
-# carried. A real subtree-add merges the commit its own split names, so that
-# commit is an ancestor of its second parent; quoted text is not.
+# fix and it is not enough. MEASURED against that predicate, not reasoned about:
+# the quoted merge is selected as the add, and because it is also the newest
+# merge the anchor scan lands right back on it, so the script reports
+#
+#   'svc' has only ever been added, never pulled -- nothing to audit.   rc=0
+#
+# about a prefix whose file IS carried -- a silent false clean, not the loud
+# refusal an earlier revision of this comment claimed ("exits 2 with Found no
+# merge of 'svc''s upstream in the last 200 merges"). The fixture discriminates
+# either way; the stated reason was wrong, which is the failure this file exists
+# to stop. A real subtree-add merges the commit its own split names, so that
+# commit IS its second parent; quoted text is not.
 # The quoted split names a REAL commit that exists here -- the monorepo's own
 # root -- not a string of zeros. A zeros sha is rejected by the existence check
 # alone, so a fixture using one passes without the ancestry test and proves
@@ -279,23 +293,24 @@ chk "landing merge quoting its own ^1" "$d/mono" 'STILL HERE.*shared/b\.go'
 # squashing and says nothing about --rejoin, so this is reachable rather than
 # out of policy.
 #
-# HONESTLY: THIS ROW DOES NOT DISCRIMINATE. It passes with the fix reverted, in
-# both places, because in this shape the anchor scan still reaches the real
-# pull merge and the `adds > 1` refusal is never consulted. It is a regression
-# guard, not evidence. The evidence is the table above, which is checked by the
-# script's header rather than by this row -- and saying so is the point, since
-# four fixtures written for four earlier predicates each passed with their fix
-# reverted and were reported as proof.
+# THE ORDER IS THE WHOLE CASE. A rejoin done BEFORE the pull proves nothing:
+# the pull then conflicts, the script takes its conflicted branch, and the
+# selection loop, the anchor scan and the adds counter are all unreachable --
+# that row passed against a script with its entire `merged` branch deleted, and
+# was published as evidence for a predicate it never ran. Doing the rejoin AFTER
+# a clean pull is the shape that discriminates, and it is a false-clean rather
+# than a wrong error: without the anchor scan's rejoin skip this fixture reports
+# `0 carried` and exits 0 with shared/b.go still on disk.
 d=$(mk rejoin)
-( cd "$d/mono" || exit
-  printf 'package s\nlocal\n' >svc/c.go; git add -A; git commit -qm 'local change in svc'
-  git subtree split -q --prefix=svc --rejoin -b zz-split ) >/dev/null 2>&1
 updel "$d"; pull "$d"
-chk "a --rejoin merge is not the add" "$d/mono" 'STILL HERE.*shared/b\.go'
+( cd "$d/mono" || exit
+  git subtree split -q --prefix=svc --rejoin -b zz-split ) >/dev/null 2>&1
+chk "a rejoin AFTER a clean pull hides nothing" "$d/mono" 'STILL HERE.*shared/b\.go'
+chk "...and is still counted, not swallowed" "$d/mono" '1 carried'
 
 # Reaches the candidate test's `-t` -- the `cat-file -t` on `$c^2:$prefix` --
-# which no other case does: an
-# ancestry-only fork-back, plus a top-level FILE named like the prefix upstream.
+# which no other case does: an ancestry-only fork-back, plus a top-level FILE
+# named like the prefix upstream.
 # With `cat-file -e` there the real pull merge is rejected -- `-e` succeeds for
 # the blob -- and the script says "only ever been added, never pulled" and
 # exits 0 with the file carried. With `-t` = tree it refuses loudly instead.

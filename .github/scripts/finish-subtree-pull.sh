@@ -237,6 +237,35 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   for c in $(git rev-list --merges --max-count=200 HEAD); do
     git rev-parse -q --verify "$c^2" >/dev/null 2>&1 || continue
     git merge-base --is-ancestor "$split" "$c^2" 2>/dev/null || continue
+    # A `git subtree split --rejoin` is a split of OUR OWN prefix, never a pull
+    # of upstream, and it must not anchor one. Nothing above rejects it: its ^2
+    # is a fresh split commit, so it contains $split and carries no prefix tree
+    # -- it fails BOTH rejection tests below -- and being newer than the real
+    # pull it wins the scan outright. The audit then diffs upstream against
+    # upstream and reports a clean pull. Measured on a fixture: a true
+    # `1 carried` / exit 1 becomes `0 carried` / exit 0 with the carried file
+    # still in the tree, which is this script's own failure mode rebuilt for the
+    # second time (the fork-back comment below is the first).
+    #
+    # git-subtree writes the trailer pair naming a merge's own two parents for
+    # exactly two things it makes: the add and the rejoin. `cmd_merge` and
+    # `cmd_pull` write no trailers, and `--squash` puts them on a non-merge
+    # commit. The add CREATES the prefix; a rejoin runs on one already there.
+    # So trailers naming both parents AND a ^1 that already has the prefix is a
+    # rejoin and nothing else is -- the same table the add selection above uses,
+    # read the other way up. Deliberately not restricted to THIS prefix: a
+    # rejoin of any prefix is a split of our tree, so none of them is ever the
+    # merge wanted here.
+    rj_s=$(git log -1 --format=%B "$c" \
+             | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
+    rj_m=$(git log -1 --format=%B "$c" \
+             | sed -n 's/^[[:space:]]*git-subtree-mainline:[[:space:]]*//p' | head -1)
+    if [ -n "$rj_s" ] && [ -n "$rj_m" ] \
+       && [ "$(git rev-parse -q --verify "${rj_s}^{commit}" 2>/dev/null)" \
+          = "$(git rev-parse -q --verify "$c^2" 2>/dev/null)" ] \
+       && [ "$(git rev-parse -q --verify "${rj_m}^{commit}" 2>/dev/null)" \
+          = "$(git rev-parse -q --verify "$c^1" 2>/dev/null)" ] \
+       && [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ]; then continue; fi
     # BOTH, not either. Each test alone has its own blind spot and they are
     # different ones, so a candidate is rejected only when they agree:
     #   ancestry alone   -- fails on a fork-back, where upstream's tip contains
@@ -309,8 +338,10 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # ancestry and by path space alike, and those are every signal available
     # without a remote. Four review rounds each proposed a discriminator and
     # each was measured wrong; a counter of rejections false-positives on 15 to
-    # 26 ordinary merges per prefix at origin/main. So: no fifth heuristic, and
-    # no silent claim either. AGENTS.md and [[Needs Human Work]] carry it.
+    # 26 ordinary merges per prefix at origin/main. DECIDED, not open: we do not
+    # expect a fork-back here, so it is left unhandled deliberately -- no fifth
+    # heuristic, and no silent claim either. The note below is the whole of the
+    # mitigation, and AGENTS.md says the same.
     note "'$prefix' has only ever been added, never pulled -- nothing to audit."
     note "  (That reads the history: of the last 200 merges, none has a second"
     note "   parent descending from the add's split WITHOUT also looking like a branch of"
@@ -320,7 +351,7 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     exit 0
   fi
   if [ "$merge" != "$(git rev-parse HEAD)" ]; then
-    note "Auditing $prefix's pull at $(git rev-parse --short "$merge"); later pulls sit on top."
+    note "Auditing $prefix's pull at $(git rev-parse --short "$merge"); it is not HEAD."
   fi
   upstream="$merge^2"
   # Guarded: unrelated histories give an empty merge-base, and `set -e` then
