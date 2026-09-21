@@ -361,33 +361,64 @@ the first full round.** The problem they solve: everything in this repository is
 attributed to one GitHub user, so a real GitHub approval carries no information
 about who approved.
 
-1. **A satisfied reviewer posts its own approval comment on the PR** — exactly
-   one issue comment, `[From Claude:]` prefixed, naming the round and the head
-   sha, what the verdict rests on, and what it deliberately did not verify. An
-   unsatisfied reviewer posts **nothing** and reports back instead. So the
-   comment's existence is the fact: her signal that the PR is ready to read,
-   and mine that the round is closed.
+1. **A satisfied reviewer posts its own approval comment on the PR** —
+   `[From Claude:]` prefixed, naming the round and the head sha, what the
+   verdict rests on, and what it deliberately did not verify. The sentence
+   **"Satisfied. No findings this round. This PR is ready for human review."**
+   is the token; a reviewer is told not to write it unless it found nothing.
+   So that sentence's existence is the fact: her signal that the PR is ready to
+   read, and mine that the round is closed.
 2. **A `forge` PR stays a draft while an agent review is open, and goes Open
    when that reviewer is satisfied.** Draft is the visible half of the same
    signal. All five were drafted; **#14 is the first to come back Open.**
+
+**Amended the same day: every round posts, not only the satisfied one.** The
+first version had an unsatisfied reviewer post nothing and report back to me
+privately, which made the comment's *existence* the signal — tidy, and it left
+Petra with no visibility into what the reviews were actually finding, which is
+the part worth reading. Every round now posts a `COMMENT` review to the PR
+whether it is satisfied or not.
+
+**A `COMMENT` review is the mechanism, and it works on our own PR.** `APPROVE`
+and `REQUEST_CHANGES` are rejected by GitHub on a PR you authored, and
+everything here is authored by one user — but `event: "COMMENT"` via
+`pull_request_review_write` is accepted. Verified before the instruction went
+out, not assumed.
 
 Together they replace the thing that failed all weekend — a PR looking finished
 because nobody had looked at it again.
 
 The tally, because the shape is the finding:
 
-| PR | round | verdict | new defects **in the previous round's fixes** |
+| PR | rounds so far | last verdict | new defects **in the previous round's fixes** |
 |---|---|---|---|
-| #14 | two | **satisfied** | none — 2 stale claims |
-| #15 | one | not satisfied | 2 of 10 (7 blocking) |
-| #13 | three | not satisfied | **3 of 3 blocking** |
-| #16 | three | not satisfied | 2 blocking, both partial fixes |
-| #12 | six | not satisfied | 1 of 3 blocking, and it is the sharpest of the weekend |
+| #14 | 2 | **satisfied**, Open | none — 2 stale claims |
+| #12 | 7 | not satisfied | round 7 found 3, one of them my own fix reproducing round 7's finding 3 |
+| #13 | 4 | not satisfied | **round 4 found my anchoring fix was wrong and I had verified it wrongly** |
+| #15 | 3 | not satisfied | 10, every one a number or claim no command backs |
+| #16 | 4 | not satisfied | 2 blocking, both partial fixes |
 
-**All five are worked and pushed**, and a further round is running on the four
-that are not yet signed off: #12 `60cdb98c`, #13 `8897649a`, #15 `f0ed73db`,
-#16 `df8dcb54` (rebased onto #12's new head, rule 6). **#14 is done** — its
-reviewer re-checked `d7f00ba9`, posted its approval, and the PR is Open.
+**All five are worked and pushed.** Heads: #12 `3b60610f`, #13 `a1c684d0`
+(CI green, 24/24), #14 `d7f00ba9` (**done** — its reviewer re-checked that
+head, posted its approval, and the PR is Open), #15 `4d8b3cee`, #16
+`17614b7c`. Four scoped rounds are running against those heads.
+
+**The rounds after the first are scoped now**, one of four changes made
+2026-09-21 after costing the practice: a later round reviews the delta since
+the head it last saw plus the previous round's findings, rather than
+re-deriving the whole PR. The others: reproduce → fix → reproduce against the
+repository's own shape before requesting a re-review; no full adversarial pass
+on documentation (a numbers-check brief reproduced the full review's yield on
+#15 at 166k tokens against 192k); and the "every `forge` PR gets one" rule
+sunsets when the consolidation lands, alongside the rest of this scaffolding.
+
+**#13's round four is the one that justifies the whole practice.** I fixed
+round three's anchoring finding, ran the fork-back fixture, saw exit 1, called
+it correct — and wrote off the contrary evidence as fixture noise. Round four's
+diagnosis: *"I checked WHICH MERGE GOT ANCHORED. I never read what the audit
+then SAID."* It said `0 carried, 3 to confirm`, naming monorepo paths upstream
+never had. A self-check that reads the exit code and not the output is not a
+check.
 
 **#12's round six is the one to read if you read only one.** Its meta-guard
 exists so the assertion script is executed by *something*, and its header lists
