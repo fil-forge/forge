@@ -213,10 +213,11 @@ not until the index was stopped from being read as evidence about a run that
 stages nothing. Notes and problems go to stderr. **Exit 1 if anything was left
 for a human or flagged by the audit, 2 if the script refused to act at all**.
 Test for non-zero, not for 1. **The seven refusals are enumerated in the
-script's own header, not here** — this file carried a second copy and it went
-stale twice, once when the merge-base refusal was added and once when the
-200-merge one was. Two copies of a derivable list is the failure rule 3 names,
-and the copy that is not next to the code is the one that rots.
+script's own header, not here** — this file carried a second copy that went
+stale over the path-space refusal, which was added without updating it, and was
+born already missing the 200-merge one. Two copies of a derivable list is the
+failure rule 3 names, and the copy that is not next to the code is the one that
+rots.
 
 It applies only where a rename was recorded *and* the destination verified to
 exist. It refuses a same-basename guess, a true delete, a destination with

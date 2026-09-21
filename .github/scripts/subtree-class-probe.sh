@@ -19,7 +19,7 @@
 #
 # Every row must read PASS, **and this script exits non-zero if any does not**.
 # Enumerate the anchoring / range / dry-run / binary / trailer / destination
-# class for finish-subtree-pull.sh. Eleven cases, each building a throwaway
+# class for finish-subtree-pull.sh. Sixteen cases, each building a throwaway
 # upstream+monorepo pair.
 # A case passes when the script's OUTPUT is right, not merely its exit code --
 # that distinction is the whole reason this exists.
@@ -267,7 +267,34 @@ git-subtree-split: $root"
 updel "$d"; pull "$d"
 chk "landing merge quoting its own ^1" "$d/mono" 'STILL HERE.*shared/b\.go'
 
-# Reaches the candidate test's `-t` (line 197), which no other case does: an
+# `git subtree split --rejoin`, which is NOT a hand-written message: git-subtree's
+# own rejoin_msg writes the same three trailers, and a rejoin merge's parents are
+# HEAD and the new split, so it satisfies both trailer-to-parent equalities
+# exactly. Measured on this very fixture:
+#
+#   Split 'svc/'  split==^2:YES mainline==^1:YES  ^1 has prefix: YES
+#   Add   'svc/'  split==^2:YES mainline==^1:YES  ^1 has prefix: no
+#
+# so only "the merge CREATES the prefix" separates them. Rule 7 forbids
+# squashing and says nothing about --rejoin, so this is reachable rather than
+# out of policy.
+#
+# HONESTLY: THIS ROW DOES NOT DISCRIMINATE. It passes with the fix reverted, in
+# both places, because in this shape the anchor scan still reaches the real
+# pull merge and the `adds > 1` refusal is never consulted. It is a regression
+# guard, not evidence. The evidence is the table above, which is checked by the
+# script's header rather than by this row -- and saying so is the point, since
+# four fixtures written for four earlier predicates each passed with their fix
+# reverted and were reported as proof.
+d=$(mk rejoin)
+( cd "$d/mono" || exit
+  printf 'package s\nlocal\n' >svc/c.go; git add -A; git commit -qm 'local change in svc'
+  git subtree split -q --prefix=svc --rejoin -b zz-split ) >/dev/null 2>&1
+updel "$d"; pull "$d"
+chk "a --rejoin merge is not the add" "$d/mono" 'STILL HERE.*shared/b\.go'
+
+# Reaches the candidate test's `-t` -- the `cat-file -t` on `$c^2:$prefix` --
+# which no other case does: an
 # ancestry-only fork-back, plus a top-level FILE named like the prefix upstream.
 # With `cat-file -e` there the real pull merge is rejected -- `-e` succeeds for
 # the blob -- and the script says "only ever been added, never pulled" and

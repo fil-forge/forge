@@ -39,9 +39,11 @@
 # flagged by the audit; exit 2 if the script REFUSED TO ACT at all. A caller
 # acting on the status wants "non-zero", not "1".
 #
-# The seven refusals, and this is the only copy of the list -- a second one in
-# AGENTS.md went stale twice, once when the merge-base refusal was added and
-# once when the 200-merge one was:
+# The seven refusals, and this is the only copy of the list. A second copy in
+# AGENTS.md went stale over the path-space refusal, which was added without it,
+# and was born missing the 200-merge one -- two different ways for the same
+# hand-maintained list to be wrong, which is why there is one copy now and it
+# sits next to the code:
 #
 #   a bad argument, or a flag after the prefix
 #   no merge to audit: no merge in progress and HEAD is not a merge
@@ -131,10 +133,9 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     cand=$(git log -1 --format=%B "$c" \
              | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
     [ -n "$cand" ] || continue
-    # The trailer must describe THIS merge, and FOUR tests were tried before
-    # this one. The first three are worth naming because each looked like a
-    # property and each had a fixture built for it that passed with the fix
-    # reverted:
+    # The trailers must describe THIS merge. FOUR predicates were tried before
+    # this one, each of which looked like a property, and each of which had a
+    # fixture written for it that passed with the fix reverted:
     #
     #   both trailers present  -- a body quoting both at line start satisfies
     #                             it; a pull request about these scripts is the
@@ -145,37 +146,53 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     #                             written to prove this fix passed with the fix
     #                             reverted, which is how it was caught.
     #   the merge CREATES the  -- defeated by the `Merge pull request` that
-    #   prefix (absent in ^1,     LANDS the subtree-add branch: its first
-    #   present in the merge)     parent is main before the import, its tree
+    #   prefix                    LANDS the subtree-add branch: its first
+    #                             parent is main before the import, its tree
     #                             has the prefix, and it is the single most
     #                             likely commit to quote those trailers.
     #
-    # `git subtree add` writes BOTH parents into the message: `git-subtree-split`
-    # is the commit it merged in (the second parent) and `git-subtree-mainline`
-    # is what it merged into (the first). So the trailers describe this merge
-    # exactly when they name this merge's own parents -- not a property inferred
-    # from the shape of the history, but the thing git-subtree literally did.
+    # THE FOURTH IS NOT DISCARDED -- it is half of what is here. Two conditions
+    # survive, and neither is sufficient alone, because each excludes an
+    # impostor the other admits.
     #
-    # BOTH, not the split alone. The landing merge's second parent IS the import
-    # branch tip, so a body quoting that tip as the split satisfies `split == ^2`
-    # while being no kind of subtree add. Requiring the mainline too separates
-    # them: the landing merge's `^1` is main before the import, which is not
-    # what such a body quotes. Measured over the four shapes a quoted split can
-    # take -- the monorepo root, upstream's commit, the import tip, none -- and
-    # only the pair is right in all four.
+    # (a) THE TRAILERS NAME THIS MERGE'S OWN PARENTS. `git subtree add` writes
+    #     both: `git-subtree-split` is the commit it merged in (the second
+    #     parent) and `git-subtree-mainline` is what it merged into (the
+    #     first). Not inferred from the shape of the history -- the thing
+    #     git-subtree literally did.
     #
-    # Verified on all ten real adds here (both trailers match both parents) and
-    # on fresh adds with and without `-m`.
+    #     This is what excludes the `Merge pull request` that LANDS a
+    #     subtree-add branch, which is the likeliest commit in any repository
+    #     to quote those trailers. Both halves are needed: the landing merge's
+    #     second parent IS the import branch tip, so quoting that tip satisfies
+    #     the split half alone.
+    #
+    # (b) THE MERGE CREATES THE PREFIX -- absent in its first parent, present
+    #     in the merge. This is what excludes `git subtree split --rejoin`,
+    #     and that is not a hand-written message: git-subtree's own
+    #     `rejoin_msg` writes the SAME three trailers, and a rejoin merge's
+    #     parents are HEAD and the new split, so it satisfies (a) exactly.
+    #     Measured -- a rejoin and a real add side by side:
+    #
+    #       Split 'svc/'  split==^2:YES mainline==^1:YES  ^1 has prefix: YES
+    #       Add   'svc/'  split==^2:YES mainline==^1:YES  ^1 has prefix: no
+    #
+    #     Rule 7 forbids squashing; it says nothing about `--rejoin`, so this
+    #     is reachable rather than out of policy.
+    #
+    # Verified on all ten real adds here, on fresh adds with and without `-m`,
+    # and against a rejoin fixture.
     #
     # A `--squash` add does not reach this at all: its trailers land on the
     # non-merge `Squashed '<prefix>/' content` commit, so the `--merges` grep
     # finds nothing and the script exits 2 at the "no subtree-add" refusal.
-    # Out of scope by rule 7 ("subtree history is never squashed"), pre-existing,
-    # and loud.
+    # Out of scope by rule 7, pre-existing, and loud.
     mline=$(git log -1 --format=%B "$c" \
               | sed -n 's/^[[:space:]]*git-subtree-mainline:[[:space:]]*//p' | head -1)
     [ "$cand"  = "$(git rev-parse -q --verify "$c^2" 2>/dev/null)" ] || continue
     [ "$mline" = "$(git rev-parse -q --verify "$c^1" 2>/dev/null)" ] || continue
+    [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ] && continue
+    [ "$(git cat-file -t "$c:$prefix"   2>/dev/null)" = tree ] || continue
     add=$c; split=$cand; break
   done < <(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" || true)
   if [ -z "$add" ]; then
@@ -249,10 +266,15 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # is the shape of failure this script exists to remove.
     # The SAME predicate the selection above uses, or the two disagree and this
     # refusal fires on a prefix the selection never treated as twice-added --
-    # or, worse, fails to fire on one it did. Rule 7's rebuild re-adds a prefix
-    # that already has one, so its first parent DOES carry the prefix: the
-    # "creates the prefix" predicate this replaces would have counted it as
-    # zero adds and silenced this refusal entirely.
+    # or, worse, fails to fire on one it did.
+    #
+    # Rule 7's rebuild is safe under it: `git subtree add` REFUSES an existing
+    # prefix (`fatal: prefix 'svc' already exists.`), so a rebuild must
+    # `git rm -r` first, and the add's first parent therefore does not carry
+    # the prefix. A previous revision of this comment claimed the opposite and
+    # used it to justify dropping condition (b); the claim was untested and
+    # wrong in both directions -- a genuinely twice-added prefix counts 2
+    # either way.
     adds=$(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" \
              | while IFS= read -r c; do
                  body=$(git log -1 --format=%B "$c")
@@ -263,6 +285,8 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
                  [ -n "$cand" ] || continue
                  [ "$cand"  = "$(git rev-parse -q --verify "$c^2" 2>/dev/null)" ] || continue
                  [ "$mline" = "$(git rev-parse -q --verify "$c^1" 2>/dev/null)" ] || continue
+                 [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ] && continue
+                 [ "$(git cat-file -t "$c:$prefix"   2>/dev/null)" = tree ] || continue
                  echo x
                done | wc -l | tr -d ' ')
     if [ "$adds" -gt 1 ]; then
