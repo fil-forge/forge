@@ -36,35 +36,33 @@ name: release
 # said and a later one deleted. Restored, because it is the single most useful
 # sentence here for whoever presses the button:
 #
-#   THE DEFAULT DRY RUN IS RED FOR TWO OF THE FOUR SERVICES TODAY, green for
-#   one, and unmeasured for the fourth. Not broken -- refusing, on purpose,
-#   and each for a different reason. (This sentence said "all four" until a
-#   review measured it. That was true before `docker` joined the skip list, in
-#   the push that also restored the sentence; ingot was dying on the docker
-#   build, not on the assertion. Four reviews of this file have now found a
-#   headline its own sub-bullets contradict -- if you change the behaviour
-#   below, change this line in the same commit.)
+#   WHAT A DEFAULT DRY RUN DOES PER SERVICE IS NOT WRITTEN DOWN HERE. It was,
+#   four times, and four consecutive reviews found the summary contradicting
+#   its own sub-bullets -- because it was a hand-maintained restatement of a
+#   fact that changes whenever the skip list or the assertion does. Rule 3 in
+#   prose. The status is derivable, by the command this workflow already runs:
 #
-#     indexing-service   reaches the assertion and exits 1, NOT ASSERTED:
-#                        cmd/main.go is a urfave/cli App with no Version and no
-#                        version command, so the binary cannot be asked what it
-#                        is.
-#     sprue              the same, from the other framework: a cobra root with
+#       .github/scripts/assert-released-version.sh "<svc>/dist" "<version>"
+#
+#   `ok` per binary, or `NOT ASSERTED`, or `CANNOT ASSERT` with the reason.
+#   That answer cannot go stale, because nothing here narrates it.
+#
+#   What IS durable is why a service cannot be asserted, because that is a
+#   property of the service's own code rather than of this file:
+#
+#     indexing-service   cmd/main.go is a urfave/cli App with no Version and
+#                        no version command, so the binary cannot be asked
+#                        what it is.
+#     sprue              the same from the other framework: a cobra root with
 #                        no `version` subcommand and no Version field.
-#     ingot              GREEN. Measured, not predicted: built with the
-#                        goreleaser-equivalent ldflags, `ingot version` reports
-#                        v0.0.0 and the assertion exits 0. Its dist also
-#                        carries images, which is why `docker` is in the skip
-#                        list below -- before that, it died there instead.
-#                        Dispatch this one first: it is the only one MEASURED
-#                        green end to end. Not "the only one that can be" --
-#                        piri is unmeasured and may well pass too, which the
-#                        bullet below says and this sentence contradicted.
-#     piri               macos-14 only, and its build time inside
-#                        timeout-minutes: 40 is unmeasured -- it cross-compiles
-#                        darwin/amd64 + darwin/arm64 with cgo against curio and
-#                        lotus, then a universal binary, then two linux builds.
-#                        This is the one genuine unknown.
+#     piri               has a version surface; the open question is its build
+#                        time on macos-14 inside timeout-minutes: 40, since it
+#                        cross-compiles darwin/amd64 + darwin/arm64 with cgo
+#                        against curio and lotus, then a universal binary,
+#                        then two linux builds. Not measurable without
+#                        dispatching it.
+#     ingot              has a version surface, and its dist carries images,
+#                        which is why `docker` is in the skip list below.
 #
 #   The fix for the first two is ~15 lines each, modelled on
 #   piri/cmd/cli/version.go, and it is deliberately NOT bundled into this pull
