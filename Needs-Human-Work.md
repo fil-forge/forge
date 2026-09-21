@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-21 17:55Z.** Everything here is waiting on a person — either
+**Updated 2026-09-21 18:50Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -567,41 +567,6 @@ point instead of waiting for a conflict, runs in both modes — including after 
 pull where nothing conflicted, which is exactly when it is the only thing
 looking — and exits non-zero if it finds one.
 
-## A decision, not a bug: what `finish-subtree-pull.sh` should do about a fork-back
-
-**Decide; do not let me guess again.** If an upstream repository has merged
-*this* repository's history and layout into itself, then its tip both descends
-from the subtree-add and carries a `<prefix>/` tree — so a real subtree-pull
-merge becomes indistinguishable from an ordinary `Merge pull request` by
-ancestry and by path space alike, and those are every signal available without
-consulting a remote. The script then says **"only ever been added, never
-pulled" and exits 0**, immediately after a pull, with the upstream-deleted file
-still in the tree.
-
-**Five review rounds have each proposed a discriminator and each was wrong.**
-The most recent: a counter of rejected candidates false-positives on 15 to 26
-ordinary merges per prefix at `origin/main`, because an ordinary feature branch
-descends from the add too.
-
-What is true, and why nothing here is in that state: **`git subtree push`
-cannot produce it.** It pushes *rewritten* commits in upstream's path space, so
-upstream never gains our history or a `<prefix>/` directory. Reaching this
-state takes a hand-made merge in the upstream repository.
-
-`0fa6abcd` therefore stops guessing: the merge-base guard still refuses loudly
-where the problem *is* visible, and the "never pulled" note now states the
-assumption it rests on rather than asserting a fact. The options, and I have
-deliberately not picked one:
-
-1. **Leave it.** Cheapest, and correct while the polyrepos are being archived
-   rather than developed on.
-2. **Refuse whenever the anchor lands on the subtree-add and HEAD is a merge.**
-   Catches it — and breaks the legitimate never-pulled case on `main`, which is
-   4 of 10 prefixes today.
-3. **Take a remote.** Give the script the upstream URL and ask which commits
-   are actually upstream's. Correct, and makes a local-only tool a networked
-   one.
-
 ## Waiting on Petra
 
 - ~~Archive `fil-forge/forge-2`, or delete it?~~ **Done — archived 20:45Z.**
@@ -883,6 +848,20 @@ rewritten. Rewriting them rewrites the wiki's history, which is cheap here and
 still your call.
 
 ## Recently cleared
+
+- **The fork-back case in `finish-subtree-pull.sh`** (2026-09-21) — **decided:
+  leave it.** Petra: *"We never expect that to happen here."* Which is the
+  cheapest of the three options that were on this page, and right for the
+  reason the write-up gave rather than in spite of it: `git subtree push`
+  cannot produce the state, so reaching it takes a hand-made merge in an
+  upstream repository that is being archived rather than developed on.
+
+  What the script does about it is unchanged and is now a documented
+  limitation rather than an open question: it refuses loudly where the problem
+  is visible (the merge base lands in this repository's path space), and the
+  "never pulled" note states the assumption it rests on instead of asserting a
+  fact. **Five review rounds each proposed a discriminator and each was
+  measured wrong** — a sixth attempt is explicitly not wanted.
 
 - **All five "Waiting on Petra" items approved** (2026-09-17): the
   `replaces` → `guards` rename resolved, #17's reuse of digests already in the
