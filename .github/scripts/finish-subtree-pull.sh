@@ -118,7 +118,26 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     [ -n "$c" ] || continue
     cand=$(git log -1 --format=%B "$c" \
              | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
-    if [ -n "$cand" ]; then add=$c; split=$cand; break; fi
+    [ -n "$cand" ] || continue
+    # The trailer must describe THIS merge, and the test is what the merge DID,
+    # not what its message says. Requiring both trailers was not enough: a body
+    # quoting both at line start -- a pull request about these scripts is the
+    # obvious carrier -- still captured a bogus split, every later candidate
+    # then failed `--is-ancestor "$split"`, and the script exited 2 with "Found
+    # no merge of '<prefix>''s upstream in the last 200 merges" about a prefix
+    # whose control run reports the carried file.
+    #
+    # Ancestry of the quoted sha is NOT the test either, and the fixture that
+    # proved it is in the probe: quote the monorepo's own root and it IS an
+    # ancestor of the merge's second parent, because everything here is. What
+    # only a real `git subtree add` does is CREATE the prefix -- absent in its
+    # first parent, present in the merge. A documentation merge on a branch
+    # where the prefix already exists cannot satisfy that however its message
+    # is written.
+    git rev-parse -q --verify "$cand^{commit}" >/dev/null 2>&1 || continue
+    [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ] && continue
+    [ "$(git cat-file -t "$c:$prefix"   2>/dev/null)" = tree ] || continue
+    add=$c; split=$cand; break
   done < <(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" || true)
   if [ -z "$add" ]; then
     echo "Found no 'git subtree add' for '$prefix' in this history -- no merge" >&2
@@ -175,7 +194,7 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # revisions each claimed of theirs. Requiring agreement is: a monorepo
     # branch tip satisfies both, upstream's tip satisfies at most one.
     if git merge-base --is-ancestor "$add" "$c^2" 2>/dev/null \
-       && git cat-file -e "$c^2:$prefix" 2>/dev/null; then continue; fi
+       && [ "$(git cat-file -t "$c^2:$prefix" 2>/dev/null)" = tree ]; then continue; fi
     merge=$c; break
   done
   if [ -z "$merge" ]; then
@@ -189,10 +208,15 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # split is upstream's tip) but the prefix has a pull history the sentence
     # would deny. Refuse loudly rather than report nothing and exit 0 -- that
     # is the shape of failure this script exists to remove.
+    # The SAME predicate the selection above uses, or the two disagree and this
+    # refusal fires on a prefix the selection never treated as twice-added.
     adds=$(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" \
              | while IFS= read -r c; do
                  git log -1 --format=%B "$c" \
-                   | grep -q '^[[:space:]]*git-subtree-split:' && echo x
+                   | grep -q '^[[:space:]]*git-subtree-split:' || continue
+                 [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ] && continue
+                 [ "$(git cat-file -t "$c:$prefix"   2>/dev/null)" = tree ] || continue
+                 echo x
                done | wc -l | tr -d ' ')
     if [ "$adds" -gt 1 ]; then
       echo "'$prefix' has $adds subtree-adds, and the newest is the most recent" >&2
@@ -203,7 +227,25 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
       echo "upstream range this audit cannot reconstruct. Check that range by hand." >&2
       exit 2
     fi
+    # This sentence rests on an assumption the script cannot check, and says so
+    # rather than asserting a fact. The anchor search rejects a candidate whose
+    # second parent both descends from the add and carries a `$prefix/` tree,
+    # because that is what a monorepo branch tip looks like and upstream's tip
+    # is not supposed to. If upstream has merged this repository's history and
+    # layout -- a hand-made fork-back; `git subtree push` cannot produce it,
+    # since it pushes rewritten commits in upstream's path space -- then its tip
+    # looks exactly like an ordinary `Merge pull request` second parent, by
+    # ancestry and by path space alike, and those are every signal available
+    # without a remote. Four review rounds each proposed a discriminator and
+    # each was measured wrong; a counter of rejections false-positives on 15 to
+    # 26 ordinary merges per prefix at origin/main. So: no fifth heuristic, and
+    # no silent claim either. AGENTS.md and [[Needs Human Work]] carry it.
     note "'$prefix' has only ever been added, never pulled -- nothing to audit."
+    note "  (That reads the history: no merge since the add has a second parent"
+    note "   descending from upstream's root WITHOUT also looking like a branch of"
+    note "   this repository. An upstream that has merged this repository's own"
+    note "   history and layout would be indistinguishable from one, and its pull"
+    note "   would be missed here. Nothing in this repository is in that state.)"
     exit 0
   fi
   if [ "$merge" != "$(git rev-parse HEAD)" ]; then
@@ -221,7 +263,14 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   # taken for correctness while the answer was wrong in both directions.
   # Upstream's path space has no `$prefix/`; if the base does, the diff is
   # meaningless and saying so is the only honest option.
-  if [ -n "$base" ] && git cat-file -e "$base:$prefix" 2>/dev/null; then
+  # `cat-file -t` and compare to `tree`, NOT `cat-file -e`. This guard was added
+  # one screen below a comment diagnosing exactly this: `-e` succeeds for a BLOB
+  # as well as a tree, so an upstream carrying a top-level FILE named like the
+  # prefix makes the merge base "inside our path space" on the SECOND pull --
+  # the base is then upstream's own commit, which holds that blob -- and this
+  # refuses permanently, with the carried file unreported. The diagnosis was in
+  # the file and the new code did not apply it.
+  if [ -n "$base" ] && [ "$(git cat-file -t "$base:$prefix" 2>/dev/null)" = tree ]; then
     echo "'$prefix''s merge base is inside this repository's path space, not" >&2
     echo "upstream's -- a fork-back, or an upstream carrying the prefix name." >&2
     echo "The audit would diff two different layouts and report nonsense in" >&2
@@ -314,6 +363,18 @@ while IFS= read -r conflicted; do
 
   if ! git diff --quiet -- "$dest" 2>/dev/null; then
     note "SKIP  $conflicted -> $dest: destination has uncommitted changes"
+    unresolved=$((unresolved + 1)); continue
+  fi
+  # A symlink destination is refused, not merged. The write below is
+  # `cat "$tmp/$dest" > "$dest"`, and a redirect FOLLOWS a symlink: the merged
+  # text -- conflict markers and all -- landed in whatever the link pointed at,
+  # an unrelated tracked file, while the link itself was untouched and the run
+  # reported `merged ... (1 conflict(s))`. It is unstaged, so `git status` shows
+  # it, and `git add -A` commits it. Mode 120000 is a symlink in the index;
+  # `git show ":0:$dest"` on one gives the link TARGET, so there is nothing
+  # sensible to three-way merge here either.
+  if [ "$(git ls-files -s -- "$dest" | cut -d' ' -f1)" = 120000 ]; then
+    note "SKIP  $conflicted -> $dest: destination is a symlink, merge by hand"
     unresolved=$((unresolved + 1)); continue
   fi
   # merge-file is a line-based text merge; on a binary it produces plausible

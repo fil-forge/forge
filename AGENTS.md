@@ -213,12 +213,29 @@ not until the index was stopped from being read as evidence about a run that
 stages nothing. Notes and problems go to stderr. **Exit 1 if anything was left
 for a human or flagged by the audit, 2 if the script refused to act at all** —
 no merge to audit, no subtree-add, a prefix added more than once, no merge
-base, a bad argument. Test for non-zero, not for 1.
+base, a merge base that is in *this* repository's path space rather than
+upstream's, a bad argument. Test for non-zero, not for 1. The list is here
+rather than in the script because a reader asking "what does 2 mean" looks
+here; it has gone stale once already, when the path-space refusal was added and
+this sentence was not.
 
 It applies only where a rename was recorded *and* the destination verified to
 exist. It refuses a same-basename guess, a true delete, a destination with
-uncommitted changes, and a binary (where `merge-file` yields plausible garbage
-rather than failing). Those are reported and skipped, never guessed at.
+uncommitted changes, a destination that is a symlink (the write is a redirect,
+and a redirect follows the link — the merged text landed in an unrelated
+tracked file and the run said `merged`), and a binary (where `merge-file`
+yields plausible garbage rather than failing). Those are reported and skipped,
+never guessed at.
+
+**It cannot audit a pull from an upstream that carries this repository's own
+history and layout** — a hand-made fork-back, not anything `git subtree push`
+produces, since that pushes rewritten commits in upstream's path space. In that
+state the pull merge is indistinguishable from an ordinary `Merge pull request`
+by ancestry and by path space alike, which is every signal available locally.
+Four successive review rounds each proposed a heuristic and each was measured
+wrong. What the script does is refuse where it can see the problem (the merge
+base lands in our path space) and say what "never pulled" rests on where it
+cannot. Do not add a fifth heuristic; [[Needs Human Work]] carries it.
 
 **Why react to the conflict rather than predict it:** you cannot predict it.
 Measured (matrix on the wiki):
