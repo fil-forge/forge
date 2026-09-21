@@ -395,7 +395,7 @@ The tally, because the shape is the finding:
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
 | #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
 | #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
-| #13 | 8 | 4 findings, all fixed | `fc20fa81` | **Open** — flipped out of draft by Petra's "move on with it". `6f01e5e2` was 23 of 24: the poller flake, fixed by porting `indexing-service#106` |
+| #13 | 8 | 4 findings, all fixed | `fc20fa81` | **Open, green all 24** — ready to merge. `6f01e5e2` was 23 of 24: the poller flake, fixed by porting `indexing-service#106` |
 | #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
 
 **#15 is merged; #14 is Open and signed off.** #15 took five revisions of one Markdown entry to get
