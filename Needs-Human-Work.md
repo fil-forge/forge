@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-21 12:25Z.** Everything here is waiting on a person — either
+**Updated 2026-09-21 14:55Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -9,27 +9,38 @@ why each item exists.
      belongs in issues. Items leave via **Recently cleared**, which is pruned
      once it stops being useful. Kept current as things move. -->
 
-## Since you last looked (Sunday 16:10Z → Monday 12:25Z)
+## Since you last looked (Sunday 16:10Z → Monday 14:55Z)
 
-Four things, none of which needs an answer — they are here so the morning read
-is one glance:
+Five things. Only the first changes what the PRs are waiting on:
 
-1. **Every `forge` PR got an adversarial review, and every one found something
+1. **The review practice was being run half-way, and that is now corrected.**
+   Your instruction was "respond to its reviews *until it's satisfied*". Four
+   PRs got a round, every round found something real, the findings were worked
+   and pushed — **and no reviewer was ever sent back to check the fix.** No
+   reviewer has seen any current head. #15 was never reviewed by anyone but me
+   at all. That matters here more than it would elsewhere, because **four of
+   the defects found this weekend were in fixes made by the round before**. Five
+   rounds are running now against the current heads, each holding the previous
+   report and asked to end with an explicit verdict. [[Current State]] has the
+   head-by-head table.
+2. **Every `forge` PR got an adversarial review, and every one found something
    real.** The sharpest finding was that **four of the defects were in fixes
-   made by the round before**. All of them are fixed and pushed. Detail below
-   and on [[Current State]].
-2. **`forge`#16 is new** — four Makefiles injected `-X` ldflags that stamped
+   made by the round before**. All of them are fixed and pushed — but see item
+   1 for what "fixed" is and is not worth here. Detail below and on
+   [[Current State]].
+3. **`forge`#16 is new** — four Makefiles injected `-X` ldflags that stamped
    nothing, and `piri`'s `make build` did not resolve its own target. It is
    **hard-stacked on #12**, which must merge first.
-3. **hilt#76 (bajtos's) merged** at 11:29Z, which left our hilt#77 behind its
+4. **hilt#76 (bajtos's) merged** at 11:29Z, which left our hilt#77 behind its
    base. Merged `main` in, verified, pushed; it is green again.
-4. **`forge#14` went red once overnight** — a Docker Hub connection reset
+5. **`forge#14` went red once overnight** — a Docker Hub connection reset
    pulling `redis`, before any test body ran. It passed on its one re-run.
 
 ## Blocking
 
 **Nothing is blocked. Ten pull requests and one issue are waiting for you,
-and all ten are green.**
+and all ten are green.** The five `forge` ones are also waiting on the
+re-review round described above — not on you, and not for long.
 Per your call on 2026-09-19, **`forge` PRs are fully Open** when they look
 ready — you are the only one looking at them right now — while
 **upstream PRs stay draft** so other engineers do not spend time on them before
@@ -114,8 +125,10 @@ the only thing that can exercise goreleaser's behaviour at all.
 ### The second result: the review's most useful find was in a document
 
 #15 adds **one Markdown entry and no code**, which is the least promising thing
-to review. Its review found the entry wrong in four ways, and one of those
-corrections turned out to name a live defect in the tree:
+to review. Re-reading it found the entry wrong in four ways, and one of those
+corrections turned out to name a live defect in the tree. (**It was me who
+re-read it, not a reviewer** — #15 is the one `forge` PR that never had an
+independent round, which is being fixed now; see item 1 above.)
 
 - **`.dockerignore` was not a cause**, and the entry blamed it for two of
   three. The version fallback is a *runtime* read of `version.json` by relative

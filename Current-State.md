@@ -209,7 +209,9 @@ Merged onto `main` since the last revision of this page, newest first:
 **Ten pull requests are open and every one is green**, five on `forge` and
 five upstream. Nothing has been red since Sunday evening, nothing is blocked on
 the agent, and every review finding raised against the five `forge` PRs has
-been worked and pushed. **They are waiting on you and on nothing else.**
+been worked and pushed — but **no reviewer has yet confirmed any of those
+fixes**; a second round is running now (below). **They are waiting on you and
+on that.**
 [[Plan]] has the table; [[Needs Human Work]] has what each needs from a person.
 The one that matters for sequencing is
 [#14](https://github.com/fil-forge/forge/pull/14), **the final subtree
@@ -255,11 +257,37 @@ flag as behind**, and that is an argument for cutting release tags that holds
 whether or not the monorepo happens.
 
 **Every `forge` pull request now gets an adversarial review before Petra reads
-it** — her instruction of 2026-09-20, and standing for every one we open. **All
-five have now had a round, and every one found something real.** The pattern
+it** — her instruction of 2026-09-20, and standing for every one we open. **Four
+of the five have had a round, and every one found something real.** The pattern
 across them is sharper than any single finding: **four of the defects were in
 fixes made by the round before**, each of which had fixed one instance and not
 the class.
+
+**The practice was being run half-way, and that is the correction of the
+weekend.** The instruction was "respond to its reviews *until it's satisfied*".
+What actually happened four times over: the reviewer reported, the findings were
+worked, the fix was pushed — and the reviewer was never sent back. **No reviewer
+has seen any current head.** Each PR's last review was against an earlier one:
+
+| PR | last reviewed at | head now | landed since, unreviewed |
+|---|---|---|---|
+| [#12](https://github.com/fil-forge/forge/pull/12) | `f365ae9b` (round 5) | `06e49742` | 4 commits |
+| [#13](https://github.com/fil-forge/forge/pull/13) | `68ba0f48` (round 2) | `563c27b5` | 1 commit |
+| [#14](https://github.com/fil-forge/forge/pull/14) | `d4505701` (round 1) | `a032681d` | 1 commit |
+| [#15](https://github.com/fil-forge/forge/pull/15) | **never** | `8972b1f6` | 2 commits |
+| [#16](https://github.com/fil-forge/forge/pull/16) | `f0a97d03` (round 1) | `e5ea4209` | 1 commit + 5 rebases |
+
+That is not a bookkeeping point. **Four of the defects on this list were in
+fixes made by the round before** — an unreviewed fix is exactly the thing this
+repository has shown it cannot trust. And #15 was reviewed by nobody: its four
+factual errors were found by re-reading my own work, and its correction
+(`8972b1f6`) has had no second pair of eyes at all.
+
+**Five rounds are running now**, each given the previous round's full report and
+told to grade every finding FIXED / PARTIALLY FIXED / NOT FIXED / FIX
+INTRODUCED A NEW DEFECT, and to end with an explicit verdict on whether it is
+satisfied at the current head. A PR is not done being reviewed until one says
+so.
 
 - **#12**, round five: `--skip=publish` does **not** skip goreleaser's docker
   build (`docker` is its own skip value in v2.18.2; measured — 2m24s and a
