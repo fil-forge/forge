@@ -287,7 +287,61 @@ factual errors were found by re-reading my own work, and its correction
 told to grade every finding FIXED / PARTIALLY FIXED / NOT FIXED / FIX
 INTRODUCED A NEW DEFECT, and to end with an explicit verdict on whether it is
 satisfied at the current head. A PR is not done being reviewed until one says
-so.
+so. **Two have reported, and they went opposite ways** — which is the argument
+for the round in one line.
+
+**#14 is the first PR any reviewer has declared itself satisfied with.** All
+three round-one fixes hold, and the round re-derived each rather than accepting
+it: the build tag was the only one of its kind in the ten prefixes; the corpus
+re-pin was the only stale pin in **1685 dependency records** across thirteen
+in-repo modules and ten upstream trees; and the guard fix is verified failing on
+the exact defect it was blind to. It also re-checked the resync itself
+independently — **zero upstream files lost outside `.github/`** across all ten
+prefixes, 736 byte-identical after the rewrite. Two one-line things came out of
+it, both now pushed as `d7f00ba9`:
+
+- **The body's headline numbers were one push stale** (51/98/+6406−844, which
+  were `d4505701`'s). This page's own rule, applied to a pull request body.
+- **`check-module-paths.sh` printed a total claim on a partial check.** Its
+  header named its scope honestly; its *success line* said "All in-repo module
+  references use their monorepo paths" while `piri/Makefile:34` in the same tree
+  names `github.com/fil-forge/piri/cmd`. Rule 5 is about what a green check
+  claims, and a success line is a claim.
+
+One thing it found is deliberately **not** fixed: there is no durable guard for
+the build-tag class, so the next subtree pull can re-hide a test exactly as this
+one did. A correct guard has to know which tags each suite is *run* with —
+`smelt/tests/e2e` legitimately carries `//go:build e2e` because `e2e.yml` passes
+`-tags e2e` — so a bare "no build tags under `*/itest/*`" is the partial guard
+rule 5 says not to ship. It needs deriving from the workflows' own `-tags`
+flags. **Worth an issue; not filed, because filing one is a write I have not
+been asked to make.**
+
+**#15 went the other way: ten problems, seven blocking, every one reproduced.**
+The PR that adds one Markdown entry and no code is now on its third revision,
+and the second revision — the one written to fix four errors — **introduced two
+more**. The worse of the two is the shape this page has been tracking all
+weekend: the rewrite said `make build` "produced an unstamped binary too" for
+`piri`, when `piri/Makefile:34` names `github.com/fil-forge/piri/cmd` as its
+build *target* against a module declared `github.com/fil-forge/forge/piri`, so
+it does not produce an unstamped binary — **it fails outright, and has since
+consolidation**. That fact had been established by the same review round the
+rewrite was responding to. The other new error put `ingot` under the
+`version.json` fallback; nothing in `ingot`'s Go reads `version.json` at all.
+
+Five more had survived both passes, and the sharpest is the one the entry most
+needed: **"declares `version`, `Commit`, `Date` and `BuiltBy`, the code reads
+them" is wrong in two directions.** `indexing-service` declares none of the
+three; `hilt`, `sprue` and `swarf` read none of them. Only `piri` and `ingot`
+read all four. That is the strongest available argument for the entry's own
+"delete the variables" option, and the entry was not making it. Also: "every
+service binary" is six of ten, which the entry itself said sixty lines later;
+`hilt` and `swarf` have no goreleaser config, so their `Dockerfile.release`
+inherits nothing, which `MONOREPO_TODO.md` already said eighty lines above; "all
+four stamp the right package" omitted `indexing-service`'s four dead `-X main.*`
+flags, which the guard passes because it special-cases `main`; and "Fixed in
+#16" asserted a fix in no tree the entry describes. Rewritten as `f0ed73db`,
+with every number derived by a command quoted beside it.
 
 - **#12**, round five: `--skip=publish` does **not** skip goreleaser's docker
   build (`docker` is its own skip value in v2.18.2; measured — 2m24s and a
