@@ -393,12 +393,12 @@ The tally, because the shape is the finding:
 | PR | rounds so far | last verdict | head | state |
 |---|---|---|---|---|
 | #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
-| #15 | 5 | **satisfied** | `bfc56b28` | **Open** |
-| #12 | 9 | 3 claim-level findings, no code defect | `4a46c4f1` | draft, round 10 running |
-| #13 | 5 | 2 blocking | `0fa6abcd` | draft, round 6 running |
-| #16 | 5 | **satisfied**, 5 nits worth fixing | `844b4b53` | draft, round 6 running |
+| #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
+| #12 | 11 | 2 findings, both in the PR body; code settled since round 8 | `1cf37e67` | draft, round 12 running |
+| #13 | 6 | 3 blocking | `2a5022a4` | draft, round 7 running |
+| #16 | 6 | 6 findings, 3 in code | `9a7860b9` | draft, round 7 running |
 
-**Two are done and Open.** #15 took five revisions of one Markdown entry to get
+**#15 is merged; #14 is Open and signed off.** #15 took five revisions of one Markdown entry to get
 right, and the last defect is the best example the repository has of the thing
 the entry is about: `4d8b3cee` added a per-service split of 38 to stop 38
 looking like a refutation of 29 — and the split was wrong for **seven of eight
@@ -425,6 +425,39 @@ repository's own shape before requesting a re-review; no full adversarial pass
 on documentation (a numbers-check brief reproduced the full review's yield on
 #15 at 166k tokens against 192k); and the "every `forge` PR gets one" rule
 sunsets when the consolidation lands, alongside the rest of this scaffolding.
+
+**Petra's rule, taken 2026-09-21 after #15 merged: a number earns its place
+only if a reader's decision changes with it.** If it does, derive it with the
+command beside it (rule 3). If it does not, cut it. It goes into `AGENTS.md`'s
+Conventions with task #40's edit, once #13 and #14 free that file.
+
+She asked the right question about #15: five revisions of one Markdown entry,
+ten findings, and none of the corrections changed the decision the entry
+records or the question it asks. The honest counterfactual is that this rule
+would have saved the last two rounds and not the first three, which corrected
+claims that *were* load-bearing. It is the authoring half of a pair -- the
+review side already skips a full adversarial pass on documentation -- and
+either half alone leaves the other end open.
+
+**Applied immediately to #12 and #13, and it worked in both.** #12's rounds
+eight through eleven found no defect in the workflow and four stale claims
+*about* it; the body is now half its length, the sabotage table is deleted in
+favour of the script header that derives it, and the per-service tag census is
+replaced by `git tag` output plus a pointer to `release.yml`'s header -- which
+already carried a correct census the body had drifted away from. #13's body is
+about a third of its previous size.
+
+Two corrections that cutting produced, both worth keeping:
+
+- the deleted tag census had lost the sharpest fact in it. `indexing-service`
+  still has a live polyrepo flow cutting its own tags and is the one service
+  whose `.goreleaser.yaml` #12 changes, so the "two sources of truth" hazard
+  that paragraph argues about is concrete and present rather than
+  hypothetical.
+- a claim I wrote into #13's shortened body -- "byte-identical at all ten
+  prefixes on `origin/main`" -- was false, and measuring it rather than
+  assuming is what caught it. Four never-pulled prefixes differ, by exactly
+  the three lines of the note that round asked me to rewrite.
 
 **#13's round four is the one that justifies the whole practice.** I fixed
 round three's anchoring finding, ran the fork-back fixture, saw exit 1, called
