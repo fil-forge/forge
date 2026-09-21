@@ -392,11 +392,11 @@ The tally, because the shape is the finding:
 
 | PR | rounds so far | last verdict | head | state |
 |---|---|---|---|---|
-| #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
-| #12 | 11 | 2 findings, both in the PR body; code settled since round 8 | `1cf37e67` | draft, round 12 running |
-| #13 | 6 | 3 blocking | `2a5022a4` | draft, round 7 running |
-| #16 | 6 | 6 findings, 3 in code | `9a7860b9` | draft, round 7 running |
+| #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
+| #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge |
+| #13 | 7 | 6 findings | `e6f80764` | draft, round 8 running, CI green |
+| #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
 
 **#15 is merged; #14 is Open and signed off.** #15 took five revisions of one Markdown entry to get
 right, and the last defect is the best example the repository has of the thing
@@ -425,6 +425,48 @@ repository's own shape before requesting a re-review; no full adversarial pass
 on documentation (a numbers-check brief reproduced the full review's yield on
 #15 at 166k tokens against 192k); and the "every `forge` PR gets one" rule
 sunsets when the consolidation lands, alongside the rest of this scaffolding.
+
+**Three decisions on 2026-09-21 evening, all of them narrowing scope.**
+
+**#16 is parked.** *"#16 is becoming too much effort. We can manually make sure
+we have the right variable names for now and leave a draft PR in progress."*
+Before that she had already cut its guard from 937 lines to 200 — path-only,
+no `go/ast` helper, no probe — on the measured grounds that of the 43 flags it
+checked, 19 were in Makefiles that ship nothing (no Dockerfile or workflow step
+runs `make`), the 17 that ship are checked on their effect by
+`assert-released-version.sh`, and **every defect it found in a file that ships
+was a wrong path, not a missing symbol**. It had also printed a total-sounding
+success while missing a dead flag three times in seven rounds, which is rule
+5's own prohibition.
+
+The last review before parking found the sharpest thing on that branch: the
+script was cut and **four places describing it were not**, including
+`ci.yml`'s step name — a required check whose name asserted more than it did.
+Fixed before stopping. Variable names verified by hand instead of by another
+round.
+
+**The fork-back is decided: leave it.** *"We never expect that to happen
+here."* See [[Needs Human Work]] → Recently cleared.
+
+**#12 merges before the dry run, not after**, and that is not a preference —
+it is the only order available. I argued for the opposite all day and was
+wrong on a checkable fact: only `ci`, `e2e`, `images` and `itest` are
+registered on `main`, because GitHub registers a `workflow_dispatch` workflow
+from the DEFAULT branch, and `release.yml` exists solely on
+`claude/release-workflow`. The dispatch cannot happen until the merge does.
+
+Rather than merge blind, the two substantive steps were run locally against
+goreleaser v2.18.2 — the version the workflow pins — and they answer the
+question the deleted narration kept getting wrong:
+
+| | `goreleaser release --skip=…` | `assert-released-version.sh` |
+|---|---|---|
+| `ingot` | succeeded, 36s | **`ok ingot reports v0.0.0`**, 1 asserted |
+| `indexing-service` | succeeded, 3m36s | refused — no version surface, as documented |
+| `sprue` | **inconclusive** — ran out of disk on the darwin cross-build | — |
+| `piri` | not attempted — cgo darwin needs macOS, which is why the workflow routes it there |
+
+`sprue`'s row is an environment failure and is not evidence about `sprue`.
 
 **Petra's rule, taken 2026-09-21 after #15 merged: a number earns its place
 only if a reader's decision changes with it.** If it does, derive it with the
