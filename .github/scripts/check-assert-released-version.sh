@@ -41,6 +41,12 @@
 #   the `</dev/null` on the probe                      -> FAIL (test 6)
 #   the full ERE escaping of $want                     -> FAIL (test 4b)
 #   the "output must be version-shaped" test           -> FAIL (test 4c)
+#   the `*_darwin_all` alternative in the dist filter  -> FAIL (test 9)
+#   the host-ARCH `*) continue` arm of the dist filter -> FAIL (test 9b)
+#
+# THE LIST IS THE CLAIM, which is what round six was about: four fixes landed
+# and three were listed, and the unlisted one was the live defect. Test 9 landed
+# a round later with the same omission. Both are on it now.
 #
 # THE FOURTH FIX OF THAT PUSH WAS NOT ON THAT LIST, and that is how it was
 # found: reverting the ERE escaping to `sed 's/\./\\./g'` -- the spelling it
@@ -73,7 +79,7 @@
 # fixes it, and the goarch stays in the name so the host-arch filter still
 # selects it.
 #
-# COST: about 30s, most of it test 8 waiting out run_probe's own cap on a
+# COST: about 39s, most of it test 8 waiting out run_probe's own cap on a
 # binary that never exits. That is the price of exercising the cap at all, and
 # it is paid on every `guards` run; worth knowing before adding more.
 set -euo pipefail
@@ -366,18 +372,24 @@ SHIM
 chmod +x "$shim/go"
 REAL_GO=$(command -v go); export REAL_GO
 
-build_fixture 'example.com/fixture/pkg/build'
+# Clear the host-arch directory earlier tests built into FIRST, before the
+# darwin fixtures exist. Doing it afterwards deleted `$arm` outright on a
+# darwin/arm64 host -- the good fixture this test needs -- and the sabotage was
+# then still caught, but through "refused, but not for the reason under test",
+# which reads like a broken test rather than a caught defect. `guards` runs on
+# ubuntu, so it only bit someone running this on the Mac the arm exists for.
+rm -rf "${svc:?}/dist/fixture_$(go env GOHOSTOS)_$(go env GOHOSTARCH)"
 uni=$svc/dist/fixture_darwin_all
 arm=$svc/dist/fixture_darwin_arm64
+amd=$svc/dist/fixture_darwin_amd64
 mkdir -p "$uni" "$arm"
-# The universal one is STALE (built at the fallback, so it reports v0.0.0); the
-# arch-specific one is correct. A filter that skips the universal binary sees
-# only the good one and passes.
+# The universal one is STALE (the -X names a package that does not exist, so the
+# binary reports its default); the arch-specific one is correct. A filter that
+# skips the universal binary sees only the good one and passes.
 ( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
     go build -ldflags="-X example.com/fixture/pkg/buildTYPO.version=v7.7.7" -o "$uni/fixture" ./cmd )
 ( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
     go build -ldflags="-X example.com/fixture/pkg/build.version=v7.7.7" -o "$arm/fixture" ./cmd )
-rm -rf "${svc:?}/dist/fixture_$(go env GOHOSTOS)_$(go env GOHOSTARCH)"
 # set +e around the assignment, the way refuses() does. Under `set -e` a
 # command substitution that fails takes the assignment's exit status with it
 # and errexit kills the script BEFORE the if -- which is how the first version
@@ -397,6 +409,39 @@ elif ! printf '%s' "$out" | grep -qF -- "was built for v7.7.7 but reports"; then
 else
   echo "ok    a stale universal binary is selected and refused"
 fi
-rm -rf "$uni" "$arm" "$shim"
+rm -rf "$uni"
+
+# 9b. THE ARM THAT SKIPS, which test 9 does not reach. Test 9 covers the
+#     `*_darwin_all|*_darwin_all/*` SELECT alternative -- the defect round seven
+#     named -- but instrumenting both `case` statements during round eight showed
+#     the `*) continue ;;` arms still taken ZERO times across the whole suite:
+#
+#       14 arch-select   15 os-select   1 universal-select   0 os-skip   0 arch-skip
+#
+#     So deleting the host-OS filter entirely still gave 13 ok / exit 0. A
+#     cross-ARCH binary alongside a good host-arch one reaches it: the release
+#     must PASS, on the arm64 binary, with the stale amd64 one skipped.
+#
+#     It is also a tripwire on the shim, which is load-bearing and was otherwise
+#     unasserted. The shim answers ONE variable per call and delegates the rest,
+#     which is right for the script as written -- but if the script under test
+#     ever asks for both in one call, the shim answers the first and exits,
+#     `host_arch` comes back empty, `*""*` matches every path, and test 9 then
+#     passes WITH the `_darwin_all` arm deleted. Under 9b the same degradation
+#     turns this red, because an unfiltered amd64 binary is stale.
+mkdir -p "$amd"
+( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
+    go build -ldflags="-X example.com/fixture/pkg/buildTYPO.version=v7.7.7" -o "$amd/fixture" ./cmd )
+set +e
+out=$( cd "$svc" && PATH="$shim:$PATH" bash "$script" dist v7.7.7 2>&1 ); rc=$?
+set -e
+if [ "$rc" -ne 0 ]; then
+  echo "FAIL  a cross-arch binary is not skipped: the release was refused over it" >&2
+  printf '%s\n' "$out" | sed 's/^/      /' >&2
+  fail=1
+else
+  echo "ok    a stale cross-arch binary is skipped"
+fi
+rm -rf "$arm" "$amd" "$shim"
 
 exit $fail
