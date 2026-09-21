@@ -57,7 +57,7 @@ draft until Petra has passed on them, so nobody else spends time first.
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand, **plus the container build it broke** | draft, 8/8 |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, root-caused not re-run | draft, 9/9 |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | a `version` subcommand + **four dead `-X` ldflags** | draft, 9/9 |
-| [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits, **plus the same `./cmd/main.go` bug sprue had** | draft, 8/8 |
+| [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits, **plus the same `./cmd/main.go` bug sprue had** | draft, on `6584213` after merging `main` |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits; ingot consumes the firehose directly | draft, 17/17 |
 
 Merged since the last revision of this page: **#9** (goreleaser ldflags),
