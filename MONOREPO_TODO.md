@@ -503,9 +503,13 @@ binaries their version, and today `sprue --version` cannot answer.
 **Do not shortcut it by grepping the binary for the version string.** That is
 uniform without touching any service, and it tests the wrong thing — whether
 the bytes are present, not whether the program reports them. `indexing-service`
-shows why: its config injects a working `-X main.version={{.Version}}` *and* a
-broken `-X …/pkg/build.version=v{{.Version}}`, so the string is in the binary
-either way and only the `v` prefix separates them.
+shows why: its config injects two `-X` flags naming the same field, so the
+string is in the binary either way and only the `v` prefix separates them.
+(This paragraph had the two the wrong way round until the build-metadata entry
+below was checked against the tree: it is `-X main.version` that is **dead** —
+`indexing-service/cmd` declares no such symbol — and the `pkg/build.version`
+one that works. `check-goreleaser-ldflags.sh` passes the `main.*` flags because
+it special-cases `main`. The point about grepping the binary is unaffected.)
 
 What the assertion buys over the lint: it also catches the linker's other
 silent branches, notably a correct `-X` against a symbol that got dead-code
@@ -551,7 +555,9 @@ at the end:
 | `indexing-service` | `version`, `Version`, `UserAgent` | `Version` only |
 
 `Commit`, `Date` and `BuiltBy` are already dead in three of the six, and
-`indexing-service` never declared them.
+`indexing-service` never declared them. `UserAgent` is deader still —
+`indexing-service`, `piri` and `sprue` all declare it and
+`git grep -n 'build\.UserAgent' -- '*.go'` matches **nothing anywhere**.
 
 **The symptom.** Eight service Dockerfiles — `delegator`, `hilt`,
 `indexing-service`, `ingot`, `piri`, `piri-signing-service`, `sprue`, `swarf` —
@@ -580,11 +586,18 @@ An earlier draft of this entry blamed `.dockerignore` for both of those. It
 causes neither, but not for the reason that draft gave, and the real reasons
 are the two above rather than anything about `.dockerignore` at all:
 
-- On `.git`: **every one of the seven `.dockerignore` files lists `.git`**,
-  the root one included, so a reader checking whether it is excluded finds
-  that it is. That is not what makes it absent. Nothing copies it — nine
-  Dockerfiles `COPY . .` and would carry `.git` in if it were in the context,
-  and it is excluded everywhere, so the builder never sees it either way.
+- On `.git`: **every one of the seven `.dockerignore` files lists `.git`**, so
+  a reader checking whether it is excluded finds that it is — and that is not
+  what makes it absent. **No Dockerfile here would carry `.git` into its builder
+  even if nothing excluded it.** The only build context containing `.git` is the
+  repository root, and `images.yml` gives `context: .` to exactly four services
+  — `piri`, `ingot`, `hilt`, `delegator` — **none of which uses `COPY . .`**;
+  each copies named service directories. The five Dockerfiles that do
+  `COPY . .` (`indexing-service`, `piri-signing-service`, `sprue`, `swarf`,
+  `smelt/systems/stress-tester`) are built with service-directory contexts,
+  which contain no `.git` to copy. The exclusions are not load-bearing in
+  either direction. (`hilt` and `swarf` have no `.dockerignore` at all, so
+  "excluded everywhere" was never true either.)
 - On `version.json`: only `piri/.dockerignore` and `sprue/.dockerignore` name
   it. Docker reads only the `.dockerignore` at the **build context root**, and
   `images.yml` builds `piri` with `context: .`, so `piri/.dockerignore` is
@@ -598,11 +611,21 @@ are the two above rather than anything about `.dockerignore` at all:
 takes no `packages: write`; no other workflow pushes. So in this repository it
 shows up only in the images `e2e` and `itest` build, and in local builds. The
 images that *do* ship today are the polyrepos' `ghcr.io/fil-forge/<svc>:main`
-that `smelt/.env.published` runs, and those report nothing either: of the seven
-`publish-ghcr.yml` files this repository's history carries — `delegator`,
-`hilt`, `indexing-service`, `ingot`, `piri`, `piri-signing-service`, `sprue`,
-read at the parent of the commits that deleted them — **not one passes any
-`build-args`**. `swarf`'s never existed here, so it is unchecked.
+that `smelt/.env.published` runs, and those report nothing either: of the
+**eight** `publish-ghcr.yml` files this repository's history carries —
+`delegator`, `hilt`, `indexing-service`, `ingot`, `piri`,
+`piri-signing-service`, `sprue` and `swarf` — **not one passes any
+`build-args`, in any of their 38 historical versions**.
+
+  An earlier revision of this paragraph said seven and that `swarf`'s never
+  existed here. It did: added by swarf's subtree-add `8ac8d922` and removed by
+  `52a5979b`, both ancestors of this branch. The corpus was short because the
+  `git log` that derived it lacked `-m`, and **`git log` without `-m` does not
+  show file changes across a merge — and `git subtree add` is a merge**. That
+  is this entry's own lesson, committed while writing the entry: a command
+  whose output was read without asking what it could not see. `swarf` is also
+  the service the omission mattered most for, since `smelt/.env.published`
+  ships `SWARF_IMAGE`.
 
 **What a release does get.** Four services have a goreleaser config —
 `indexing-service`, `ingot`, `piri`, `sprue`. Each stamps its own build
@@ -611,7 +634,7 @@ package, so a released binary does report itself. One caveat:
 `main.commit`, `main.date` and `main.builtBy` flags that package `main` does
 not declare, and `check-goreleaser-ldflags.sh` passes them because it
 special-cases `main` — the live instance of the defect #9 was written to
-catch. #12 drops them; on `main` they are still there.
+catch. [#12](https://github.com/fil-forge/forge/pull/12) drops them; on `main` they are still there.
 
 `ingot` and `sprue` additionally ship release *images* (`dockers:` →
 `Dockerfile.release`), which package that stamped binary, so their released
@@ -654,8 +677,13 @@ pre-consolidation module path `github.com/fil-forge/<svc>/pkg/build`, and
 `piri-signing-service` names `main` symbols nobody declared. `piri` has a
 second, larger fault: `make build` names `github.com/fil-forge/piri/cmd` as its
 build *target*, which has not resolved since consolidation, so it fails
-outright rather than producing an unstamped binary. `swarf` is the one that was
-already correct. Open as #16. The wiki's *Needs Human Work* page carries the
+outright rather than producing an unstamped binary. **Two were already
+correct**, not one: `swarf`, and `smelt/systems/stress-tester`, whose Makefile
+stamps `main.Version`, `main.Commit` and `main.BuildTime` into `./cmd/stress`
+— and `cmd/stress/version.go` declares exactly those three. That component is
+the repository's only worked example of the whole pattern this entry says is
+missing: its Dockerfile passes `-X` (named above as the only one that does) and
+its Makefile stamps what the binary reads. Open as [#16](https://github.com/fil-forge/forge/pull/16). The wiki's *Needs Human Work* page carries the
 same question for the polyrepo images, where it waits on a decision rather than
 on the monorepo.
 
