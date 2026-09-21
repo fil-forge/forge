@@ -920,6 +920,46 @@ require.Equal(t, expectedBatches, actualBatches)
 A deadline instead of a fixed sleep removes the dependence on how much CPU the
 runner has, and costs the passing case nothing.
 
+## indexing-service: `TestCachingQueuePoller_BatchProcessing` synchronises on the wrong call
+
+`indexing-service/pkg/service/providercacher/cachingqueuepoller_test.go` counts
+down its `sync.WaitGroup` inside the `Run` hook of
+`CacheProviderForIndexRecords`, then calls `poller.Stop()` as soon as
+`wg.Wait()` returns. But the poller calls `Delete` **after** the cache call, and
+the test also expects `Delete` `Times(numJobs)`. So the barrier releases one
+call too early and `Stop()` can cut off the last `Delete`:
+
+```
+--- FAIL: TestCachingQueuePoller_BatchProcessing
+    mock_CachingQueue.go:23: FAIL:  Delete(string,string)
+    mock_CachingQueue.go:23: FAIL: 3 out of 4 expectation(s) were met.
+        The code you are testing needs to make 1 more call(s).
+```
+
+Measured: **4 failures in 80 runs** across eight concurrent
+`go test -race -count=10` processes; **zero** in ten solo runs. It went red once
+in CI, on a branch touching only `.github/scripts/` and `AGENTS.md`.
+
+**No verified fix here, and that is the point of the entry.** Moving `wg.Done()`
+into `Delete`'s `Run` hook — the obvious repair, and the right barrier for that
+expectation — takes it from 4 in 80 to **1 in 80**, not to zero. The remaining
+failure is a different unmet expectation:
+
+```
+    mock_CachingQueue.go:23: FAIL:  Read(string,int)
+        at: [...cachingqueuepoller_test.go:58]
+```
+
+which is the second `Read`, the one declared `.Once()` that blocks on
+`<-ctx.Done()`. The poller can stop before it loops around to make that call.
+So there are at least two wrong barriers, and the second is about the poller's
+shutdown ordering rather than the test's — whoever fixes this needs to read
+`queue.Poller`'s lifecycle, which is more than a test change.
+
+Recorded without a patch deliberately. The `piri` entry above originally
+carried a patch that raced, and a wrong fix in a document written to be picked
+up later is worse than no entry: it is read as the answer.
+
 ## swarf
 
 Raised by the Copilot reviewer on
