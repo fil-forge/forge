@@ -901,6 +901,9 @@ pr.RotateFunc = func(batchID cid.Cid) {
     t.Logf("Rotated batch: %s", batchID)
 }
 
+// HOIST the expectedBatches loop above this point. In the file today it sits
+// AFTER pr.Stop(), so pasting the block below without moving it does not
+// compile -- expectedBatches is not in scope yet.
 pr.Start()
 // assert, not require: require aborts the test goroutine, so pr.Stop() would
 // never run and the rotator would leak.
@@ -950,11 +953,14 @@ failure is a different unmet expectation:
         at: [...cachingqueuepoller_test.go:58]
 ```
 
-which is the second `Read`, the one declared `.Once()` that blocks on
-`<-ctx.Done()`. The poller can stop before it loops around to make that call.
+which is the `Read` expectation declared `.Once()` that blocks on
+`<-ctx.Done()` (the third `Read` declared, the second of the `.Once()` pair;
+`:58` pins it). The poller can stop before it loops around to make that call.
 So there are at least two wrong barriers, and the second is about the poller's
 shutdown ordering rather than the test's — whoever fixes this needs to read
-`queue.Poller`'s lifecycle, which is more than a test change.
+`queue.QueuePoller`'s lifecycle, which lives in
+`github.com/fil-forge/go-ipni-tools` rather than in this tree, so half the fix
+is in a different repository.
 
 Recorded without a patch deliberately. The `piri` entry above originally
 carried a patch that raced, and a wrong fix in a document written to be picked
