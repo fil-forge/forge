@@ -52,6 +52,12 @@ status=0
 # which is what an import block looks like mid-rewrite -- so the guard passed
 # over exactly the file a half-finished rewrite produces. Verified on a fixture
 # before and after.
+#
+# The `grep -v` matches nothing today: $svcs is the top-level directories with
+# a go.mod and there is no `forge/` among them, so no match can end in /forge.
+# It is here for the day one is added, when `forge\b` would otherwise match
+# inside every correct monorepo path. Do not read it as the fix -- the fix is
+# the -o above.
 if hits=$(grep -rnoE "github\.com/fil-forge/($svcs)(\b|$)" \
             --include='*.go' --include='go.mod' . \
           | grep -v ':github\.com/fil-forge/forge$'); then
@@ -74,5 +80,14 @@ if hits=$(grep -rnE "https://github\.com/fil-forge/($svcs)\b" \
   status=1
 fi
 
-[ "$status" -eq 0 ] && echo "All in-repo module references use their monorepo paths."
+# Name the scope in the success line, not only in the header. "All in-repo
+# module references use their monorepo paths" is what a reviewer reads, and
+# it was not true of the tree it printed in: piri/Makefile names
+# github.com/fil-forge/piri/cmd as its build target, which is #16's. A guard
+# over part of a chain reads exactly like a guard over the chain (rule 5), and
+# that applies to what it says when it passes as much as to what it looks at.
+[ "$status" -eq 0 ] &&
+  echo "All *.go and go.mod in-repo module references use their monorepo paths."
+[ "$status" -eq 0 ] &&
+  echo "(Makefile, *.yaml, *.json, *.sh and go.sum are not checked -- see header.)"
 exit "$status"
