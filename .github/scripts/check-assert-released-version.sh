@@ -64,12 +64,12 @@
 #                                                 selects cross-compiled artifacts
 #   GOHOSTOS/GOHOSTARCH -> GOOS/GOARCH         -> cross-compile picks the wrong host
 #   `head -1` -> `tail -1` in the default read -> compares the wrong fallback
-#   the host-OS `*) continue ;;` dist arm     -> a cross-OS artifact is probed
-#                                                rather than skipped; fails
-#                                                CLOSED (it cannot exec, so it
-#                                                comes back NOT ASSERTED), so it
-#                                                blocks good releases rather
-#                                                than passing bad ones
+#   the host-OS `*) continue ;;` dist arm      -> a cross-OS artifact is probed
+#                                                 rather than skipped; fails
+#                                                 CLOSED (it cannot exec, so it
+#                                                 comes back NOT ASSERTED), so
+#                                                 it blocks good releases
+#                                                 rather than passing bad ones
 #
 # AND ONE DEPENDENCY NOTHING ELSE STATES: test 6 needs the script under test to
 # `sort -u` its dist listing. That sort is what puts the stdin-eating fixture
@@ -236,7 +236,9 @@ sed -i.bak 's/v7.7.77/v0.0.0/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/bu
 
 # 4b. A VERSION CONTAINING AN ERE METACHARACTER. This is the test the round
 #     that fixed the escaping was asked for and did not add -- and the ONE break
-#     this guard did not catch: reverting :211 to `sed 's/\./\\./g'` left this
+#     this guard did not catch: reverting `want_re`'s sed to `sed 's/\./\\./g'`
+#     -- naming the variable, because that line has drifted 206 -> 211 -> 216
+#     across three rounds and a line number is a hand-maintained fact -- left this
 #     file printing nine ok lines and exit 0 while the assertion accepted a
 #     stale binary. `release.yml` admits `+` deliberately (its charset class
 #     lists it), so this is reachable, not hypothetical.
