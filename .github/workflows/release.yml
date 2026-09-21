@@ -56,8 +56,10 @@ name: release
 #                        v0.0.0 and the assertion exits 0. Its dist also
 #                        carries images, which is why `docker` is in the skip
 #                        list below -- before that, it died there instead.
-#                        Dispatch this one first; it is the only service whose
-#                        dry run can currently go green end to end.
+#                        Dispatch this one first: it is the only one MEASURED
+#                        green end to end. Not "the only one that can be" --
+#                        piri is unmeasured and may well pass too, which the
+#                        bullet below says and this sentence contradicted.
 #     piri               macos-14 only, and its build time inside
 #                        timeout-minutes: 40 is unmeasured -- it cross-compiles
 #                        darwin/amd64 + darwin/arm64 with cgo against curio and

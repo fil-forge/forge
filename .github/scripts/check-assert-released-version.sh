@@ -184,7 +184,14 @@ accepts() { # $1 = label, $2.. = script args
     echo "ok    $label"
   else
     echo "FAIL  $label: rejected it. The assertion blocks good releases." >&2
+    # set +e: this diagnostic re-run is a failing pipeline, so under
+    # `set -euo pipefail` errexit fired HERE and `fail=1` below was never
+    # reached -- the suite stopped at the first failing positive test and
+    # `exit $fail` was unreachable. refuses() has always guarded itself this
+    # way; accepts() did not.
+    set +e
     ( cd "$svc" && bash "$script" "$@" 2>&1 ) | sed 's/^/      /' >&2
+    set -e
     fail=1
   fi
 }
@@ -336,5 +343,60 @@ else
   echo "ok    the probe cap bounded it (${elapsed}s)"
 fi
 rm -rf "$stuck"
+
+# 9. THE DIST FILTER'S "SKIP" DIRECTION. Tests 1-8 only ever exercise the arm
+#    that SELECTS a binary; nothing reached the arms that skip one, so deleting
+#    `*_darwin_all|*_darwin_all/*` from the filter left this file printing every
+#    `ok` above and exit 0 -- while a stale UNIVERSAL binary sailed through on
+#    macos-14, which is the only runner that arm exists for and the one piri
+#    routes to. piri is also the one service in the fleet with a published tag.
+#
+#    Reachable on a linux runner by shimming `go env`, which is the only thing
+#    the script under test asks go for. The binaries are this host's, named into
+#    darwin directories: the filter selects on the PATH, never on the file.
+shim=$tmp/shim; mkdir -p "$shim"
+cat > "$shim/go" <<'SHIM'
+#!/bin/sh
+# Answer only what the script under test asks; delegate everything else.
+if [ "$1" = env ]; then
+  case "$2" in GOHOSTOS) echo darwin; exit 0 ;; GOHOSTARCH) echo arm64; exit 0 ;; esac
+fi
+exec "$REAL_GO" "$@"
+SHIM
+chmod +x "$shim/go"
+REAL_GO=$(command -v go); export REAL_GO
+
+build_fixture 'example.com/fixture/pkg/build'
+uni=$svc/dist/fixture_darwin_all
+arm=$svc/dist/fixture_darwin_arm64
+mkdir -p "$uni" "$arm"
+# The universal one is STALE (built at the fallback, so it reports v0.0.0); the
+# arch-specific one is correct. A filter that skips the universal binary sees
+# only the good one and passes.
+( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
+    go build -ldflags="-X example.com/fixture/pkg/buildTYPO.version=v7.7.7" -o "$uni/fixture" ./cmd )
+( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
+    go build -ldflags="-X example.com/fixture/pkg/build.version=v7.7.7" -o "$arm/fixture" ./cmd )
+rm -rf "${svc:?}/dist/fixture_$(go env GOHOSTOS)_$(go env GOHOSTARCH)"
+# set +e around the assignment, the way refuses() does. Under `set -e` a
+# command substitution that fails takes the assignment's exit status with it
+# and errexit kills the script BEFORE the if -- which is how the first version
+# of this test ran, produced no output at all, and looked like it had not run.
+# Round seven found the same hole in accepts(); this is it a second time, in
+# the test added to close round seven.
+set +e
+out=$( cd "$svc" && PATH="$shim:$PATH" bash "$script" dist v7.7.7 2>&1 ); rc=$?
+set -e
+if [ "$rc" -eq 0 ]; then
+  echo "FAIL  a stale universal binary is not skipped by the dist filter: accepted it (exit 0)" >&2
+  fail=1
+elif ! printf '%s' "$out" | grep -qF -- "was built for v7.7.7 but reports"; then
+  echo "FAIL  the universal binary was refused, but not for the reason under test." >&2
+  printf '%s\n' "$out" | sed 's/^/      /' >&2
+  fail=1
+else
+  echo "ok    a stale universal binary is selected and refused"
+fi
+rm -rf "$uni" "$arm" "$shim"
 
 exit $fail
