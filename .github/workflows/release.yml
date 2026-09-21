@@ -4,12 +4,17 @@ name: release
 # this workflow never creates a tag.
 #
 # Nothing outside this repository consumes a forge module version yet -- guppy
-# and the other consumers still pin the polyrepo paths -- and four of the ten
-# services have never carried a tag at all (sprue, smelt, delegator and
-# piri-signing-service have none; hilt and ingot have only v0.0.0). Cutting a
-# tag here while the polyrepo still releases the same service would give that
-# service two sources of truth, and that is a decision about ownership, not a
-# workflow change.
+# and the other consumers still pin the polyrepo paths -- and most of the fleet
+# is barely tagged upstream: several services have no tag at all and several
+# more have only v0.0.0.
+#
+# The roster is deliberately not enumerated here. It lives in the polyrepos,
+# not in this tree, so nothing in CI can derive or check it, and the version
+# that WAS enumerated had already gone stale -- it omitted swarf, which also
+# has only v0.0.0. What matters for this decision is not which services: it is
+# that `indexing-service` has a live polyrepo release flow cutting its own
+# tags, so cutting a tag here would give that service two sources of truth
+# today. That is a decision about ownership, not a workflow change.
 #
 # So this runs by hand, defaults to changing nothing, and exists so that the
 # release path is exercised now rather than discovered on the day it is first
