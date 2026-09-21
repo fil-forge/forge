@@ -40,9 +40,9 @@ mk() { # $1 = name; echoes the mono dir. upstream has a.go + b.go; we move b.go 
     mkdir -p shared; git mv svc/b.go shared/b.go; git commit -qm 'move b.go out' ) >/dev/null 2>&1
   echo "$d"
 }
-updel() { ( cd "$1/up"; git rm -q b.go; printf 'package s\n//t\n' >a.go; git add -A
+updel() { ( cd "$1/up" || exit; git rm -q b.go; printf 'package s\n//t\n' >a.go; git add -A
             git commit -qm 'up: delete b.go' ) >/dev/null 2>&1; }
-pull()  { ( cd "$1/mono"; git fetch -q up
+pull()  { ( cd "$1/mono" || exit; git fetch -q up
             git subtree pull -q --prefix=svc up main -m 'subtree: pull svc' ) >/dev/null 2>&1; }
 chk() { # $1 label, $2 mono dir, $3 = regex the OUTPUT must match
   local out rc
