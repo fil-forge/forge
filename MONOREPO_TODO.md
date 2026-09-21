@@ -867,12 +867,53 @@ require.Equal(t, actualBatches, expectedBatches)
 what happened and `actual: … len=6` is what was wanted. At face value it looks
 like the rotator fired too often; it fired too few times.
 
-The fix belongs upstream in `piri`, not in whichever branch next trips over it:
+The fix belongs upstream in `piri`, not in whichever branch next trips over it.
+
+**The obvious fix is wrong, and wrong in a way that is worse than the bug**, so
+it is written down here rather than left to be rediscovered. Replacing the
+sleep with a bare `require.Eventually` on `len(actualBatches)` races:
+`RotateFunc` is called from the rotator's own goroutine
+(`periodic_rotator.go:51`) and appends to a slice the test goroutine owns, which
+is safe today only because `pr.Stop()` synchronises before the read.
+`Eventually` evaluates its condition on a **third** goroutine, so the read races
+the appends. Measured — the patch does not flake, it fails every time under the
+`-race` that `ci.yml:157` already runs:
+
+```
+WARNING: DATA RACE
+--- FAIL: TestPeriodicRotator (0.01s)
+    testing.go:1865: race detected during execution of test
+```
+
+All six rotations were logged: the logic succeeded and the test still failed.
+Moving the call after `Stop()` does not rescue it either — the rotator is dead
+by then and the condition can never become true.
+
+What works, measured at 0 failures in 240 runs across twelve concurrent
+`-race` processes:
 
 ```go
-require.Eventually(t, func() bool {
+var mu sync.Mutex
+pr.RotateFunc = func(batchID cid.Cid) {
+    mu.Lock()
+    actualBatches = append(actualBatches, batchID)
+    mu.Unlock()
+    t.Logf("Rotated batch: %s", batchID)
+}
+
+pr.Start()
+// assert, not require: require aborts the test goroutine, so pr.Stop() would
+// never run and the rotator would leak.
+assert.Eventually(t, func() bool {
+    mu.Lock()
+    defer mu.Unlock()
     return len(actualBatches) == len(expectedBatches)
 }, 2*time.Second, time.Millisecond)
+err := pr.Stop(t.Context())
+require.NoError(t, err)
+
+mu.Lock()
+defer mu.Unlock()
 require.Equal(t, expectedBatches, actualBatches)
 ```
 
