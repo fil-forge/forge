@@ -617,6 +617,18 @@ that `smelt/.env.published` runs, and those report nothing either: of the
 `piri-signing-service`, `sprue` and `swarf` — **not one passes any
 `build-args`, in any of their 38 historical versions**.
 
+  **38 is the per-service sum of distinct versions** (delegator 3, hilt 5,
+  indexing-service 4, ingot 5, piri 8, piri-signing-service 3, sprue 8,
+  swarf 2), which is what "their historical versions" means. The union of
+  distinct *blobs* reachable from `HEAD` is **29** — nine are shared between
+  services, because several of these workflows were byte-identical at import.
+  Both numbers are right about different questions, and
+  `git rev-list HEAD --objects | grep publish-ghcr | sort -u | wc -l` returns
+  29 and looks exactly like a refutation. It is not one. A ninth path,
+  `.github/workflows/publish-ghcr.yml` with no service prefix, also appears
+  under `git log -m`: that is these same eight files at their pre-import paths
+  on the upstream side of each subtree merge, not a ninth service.
+
   An earlier revision of this paragraph said seven and that `swarf`'s never
   existed here. It did: added by swarf's subtree-add `8ac8d922` and removed by
   `52a5979b`, both ancestors of this branch. The corpus was short because the
