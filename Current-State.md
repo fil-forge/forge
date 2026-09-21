@@ -291,6 +291,43 @@ so. **Four have reported. Three were not satisfied, and every one of the three
 found defects that round two's fixes had introduced** — which is the argument
 for the round, and the argument for never having skipped it.
 
+**Petra costed the practice on 2026-09-21 and approved four changes to it.**
+The measured price is ~230k subagent tokens and 14-42 minutes per round; six
+rounds landed that day. What it bought was five load-bearing findings, all the
+same kind — *a guard that was green while not guarding* — none of which CI
+could have caught, because in every case the broken thing **was** the check.
+The waste was equally clear: four of the blocking findings were in fixes made
+by the round before, so each round bought validation of work that needed
+another round to validate.
+
+1. **Reproduce → fix → reproduce, against the repository's own shape, before
+   requesting any re-review.** This is now an artifact rather than an
+   intention: `.github/scripts/ldflag-class-probe.sh` (16 cases) on #16 and
+   `.github/scripts/subtree-class-probe.sh` (8 cases) on #13. **Both assert on
+   the tool's OUTPUT, not its exit code** — the distinction round four caught
+   me on. Neither is a guard and neither runs in CI; both say so in their
+   headers.
+2. **Rounds after the first are scoped** — grade each prior finding, attack
+   only what the fixes touched. A full sweep every time has poor yield after
+   round two: #12's round six found things about round five's fixes, not new
+   territory.
+3. **Documentation PRs get a numbers-check brief**, not a full adversarial one.
+   #15 got a 192k review for one Markdown entry; it found ten real errors, but
+   every one came from "derive every number with a command", which is a far
+   cheaper instruction.
+4. **Sunset "every forge PR" when the consolidation lands.** This code is
+   unusual — guards and release machinery, where a wrong implementation looks
+   exactly like a right one and nothing downstream fails. Ordinary service
+   changes are validated by their tests. `AGENTS.md` already calls its own
+   rules scaffolding; this belongs in that category.
+
+**Both probes caught a regression I introduced while writing them**, which is
+the clearest evidence they earn their place. On #16 the obvious widening of the
+continuation pattern turned the guard red on a clean tree, because
+`curl -X POST http://… \` appears twenty times in the READMEs and `-X` is not
+unambiguously a linker flag. On #13 the `|| exit` I added for shellcheck broke
+two fixture cases. Neither was visible in the diff.
+
 **The practice now has two signals, both Petra's, both added 2026-09-21 after
 the first full round.** The problem they solve: everything in this repository is
 attributed to one GitHub user, so a real GitHub approval carries no information
