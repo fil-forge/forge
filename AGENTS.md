@@ -184,8 +184,10 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 used to ignore the flag and write anyway; it now refuses the trailing argument.
 
 The first runs after **every** pull, conflicted or not, and detects which it is
-rather than being told — the audit is the whole point and it only has something
-to say when nothing conflicted. The second is conflicted-pull-only, and exits 0
+rather than being told. The audit runs in both modes and speaks in both; what is
+true is narrower than an earlier revision of this line claimed — a pull with no
+conflicts at all is the case where the audit is *the only thing looking*, not
+the only case where it has something to say. The second is conflicted-pull-only, and exits 0
 saying so when there is no merge in progress, so running the pair
 unconditionally is safe.
 
@@ -206,8 +208,12 @@ staged. A conflicted one gets `--diff3` markers in the file *and* index stages
 needs to know the script ran.
 
 **stdout is diffs and nothing else**, so `--dry-run` can be read, graded or
-piped. Notes and problems go to stderr. **Exit 1 if anything was left for a
-human**, which is what makes it safe to call from a script.
+piped — and a dry run that would resolve everything exits **0**, which it did
+not until the index was stopped from being read as evidence about a run that
+stages nothing. Notes and problems go to stderr. **Exit 1 if anything was left
+for a human or flagged by the audit, 2 if the script refused to act at all** —
+no merge to audit, no subtree-add, a prefix added more than once, no merge
+base, a bad argument. Test for non-zero, not for 1.
 
 It applies only where a rename was recorded *and* the destination verified to
 exist. It refuses a same-basename guess, a true delete, a destination with
@@ -244,7 +250,12 @@ when it is the only thing looking. `-M` is load-bearing there — without it a
 rename upstream reads as a delete and every one is a false positive.
 
 Exit is non-zero if anything was left for a human *or* anything was flagged by
-the audit, so a caller can act on the status rather than parse prose.
+the audit, so a caller can act on the status rather than parse prose. The audit
+reports two kinds and counts them apart: a **carried** file, where our own
+rename chain proves we moved it, and one **to confirm**, where nothing outside
+the prefix is proven to be the same file but something shares its basename.
+The second is a lead — between 16% and 81% of a prefix's basenames also exist
+outside it — so it is never described as a move.
 
 ## The other half of the conflicts: `resolve-rewrite-conflicts.sh`
 
@@ -256,7 +267,11 @@ upstream touched that import block. **Fourteen of them in one resync**, each
 the same non-decision.
 
 `resolve-rewrite-conflicts.sh` takes upstream's file and re-applies the
-rewrite — but only where that is provably safe.
+rewrite — but only where that is provably safe. What it writes for a `.go` file
+is `gofmt(rewrite(theirs))`, not `rewrite(theirs)`: it reformats, so deliberate
+spacing and CRLF do not survive it. Measured exposure today is zero — `gofmt -l`
+over the tree reports nothing and there is no CRLF in it — but that is a fact
+about the tree, not about the script.
 
 **The check is the point, not the fix.** It is safe only if our side carries
 nothing upstream could disagree with, so the script verifies per file that
@@ -266,9 +281,13 @@ carry real decisions (siblings at `v0.0.0` with `replace ../<svc>`, a unified
 libforge) that have to be re-applied by hand.
 
 `gofmt` normalises both sides for `.go` files, and that is load-bearing, not
-tidiness: the rewrite makes a path longer, which can move it within its import
-group, and `gofmt` sorts groups. Without normalising, a file whose only
-difference *is* the rewrite compares unequal and gets refused.
+tidiness: the rewrite inserts `forge/` into the path, which can move the line
+**within** its import group, because `gofmt` sorts each group lexicographically.
+Not because the path got longer, and `gofmt` never reorders the groups
+themselves — measured: `fil-forge/piri/…` sorts *after* `fil-forge/libforge/…`
+and `fil-forge/forge/piri/…` sorts *before* it, since `forge/` < `libforge/`.
+Without normalising, a file whose only difference *is* the rewrite compares
+unequal and gets refused.
 
 **Neither tool sees the third class.** A hunk can merge *cleanly* and still
 carry a polyrepo import path, because it never touched a line we had rewritten

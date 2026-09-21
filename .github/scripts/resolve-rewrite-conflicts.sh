@@ -18,14 +18,19 @@
 # `replace ../<svc>`, a unified libforge) that must be re-applied by hand.
 #
 # gofmt normalises both sides for .go files, and it is load-bearing rather than
-# tidiness: the rewrite makes an import path longer, which can move it within
-# its group, and gofmt sorts groups. Without normalising, a file whose only
-# difference IS the rewrite compares unequal byte for byte and gets refused.
+# tidiness: the rewrite inserts `forge/` into the path, which can move the line
+# WITHIN its import group, because gofmt sorts each group lexicographically.
+# (Measured: `fil-forge/piri/...` sorts after `fil-forge/libforge/...`, and
+# `fil-forge/forge/piri/...` sorts before it -- `forge/` < `libforge/`. Not
+# because the path got longer, and gofmt never reorders the groups themselves.)
+# Without normalising, a file whose only difference IS the rewrite compares
+# unequal byte for byte and gets refused.
 #
 #   resolve-rewrite-conflicts.sh            resolve what qualifies, stage it
 #   resolve-rewrite-conflicts.sh --dry-run  say what it would do, change nothing
 #
-# Exit 1 if anything was left for a human. Run it after finish-subtree-pull.sh,
+# Exit 1 if anything was left for a human, 2 if it refused to act (a bad
+# argument, a path outside the repository). Run it after finish-subtree-pull.sh,
 # which handles a different class: files we moved out of the prefix, which git's
 # rename detection cannot follow. The two do not overlap -- that one works on
 # `deleted by us, modified by them`, this one on ordinary content conflicts --
@@ -73,14 +78,19 @@ command -v gofmt >/dev/null 2>&1 || {
   exit 2
 }
 
-# The services are the top-level directories with a go.mod -- the same set
-# go.work lists. Nothing here needs updating when one is added.
-# LONGEST FIRST, and this is not cosmetic. The glob's order follows the
-# locale's collation: under C it happens to yield piri-signing-service before
-# piri, under en_US.UTF-8 it yields piri first -- and then `piri` matches inside
-# `piri-signing-service`, rewriting it to `forge-signing-service`, a repository
-# that does not exist. Same script, different answer per machine. Sorting by
-# length removes the dependence entirely.
+# The services are the top-level directories with a go.mod. NOT "the same set
+# go.work lists" -- go.work has twelve entries and this derivation yields ten,
+# because hilt/itest and ingot/itest are nested modules rather than services.
+# Ten is the right set here: they are the prefixes whose import paths were
+# rewritten. Nothing here needs updating when a service is added.
+# LONGEST FIRST. The hazard is real and the mechanism is simple: if `piri`
+# precedes `piri-signing-service` in the alternation it matches inside it,
+# rewriting it to `forge-signing-service`, a repository that does not exist.
+# What is NOT established is that any locale actually orders them that way --
+# the glob yields piri-signing-service first under C here, and an earlier
+# revision of this comment asserted an en_US.UTF-8 flip that nobody has
+# observed. So: sort by length rather than rely on a collation order this
+# script does not control, and do not claim to know what that order is.
 svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s\n' "${d%/}"; done \
   | awk '{ print length, $0 }' | sort -rn -k1,1 | cut -d' ' -f2- | paste -sd'|')
 [ -n "$svcs" ] || { echo "no modules found -- is this the repository root?" >&2; exit 2; }

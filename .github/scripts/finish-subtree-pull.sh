@@ -35,7 +35,14 @@
 #   finish-subtree-pull.sh --dry-run <prefix>    print the diffs, change nothing
 #
 # stdout is diffs and nothing else, so --dry-run can be read, graded or piped.
-# Notes and problems go to stderr. Exit 1 if anything needed a human.
+# Notes and problems go to stderr. Exit 1 if anything needed a human or was
+# flagged by the audit; exit 2 if the script refused to act at all (no merge to
+# audit, no subtree-add found, a prefix added more than once, no merge base, a
+# bad argument). A caller acting on the status wants "non-zero", not "1".
+#
+# The 200-merge cap on the anchor walk is load-bearing now that the walk passes
+# over every ordinary PR merge: the worst correct anchor measured on the resync
+# branch sits at position 50 of 108. Beyond the cap it exits 2 and says so.
 set -euo pipefail
 
 dry=0
@@ -87,8 +94,12 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   # Anchor on the prefix's own subtree-ADD. `git subtree pull` records no
   # trailer -- only `add` does -- and the add's `git-subtree-split` names the
   # upstream root. Every later pull of that prefix has a second parent
-  # descending from that root, and no other prefix's does. That is exact, and it
-  # needs nothing from the pull commits themselves.
+  # descending from that root. Not exact on its own -- two prefixes taken from
+  # ONE upstream repository share a root, and each would satisfy the other's
+  # test; that is why the second condition below exists. Rule 1 forbids
+  # importing another module without a human decision, and all ten upstream
+  # roots here are unrelated histories, so it does not arise today.
+  # It needs nothing from the pull commits themselves.
   #
   # NOT "the most recent merge whose diff is confined to the prefix". That was
   # the first attempt and it is wrong in the worst possible way: when upstream
@@ -118,16 +129,31 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   # "diff confined to the prefix" attempt above, arrived at from the other
   # direction, and it survived a review round.
   #
-  # A real `git subtree pull` merge has upstream's tip as its second parent,
-  # and upstream has never heard of this monorepo, so $add is NOT an ancestor
-  # of it. A monorepo feature branch always is. That one test separates them.
-  # Verified against origin/main: all ten prefixes resolve to their own pull
-  # merge, or to their own add when they have never been pulled.
+  # The second test WAS "$add is not an ancestor of $c^2", on the reasoning that
+  # upstream has never heard of this monorepo. That is an assumption, not a
+  # fact, and it fails the moment upstream merges anything carrying our history
+  # -- a fork-back, even an ancestry-only `merge -s ours` that changes no file.
+  # Then the real pull merge is REJECTED, the loop falls through to the add
+  # itself, and the script says "only ever been added, never pulled" and exits
+  # 0, immediately after a pull, with the upstream-deleted file in the tree.
+  # That is this script's own failure mode, rebuilt out of its own fix. Caught
+  # on a fixture.
+  #
+  # Test the path space instead, which the repository already relies on
+  # elsewhere: upstream's tree has no `$prefix/` directory -- that is what
+  # makes it upstream -- and a monorepo branch tip always has one. It is a
+  # property of the trees rather than a belief about who merged what.
+  #
+  # Verified: byte-identical anchors to the ancestry test on origin/main (10 of
+  # 10 prefixes) and on the resync branch (10 of 10, worst anchor at position
+  # 50 of 108 merges), AND correct on the fork-back fixture where the ancestry
+  # test silently exits 0. Wrong only if an upstream repository carried a
+  # top-level directory named exactly like its prefix; none of the ten does.
   merge=
   for c in $(git rev-list --merges --max-count=200 HEAD); do
     git rev-parse -q --verify "$c^2" >/dev/null 2>&1 || continue
     git merge-base --is-ancestor "$split" "$c^2" 2>/dev/null || continue
-    git merge-base --is-ancestor "$add"   "$c^2" 2>/dev/null && continue
+    git cat-file -e "$c^2:$prefix" 2>/dev/null && continue
     merge=$c; break
   done
   if [ -z "$merge" ]; then
@@ -135,6 +161,22 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     exit 2
   fi
   if [ "$merge" = "$add" ]; then
+    # "Only ever been added" is only true if there is ONE add. Rule 7's rebuild
+    # does a fresh `git subtree add` of a prefix that already has one, and then
+    # $add is the newest of two: the audit has no range to diff (this add's
+    # split is upstream's tip) but the prefix has a pull history the sentence
+    # would deny. Refuse loudly rather than report nothing and exit 0 -- that
+    # is the shape of failure this script exists to remove.
+    adds=$(git rev-list --merges HEAD --grep="git-subtree-dir: $prefix\$" | wc -l | tr -d ' ')
+    if [ "$adds" -gt 1 ]; then
+      echo "'$prefix' has $adds subtree-adds, and the newest is the most recent" >&2
+      echo "thing that happened to it, so there is no pull range to audit -- but" >&2
+      echo "the prefix DOES have earlier history, so \"never pulled\" would be a lie." >&2
+      echo "Re-adding at the SAME upstream commit (rule 7's rebuild) deletes nothing" >&2
+      echo "upstream, so there is nothing to find; re-adding at a LATER one skips an" >&2
+      echo "upstream range this audit cannot reconstruct. Check that range by hand." >&2
+      exit 2
+    fi
     note "'$prefix' has only ever been added, never pulled -- nothing to audit."
     exit 0
   fi
@@ -237,7 +279,16 @@ while IFS= read -r conflicted; do
   # `grep -Iq .` needs a non-empty LINE, so an empty file and a blank-lines-only
   # file both failed it and were refused as binary. Test emptiness first, then
   # look for a NUL the way grep -I decides.
-  if [ -n "$(git show ":3:$conflicted" 2>/dev/null | head -c 1)" ] \
+  #
+  # Size, not the first byte. `$(... | head -c 1)` was the emptiness test, and
+  # bash DROPS NUL bytes in command substitution -- so a file whose first byte
+  # is \0, which is to say a great many binaries, substituted to the empty
+  # string, the && short-circuited, and `grep -Iq` never ran. The binary guard
+  # was bypassed by exactly the files it is for. Nothing broke only because
+  # `git merge-file` refuses binaries on its own and rc > 127 catches it, which
+  # is a second mechanism, not this one. `git cat-file -s` reads the size from
+  # the object header and touches no content.
+  if [ "$(git cat-file -s ":3:$conflicted" 2>/dev/null || echo 0)" -gt 0 ] \
      && ! grep -Iq . < <(git show ":3:$conflicted" 2>/dev/null); then
     note "SKIP  $conflicted -> $dest: binary, merge by hand"
     unresolved=$((unresolved + 1)); continue
@@ -306,6 +357,16 @@ fi
 # map each back through our prefix. -M matters: without it a rename upstream
 # reads as a delete and every one would be a false positive.
 stale=0
+# Two counters, because they are two different claims. $stale is "upstream
+# deleted it, we moved it, we still have it" -- verified through our own rename
+# chain. $guessed is "upstream deleted it and SOMETHING with that basename
+# exists outside the prefix", which is a lead, not a fact. Folding the second
+# into the first made the summary assert "because we had moved them" about
+# files nobody moved. Measured collision rate of distinct basenames in a prefix
+# that also exist outside it: delegator 81%, sprue 40%, ingot 23%, hilt 23%,
+# piri 20%, smelt 16% -- so most genuine upstream deletions would have produced
+# a false claim. Both still make the exit non-zero; only the wording differs.
+guessed=0
 while IFS= read -r gone; do
   [ -n "$gone" ] || continue
   old=$prefix/$gone
@@ -322,11 +383,16 @@ while IFS= read -r gone; do
   # loud path already probes for this case and prints SKIP; the audit did not.
   # Same probe here, so a genuine delete stays quiet (nothing outside the
   # prefix has that basename) and a rewritten move is named.
-  cands=$(git ls-files "*/$(basename "$gone")" | grep -v "^$prefix/" || true)
+  #
+  # Both pathspecs: `*/x` does not match `x` at the repository root, and
+  # consolidating a service file to the root is a thing this monorepo does.
+  cands=$(git ls-files "*/$(basename "$gone")" "$(basename "$gone")" \
+          | grep -v "^$prefix/" | sort -u || true)
   if [ -n "$cands" ]; then
-    note "VERIFY      upstream deleted $gone; no rename was recorded, but these exist"
+    note "VERIFY      upstream deleted $gone; no rename was recorded. Same basename"
     note "            outside the prefix: $(echo "$cands" | tr '\n' ' ')"
-    stale=$((stale + 1))
+    note "            -- a lead, not a match. Check whether it is the same file."
+    guessed=$((guessed + 1))
   fi
 done < <(git diff -M --diff-filter=D --name-only "$base" "$upstream" 2>"$rename_warn" || true)
 
@@ -352,20 +418,33 @@ if [ "$stale" -gt 0 ]; then
   note "deleted dead code we are still carrying, or may have moved it somewhere this"
   note "audit cannot see."
 fi
+if [ "$guessed" -gt 0 ]; then
+  note ""
+  note "$guessed further upstream deletion(s) have a same-basename file outside the"
+  note "prefix. No rename was recorded for these, so this is a lead and not a"
+  note "finding: it is equally the shape of a genuine delete next to an unrelated"
+  note "file of the same name. Confirm each before acting on it."
+fi
 
 unmerged=0
-if [ "$pull_mode" = conflicted ]; then
+# Not in dry-run mode. A dry run stages nothing by definition, so every path is
+# still unmerged in the index and this term made --dry-run exit 1 even when it
+# had just said everything would merge cleanly -- while the real run on the same
+# tree exited 0. A caller under `set -e` aborted on the preview, and the preview
+# could no longer signal "this would all resolve", which is the one thing it is
+# for. The dry run's own counters already carry the answer.
+if [ "$pull_mode" = conflicted ] && [ "$dry" != 1 ]; then
   unmerged=$(git ls-files -u | awk '{print $4}' | sort -u | wc -l | tr -d ' ')
 fi
 
 if [ "$pull_mode" = merged ]; then
-  note "Audited a completed pull: $stale upstream deletion(s) we still carry."
+  note "Audited a completed pull: $stale carried, $guessed to confirm."
 else
-  note "$merged merged, $unresolved left for a human, $unmerged path(s) still unmerged, $stale upstream deletion(s) we still carry."
+  note "$merged merged, $unresolved left for a human, $unmerged path(s) still unmerged, $stale carried, $guessed to confirm."
 fi
 
 # $unmerged, not just $unresolved. The status used to count only the DU class,
 # so a pull whose conflicts were ordinary content conflicts -- the common case,
 # fourteen of them in one resync -- exited 0 with the merge unresolved, and a
 # caller acting on the status per AGENTS.md committed it.
-[ "$unresolved" = 0 ] && [ "$stale" = 0 ] && [ "$unmerged" = 0 ]
+[ "$unresolved" = 0 ] && [ "$stale" = 0 ] && [ "$guessed" = 0 ] && [ "$unmerged" = 0 ]
