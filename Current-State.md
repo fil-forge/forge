@@ -390,18 +390,32 @@ because nobody had looked at it again.
 
 The tally, because the shape is the finding:
 
-| PR | rounds so far | last verdict | new defects **in the previous round's fixes** |
-|---|---|---|---|
-| #14 | 2 | **satisfied**, Open | none — 2 stale claims |
-| #12 | 7 | not satisfied | round 7 found 3, one of them my own fix reproducing round 7's finding 3 |
-| #13 | 4 | not satisfied | **round 4 found my anchoring fix was wrong and I had verified it wrongly** |
-| #15 | 3 | not satisfied | 10, every one a number or claim no command backs |
-| #16 | 4 | not satisfied | 2 blocking, both partial fixes |
+| PR | rounds so far | last verdict | head | state |
+|---|---|---|---|---|
+| #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
+| #15 | 5 | **satisfied** | `bfc56b28` | **Open** |
+| #12 | 9 | 3 claim-level findings, no code defect | `4a46c4f1` | draft, round 10 running |
+| #13 | 5 | 2 blocking | `0fa6abcd` | draft, round 6 running |
+| #16 | 5 | **satisfied**, 5 nits worth fixing | `844b4b53` | draft, round 6 running |
 
-**All five are worked and pushed.** Heads: #12 `3b60610f`, #13 `a1c684d0`
-(CI green, 24/24), #14 `d7f00ba9` (**done** — its reviewer re-checked that
-head, posted its approval, and the PR is Open), #15 `4d8b3cee`, #16
-`17614b7c`. Four scoped rounds are running against those heads.
+**Two are done and Open.** #15 took five revisions of one Markdown entry to get
+right, and the last defect is the best example the repository has of the thing
+the entry is about: `4d8b3cee` added a per-service split of 38 to stop 38
+looking like a refutation of 29 — and the split was wrong for **seven of eight
+services** while summing to 38. The total had been derived; the split beside it
+agreed with the total; agreeing with a checked number reads like having been
+checked.
+
+**#16's reviewer was satisfied and I pushed anyway**, because "non-blocking"
+covered a guard printing *"this ldflag silently does nothing"* for the one case
+where the linker refuses the flag and the build fails. The cause is the
+interesting part: the shell decided which sentence to print by grepping the
+helper's prose, and the helper's prose had changed. It reads a field now.
+
+**#12 is the other shape.** Rounds eight and nine found nothing wrong with the
+code and four wrong claims *about* it — the deleted narration surviving in the
+PR body, a stated mechanism that was not the mechanism, an over-claim by one
+`case` arm, and a "NOT COVERED" list missing the gap the same push measured.
 
 **The rounds after the first are scoped now**, one of four changes made
 2026-09-21 after costing the practice: a later round reviews the delta since
@@ -419,6 +433,23 @@ diagnosis: *"I checked WHICH MERGE GOT ANCHORED. I never read what the audit
 then SAID."* It said `0 carried, 3 to confirm`, naming monorepo paths upstream
 never had. A self-check that reads the exit code and not the output is not a
 check.
+
+**And #13's round five is where a guard repeated a defect the same file
+diagnoses one screen above it.** The merge-base guard was added directly below
+a comment explaining that `git cat-file -e` succeeds for a blob as well as a
+tree — and it used `-e`. The single-pull fixture passed because on a first pull
+the merge base predates the offending blob; the second pull is where it bites.
+
+The same round is also the clearest case yet for writing probe fixtures before
+believing a fix. Selecting the subtree-add went through **three** versions:
+requiring both trailers (defeated by a body quoting both), requiring the quoted
+sha to exist (defeated by quoting a real one), and requiring it to be an
+ancestor of the merge's second parent (defeated because *everything* in this
+repository is an ancestor of it — the fixture I wrote to prove that fix passed
+with the fix reverted). What holds is a property of what the merge **did**: a
+`git subtree add` creates the prefix, absent in its first parent and present in
+the merge. A documentation merge cannot satisfy that however its message is
+written.
 
 **#12's round six is the one to read if you read only one.** Its meta-guard
 exists so the assertion script is executed by *something*, and its header lists
