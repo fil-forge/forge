@@ -617,17 +617,58 @@ that `smelt/.env.published` runs, and those report nothing either: of the
 `piri-signing-service`, `sprue` and `swarf` — **not one passes any
 `build-args`, in any of their 38 historical versions**.
 
-  **38 is the per-service sum of distinct versions** (delegator 3, hilt 5,
-  indexing-service 4, ingot 5, piri 8, piri-signing-service 3, sprue 8,
-  swarf 2), which is what "their historical versions" means. The union of
-  distinct *blobs* reachable from `HEAD` is **29** — nine are shared between
-  services, because several of these workflows were byte-identical at import.
-  Both numbers are right about different questions, and
+  **38 is the per-service sum of distinct versions**, which is what "their
+  historical versions" means. Each service's upstream history is reachable from
+  the commit its subtree-add names, and the file sat at the bare
+  `.github/workflows/publish-ghcr.yml` until the add moved it, so the split is:
+
+  ```sh
+  git log --oneline --merges --grep='^git-subtree-dir:' --format='%s'   # roots
+  for root in <the eight>; do
+    git rev-list "$root" |
+      while read -r c; do
+        git rev-parse -q --verify "$c:.github/workflows/publish-ghcr.yml"
+      done | sort -u | wc -l
+  done
+  ```
+
+  delegator 6, hilt 2, indexing-service 6, ingot 4, piri 7,
+  piri-signing-service 4, sprue 7, swarf 2.
+
+  An earlier revision of this paragraph gave 3, 5, 4, 5, 8, 3, 8, 2 — a
+  different split of the same 38, and every service but `swarf` wrong. The
+  total was derived; the split beside it was not, and summing to the right
+  number is what let it stand. Worth keeping as the sharpest example in this
+  entry of the thing the entry is about: a number that agrees with a checked
+  number and was never checked itself.
+
+  The union of distinct *blobs* reachable from `HEAD` is **29**, and
   `git rev-list HEAD --objects | grep publish-ghcr | sort -u | wc -l` returns
-  29 and looks exactly like a refutation. It is not one. A ninth path,
-  `.github/workflows/publish-ghcr.yml` with no service prefix, also appears
-  under `git log -m`: that is these same eight files at their pre-import paths
-  on the upstream side of each subtree merge, not a ninth service.
+  29 and looks exactly like a refutation. It is not one: **six blobs** occur in
+  more than one service's history, filling 15 of the 38 slots, so 38 − 29 = 9
+  is the count of redundant *slots*, not of shared files.
+
+  ```
+  b4d0de53  hilt, sprue, swarf
+  481e0928  delegator, indexing-service, piri-signing-service
+  f80feb0a  indexing-service, piri, piri-signing-service
+  0c9a803b  delegator, indexing-service
+  8d2f791f  delegator, piri
+  d2b0fdee  indexing-service, piri
+  ```
+
+  **None of that overlap is at import.** The eight blobs the eight subtree-adds
+  brought in are eight distinct blobs — no two services were imported carrying
+  an identical file. Every shared blob above is an *earlier* version on at least
+  one side; `0c9a803b`, for instance, is indexing-service's import and a
+  delegator version predating delegator's. An earlier revision said the
+  overlap was "because several of these workflows were byte-identical at
+  import", which is a cause that does not exist.
+
+  A ninth path, `.github/workflows/publish-ghcr.yml` with no service prefix,
+  also appears under `git log -m`: that is these same eight files at their
+  pre-import paths on the upstream side of each subtree merge, not a ninth
+  service.
 
   An earlier revision of this paragraph said seven and that `swarf`'s never
   existed here. It did: added by swarf's subtree-add `8ac8d922` and removed by
@@ -692,10 +733,17 @@ build *target*, which has not resolved since consolidation, so it fails
 outright rather than producing an unstamped binary. **Two were already
 correct**, not one: `swarf`, and `smelt/systems/stress-tester`, whose Makefile
 stamps `main.Version`, `main.Commit` and `main.BuildTime` into `./cmd/stress`
-— and `cmd/stress/version.go` declares exactly those three. That component is
-the repository's only worked example of the whole pattern this entry says is
-missing: its Dockerfile passes `-X` (named above as the only one that does) and
-its Makefile stamps what the binary reads. Open as [#16](https://github.com/fil-forge/forge/pull/16). The wiki's *Needs Human Work* page carries the
+— and `cmd/stress/version.go` declares exactly those three. Its Dockerfile is
+also the only one in the repository with the `ARG`/`-X` half: `ARG VERSION`,
+`ARG COMMIT`, `ARG BUILD_TIME` feeding three `-X` flags.
+
+That is the closest thing here to a worked example, and it is **not** a worked
+example of the whole pattern — the missing half is a *source per builder*, and
+the only thing that builds that Dockerfile, `smelt/systems/stress-tester/compose.yml`,
+passes `VERSION: ${STRESS_VERSION:-dev}` and nothing else. `COMMIT` and
+`BUILD_TIME` keep their `unknown` defaults in every image anyone actually
+builds, which is the same symptom this entry opens with, in the one component
+equipped to avoid it. Open as [#16](https://github.com/fil-forge/forge/pull/16). The wiki's *Needs Human Work* page carries the
 same question for the polyrepo images, where it waits on a decision rather than
 on the monorepo.
 
