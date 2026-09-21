@@ -33,7 +33,8 @@
 # so the script could lose any of them silently.
 #
 # VERIFIED BOTH DIRECTIONS, by deleting each fix from the script under test and
-# watching this go red. All four were GREEN on the previous version:
+# watching this go red. The list has grown a row per round since; the first four
+# were all GREEN on the version this file replaced:
 #
 #   the FATAL exit for an unassertable binary          -> FAIL (test 5)
 #   the "released AT the fallback" refusal             -> FAIL (test 3)
@@ -237,8 +238,8 @@ sed -i.bak 's/v7.7.77/v0.0.0/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/bu
 # 4b. A VERSION CONTAINING AN ERE METACHARACTER. This is the test the round
 #     that fixed the escaping was asked for and did not add -- and the ONE break
 #     this guard did not catch: reverting `want_re`'s sed to `sed 's/\./\\./g'`
-#     -- naming the variable, because that line has drifted 206 -> 211 -> 216
-#     across three rounds and a line number is a hand-maintained fact -- left this
+#     -- naming the variable rather than a line, because that line has moved in
+#     three successive rounds and a line number is a hand-maintained fact -- left this
 #     file printing nine ok lines and exit 0 while the assertion accepted a
 #     stale binary. `release.yml` admits `+` deliberately (its charset class
 #     lists it), so this is reachable, not hypothetical.

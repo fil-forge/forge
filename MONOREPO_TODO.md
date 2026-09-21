@@ -839,6 +839,46 @@ yet.
 
 Each was checked against the tree rather than taken on the reviewer's word.
 
+## piri: `TestPeriodicRotator` is a wall-clock race
+
+`piri/pkg/store/local/retrievaljournal/periodic_rotator_test.go` starts a
+rotator with a **1 ms** ticker, sleeps **30 ms**, then asserts that all six
+non-`cid.Undef` batches were rotated. Under CPU contention the rotator
+goroutine does not get six ticks in that window and the test fails with four.
+
+It went red once in CI on a branch whose whole diff was comments in a shell
+script. Reproduced locally — twelve concurrent `go test -count=20 -race`
+processes:
+
+```
+total FAILs: 2 / 240
+```
+
+Zero failures in fifty consecutive solo runs, with and without `-race`. The
+re-run passed.
+
+**Its failure output reads backwards**, which matters if you meet it:
+
+```go
+require.Equal(t, actualBatches, expectedBatches)
+```
+
+`require.Equal` is `(t, expected, actual)`, so the log's `expected: … len=4` is
+what happened and `actual: … len=6` is what was wanted. At face value it looks
+like the rotator fired too often; it fired too few times.
+
+The fix belongs upstream in `piri`, not in whichever branch next trips over it:
+
+```go
+require.Eventually(t, func() bool {
+    return len(actualBatches) == len(expectedBatches)
+}, 2*time.Second, time.Millisecond)
+require.Equal(t, expectedBatches, actualBatches)
+```
+
+A deadline instead of a fixed sleep removes the dependence on how much CPU the
+runner has, and costs the passing case nothing.
+
 ## swarf
 
 Raised by the Copilot reviewer on
