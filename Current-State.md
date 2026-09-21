@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-21 12:25Z, Monday morning.** For history and
+**Snapshot as of 2026-09-21 20:05Z, Monday evening.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -394,8 +394,8 @@ The tally, because the shape is the finding:
 |---|---|---|---|---|
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
 | #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
-| #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge |
-| #13 | 7 | 6 findings | `e6f80764` | draft, round 8 running, CI green |
+| #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
+| #13 | 8 | 4 findings, all fixed | `6f01e5e2` | **Open** — flipped out of draft by Petra's "move on with it". CI running on this head; green on all 24 at `e6f80764` |
 | #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
 
 **#15 is merged; #14 is Open and signed off.** #15 took five revisions of one Markdown entry to get

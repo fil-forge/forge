@@ -181,13 +181,13 @@ the same failure mode as the eighteen-hour sprue miss, two weeks apart.
 
 | | what | state |
 |---|---|---|
-| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **Draft** — round four running. On `a1c684d0`; round three found three blocking defects, all three introduced by round two's fixes |
+| [forge #13](https://github.com/fil-forge/forge/pull/13) | **two** subtree tools now: `finish-subtree-pull.sh` (merge + the deletion audit) and `resolve-rewrite-conflicts.sh` (the module-path collisions, with the check that makes them safe) | **OPEN** on `6f01e5e2`; CI 17 of 24 green, 7 still running as of 19:13Z. Eight rounds. Round eight found a `git subtree split --rejoin` silently turning a carried file into a clean audit — fixed and covered both directions. Flipped out of draft on Petra's *"unless there are major issues, I'd like to move on with it"* |
 | [forge #14](https://github.com/fil-forge/forge/pull/14) | every subtree resynced to its upstream `main` — 37 commits across eight prefixes; **caught a live wire break**, see below. **This is the one that gates Phase 1.** | **OPEN and signed off** — its reviewer re-checked the current head and posted its approval. **Green all 24 on `d7f00ba9`**, first pass, no re-runs. **Round two is satisfied; nothing blocking.** (At `a032681d`, `itest hilt` had been red once on a Docker Hub connection reset and passed on its one re-run) |
 | [indexing-service #106](https://github.com/fil-forge/indexing-service/pull/106) | the poller flake, and **now only that** — net diff is one test file | draft, on `38923a3` |
 | [indexing-service #107](https://github.com/fil-forge/indexing-service/pull/107) | the `version` subcommand + **four dead `-X` ldflags**, split out of #106 as you asked | draft, on `894f1c0` |
 | [hilt #77](https://github.com/fil-forge/hilt/pull/77) | swarf bumped 9 commits for the firehose fixes, **plus** the same `./cmd/main.go` build bug sprue had | draft, on `6584213` — `main` merged in after hilt#76 landed |
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
-| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Third revision.** The first was wrong four ways; the second fixed those and introduced two more, and left five it had missed. An independent review found all ten; every number in the entry is now derived by a command quoted beside it | **Draft** — round two running. On `f0ed73db`, the third revision; round one found ten problems, seven blocking |
+| [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix | **MERGED** as `74be2e39` after five revisions. Every number in the entry is derived by a command quoted beside it — and the reason Petra's detail rule exists |
 | [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Draft** — round seven running. On `3b60610f`; round six found the meta-guard not covering the one fix made in the same push as its own rewrite |
 | [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Draft** — round four running. On `17614b7c`, rebased onto #12's new head; round three found the guard counting lines, so it checked a quarter again and printed the round-one sentence verbatim |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
@@ -862,6 +862,11 @@ still your call.
   "never pulled" note states the assumption it rests on instead of asserting a
   fact. **Five review rounds each proposed a discriminator and each was
   measured wrong** — a sixth attempt is explicitly not wanted.
+
+  **Written down where it will be read** (2026-09-21, `6f01e5e2`): the script's
+  own comment and `AGENTS.md` both now say this is decided rather than open, and
+  neither points back at this page. If an upstream ever does merge this
+  repository's history, the fix is a remote, not another local signal.
 
 - **All five "Waiting on Petra" items approved** (2026-09-17): the
   `replaces` → `guards` rename resolved, #17's reuse of digests already in the
