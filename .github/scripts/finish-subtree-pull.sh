@@ -36,9 +36,21 @@
 #
 # stdout is diffs and nothing else, so --dry-run can be read, graded or piped.
 # Notes and problems go to stderr. Exit 1 if anything needed a human or was
-# flagged by the audit; exit 2 if the script refused to act at all (no merge to
-# audit, no subtree-add found, a prefix added more than once, no merge base, a
-# bad argument). A caller acting on the status wants "non-zero", not "1".
+# flagged by the audit; exit 2 if the script REFUSED TO ACT at all. A caller
+# acting on the status wants "non-zero", not "1".
+#
+# The seven refusals, and this is the only copy of the list -- a second one in
+# AGENTS.md went stale twice, once when the merge-base refusal was added and
+# once when the 200-merge one was:
+#
+#   a bad argument, or a flag after the prefix
+#   no merge to audit: no merge in progress and HEAD is not a merge
+#   no `git subtree add` for the prefix: no merge carries both trailers naming
+#     its own two parents
+#   no merge of the prefix's upstream in the last 200 merges
+#   the prefix has more than one subtree-add, so there is no pull range
+#   no merge base between the pull and its upstream
+#   the merge base is in THIS repository's path space, not upstream's
 #
 # The 200-merge cap on the anchor walk is load-bearing now that the walk passes
 # over every ordinary PR merge: the worst correct anchor measured on the resync
@@ -119,24 +131,51 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     cand=$(git log -1 --format=%B "$c" \
              | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
     [ -n "$cand" ] || continue
-    # The trailer must describe THIS merge, and the test is what the merge DID,
-    # not what its message says. Requiring both trailers was not enough: a body
-    # quoting both at line start -- a pull request about these scripts is the
-    # obvious carrier -- still captured a bogus split, every later candidate
-    # then failed `--is-ancestor "$split"`, and the script exited 2 with "Found
-    # no merge of '<prefix>''s upstream in the last 200 merges" about a prefix
-    # whose control run reports the carried file.
+    # The trailer must describe THIS merge, and FOUR tests were tried before
+    # this one. The first three are worth naming because each looked like a
+    # property and each had a fixture built for it that passed with the fix
+    # reverted:
     #
-    # Ancestry of the quoted sha is NOT the test either, and the fixture that
-    # proved it is in the probe: quote the monorepo's own root and it IS an
-    # ancestor of the merge's second parent, because everything here is. What
-    # only a real `git subtree add` does is CREATE the prefix -- absent in its
-    # first parent, present in the merge. A documentation merge on a branch
-    # where the prefix already exists cannot satisfy that however its message
-    # is written.
-    git rev-parse -q --verify "$cand^{commit}" >/dev/null 2>&1 || continue
-    [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ] && continue
-    [ "$(git cat-file -t "$c:$prefix"   2>/dev/null)" = tree ] || continue
+    #   both trailers present  -- a body quoting both at line start satisfies
+    #                             it; a pull request about these scripts is the
+    #                             obvious carrier.
+    #   the quoted sha exists  -- defeated by quoting a real sha.
+    #   it is an ANCESTOR of   -- defeated because everything in this
+    #   the merge's ^2            repository is an ancestor of it. The fixture
+    #                             written to prove this fix passed with the fix
+    #                             reverted, which is how it was caught.
+    #   the merge CREATES the  -- defeated by the `Merge pull request` that
+    #   prefix (absent in ^1,     LANDS the subtree-add branch: its first
+    #   present in the merge)     parent is main before the import, its tree
+    #                             has the prefix, and it is the single most
+    #                             likely commit to quote those trailers.
+    #
+    # `git subtree add` writes BOTH parents into the message: `git-subtree-split`
+    # is the commit it merged in (the second parent) and `git-subtree-mainline`
+    # is what it merged into (the first). So the trailers describe this merge
+    # exactly when they name this merge's own parents -- not a property inferred
+    # from the shape of the history, but the thing git-subtree literally did.
+    #
+    # BOTH, not the split alone. The landing merge's second parent IS the import
+    # branch tip, so a body quoting that tip as the split satisfies `split == ^2`
+    # while being no kind of subtree add. Requiring the mainline too separates
+    # them: the landing merge's `^1` is main before the import, which is not
+    # what such a body quotes. Measured over the four shapes a quoted split can
+    # take -- the monorepo root, upstream's commit, the import tip, none -- and
+    # only the pair is right in all four.
+    #
+    # Verified on all ten real adds here (both trailers match both parents) and
+    # on fresh adds with and without `-m`.
+    #
+    # A `--squash` add does not reach this at all: its trailers land on the
+    # non-merge `Squashed '<prefix>/' content` commit, so the `--merges` grep
+    # finds nothing and the script exits 2 at the "no subtree-add" refusal.
+    # Out of scope by rule 7 ("subtree history is never squashed"), pre-existing,
+    # and loud.
+    mline=$(git log -1 --format=%B "$c" \
+              | sed -n 's/^[[:space:]]*git-subtree-mainline:[[:space:]]*//p' | head -1)
+    [ "$cand"  = "$(git rev-parse -q --verify "$c^2" 2>/dev/null)" ] || continue
+    [ "$mline" = "$(git rev-parse -q --verify "$c^1" 2>/dev/null)" ] || continue
     add=$c; split=$cand; break
   done < <(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" || true)
   if [ -z "$add" ]; then
@@ -209,13 +248,21 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # would deny. Refuse loudly rather than report nothing and exit 0 -- that
     # is the shape of failure this script exists to remove.
     # The SAME predicate the selection above uses, or the two disagree and this
-    # refusal fires on a prefix the selection never treated as twice-added.
+    # refusal fires on a prefix the selection never treated as twice-added --
+    # or, worse, fails to fire on one it did. Rule 7's rebuild re-adds a prefix
+    # that already has one, so its first parent DOES carry the prefix: the
+    # "creates the prefix" predicate this replaces would have counted it as
+    # zero adds and silenced this refusal entirely.
     adds=$(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" \
              | while IFS= read -r c; do
-                 git log -1 --format=%B "$c" \
-                   | grep -q '^[[:space:]]*git-subtree-split:' || continue
-                 [ "$(git cat-file -t "$c^1:$prefix" 2>/dev/null)" = tree ] && continue
-                 [ "$(git cat-file -t "$c:$prefix"   2>/dev/null)" = tree ] || continue
+                 body=$(git log -1 --format=%B "$c")
+                 cand=$(printf '%s' "$body" \
+                          | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
+                 mline=$(printf '%s' "$body" \
+                          | sed -n 's/^[[:space:]]*git-subtree-mainline:[[:space:]]*//p' | head -1)
+                 [ -n "$cand" ] || continue
+                 [ "$cand"  = "$(git rev-parse -q --verify "$c^2" 2>/dev/null)" ] || continue
+                 [ "$mline" = "$(git rev-parse -q --verify "$c^1" 2>/dev/null)" ] || continue
                  echo x
                done | wc -l | tr -d ' ')
     if [ "$adds" -gt 1 ]; then
@@ -241,11 +288,11 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # 26 ordinary merges per prefix at origin/main. So: no fifth heuristic, and
     # no silent claim either. AGENTS.md and [[Needs Human Work]] carry it.
     note "'$prefix' has only ever been added, never pulled -- nothing to audit."
-    note "  (That reads the history: no merge since the add has a second parent"
-    note "   descending from upstream's root WITHOUT also looking like a branch of"
+    note "  (That reads the history: of the last 200 merges, none has a second"
+    note "   parent descending from the add's split WITHOUT also looking like a branch of"
     note "   this repository. An upstream that has merged this repository's own"
     note "   history and layout would be indistinguishable from one, and its pull"
-    note "   would be missed here. Nothing in this repository is in that state.)"
+    note "   would be missed here.)"
     exit 0
   fi
   if [ "$merge" != "$(git rev-parse HEAD)" ]; then

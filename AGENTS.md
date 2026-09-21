@@ -211,13 +211,12 @@ needs to know the script ran.
 piped — and a dry run that would resolve everything exits **0**, which it did
 not until the index was stopped from being read as evidence about a run that
 stages nothing. Notes and problems go to stderr. **Exit 1 if anything was left
-for a human or flagged by the audit, 2 if the script refused to act at all** —
-no merge to audit, no subtree-add, a prefix added more than once, no merge
-base, a merge base that is in *this* repository's path space rather than
-upstream's, a bad argument. Test for non-zero, not for 1. The list is here
-rather than in the script because a reader asking "what does 2 mean" looks
-here; it has gone stale once already, when the path-space refusal was added and
-this sentence was not.
+for a human or flagged by the audit, 2 if the script refused to act at all**.
+Test for non-zero, not for 1. **The seven refusals are enumerated in the
+script's own header, not here** — this file carried a second copy and it went
+stale twice, once when the merge-base refusal was added and once when the
+200-merge one was. Two copies of a derivable list is the failure rule 3 names,
+and the copy that is not next to the code is the one that rots.
 
 It applies only where a rename was recorded *and* the destination verified to
 exist. It refuses a same-basename guess, a true delete, a destination with

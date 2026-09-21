@@ -24,6 +24,13 @@
 # A case passes when the script's OUTPUT is right, not merely its exit code --
 # that distinction is the whole reason this exists.
 set -uo pipefail
+# `set -u` and a missing argument is an unbound-variable spew, not a usage
+# message, and the script then exits 1 rather than the 2 it uses everywhere
+# else for "refused to act at all".
+if [ "$#" -lt 1 ]; then
+  echo "usage: ${0##*/} <path to finish-subtree-pull.sh>" >&2
+  exit 2
+fi
 # Absolute: every case cds into its own temp repo, so a relative path would
 # resolve against the wrong directory and the fixtures would silently run
 # against no script at all.
@@ -124,7 +131,7 @@ d=$(mk blank)
 # passed against `echo "I refuse"; exit 2` -- a case that cannot fail is not a
 # case, and this file's own header says no case here does that.
 chk "blank-lines file merges, not 'binary'" "$d/mono" \
-  'merged  svc/blank\.txt -> shared/blank\.txt \(clean, staged\)' 
+  'merged  svc/blank\.txt -> shared/blank\.txt \(clean, staged\)'
 
 d=$(mk dryc)
 ( cd "$d/up" || exit; printf 'package s\nL2\nL3\n' >c.txt; git add -A; git commit -qm 'up: c' ) >/dev/null 2>&1
@@ -176,6 +183,101 @@ pull "$d"
 ( cd "$d/up" || exit; printf 'package s\nTHEIRS\n' >d.go; git add -A; git commit -qm 'up: edit d.go' ) >/dev/null 2>&1
 pull "$d"
 chk "a symlink destination is refused" "$d/mono" 'SKIP.*symlink'
+
+# The subtree-add done ON A BRANCH and landed by a `Merge pull request` whose
+# body quotes both trailers -- which is how it actually happens here, and the
+# single most likely commit to carry that text. That landing merge has main
+# before the import as its first parent and the prefix in its tree, so it
+# satisfies "the merge CREATES the prefix" and was selected as the add: the
+# script then reported `'svc' has 2 subtree-adds` and exited 2 while the
+# carried file went unreported. Only "the split names this merge's own ^2"
+# separates them.
+d=$LAB/landed; mkdir -p "$d/up" "$d/mono"
+( cd "$d/up" || exit; git init -qb main; printf 'package s\n' >a.go; printf 'package s\n' >b.go
+  git add -A; git commit -qm up-init ) >/dev/null 2>&1
+( cd "$d/mono" || exit; git init -qb main; mkdir -p .github/scripts; cp "$S" .github/scripts/
+  printf 'r\n' >README.md; git add -A; git commit -qm mono-init
+  git remote add up ../up; git fetch -q up
+  git checkout -qb import
+  git subtree add -q --prefix=svc up main
+  git checkout -qm main
+  # The quoted split is the MONOREPO ROOT: a real commit, an ancestor of the
+  # landing merge's second parent, but neither that parent nor the commit the
+  # real add names. Three weaker versions of this fixture each proved nothing --
+  # a zeros sha is thrown out by the existence check alone; quoting the commit
+  # the add itself names leaves the anchor scan working by accident, because
+  # $split is then the right commit however the add was chosen; and quoting the
+  # import branch TIP is pathological, because that tip IS the landing merge's
+  # second parent, so it defeats every predicate equally.
+  bt=$(git rev-list --max-parents=0 HEAD | tail -1)
+  git merge -q --no-ff import -m "Merge pull request #7 from fil-forge/import
+
+Brings svc in. A subtree add records
+git-subtree-dir: svc
+git-subtree-split: $bt"
+  mkdir -p shared; git mv svc/b.go shared/b.go; git commit -qm 'move b.go out' ) >/dev/null 2>&1
+updel "$d"; pull "$d"
+chk "the PR merge that LANDS the add" "$d/mono" 'STILL HERE.*shared/b\.go'
+
+# The same landing merge, quoting the IMPORT BRANCH TIP as the split. That tip
+# IS the landing merge's second parent, so `split == ^2` is satisfied by a
+# commit that is no kind of subtree add -- which is why the split alone is not
+# the predicate and `git-subtree-mainline == ^1` has to be required too. This
+# is the only case that separates the two; the case above is caught by either
+# half on its own, so it cannot stand in for this one.
+d=$LAB/landed2; mkdir -p "$d/up" "$d/mono"
+( cd "$d/up" || exit; git init -qb main; printf 'package s\n' >a.go; printf 'package s\n' >b.go
+  git add -A; git commit -qm up-init ) >/dev/null 2>&1
+( cd "$d/mono" || exit; git init -qb main; mkdir -p .github/scripts; cp "$S" .github/scripts/
+  printf 'r\n' >README.md; git add -A; git commit -qm mono-init
+  git remote add up ../up; git fetch -q up
+  git checkout -qb import
+  git subtree add -q --prefix=svc up main
+  git checkout -qm main
+  tip=$(git rev-parse import)
+  git merge -q --no-ff import -m "Merge pull request #7 from fil-forge/import
+
+git-subtree-dir: svc
+git-subtree-split: $tip"
+  mkdir -p shared; git mv svc/b.go shared/b.go; git commit -qm 'move b.go out' ) >/dev/null 2>&1
+updel "$d"; pull "$d"
+chk "landing merge quoting its own ^2" "$d/mono" 'STILL HERE.*shared/b\.go'
+
+# And the mirror, so BOTH halves of the predicate are reached by a case rather
+# than one being carried on the other's evidence: a landing merge quoting its
+# own `^1` as the mainline while the split names something else. `mainline ==
+# ^1` is satisfied; only `split == ^2` rejects it.
+d=$LAB/landed3; mkdir -p "$d/up" "$d/mono"
+( cd "$d/up" || exit; git init -qb main; printf 'package s\n' >a.go; printf 'package s\n' >b.go
+  git add -A; git commit -qm up-init ) >/dev/null 2>&1
+( cd "$d/mono" || exit; git init -qb main; mkdir -p .github/scripts; cp "$S" .github/scripts/
+  printf 'r\n' >README.md; git add -A; git commit -qm mono-init
+  git remote add up ../up; git fetch -q up
+  git checkout -qb import
+  git subtree add -q --prefix=svc up main
+  git checkout -qm main
+  ml=$(git rev-parse main)
+  root=$(git rev-list --max-parents=0 HEAD | tail -1)
+  git merge -q --no-ff import -m "Merge pull request #7 from fil-forge/import
+
+git-subtree-dir: svc
+git-subtree-mainline: $ml
+git-subtree-split: $root"
+  mkdir -p shared; git mv svc/b.go shared/b.go; git commit -qm 'move b.go out' ) >/dev/null 2>&1
+updel "$d"; pull "$d"
+chk "landing merge quoting its own ^1" "$d/mono" 'STILL HERE.*shared/b\.go'
+
+# Reaches the candidate test's `-t` (line 197), which no other case does: an
+# ancestry-only fork-back, plus a top-level FILE named like the prefix upstream.
+# With `cat-file -e` there the real pull merge is rejected -- `-e` succeeds for
+# the blob -- and the script says "only ever been added, never pulled" and
+# exits 0 with the file carried. With `-t` = tree it refuses loudly instead.
+d=$(mk cand2)
+( cd "$d/up" || exit; printf 'wrapper\n' >svc; git add -A; git commit -qm 'up: a file named svc' ) >/dev/null 2>&1
+( cd "$d/up" || exit; git fetch -q ../mono main 2>/dev/null
+  git merge -q -s ours FETCH_HEAD -m 'fork-back: ancestry only' ) >/dev/null 2>&1
+updel "$d"; pull "$d"
+chk "candidate test: fork-back + prefix-named FILE" "$d/mono" 'STILL HERE.*shared/b\.go|path space'
 
 
 if [ "$fails" -gt 0 ]; then
