@@ -64,6 +64,12 @@
 #                                                 selects cross-compiled artifacts
 #   GOHOSTOS/GOHOSTARCH -> GOOS/GOARCH         -> cross-compile picks the wrong host
 #   `head -1` -> `tail -1` in the default read -> compares the wrong fallback
+#   the host-OS `*) continue ;;` dist arm     -> a cross-OS artifact is probed
+#                                                rather than skipped; fails
+#                                                CLOSED (it cannot exec, so it
+#                                                comes back NOT ASSERTED), so it
+#                                                blocks good releases rather
+#                                                than passing bad ones
 #
 # AND ONE DEPENDENCY NOTHING ELSE STATES: test 6 needs the script under test to
 # `sort -u` its dist listing. That sort is what puts the stdin-eating fixture
@@ -418,17 +424,29 @@ rm -rf "$uni"
 #
 #       14 arch-select   15 os-select   1 universal-select   0 os-skip   0 arch-skip
 #
-#     So deleting the host-OS filter entirely still gave 13 ok / exit 0. A
-#     cross-ARCH binary alongside a good host-arch one reaches it: the release
-#     must PASS, on the arm64 binary, with the stale amd64 one skipped.
+#     So deleting the host-OS filter entirely still gave 13 ok / exit 0.
+#
+#     9b reaches the host-ARCH one, and only that one: a cross-arch binary
+#     alongside a good host-arch one means the release must PASS, on the arm64
+#     binary, with the stale amd64 one skipped. Re-instrumented with 9b in
+#     place: 17 os-select, 15 arch-select, 1 universal-select, 1 arch-skip,
+#     **0 os-skip**. The host-OS skip arm is still unreached and deleting the
+#     whole host-OS `case` still gives 14 ok / exit 0 -- it is in NOT COVERED
+#     below, because a list of what a guard does not check is a claim like any
+#     other and this one was missing an entry the same push measured.
 #
 #     It is also a tripwire on the shim, which is load-bearing and was otherwise
 #     unasserted. The shim answers ONE variable per call and delegates the rest,
 #     which is right for the script as written -- but if the script under test
-#     ever asks for both in one call, the shim answers the first and exits,
-#     `host_arch` comes back empty, `*""*` matches every path, and test 9 then
-#     passes WITH the `_darwin_all` arm deleted. Under 9b the same degradation
-#     turns this red, because an unfiltered amd64 binary is stale.
+#     ever asks for both in one call, the shim answers the FIRST and exits, so
+#     both reads get the same answer: rewriting lines 88-89 to
+#     `go env GOHOSTOS GOHOSTARCH | head -1` and `| tail -1` leaves `host_arch`
+#     holding "darwin", not empty, and `*darwin*` then matches every path under
+#     dist. (An earlier version of this comment said "empty" and `*""*`; the
+#     effect is the same and the mechanism was not, which is the kind of claim
+#     these reviews exist to catch.) Test 9 then passes WITH the `_darwin_all`
+#     arm deleted. Under 9b the same degradation turns this red, because an
+#     unfiltered amd64 binary is stale.
 mkdir -p "$amd"
 ( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
     go build -ldflags="-X example.com/fixture/pkg/buildTYPO.version=v7.7.7" -o "$amd/fixture" ./cmd )
