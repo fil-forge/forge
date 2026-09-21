@@ -106,15 +106,24 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   # deletes a file we had already moved out of the prefix, the merge changes
   # NOTHING on our side, so its diff is empty -- and an empty diff is exactly
   # the case this audit exists for. Caught on a fixture.
-  add=$(git rev-list --merges HEAD --grep="git-subtree-dir: $prefix\$" --max-count=1 || true)
+  # BOTH trailers, and the split is what selects the candidate rather than
+  # merely being read off it. Anchoring the dir grep is not enough: a merge
+  # commit whose BODY happens to contain the line `git-subtree-dir: svc` -- a
+  # pull request about these very scripts is the likely carrier -- matched,
+  # became $add as the most recent match, had no split trailer, and exited 2
+  # with a message blaming the subtree-add. Every later pull of that prefix was
+  # then unauditable, permanently. A real `git subtree add` records both.
+  add=""; split=""
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    cand=$(git log -1 --format=%B "$c" \
+             | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
+    if [ -n "$cand" ]; then add=$c; split=$cand; break; fi
+  done < <(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" || true)
   if [ -z "$add" ]; then
-    echo "Found no 'git subtree add' for '$prefix' in this history." >&2
-    echo "Refusing rather than guessing which merge to audit. Check the prefix." >&2
-    exit 2
-  fi
-  split=$(git log -1 --format=%B "$add" | sed -n 's/^[[:space:]]*git-subtree-split:[[:space:]]*//p' | head -1)
-  if [ -z "$split" ]; then
-    echo "'$prefix' has a subtree-add with no git-subtree-split trailer." >&2
+    echo "Found no 'git subtree add' for '$prefix' in this history -- no merge" >&2
+    echo "carries BOTH a git-subtree-dir: $prefix and a git-subtree-split:" >&2
+    echo "trailer. Refusing rather than guessing which merge to audit." >&2
     exit 2
   fi
 
@@ -153,7 +162,20 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   for c in $(git rev-list --merges --max-count=200 HEAD); do
     git rev-parse -q --verify "$c^2" >/dev/null 2>&1 || continue
     git merge-base --is-ancestor "$split" "$c^2" 2>/dev/null || continue
-    git cat-file -e "$c^2:$prefix" 2>/dev/null && continue
+    # BOTH, not either. Each test alone has its own blind spot and they are
+    # different ones, so a candidate is rejected only when they agree:
+    #   ancestry alone   -- fails on a fork-back, where upstream's tip contains
+    #                       our history and the real pull merge is rejected;
+    #   path space alone -- fails when upstream carries a top-level entry named
+    #                       like the prefix. `git cat-file -e` succeeds for a
+    #                       BLOB as well as a tree, so an ordinary wrapper
+    #                       script named `svc` is enough; the previous comment
+    #                       said "directory" and it never was.
+    # Neither is a property on its own, which is what the previous two
+    # revisions each claimed of theirs. Requiring agreement is: a monorepo
+    # branch tip satisfies both, upstream's tip satisfies at most one.
+    if git merge-base --is-ancestor "$add" "$c^2" 2>/dev/null \
+       && git cat-file -e "$c^2:$prefix" 2>/dev/null; then continue; fi
     merge=$c; break
   done
   if [ -z "$merge" ]; then
@@ -167,7 +189,11 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
     # split is upstream's tip) but the prefix has a pull history the sentence
     # would deny. Refuse loudly rather than report nothing and exit 0 -- that
     # is the shape of failure this script exists to remove.
-    adds=$(git rev-list --merges HEAD --grep="git-subtree-dir: $prefix\$" | wc -l | tr -d ' ')
+    adds=$(git rev-list --merges HEAD --grep="^git-subtree-dir: $prefix\$" \
+             | while IFS= read -r c; do
+                 git log -1 --format=%B "$c" \
+                   | grep -q '^[[:space:]]*git-subtree-split:' && echo x
+               done | wc -l | tr -d ' ')
     if [ "$adds" -gt 1 ]; then
       echo "'$prefix' has $adds subtree-adds, and the newest is the most recent" >&2
       echo "thing that happened to it, so there is no pull range to audit -- but" >&2
@@ -187,6 +213,21 @@ elif git rev-parse -q --verify 'HEAD^2' >/dev/null 2>&1; then
   # Guarded: unrelated histories give an empty merge-base, and `set -e` then
   # kills the script with no message at all.
   base=$(git merge-base "$merge^1" "$merge^2" || true)
+  # The anchor being right does not make the RANGE right. After a fork-back the
+  # merge base is a MONOREPO commit, so `git diff $base $upstream` compares two
+  # path spaces: it names monorepo paths upstream never had and MISSES the file
+  # actually carried. The previous round verified this case by checking which
+  # merge got anchored and never read what the audit then said -- exit 1 was
+  # taken for correctness while the answer was wrong in both directions.
+  # Upstream's path space has no `$prefix/`; if the base does, the diff is
+  # meaningless and saying so is the only honest option.
+  if [ -n "$base" ] && git cat-file -e "$base:$prefix" 2>/dev/null; then
+    echo "'$prefix''s merge base is inside this repository's path space, not" >&2
+    echo "upstream's -- a fork-back, or an upstream carrying the prefix name." >&2
+    echo "The audit would diff two different layouts and report nonsense in" >&2
+    echo "both directions. Refusing rather than misreading; check by hand." >&2
+    exit 2
+  fi
   if [ -z "$base" ]; then
     echo "No merge base between '$prefix''s pull and its upstream -- cannot diff" >&2
     echo "the upstream range, so there is nothing this audit can honestly say." >&2
@@ -230,6 +271,13 @@ destination_of() {
 
 unresolved=0
 merged=0
+# Counted apart from $merged, because a dry run that "would merge with N
+# conflict(s)" is not a clean preview. $merged increments for rc>0 exactly as
+# for rc=0, so the previous revision's summary said "0 path(s) still unmerged"
+# about a run that will leave one, and exited 0 -- the mirror image of the bug
+# it was fixing, in the preview whose whole purpose is to signal
+# "this would all resolve".
+would_conflict=0
 
 while IFS= read -r conflicted; do
   # The conflict is reported at the path the file had UPSTREAM: <prefix>/<path>
@@ -278,7 +326,11 @@ while IFS= read -r conflicted; do
   # through the pipe and 0 through process substitution.
   # `grep -Iq .` needs a non-empty LINE, so an empty file and a blank-lines-only
   # file both failed it and were refused as binary. Test emptiness first, then
-  # look for a NUL the way grep -I decides.
+  # look for a NUL the way grep -I decides -- `grep -Iq ''`, with an EMPTY
+  # pattern. The previous revision fixed the emptiness half and left the probe
+  # as `grep -Iq .`, so a blank-lines-only file went on being called binary: a
+  # case that worked before that change and stopped working after it, under a
+  # comment claiming it was fixed.
   #
   # Size, not the first byte. `$(... | head -c 1)` was the emptiness test, and
   # bash DROPS NUL bytes in command substitution -- so a file whose first byte
@@ -289,7 +341,7 @@ while IFS= read -r conflicted; do
   # is a second mechanism, not this one. `git cat-file -s` reads the size from
   # the object header and touches no content.
   if [ "$(git cat-file -s ":3:$conflicted" 2>/dev/null || echo 0)" -gt 0 ] \
-     && ! grep -Iq . < <(git show ":3:$conflicted" 2>/dev/null); then
+     && ! grep -Iq '' < <(git show ":3:$conflicted" 2>/dev/null); then
     note "SKIP  $conflicted -> $dest: binary, merge by hand"
     unresolved=$((unresolved + 1)); continue
   fi
@@ -314,7 +366,9 @@ while IFS= read -r conflicted; do
     # yet; the b/ side naming a temp path is the honest cost of not writing it.
     git --no-pager diff --no-index -- "$dest" "$tmp/$dest" || true
     note "$([ "$rc" = 0 ] && echo "would merge cleanly" || echo "would merge with $rc conflict(s)")  $conflicted -> $dest"
-    merged=$((merged + 1)); rm -rf "$tmp"; continue
+    merged=$((merged + 1))
+    [ "$rc" = 0 ] || would_conflict=$((would_conflict + 1))
+    rm -rf "$tmp"; continue
   fi
 
   cat "$tmp/$dest" > "$dest"
@@ -440,11 +494,19 @@ fi
 if [ "$pull_mode" = merged ]; then
   note "Audited a completed pull: $stale carried, $guessed to confirm."
 else
-  note "$merged merged, $unresolved left for a human, $unmerged path(s) still unmerged, $stale carried, $guessed to confirm."
+  if [ "$dry" = 1 ]; then
+    note "$merged would merge, $would_conflict of them WITH CONFLICTS, $unresolved left for a human, $stale carried, $guessed to confirm."
+  else
+    note "$merged merged, $unresolved left for a human, $unmerged path(s) still unmerged, $stale carried, $guessed to confirm."
+  fi
 fi
 
 # $unmerged, not just $unresolved. The status used to count only the DU class,
 # so a pull whose conflicts were ordinary content conflicts -- the common case,
 # fourteen of them in one resync -- exited 0 with the merge unresolved, and a
 # caller acting on the status per AGENTS.md committed it.
-[ "$unresolved" = 0 ] && [ "$stale" = 0 ] && [ "$guessed" = 0 ] && [ "$unmerged" = 0 ]
+# $would_conflict is in the exit for the same reason $unmerged is: a preview
+# that says "would merge with 1 conflict(s)" has not previewed a clean merge,
+# and a caller acting on the status would commit one.
+[ "$unresolved" = 0 ] && [ "$stale" = 0 ] && [ "$guessed" = 0 ] \
+  && [ "$unmerged" = 0 ] && [ "$would_conflict" = 0 ]
