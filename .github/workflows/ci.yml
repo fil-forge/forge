@@ -42,6 +42,12 @@ concurrency:
 
 jobs:
   guards:
+    # check-assert-released-version.sh test 8 waits out the assertion's own
+    # probe cap on a binary that never exits: ~20s today, and ~20 MINUTES if
+    # that cap is ever raised, because the test measures elapsed time AFTER the
+    # probe returns rather than bounding it. Without this the ceiling is
+    # GitHub's 6-hour default. release.yml sets one and says why; so does this.
+    timeout-minutes: 15
     name: guards
     runs-on: ubuntu-latest
     steps:

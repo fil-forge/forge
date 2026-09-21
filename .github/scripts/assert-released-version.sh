@@ -43,10 +43,15 @@ cd "$(dirname "$0")/../.."
 #
 # Derived from the service's own source rather than tabulated, so a service
 # that changes its default moves itself.
-# `|| true` is load-bearing: grep exits 2 (an error, not "no match") when a
-# directory does not exist, and most services have no internal/build. Under
-# `set -euo pipefail` that killed the script before it did anything, with no
-# output and exit 2. Found by running it.
+# The `|| true` here is belt-and-braces, not load-bearing -- an earlier
+# revision of this comment claimed the latter and a review measured otherwise.
+# grep does exit 2 (an error, not "no match") when a directory does not exist,
+# and most services have no internal/build, which under `set -euo pipefail`
+# would kill the script; but the trailing `|| true` on the whole pipeline
+# already absorbs that, and removing this inner one changes nothing. Kept
+# because it makes the intent local to the grep that can fail, and because the
+# pipeline's shape is what would have to stay true for the outer one to keep
+# covering it.
 default=$(
   { grep -rhoE 'defaultVersion[[:space:]]+(string[[:space:]]+)?=[[:space:]]*"[^"]+"|Version[[:space:]]*=[[:space:]]*"dev"' \
       "$svc_dir/pkg/build" "$svc_dir/internal/build" 2>/dev/null || true; } \

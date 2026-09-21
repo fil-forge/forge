@@ -801,10 +801,13 @@ paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
 above was measured with a *prefixed* value. goreleaser's git pipe consults
 `GORELEASER_CURRENT_TAG` before `git describe`, so setting it to the **plain**
 semver (`v1.2.3`) should sidestep the parse entirely — which is exactly what the
-workflow does. That has **not** been measured. If it turns out to be wrong, the
-workflow's build step fails on the first dry run, which is the cheapest possible
-place to find out; but the row above should not be read as evidence that it
-already has been tried.
+workflow does. **Measured since, twice and independently:** a release ran to
+completion with `GORELEASER_CURRENT_TAG=v9.9.9` against a repository with no
+tags at all — goreleaser reported `couldn't find any tags before "v9.9.9"`,
+took `previous=<unknown> current=v9.9.9`, and the built binary printed
+`version: 9.9.9`. So the plain semver does sidestep the parse. The rows above
+were all measured with a *prefixed* value and still should not be read as
+evidence for this case; this paragraph is.
 
 - **Do not tag for Go at all.** Release these as binaries and images, which is
   what they are; keep `<svc>/vX.Y.Z` in reserve for the day someone wants

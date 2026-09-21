@@ -39,6 +39,32 @@
 #   the "released AT the fallback" refusal             -> FAIL (test 3)
 #   the "cannot find the fallback" refusal             -> FAIL (test 7)
 #   the `</dev/null` on the probe                      -> FAIL (test 6)
+#   the full ERE escaping of $want                     -> FAIL (test 4b)
+#   the "output must be version-shaped" test           -> FAIL (test 4c)
+#
+# THE FOURTH FIX OF THAT PUSH WAS NOT ON THAT LIST, and that is how it was
+# found: reverting the ERE escaping to `sed 's/\./\\./g'` -- the spelling it
+# had one commit earlier -- left this file printing nine `ok`s and exit 0 while
+# the assertion accepted a stale binary. A guard listing the fixes it covers is
+# a claim; four fixes landed and three were listed. Test 4b closes it.
+#
+# NOT COVERED, and listed so the next round starts from a set rather than a
+# hunt. Each is a deliberate break that leaves this file green; all are inert
+# in the tree today, which is why they are documented rather than tested:
+#   dropping the LEADING anchor `(^|[^0-9.])`  -> v1.2.3 accepts v11.2.3
+#   `--version` dropped from the probe list    -> a service answering only that
+#                                                 becomes unassertable
+#   `*all*` unanchored in the dist filter      -> a binary named `install`
+#                                                 selects cross-compiled artifacts
+#   GOHOSTOS/GOHOSTARCH -> GOOS/GOARCH         -> cross-compile picks the wrong host
+#   `head -1` -> `tail -1` in the default read -> compares the wrong fallback
+#
+# AND ONE DEPENDENCY NOTHING ELSE STATES: test 6 needs the script under test to
+# `sort -u` its dist listing. That sort is what puts the stdin-eating fixture
+# before the binary it swallows. Remove `sort -u` from assert-released-version.sh
+# and the order becomes filesystem order -- test 6 then silently reverts to the
+# "swallows what comes after, with nothing after it" version that passed with
+# the bug present.
 #
 # The last one is a lesson in fixture ORDER rather than fixture count. The
 # stdin-eating binary has to sort BEFORE the binary it is meant to swallow, or
@@ -180,7 +206,7 @@ accepts "a correct -X is accepted" dist v7.7.7
 #    fail rather than quietly succeed down the mismatch path.
 build_fixture 'example.com/fixture/pkg/buildTYPO'
 refuses "releasing at the fallback version is refused" \
-  "which is" dist v0.0.0
+  "is being released at" dist v0.0.0
 
 # 4. A version that merely shares a prefix must not satisfy the check.
 sed -i.bak 's/v0.0.0/v7.7.77/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/build/version.go.bak"
@@ -188,6 +214,48 @@ build_fixture 'example.com/fixture/pkg/buildTYPO'
 refuses "a prefix-sharing version does not satisfy the check" \
   "was built for v7.7.7 but reports" dist v7.7.7
 sed -i.bak 's/v7.7.77/v0.0.0/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/build/version.go.bak"
+
+# 4b. A VERSION CONTAINING AN ERE METACHARACTER. This is the test the round
+#     that fixed the escaping was asked for and did not add -- and the ONE break
+#     this guard did not catch: reverting :211 to `sed 's/\./\\./g'` left this
+#     file printing nine ok lines and exit 0 while the assertion accepted a
+#     stale binary. `release.yml` admits `+` deliberately (its charset class
+#     lists it), so this is reachable, not hypothetical.
+#
+#     Both directions, because dot-only escaping is wrong in both: with `+`
+#     unescaped, `1\.2\.3+meta` is an ERE meaning "one or more 3s", so it
+#     ACCEPTS a binary reporting v1.2.33meta and it would REJECT the correct
+#     v1.2.3+meta. Test the acceptance first so a regression cannot pass by
+#     rejecting everything.
+sed -i.bak 's/v0.0.0/v1.0.0/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/build/version.go.bak"
+( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
+    go build -ldflags="-X example.com/fixture/pkg/build.version=v1.2.3+meta" -o "$bin" ./cmd )
+accepts "a version containing a + is accepted when the binary reports it" dist 'v1.2.3+meta'
+
+( cd "$svc" && GOWORK=off GOFLAGS=-mod=mod \
+    go build -ldflags="-X example.com/fixture/pkg/build.version=v1.2.33meta" -o "$bin" ./cmd )
+refuses "a + in the version is a literal, not an ERE quantifier" \
+  "was built for v1.2.3+meta but reports" dist 'v1.2.3+meta'
+sed -i.bak 's/v1.0.0/v0.0.0/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/build/version.go.bak"
+
+# 4c. A BINARY THAT ANSWERS SOMETHING THAT IS NOT A VERSION must be reported as
+#     unassertable, not blamed for a stale ldflag. Without the "output must be
+#     version-shaped" test the script would print "was built for X but reports
+#     <usage text>", which sends the reader after a flag that is fine.
+notver=$svc/dist/fixture_$(go env GOHOSTOS)_$(go env GOHOSTARCH)_zzy
+mkdir -p "$notver"
+cat > "$tmp/notver.go" <<'EOF'
+package main
+
+import "fmt"
+
+func main() { fmt.Println("usage: fixture [command]"); fmt.Println("see the docs") }
+EOF
+( cd "$tmp" && GOWORK=off GOFLAGS=-mod=mod go build -o "$notver/fixture" notver.go )
+build_fixture 'example.com/fixture/pkg/build'
+refuses "a binary that answers non-version text is unassertable, not stale" \
+  "NOT ASSERTED" dist v7.7.7
+rm -rf "$notver"
 
 # 5. ONE BINARY THAT CANNOT BE ASKED CONDEMNS THE RELEASE, even alongside a
 #    good one. This is the branch the old single-binary fixture could not
