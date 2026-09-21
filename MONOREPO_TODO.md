@@ -521,9 +521,11 @@ split rather than a flag on that one.
 
 ## Decide whether service images should report what they are
 
-Every service binary here reads build metadata that nothing sets when the image
-is built. `pkg/build` (or `internal/build`) declares `version`, `Commit`, `Date`
-and `BuiltBy`, the code reads them, and a container reports:
+Six of the ten services here carry a build-metadata package — `hilt`,
+`indexing-service`, `ingot`, `piri`, `sprue` and `swarf`, in `pkg/build` or
+`internal/build`. In an image every one of them reports its defaults, because
+nothing sets them when the image is built. `piri`'s `version` subcommand in a
+container:
 
 ```
 version: v0.0.0-unknown
@@ -532,80 +534,130 @@ built at: unknown
 built by: unknown
 ```
 
+`ingot` prints the same four fields in a different shape; the other four have
+no such CLI output at all, and surface only a version — `hilt`, `sprue` and
+`swarf` through their fx server info, `indexing-service` at `GET /`.
+
+The remaining four — `delegator`, `forgectl`, `piri-signing-service` and
+`smelt` — have no build-metadata package, so there is nothing to stamp.
+
+**What the six declare is not what they read**, and that bears on the choice
+at the end:
+
+| | declares | read in Go |
+|---|---|---|
+| `piri`, `ingot` | version, `Commit`, `Date`, `BuiltBy` | all four |
+| `hilt`, `sprue`, `swarf` | version, `Commit`, `Date`, `BuiltBy` | **version only** |
+| `indexing-service` | `version`, `Version`, `UserAgent` | `Version` only |
+
+`Commit`, `Date` and `BuiltBy` are already dead in three of the six, and
+`indexing-service` never declared them.
+
 **The symptom.** Eight service Dockerfiles — `delegator`, `hilt`,
 `indexing-service`, `ingot`, `piri`, `piri-signing-service`, `sprue`, `swarf` —
 and not one passes a `-X`. The only Dockerfile in the repository that does is
 `smelt/systems/stress-tester/Dockerfile`, a test harness rather than a service.
 (There are thirteen Dockerfiles in total; the other four are
-`Dockerfile.release`, which package a goreleaser-built binary instead of
-compiling one, and inherit whatever goreleaser stamped.)
+`Dockerfile.release` — see **What a release does get** below, where two of the
+four turn out to be dead.)
 
-**One cause, not three.** Nothing passes `-X`, and neither fallback can stand in
-for it:
+**One cause, not three.** Nothing passes `-X`, and neither fallback can stand
+in for it:
 
 - The development fallback reads `version.json` **by relative path, at runtime,
-  from `init()`**. No `prod` stage sets a `WORKDIR` or copies `version.json` —
-  each one `COPY`s the binary and nothing else — so cwd is `/`, the open fails,
-  and the version falls back to the package default (`v0.0.0` for `hilt`,
-  `indexing-service`, `piri`, `sprue` and `swarf`; `"dev"` for `ingot`).
+  from `init()`** — in `hilt`, `indexing-service`, `piri`, `sprue` and `swarf`.
+  No `prod` stage sets a `WORKDIR` or copies `version.json`; each one `COPY`s
+  the binary and nothing else. So cwd is `/`, the open fails, and the version
+  falls back to the package default, `v0.0.0` in all five. `ingot` has no such
+  read at all — nothing in its Go reads `version.json`, despite the file
+  existing — and its `"dev"` comes from `init()` seeing an empty `Version`,
+  which is the `-X` absence and not a second cause.
 - The revision helper reads `vcs.revision` from `debug.ReadBuildInfo()`, which
-  the toolchain records only when it compiles inside a git checkout. No
-  Dockerfile `COPY`s `.git` into its builder, so there is nothing to record.
+  the toolchain records only when it compiles inside a git checkout. **No
+  Dockerfile `COPY`s `.git` into its builder**, so there is nothing to record.
 
-An earlier draft of this entry blamed `.dockerignore` for both of those. It does
-not cause either. Only `piri/.dockerignore` and `sprue/.dockerignore` list
-`version.json` at all, Docker reads only the `.dockerignore` at the **build
-context root** — and `images.yml` builds `piri` with `context: .`, so
-`piri/.dockerignore` is never read. `swarf` has no `.dockerignore` at all and
-reports `unknown` exactly like the rest.
+An earlier draft of this entry blamed `.dockerignore` for both of those. It
+causes neither, but not for the reason that draft gave, and the real reasons
+are the two above rather than anything about `.dockerignore` at all:
 
-**It was never only images, either.** Three Makefiles — `hilt`, `piri`,
-`sprue` — injected four `-X` flags each at `github.com/fil-forge/<svc>`, the
-pre-consolidation module path, so `make build` produced an unstamped binary
-too; `piri-signing-service` injected three into `main` symbols nobody had
-declared. That is the same defect #9 fixed in the four `.goreleaser.yaml`
-files, applied to half the corpus, and the guard that was supposed to catch it
-globbed `.goreleaser.y*ml` only. Fixed in #16, which also widens the guard;
-not part of this open question.
+- On `.git`: **every one of the seven `.dockerignore` files lists `.git`**,
+  the root one included, so a reader checking whether it is excluded finds
+  that it is. That is not what makes it absent. Nothing copies it — nine
+  Dockerfiles `COPY . .` and would carry `.git` in if it were in the context,
+  and it is excluded everywhere, so the builder never sees it either way.
+- On `version.json`: only `piri/.dockerignore` and `sprue/.dockerignore` name
+  it. Docker reads only the `.dockerignore` at the **build context root**, and
+  `images.yml` builds `piri` with `context: .`, so `piri/.dockerignore` is
+  never read — but it builds `sprue` with `context: sprue`, so
+  `sprue/.dockerignore` **is** the context-root file and **does** exclude
+  `version.json`. It makes no difference, because no `prod` stage copies the
+  file in any case, which is the universal reason. `swarf` has no
+  `.dockerignore` at all and reports `unknown` exactly like the rest.
 
-**Nothing here publishes an image yet.** `images.yml` is `push: false` and takes
-no `packages: write`; no other workflow pushes. So today this shows up in the
-images that `e2e` and `itest` build, and in local builds — not in anything
-that ships.
+**Nothing here publishes an image yet.** `images.yml` is `push: false` and
+takes no `packages: write`; no other workflow pushes. So in this repository it
+shows up only in the images `e2e` and `itest` build, and in local builds. The
+images that *do* ship today are the polyrepos' `ghcr.io/fil-forge/<svc>:main`
+that `smelt/.env.published` runs, and those report nothing either: of the seven
+`publish-ghcr.yml` files this repository's history carries — `delegator`,
+`hilt`, `indexing-service`, `ingot`, `piri`, `piri-signing-service`, `sprue`,
+read at the parent of the commits that deleted them — **not one passes any
+`build-args`**. `swarf`'s never existed here, so it is unchecked.
 
 **What a release does get.** Four services have a goreleaser config —
-`indexing-service`, `ingot`, `piri`, `sprue` — and all four stamp the right
-package since #9. `ingot` and `sprue` additionally ship release *images*
-(`dockers:` → `Dockerfile.release`), which package that stamped binary, so their
-released images do report themselves. `hilt/Dockerfile.release` and
-`swarf/Dockerfile.release` exist but nothing references them — dead files
-inherited from the polyrepo. `delegator`, `forgectl`, `piri-signing-service` and
-`smelt` have no build-metadata package at all, so there is nothing to stamp.
+`indexing-service`, `ingot`, `piri`, `sprue`. Each stamps its own build
+package, so a released binary does report itself. One caveat:
+`indexing-service/.goreleaser.yaml` also carries four `-X main.version`,
+`main.commit`, `main.date` and `main.builtBy` flags that package `main` does
+not declare, and `check-goreleaser-ldflags.sh` passes them because it
+special-cases `main` — the live instance of the defect #9 was written to
+catch. #12 drops them; on `main` they are still there.
+
+`ingot` and `sprue` additionally ship release *images* (`dockers:` →
+`Dockerfile.release`), which package that stamped binary, so their released
+images report themselves. `hilt/Dockerfile.release` and
+`swarf/Dockerfile.release` package no such thing: **neither service has a
+goreleaser config**, and nothing references either file. They are dead,
+inherited from the polyrepo.
 
 **Why it waits.** What is left is a publishing question, not a build one:
 whether an image is expected to describe itself, or whether the tag and digest
-are its identity and the binary need not agree. If it is expected to, each field
-needs a source per workflow — a pull request build has a commit but no version,
-a publish on `main` has both, a release already has them from goreleaser — and
-a shared `ARG`/`-X` block would be the first thing every service Dockerfile has
-in common, which is a small architectural commitment rather than a tidy-up.
-Phase 1 has not settled that.
+are its identity and the binary need not agree. If it is expected to, each
+field needs a source per workflow — a pull request build has a commit but no
+version, a publish on `main` has both, a release already has them from
+goreleaser — and a shared `ARG`/`-X` block would be the first thing every
+service Dockerfile has in common, which is a small architectural commitment
+rather than a tidy-up. Phase 1 has not settled that.
 
-**The worked example is in a repository being archived.** `guppy` is the only
-Dockerfile in the fleet with `ARG VERSION/COMMIT/DATE/BUILT_BY` feeding four
-`-X` flags, and — the more useful half — its
-`.github/workflows/publish-ghcr.yml` answers the per-workflow question with
-three concrete stanzas: `VERSION=pr-<n>` with the head sha for a pull
-request, `VERSION=main` with `github.sha` for a `main` publish, and
-`VERSION=v<meta.version>` for a release. `guppy` is being
+**The worked example is in a repository being archived.** `guppy` has the only
+Dockerfiles in reach with `ARG VERSION/COMMIT/DATE/BUILT_BY` feeding four `-X`
+flags — both its `Dockerfile` and its `Dockerfile.dev` — and, the more useful
+half, its `.github/workflows/publish-ghcr.yml` answers the per-workflow
+question: five `build-args:` stanzas carrying three `VERSION` policies,
+`pr-<n>` with the head sha for a pull request, `main` with `github.sha` for a
+`main` publish, and `v<meta.version>` for a release. `guppy` is being
 dismantled and archived (`MAJOR_DECISIONS.md`). The flag list itself is
-reconstructible from four in-repo Makefiles; the workflow plumbing is the part
+reconstructible from the four in-repo Makefiles that inject the same four
+fields — `hilt`, `piri`, `sprue`, `swarf`; the workflow plumbing is the part
 worth copying out before the repository goes.
 
-**The choice.** Give every service image the metadata from a shared pattern; or
-decide images identify themselves by tag and digest alone, and delete the
-variables rather than leaving code that reads values nothing sets; or do it
+**The choice.** Give every service image the metadata from a shared pattern;
+or decide images identify themselves by tag and digest alone, and delete the
+variables rather than leaving code that reads values nothing sets — for
+`Commit`, `Date` and `BuiltBy` in `hilt`, `sprue` and `swarf` that is already
+the state, so this option is partly just making it explicit; or do it
 per-service as each one's release flow is settled.
+
+Related but separate, and not part of this question: four of the six Makefiles
+that inject `-X` stamp nothing. `hilt`, `piri` and `sprue` name the
+pre-consolidation module path `github.com/fil-forge/<svc>/pkg/build`, and
+`piri-signing-service` names `main` symbols nobody declared. `piri` has a
+second, larger fault: `make build` names `github.com/fil-forge/piri/cmd` as its
+build *target*, which has not resolved since consolidation, so it fails
+outright rather than producing an unstamped binary. `swarf` is the one that was
+already correct. Open as #16. The wiki's *Needs Human Work* page carries the
+same question for the polyrepo images, where it waits on a decision rather than
+on the monorepo.
 
 # Findings in the imported code
 
