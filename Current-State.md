@@ -287,8 +287,23 @@ factual errors were found by re-reading my own work, and its correction
 told to grade every finding FIXED / PARTIALLY FIXED / NOT FIXED / FIX
 INTRODUCED A NEW DEFECT, and to end with an explicit verdict on whether it is
 satisfied at the current head. A PR is not done being reviewed until one says
-so. **Two have reported, and they went opposite ways** — which is the argument
-for the round in one line.
+so. **Four have reported. Three were not satisfied, and every one of the three
+found defects that round two's fixes had introduced** — which is the argument
+for the round, and the argument for never having skipped it.
+
+The tally, because the shape is the finding:
+
+| PR | round | verdict | new defects **in the previous round's fixes** |
+|---|---|---|---|
+| #14 | two | **satisfied** | none — 2 stale claims |
+| #15 | one | not satisfied | 2 of 10 (7 blocking) |
+| #13 | three | not satisfied | **3 of 3 blocking** |
+| #16 | three | not satisfied | 2 blocking, both partial fixes |
+| #12 | six | *running* | — |
+
+All four are worked and pushed: #13 `8897649a`, #14 `d7f00ba9`, #15 `f0ed73db`,
+#16 `259f60c1`. `guards` is green on every one, which is the job that actually
+runs #16's guard.
 
 **#14 is the first PR any reviewer has declared itself satisfied with.** All
 three round-one fixes hold, and the round re-derived each rather than accepting
@@ -316,6 +331,46 @@ one did. A correct guard has to know which tags each suite is *run* with —
 rule 5 says not to ship. It needs deriving from the workflows' own `-tags`
 flags. **Worth an issue; not filed, because filing one is a write I have not
 been asked to make.**
+
+**#13 and #16 are the sharpest results of the weekend, because both are the
+same finding twice.**
+
+On **#13**, all three blocking defects were introduced by the round-two fixes.
+The anchoring one is the script's own failure mode rebuilt out of its own
+repair: round two's test was *"the subtree-add is not an ancestor of the
+merge's second parent"*, justified by "upstream has never heard of this
+monorepo" — **a belief about who merged what, not a property of the trees.**
+One fork-back, even an ancestry-only `merge -s ours` changing no file, and the
+real pull merge is rejected, the loop falls through to the add, and the script
+prints "only ever been added, never pulled" and exits 0 with the
+upstream-deleted file in the tree. Reproduced on a fixture. The replacement
+tests the path space instead — upstream's tree has no `<prefix>/` directory,
+that is what makes it upstream — and gives byte-identical anchors on
+`origin/main` and on the resync branch, 10 of 10 each, while getting the
+fork-back right. The other two: the same-basename probe added last round fed
+the *verified* counter, so the summary asserted "because we had moved them"
+about files nobody moved (16% to 81% of a prefix's basenames also exist outside
+it); and the empty-file fix tested `$(... | head -c 1)`, and **bash drops NUL
+bytes in command substitution**, so the binary guard was bypassed by binaries.
+
+On **#16**, round three got the round-one output back word for word:
+
+```
+$ # a dead -X appended to hilt/Makefile's EXISTING ldflags line
+All 39 distinct -X ldflags (43 occurrences) name a string
+var that exists in their module.       EXIT=0
+```
+
+`grep -c` counts matching *lines*. A line carrying one readable `-X` and one
+unreadable one matches both patterns once, so nothing fires — and **10 of the
+17 `-X`-bearing lines here carry two or more flags, covering 38 of the 43
+occurrences the guard checks.** Round two's fix was verified on a fixture with
+one flag per line. This repository does not write one flag per line. **The
+fixture is the lesson, not the patch:** a fixture whose shape does not match the
+repository's proves the guard works on the fixture. And for the third round
+running, a false universal claim shipped — the helper's header still said it
+"cannot call a live flag dead", and `type S = string; var V S` is set by the
+linker and was failed by the guard.
 
 **#15 went the other way: ten problems, seven blocking, every one reproduced.**
 The PR that adds one Markdown entry and no code is now on its third revision,

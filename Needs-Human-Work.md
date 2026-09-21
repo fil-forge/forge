@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-21 15:25Z.** Everything here is waiting on a person — either
+**Updated 2026-09-21 15:35Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -22,11 +22,15 @@ Five things. Only the first changes what the PRs are waiting on:
    the defects found this weekend were in fixes made by the round before**. Five
    rounds are running now against the current heads, each holding the previous
    report and asked to end with an explicit verdict. [[Current State]] has the
-   head-by-head table. **Two have reported, and they went opposite ways.**
-   #14 is the first PR a reviewer has declared itself satisfied with — two
-   one-line fixes came out of it, pushed as `d7f00ba9`. #15 is the
-   opposite: ten problems, seven blocking, and the revision written to fix
-   four errors had introduced two more. Rewritten as `f0ed73db`.
+   head-by-head table. **Four have reported, three of them not satisfied, and
+   all three found defects that the previous round's fixes had introduced.**
+   #14 is the one that passed. #13's three blocking defects were *all* in
+   round two's fixes; #16's guard printed its round-one output again, word
+   for word, because round two's fix was verified on a fixture whose shape
+   does not match this repository's; #15's rewrite fixed four errors and
+   introduced two. All four worked and pushed — #13 `8897649a`,
+   #14 `d7f00ba9`, #15 `f0ed73db`, #16 `259f60c1`, `guards` green on each.
+   #12's sixth round is still running.
 2. **Every `forge` PR got an adversarial review, and every one found something
    real.** The sharpest finding was that **four of the defects were in fixes
    made by the round before**. All of them are fixed and pushed — but see item
@@ -177,7 +181,7 @@ the same failure mode as the eighteen-hour sprue miss, two weeks apart.
 | [ingot #175](https://github.com/fil-forge/ingot/pull/175) | swarf bumped 9 commits — ingot is the repo that actually consumes the firehose | draft, on `6e205ef` |
 | [forge #15](https://github.com/fil-forge/forge/pull/15) | one entry in `MONOREPO_TODO.md`: service images report no build metadata, filed as a question not a fix. **Third revision.** The first was wrong four ways; the second fixed those and introduced two more, and left five it had missed. An independent review found all ten; every number in the entry is now derived by a command quoted beside it | **Open**, on `f0ed73db` (third revision; CI running) |
 | [forge #12](https://github.com/fil-forge/forge/pull/12) | round five found `--skip=publish` does not skip goreleaser's docker build — the premise round four deleted two setup steps on. Fixed, measured both ways | **Open**, green all 24, on `06e49742` — round five complete |
-| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Open**, green all 24, on `e5ea4209` |
+| [forge #16](https://github.com/fil-forge/forge/pull/16) | the code half of #15's review: four Makefiles that stamped nothing, and the guard that globbed `.goreleaser.y*ml` and so never looked. **#12 must merge first** — tried rebasing it onto `main` and it conflicts in five files, two of which only exist on #12's branch | **Open**, on `259f60c1` — round three: the guard counted lines, so it checked a quarter again and printed the round-one sentence; CI running |
 | [sprue #106](https://github.com/fil-forge/sprue/pull/106) | a `version` subcommand — **plus the fix for the container build it broke**, see below | draft, green on `2e8f17c`, after being red on `a50db97` |
 
 ### What #14's `e2e` caught, which is the most useful thing today
