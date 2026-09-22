@@ -107,8 +107,8 @@ Numbered as the wiki numbers them; it carries the reasoning.
    the import, not the work.
 9. **A branch meant to be reviewed and merged gets a PR when it is pushed.**
    Scratch branches do not.
-10. **Every pull request gets agent review rounds until one comes back
-    satisfied.** Details below.
+10. **Every pull request gets agent review rounds, and goes Open when they
+    stop.** Details below.
 
 ## Every pull request is reviewed by an agent, repeatedly
 
@@ -119,19 +119,38 @@ consolidation does, and the team develops its own when it arrives.
 
 **Open a review round on every push.** A **review agent** reads the PR and
 verifies its claims against the tree rather than against the body. Rounds
-repeat until one comes back with nothing. ("Reviewer" elsewhere in this file —
-in the skippable-checks block — means the human who merges; these are
-different, and a draft cannot be merged.)
+repeat until the reviewing is done. ("Reviewer" elsewhere in this file — in the
+skippable-checks block — means the human who merges; these are different, and a
+draft cannot be merged.)
 
 **Two signals, and they are deliberately mechanical.**
 
 - The review agent writes, verbatim and only when it found nothing:
   **"Satisfied. No findings this round. This PR is ready for human review."**
   That sentence's existence is the fact; it is told not to write it otherwise.
-- **A PR stays a draft while a round is open, and goes Open once a round comes
-  back satisfied.** Draft is the visible half of the same signal. **The flip is
-  the human's to make**, not the agent's — it is the point at which someone
-  else is being asked to spend time.
+- **A PR stays a draft while the rounds are running, and goes Open the moment
+  they stop.** Draft is the visible half of the same signal, and **the flip goes
+  with the stop, whoever calls it** — a satisfied round, or the human saying
+  enough. Do not leave a PR sitting in draft after the last round: that state
+  then says "still being worked on" about something nobody is working on.
+
+**A satisfied round is one way the rounds end, not the only one, and that
+matters because it is not always reachable.** Measured across the two pull
+requests that ran five rounds each: **fourteen findings about behaviour in
+rounds one and two, none at all in rounds three to five**, which produced
+nineteen findings between them — every one about a *claim*, a comment, a count,
+a body. Those sustain themselves, because each fix to a comment is a new comment
+the next round finds slightly off. One number could not converge at all: the
+run that measured it always postdated the sentence quoting it, so every revision
+was stale on arrival until the number was deleted.
+
+The cause is structural rather than anyone's carelessness. When most of a diff
+is commentary — one of those two was ~305 changed lines of a workflow, nearly
+all comments — the rounds review the commentary, and a reviewer told to verify
+every factual claim against the tree will always find something in that much
+prose. **So scope each round to what changed since the last one, and skip the
+round when that is comments only.** Where a round still will not settle, stopping
+is a legitimate end: say so on the PR, open it, and hand it over.
 
 **Every round posts, not only the satisfied one.** An unsatisfied agent
 reporting back privately makes the comment's *existence* the signal, which is
