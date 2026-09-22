@@ -66,6 +66,12 @@ jobs:
     needs: window
     # Nothing to pin against is not a failure. A service that has not published
     # a release yet should not give this a permanent red.
+    #
+    # This skip is only safe because the script now FAILS when it cannot read
+    # the registry, rather than reporting that as "no releases". It used to do
+    # the latter, which made an outage look like this case: four "publishes no
+    # version-tagged image" lines, pinnable=false, this job skipped, and the
+    # nightly green having asserted nothing.
     if: needs.window.outputs.pinnable == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60

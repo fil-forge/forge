@@ -61,6 +61,7 @@ import (
 
 	"github.com/fil-forge/forge/smelt/pkg/clients/guppy"
 	"github.com/fil-forge/forge/smelt/pkg/stack"
+	"github.com/fil-forge/forge/smelt/pkg/workspace"
 )
 
 // imageRepo is where the services' released images live. Kept as one constant
@@ -112,20 +113,29 @@ func pinnedVersions(t *testing.T, service string) []string {
 	return out
 }
 
-// pinOption maps a service name to the stack option that pins its image.
-// Only the operator-facing services are covered: piri and ingot are the ones
-// third parties run and therefore the ones that can lag. sprue and hilt we
-// deploy ourselves and can upgrade together, so a version skew between them is
-// our own scheduling problem rather than a compatibility contract.
-func pinOption(service, image string) (stack.Option, bool) {
-	switch service {
-	case "piri":
-		return stack.WithPiriImage(image), true
-	case "ingot":
-		return stack.WithIngotImage(image), true
-	default:
-		return nil, false
-	}
+// pinFor maps a smelt service name to the option that pins its image. The
+// names are workspace.Detect()'s, which are the names the stack itself uses,
+// so TestRollingUpgrade can walk that list and pin every entry.
+//
+// A service in the workspace with no entry here is a hard failure rather than
+// a default, because the default is the bug this table exists to stop: a
+// service nobody pinned is built from HEAD, and a fleet with one HEAD service
+// in it that nobody meant to put there is not a baseline.
+var pinFor = map[string]func(string) stack.Option{
+	"piri":            stack.WithPiriImage,
+	"ingot":           stack.WithIngotImage,
+	"upload":          stack.WithUploadImage,
+	"hilt":            stack.WithHiltImage,
+	"indexer":         stack.WithIndexerImage,
+	"delegator":       stack.WithDelegatorImage,
+	"signing-service": stack.WithSignerImage,
+	"swarf":           stack.WithSwarfImage,
+	"guppy":           stack.WithGuppyImage,
+}
+
+// envSuffix is a service's name as it appears in COMPAT_BASELINE_<SUFFIX>.
+func envSuffix(service string) string {
+	return strings.ToUpper(strings.ReplaceAll(service, "-", "_"))
 }
 
 // TestPinnedPeer boots the stack with one service at a released image and every
@@ -140,19 +150,29 @@ func TestPinnedPeer(t *testing.T) {
 			for _, version := range pinnedVersions(t, service) {
 				t.Run(version, func(t *testing.T) {
 					image := imageFor(service, version)
-					pin, ok := pinOption(service, image)
+					pin, ok := pinFor[service]
 					if !ok {
 						t.Fatalf("no pin option for %s", service)
 					}
 
-					// The exclusion is load-bearing: without it the workspace
-					// binary would be mounted over the pinned image and this
-					// would quietly become a HEAD-vs-HEAD run that always
-					// passes.
+					// WithPublishedImages is not garnish. Every service
+					// this repository builds is a REQUIRED compose
+					// interpolation -- ${HILT_IMAGE:?...} and its
+					// siblings -- and config.buildEnv() omits a variable
+					// it has no value for, so compose refuses to start,
+					// naming the variable. Workspace binaries do not
+					// cover for that: they are bind mounts over an image,
+					// not an image.
+					//
+					// The exclusion is load-bearing too. Without it the
+					// workspace binary is mounted over the pinned image
+					// and this quietly becomes a HEAD-vs-HEAD run that
+					// always passes.
 					s := stack.MustNewStack(t,
+						stack.WithPublishedImages(),
 						stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
 						stack.WithWorkspaceBinariesExcept(service),
-						pin,
+						pin(image),
 					)
 					t.Logf("compat: %s pinned to %s, all other services from HEAD", service, image)
 
@@ -164,7 +184,7 @@ func TestPinnedPeer(t *testing.T) {
 }
 
 // TestRollingUpgrade boots every in-repo service at a released version, then
-// replaces one with HEAD while the rest stay old — the state a real deployment
+// replaces one with HEAD while the rest stay old -- the state a real deployment
 // passes through, since services do not upgrade simultaneously.
 //
 // Compared to TestPinnedPeer this inverts which side is new: there, one old
@@ -173,42 +193,67 @@ func TestPinnedPeer(t *testing.T) {
 // (adding a required field breaks old-reader/new-writer; removing one breaks
 // new-reader/old-writer).
 //
-// This needs a released image for EVERY service in the baseline, so it skips
-// whenever one is missing. sprue and hilt publish no version-tagged images
-// today — only :main and :sha-* — so the skip is the expected outcome until
-// they cut releases. It is a skip rather than a substitution on purpose: :main
-// is a moving tag, and pinning a compatibility baseline to something that moves
-// is how a red becomes ambiguous.
+// THE FLEET IS WHATEVER THE WORKSPACE WOULD BUILD, not a list written here.
+// That is the whole correctness condition: any service left off such a list is
+// built from HEAD, so "the rest stay old" silently stops being true for it. A
+// hand-written four -- piri, ingot, sprue, hilt -- was wrong by four against
+// this go.work, and one of the four it missed was the indexer, which sits on
+// the path this test asserts over.
+//
+// So it needs a released image for every one of them, and skips naming the
+// ones it lacks. sprue and hilt publish no version-tagged images today (only
+// :main and :sha-*), and neither do the indexer, delegator, signing service or
+// swarf, so the skip is the expected outcome until they cut releases. It is a
+// skip rather than a substitution on purpose: :main is a moving tag, and
+// pinning a compatibility baseline to something that moves is how a red
+// becomes ambiguous.
 func TestRollingUpgrade(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("skipping on darwin (docker-in-docker flakiness)")
 	}
 
-	// Per-service semver means there is no single baseline VERSION — there is a
-	// baseline SET, one release per service. COMPAT_BASELINE_<SERVICE> carries
-	// each; the workflow fills them from the registry.
+	_, fleet, err := workspace.Detect()
+	if err != nil {
+		t.Skipf("no active go.work, so there is no fleet to hold old: %v", err)
+	}
+
+	// Per-service semver means there is no single baseline VERSION -- there is
+	// a baseline SET, one release per service. COMPAT_BASELINE_<SERVICE>
+	// carries each; the workflow fills them from the registry.
 	baseline := map[string]string{}
-	for _, svc := range []string{"piri", "ingot", "sprue", "hilt"} {
-		v := strings.TrimSpace(os.Getenv("COMPAT_BASELINE_" + strings.ToUpper(svc)))
+	var missing []string
+	for _, svc := range fleet {
+		if _, ok := pinFor[svc]; !ok {
+			t.Fatalf("workspace service %q has no entry in pinFor, so this test "+
+				"cannot pin it and would boot it from HEAD inside a fleet that is "+
+				"supposed to be old. Add it.", svc)
+		}
+		v := strings.TrimSpace(os.Getenv("COMPAT_BASELINE_" + envSuffix(svc)))
 		if v == "" {
-			t.Skipf("COMPAT_BASELINE_%s unset; %s has no published release to upgrade from", strings.ToUpper(svc), svc)
+			missing = append(missing, svc)
+			continue
 		}
 		baseline[svc] = v
+	}
+	if len(missing) > 0 {
+		t.Skipf("no published release to upgrade from for %s "+
+			"(set COMPAT_BASELINE_<SERVICE> for each)", strings.Join(missing, ", "))
 	}
 
 	for _, upgraded := range []string{"piri", "ingot"} {
 		t.Run("upgrade_"+upgraded, func(t *testing.T) {
 			opts := []stack.Option{
+				stack.WithPublishedImages(),
 				stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
-				// Everything from the released baseline set...
-				stack.WithPiriImage(imageFor("piri", baseline["piri"])),
-				stack.WithIngotImage(imageFor("ingot", baseline["ingot"])),
-				stack.WithUploadImage(imageFor("sprue", baseline["sprue"])),
-				stack.WithHiltImage(imageFor("hilt", baseline["hilt"])),
+			}
+			// Everything from the released baseline set...
+			for _, svc := range fleet {
+				opts = append(opts, pinFor[svc](imageFor(svc, baseline[svc])))
 			}
 			// ...except the one service under upgrade, which comes from HEAD.
-			// Building only that service keeps the rest genuinely old.
-			opts = append(opts, stack.WithWorkspaceBinariesExcept(otherThan(upgraded)...))
+			// Excluding every other workspace service is what keeps the rest
+			// genuinely old; the pin above is undone by a bind mount otherwise.
+			opts = append(opts, stack.WithWorkspaceBinariesExcept(otherThan(fleet, upgraded)...))
 
 			s := stack.MustNewStack(t, opts...)
 			t.Logf("compat: fleet at baseline set %v, %s upgraded to HEAD", baseline, upgraded)
@@ -218,12 +263,11 @@ func TestRollingUpgrade(t *testing.T) {
 	}
 }
 
-// otherThan returns every in-repo service except the named one, for use as the
-// exclusion list — i.e. "build only `service` from HEAD".
-func otherThan(service string) []string {
-	all := []string{"piri", "ingot", "upload", "hilt"}
+// otherThan returns every service in the fleet except the named one, for use
+// as the exclusion list -- i.e. "build only `service` from HEAD".
+func otherThan(fleet []string, service string) []string {
 	var out []string
-	for _, s := range all {
+	for _, s := range fleet {
 		if s != service {
 			out = append(out, s)
 		}

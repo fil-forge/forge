@@ -235,12 +235,19 @@ func WithWorkspaceBinaries() Option {
 // a released image while the rest come from HEAD is exactly that test:
 //
 //	s := stack.MustNewStack(t,
+//	    stack.WithPublishedImages(),
 //	    stack.WithWorkspaceBinariesExcept("piri"),
 //	    stack.WithPiriImage("ghcr.io/fil-forge/piri:0.2.4"),
 //	)
 //
 // Without the exclusion the workspace binary would be mounted over the pinned
 // image, and the test would silently exercise HEAD against HEAD.
+//
+// WithPublishedImages is in that example because the stack does not boot
+// without it. Workspace binaries are bind mounts over an image; they are not
+// an image, and every service this repository builds is a required compose
+// interpolation. Pinning one service and building the rest leaves the other
+// six with no image at all, and compose refuses, naming the variable.
 func WithWorkspaceBinariesExcept(services ...string) Option {
 	return func(c *config) {
 		c.workspaceBinaries = true
