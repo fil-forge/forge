@@ -28,6 +28,29 @@ func TestStreamCommand(t *testing.T) {
 	require.Equal(t, "{\"revoke\":\"one\"}\n{\"revoke\":\"two\"}\n", output.String())
 }
 
+// The service writes an error event when it cannot continue a stream, then
+// closes. Ignoring it left the command exiting 0 on a service-side failure.
+func TestStreamCommandReportsAnErrorEvent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		_, _ = fmt.Fprint(writer, "event: revocation\ndata: {\"revoke\":\"one\"}\n\n")
+		_, _ = fmt.Fprint(writer, "event: error\ndata: {\"error\":\"getting revocation: boom\"}\n\n")
+	}))
+	defer server.Close()
+
+	command := newStreamCommand()
+	output := bytes.NewBuffer(nil)
+	command.SetOut(output)
+	command.SetErr(bytes.NewBuffer(nil))
+	command.SetArgs([]string{"--service-url", server.URL, "--from", "0"})
+
+	err := command.Execute()
+	require.ErrorContains(t, err, "getting revocation: boom")
+	// Contains, not Equal: cobra writes the command's usage to the same
+	// output for any error a RunE returns.
+	require.Contains(t, output.String(), "{\"revoke\":\"one\"}\n",
+		"records read before the error should still reach the output")
+}
+
 func TestStreamCommandRejectsInvalidFrom(t *testing.T) {
 	command := newStreamCommand()
 	command.SetArgs([]string{"--from", "not-a-timestamp"})

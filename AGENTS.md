@@ -160,9 +160,12 @@ wrong are worth more than the ones that did not.
 The `guards` job runs the `check-*.sh` scripts in `.github/scripts/`. **That
 directory is the list** — this file deliberately does not enumerate them,
 because a hand-maintained copy of a derivable list is the thing that goes
-stale (rule 3). Each script's header says what it enforces and why. Between
-them they cover in-repo `replace` directives, Dockerfile `FROM` pins and
-compose `image:` pins.
+stale (rule 3). Each script's header says what it enforces and why: read the
+directory, not this paragraph.
+
+It used to end with a summary of what they cover between them. By the time a
+sixth guard arrived, that sentence named three of five — which is rule 3
+happening to the very paragraph that states it. Gone rather than extended.
 
 Image references in **Go** are deliberately unguarded — every pattern narrow
 enough to avoid hundreds of false positives also misses real references, and
@@ -328,12 +331,57 @@ their parent's alternative. Add `| grep -v 'https\?://'` if you only want
 module paths: most of the hits are repository URLs the monorepo deliberately
 left pointing at their own repositories.
 
-**A guard script for this does not exist on this branch.** An earlier revision
-of this paragraph named `check-module-paths.sh` as though it did; it is added by
-the subtree-resync pull request, not this one, and `.github/scripts/` is the
-list (rule 3) — a reader who looked there found nothing and either skipped the
-step or assumed it had run. When that script lands, this block becomes a call to
-it.
+**`check-module-paths.sh` is that sweep, and `guards` runs it**, so the grep
+above is for looking at a single prefix mid-pull; CI covers the tree. It reads
+`*.go` and `go.mod` only — its header names what it does not read (`Makefile`,
+`*.yaml`, `*.json`, `*.sh`, `go.sum`), because a success line that reads as
+total over a partial check is what rule 5 is about.
+
+**Do not rely on the build to find these, and do not rely on `go mod tidy`
+either — it goes both ways.** Most of what the sweep finds is an import, and on
+the resync that produced this branch swarf's two failed `go build` outright and
+piri's ten stopped `go mod tidy`. But an earlier resync had the opposite: tidy
+*resolved* a polyrepo import instead of refusing it, adding
+`github.com/fil-forge/sprue` to sprue's own `go.mod` pinned to the commit being
+merged — which builds green against code downloaded from the polyrepo, and that
+one is not history: `go get github.com/fil-forge/sprue/pkg/service/handlers`
+still succeeds today.
+
+**Resolution is not the discriminator**, which an earlier revision of this
+paragraph claimed. Each of the four prefixes that carried a polyrepo reference
+in that resync — ingot, piri, sprue, swarf — still resolves through the proxy
+under its OLD path. What differs is what the proxy serves for each: whether the
+version it has declares the matching module path, and whether it contains the
+package. Three outcomes, none of them ours to control:
+
+```
+go get github.com/fil-forge/sprue/pkg/service/handlers   ok, SILENTLY
+go get github.com/fil-forge/ingot/registry               ok, SILENTLY
+go get github.com/fil-forge/piri/pkg/service/publisher   refused: v0.2.4 declares
+                                                         module github.com/storacha/piri
+go get github.com/fil-forge/swarf/pkg/api                refused: v0.0.0 found, but
+                                                         does not contain the package
+```
+
+Two of the four succeed, which is the outcome with no symptom. None of the four
+is a check. And note what the first two prove: this is live, not a story about
+one bad afternoon — run those two today and they still work.
+
+And some of them compile either way: piri's otel meter name
+(`Meter("github.com/fil-forge/piri/pkg/service/publisher")`) is a string, so no
+build or tidy anywhere would have objected, and it would have shipped a metric
+attributed to a module path that does not exist here.
+
+**Measure drift by ancestry, never by grepping commit messages.** Only
+`git subtree add` records a `git-subtree-split` trailer; a pull records nothing,
+so a grep counts imports and misses every pull since. Measured that way once and
+got 91 commits across nine prefixes when the answer was 37 across eight.
+Ancestry needs no metadata and cannot be fooled:
+
+```sh
+git merge-base --is-ancestor "up-$p/main" HEAD   # up to date?
+git rev-list --count "up-$p/main" --not HEAD     # how far behind
+```
 
 ## Conventions
 

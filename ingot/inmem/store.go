@@ -263,6 +263,17 @@ func (m *MemStore) SetObjectLockConfig(_ context.Context, name string, cfg []byt
 	return nil
 }
 
+func (m *MemStore) SetBucketTagging(_ context.Context, name string, tags []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, ok := m.buckets[name]
+	if !ok {
+		return registry.ErrNotFound
+	}
+	s.BucketTagging = tags
+	return nil
+}
+
 func (m *MemStore) AllocVersionSeq(_ context.Context, name string) (uint64, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -413,8 +424,12 @@ func (NopUploader) UploadBlob(_ context.Context, _ did.DID, digest multihash.Mul
 
 func (NopUploader) RemoveBlob(_ context.Context, _ did.DID, _ multihash.Multihash) error { return nil }
 
-func (NopUploader) ConcludeBlob(_ context.Context, _ did.DID, parked uploader.UploadedBlob) (uploader.BlobLocation, error) {
-	return uploader.BlobLocation{Size: parked.Size}, nil
+func (NopUploader) ConcludeBlobs(_ context.Context, _ did.DID, parked []uploader.UploadedBlob) ([]*uploader.BlobLocation, error) {
+	locations := make([]*uploader.BlobLocation, len(parked))
+	for i, p := range parked {
+		locations[i] = &uploader.BlobLocation{Size: p.Size}
+	}
+	return locations, nil
 }
 
 func (NopUploader) AbortBlob(_ context.Context, _ did.DID, _ multihash.Multihash, _ cid.Cid) error {

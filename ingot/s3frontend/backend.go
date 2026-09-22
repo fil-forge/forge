@@ -12,14 +12,16 @@
 //     staging buffer, MST CBOR view, bucket-Root CAS, and per-bucket
 //     locking.
 //
-// Operations not implemented (lifecycle, tagging, bucket policies,
-// etc.) inherit ErrNotImplemented from the embedded
+// Operations not implemented (lifecycle, bucket policies, etc.)
+// inherit ErrNotImplemented from the embedded
 // backend.BackendUnsupported. The few unsupported-by-default
 // methods that versitygw nevertheless calls on every request
 // (GetBucketAcl, GetBucketPolicy, GetBucketCors) are stubbed in
 // bucket.go. Object lock is implemented: the bucket configuration in
 // bucket.go, the per-version retention / legal-hold methods in
-// objectlock.go (docs/s3-object-lock.md).
+// objectlock.go (docs/s3-object-lock.md). So is tagging: the
+// per-version object methods in objecttag.go, the bucket-level tag
+// set in buckettag.go (docs/s3-object-tagging.md).
 package s3frontend
 
 import (
@@ -115,7 +117,7 @@ type Deps struct {
 	// space's claim on a blob when its last reference is dropped.
 	Uploader uploader.BodyUploader
 	// Deferred extends Uploader for multipart's deferred accept
-	// (WithConclude(false), then ConcludeBlob/AbortBlob); Parks persists
+	// (WithConclude(false), then ConcludeBlobs/AbortBlob); Parks persists
 	// park state between UploadPart and Complete/Abort.
 	Deferred uploader.DeferredBodyUploader
 	Parks    registry.ParkStore

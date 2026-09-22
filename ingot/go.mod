@@ -5,16 +5,16 @@ go 1.27.0
 require (
 	github.com/alanshaw/dag-json-gen v0.0.9
 	github.com/aws/aws-sdk-go-v2 v1.47.0
-	github.com/aws/aws-sdk-go-v2/config v1.33.4
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
+	github.com/aws/aws-sdk-go-v2/config v1.33.5
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.1
 	github.com/aws/smithy-go v1.28.1
 	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/fil-forge/forge/hilt v0.0.0
 	github.com/fil-forge/forge/indexing-service v0.0.0
 	github.com/fil-forge/forge/swarf v0.0.0
-	github.com/fil-forge/libforge v0.0.0-20260914100934-63f5b20252fe
-	github.com/fil-forge/ucantone v0.0.0-20260827134420-25cf8340b9a1
+	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476
+	github.com/fil-forge/ucantone v0.0.0-20260917112151-f239623f942f
 	github.com/fil-forge/versitygw v0.0.0-20260914113944-a628e2cc628c
 	github.com/filecoin-project/go-fee v0.1.1-0.20260826122013-1c3970b90b0d
 	github.com/gofiber/fiber/v3 v3.5.0
@@ -60,7 +60,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/signin v1.10.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.38.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.50.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.51.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
@@ -154,6 +154,8 @@ require (
 
 replace github.com/fil-forge/forge/hilt => ../hilt
 
-replace github.com/fil-forge/forge/swarf => ../swarf
-
 replace github.com/fil-forge/forge/indexing-service => ../indexing-service
+
+replace github.com/fil-forge/forge/smelt => ../smelt
+
+replace github.com/fil-forge/forge/swarf => ../swarf
