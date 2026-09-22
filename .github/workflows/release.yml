@@ -19,13 +19,17 @@ name: release
 # than none in a repository whose rule 5 is "a green check is a claim about
 # what ran".
 #
+#   Run: two dry-run dispatches, both green -- ingot on ubuntu-24.04 (run
+#     35762662020) and piri on macos-14 (run 35765210724). Between them they
+#     cover the runner derivation in both directions, the skip list, the
+#     assertion, and `require the tag` and `publish` both skipping.
 #   Run: every shell step below, and the assertion script, against fixtures.
 #   Run on another machine: `goreleaser check` over all four configs and the
 #     tag-parsing measurements in MONOREPO_TODO.md, on v2.18.2. That is where
 #     the `format:` -> `formats:` fix came from.
-#   NOT run: this workflow. No dispatch has happened, in either mode. The flag
-#     combinations below are reasoned from goreleaser's documented behaviour
-#     and from those measurements; they have not been observed together.
+#   NOT run: a dispatch with dry_run off, which by design cannot go green --
+#     `publish` exits 1. Nor sprue or indexing-service, whose assertion refuses
+#     for the reason below. Nor anything behind the `docker` skip.
 #
 # WHAT A DRY RUN DOES PER SERVICE IS NOT WRITTEN DOWN HERE. It changes whenever
 # the skip list or the assertion does, so narrating it is rule 3 in prose. Ask
@@ -42,11 +46,11 @@ name: release
 #                     version command: the binary cannot be asked what it is.
 #   sprue             the same from the other framework -- a cobra root with no
 #                     `version` subcommand and no Version field.
-#   piri              has a version surface. Its open question is build time on
-#                     macos-14 inside timeout-minutes: 40, since it
-#                     cross-compiles darwin/amd64 + darwin/arm64 with cgo
-#                     against curio and lotus, then a universal binary, then
-#                     two linux builds. Not measurable without dispatching it.
+#   piri              has a version surface. It is the expensive one -- macos-14,
+#                     cross-compiling darwin/amd64 + darwin/arm64 with cgo
+#                     against curio and lotus, then a universal binary, then two
+#                     linux builds -- which is what `timeout-minutes` is sized
+#                     for and what a release pull request costs.
 #   ingot             has a version surface, and its dist carries images, which
 #                     is why `docker` is in the skip list below.
 #
@@ -213,7 +217,9 @@ jobs:
     runs-on: ${{ needs.plan.outputs.runner }}
     # In line with e2e (25), images (40) and itest (45). Without it a hung
     # goreleaser or a stalled module fetch sits for GitHub's 6-hour default,
-    # on a macOS runner for piri.
+    # on a macOS runner for piri. Measured on the dry runs named in the header:
+    # piri 8m47s on macos-14 (6m56s of it goreleaser, 1m18s the setup-go cache
+    # save), ingot 3m11s on ubuntu-24.04.
     timeout-minutes: 40
     env:
       # THE ARTIFACT MUST BE THE ONE CI PROVED. go.work at the root puts a
