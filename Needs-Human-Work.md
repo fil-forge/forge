@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 21:30Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 21:50Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -24,8 +24,36 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | head `12eed736`, CI **24/24 green**. Five rounds; **rounds stopped on Petra's call** — ready for her |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | head `55d55a2a`, CI green bar one `itest` leg still running. Five rounds; **rounds stopped on Petra's call** — ready for her. Both event paths verified green by real runs |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | **Open**, head `12eed736`, CI 24/24 green. Rounds stopped. One open question below |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
+| [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | Open, no round (by the rule it adds — prose-only) |
+
+## Open: should `compat.yml` keep its schedule?
+
+Petra's question on [#18](https://github.com/fil-forge/forge/pull/18) — now that
+the release-pull-request gate is merged, should compat run there rather than
+nightly?
+
+**Yes to the release pull request. No to dropping the schedule**, and the second
+half is a disagreement rather than a hedge. `compat-window.sh` reads the
+registry live, so the pinned side moves independently of us: if piri ships
+`0.3.0` upstream next week and it is incompatible with our HEAD, **no pull
+request of ours fires**. Only a schedule catches that. The release pull request
+answers "did our change break compat?"; the schedule answers "did *their*
+release break compat?", which is the question the polyrepo-images design was
+chosen to make answerable.
+
+Cost of keeping it is one run a day, most identical to yesterday's. Weekly would
+still catch a moved window within a week.
+
+The trigger itself is simpler than `release.yml`'s: compat resolves no service —
+it tests the whole stack against the window — so it is just "is this a
+`release/*` branch", with no per-service logic. It does need that scoping: the
+job is `timeout-minutes: 60`, so it cannot run on every pull request.
+
+**Recommended placement: in #18 rather than a follow-up**, now that #19's shape
+is settled. Shipping a schedule-only `compat.yml` and changing it immediately is
+churn, and #18 owns the file. **Waiting on Petra.**
 
 ## The review rounds are stopped on both, and the reason is measurable
 
