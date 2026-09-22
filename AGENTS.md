@@ -33,8 +33,8 @@ the wiki, most of the document table, and the per-pull-request
 **skippable-checks block**. By then the wiki's content belongs in the
 repository or in issues, *Needs Human Work* should be empty, and the blocks
 should have been replaced by real filtering designed from what they turned out
-to say. Do not treat that split as settled;
-decide it when you can see the finished shape.
+to say. Do not treat that split as settled; decide it when you can see the
+finished shape.
 
 ## Where state lives, and what goes where
 
@@ -462,8 +462,9 @@ practice means an agent, at least on the first pass). Every entry below is a
 thing that actually happened, and recurrence is the norm rather than the
 exception: the build tag and the itest-only bump were each fixed in one resync
 and back in the next, and the polyrepo-import class has shown up in every
-resync so far, in two different shapes — a `go build` failure, and a
-`go mod tidy` that *resolves* the polyrepo path instead of refusing it.
+resync so far. It arrives in several shapes, enumerated above: `go build`
+fails, `go mod tidy` refuses, `go mod tidy` *resolves* the polyrepo path
+instead — and, worst, the reference that compiles cleanly either way.
 
 - **A polyrepo import path in a hunk that merged cleanly.** Upstream adds an
   import, or touches a file we never rewrote, and `github.com/fil-forge/<svc>`
@@ -479,9 +480,11 @@ resync so far, in two different shapes — a `go build` failure, and a
   `ingot/itest`, a separate module here, so the bump applies to a `require`
   this repository dropped and our pin silently ages. Structural, not bad luck:
   every future itest-only bump is invisible the same way.
-- **Shared dependencies fragmenting across prefixes.** Ten pulls leave each
-  prefix on whatever revision its own upstream pinned, so the tree ends up
+- **Shared dependencies fragmenting across prefixes.** A pull leaves its prefix
+  on whatever revision that upstream pinned, so a resync ends with the tree
   carrying two versions each of `libforge`, `ucantone` and `go-ipni-tools`.
+  Not only the prefixes that moved: the last resync's re-unification also had
+  to bump `piri-signing-service`, which was not pulled at all.
   Every `go.mod` merged cleanly and each is individually correct; the tree is
   wrong only in aggregate, which nothing per-prefix can see. Take the newest of
   each.
