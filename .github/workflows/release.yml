@@ -189,18 +189,20 @@ jobs:
           SERVICE: ${{ inputs.service }}
           DRY_RUN: ${{ inputs.dry_run }}
           HEAD_REF: ${{ github.head_ref }}
-          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           set -euo pipefail
 
           # WHICH SERVICE, and in which mode. Two events reach this job and they
           # answer differently; everything after this point is common.
           #
-          # HEAD_REF is attacker-controlled on a fork pull request -- a branch
-          # can be named anything -- so it arrives by env, like SERVICE, and is
-          # only ever COMPARED against the releasable list below. Nothing
-          # derived from it reaches $GITHUB_OUTPUT unless it is exactly equal to
-          # one of this repository's own directory names.
+          # HEAD_REF arrives by env, like SERVICE, and is only ever COMPARED
+          # against the releasable list below -- and `dir`, derived from it,
+          # reaches the next step by env too, never by an expression
+          # interpolated into a script. A branch name can hold `$ ( ) { }`; git
+          # rejects only a space, and `${IFS}` covers that. The one step that
+          # did interpolate `dir` ran the substitution, which is why none do
+          # now. (Spelling the interpolation out here would make actionlint
+          # parse this comment as an expression, so it is described instead.)
           case "$GITHUB_EVENT_NAME" in
             workflow_dispatch)
               svc=${SERVICE%/}
@@ -220,21 +222,6 @@ jobs:
               ;;
             pull_request)
               dry_run=true
-              # A FORK RESOLVES NOTHING. Everything below reads the PULL
-              # REQUEST's tree -- `actions/checkout` takes refs/pull/N/merge --
-              # so on a fork the releasable list, the goreleaser config that
-              # picks the runner, and the version.json that is read are all the
-              # fork's. Refusing here is one condition instead of hardening each
-              # of those, and cutting this repository's releases is not
-              # something a fork does.
-              if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
-                echo "$HEAD_REPO is not $GITHUB_REPOSITORY; resolving no" \
-                     "service for a fork pull request."
-                { echo "dir="
-                  echo "dry_run=true"
-                  echo "runner=ubuntu-24.04"; } >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
               case "$HEAD_REF" in
                 release/*) svc=${HEAD_REF#release/} ;;
                 *)
@@ -418,40 +405,38 @@ jobs:
     # that failed AFTER resolving the service -- on the version, or on the tag
     # check -- must not start a release build under EITHER reading.
     #
-    # SAME-REPOSITORY PULL REQUESTS ONLY. `plan` derives the runner by parsing
-    # `<svc>/.goreleaser.yaml` FROM THE PULL REQUEST'S OWN TREE, so without this
-    # a fork could name a branch `release/ingot`, add a darwin build with
-    # CGO_ENABLED=1 to that config, and put a macos-14 runner under its own
-    # goreleaser hooks for the 40 minutes below.
+    # NO FORK CONDITION, and that is a decision rather than an omission: one was
+    # added here and then removed, so it is worth saying why it is not coming
+    # back. Pull requests on this repository come from the team, with push
+    # access; the only fork is `fil-forge/forge-2`, our own archived copy of the
+    # migration. `ci`, `e2e`, `images` and `itest` have all triggered on
+    # `pull_request` since before this file did, so a fork opening pull requests
+    # would already be spending 23 minutes of `itest` before reaching three
+    # minutes of ingot here.
     #
-    # WHAT THIS DOES NOT DO, said plainly because an earlier revision of this
-    # comment claimed it: it does not stop a fork reaching a macOS runner. A
-    # `pull_request` event runs the workflow definitions from the PULL
-    # REQUEST's commit -- that is the difference from `pull_request_target`,
-    # and it is why the trigger above could be tested before it merged -- so a
-    # fork can write `runs-on: macos-14` into its own copy of this file, or add
-    # a workflow of its own, and this condition is not in the code that runs.
-    # What governs that is the repository's "Fork pull request workflows from
-    # outside collaborators" setting, which is not readable from here and is
-    # worth confirming; the public default approves a returning contributor
-    # automatically.
+    # And there is nothing here for one to take. A `pull_request` from a fork
+    # runs in THIS repository's Actions with no secrets and a read-only token --
+    # which is what `pull_request_target` exists to provide and why that event,
+    # not this one, is the dangerous one. This tree references exactly one
+    # secret, GITHUB_TOKEN, which is provisioned rather than stored; every
+    # `permissions:` block in every workflow is `contents: read`; every runner is
+    # GitHub-hosted and ephemeral; and the repository is public, so there is
+    # nothing to exfiltrate. What is left is compute on free minutes.
     #
-    # What it does do is remove fork-controlled input from OUR code path: after
-    # this, nothing a fork writes decides which runner we start or reaches the
-    # shell in the job below. That is the half this file can own.
+    # The condition also could not do what it looked like: a `pull_request` runs
+    # the workflow definitions from the PULL REQUEST's own commit, so a fork's
+    # copy of this file is whatever the fork wrote and the condition is not in
+    # the code that runs. A guard that reads as total and is not is the thing
+    # rule 5 says to ship nothing rather than -- and this one had already
+    # produced two wrong comments about itself.
     #
-    # No secret is exposed either way -- the token is read-only on a fork pull
-    # request and is not passed to goreleaser in dry-run mode.
+    # WHERE IT WOULD BECOME REAL is arming publishing, which needs
+    # packages:write and a registry credential. The permissions comment below
+    # says what that costs.
     #
-    # Cutting the job rather than pinning the runner: piri's darwin cgo build
-    # genuinely cannot be cross-compiled from linux, so a `release/piri` pull
-    # request pinned to ubuntu would fail rather than be safe. Cutting forks
-    # costs nothing real, because cutting this repository's releases is not
-    # something a fork does.
-    if: >-
-      needs.plan.result == 'success' && needs.plan.outputs.dir != '' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
+    # What survived from all of it is unconditional and cheap: `dir` reaches a
+    # shell by `env:`, never by `${{ }}`, here and in every step of this file.
+    if: needs.plan.result == 'success' && needs.plan.outputs.dir != ''
     runs-on: ${{ needs.plan.outputs.runner }}
     # In line with e2e (25), images (40) and itest (45). Without it a hung
     # goreleaser or a stalled module fetch sits for GitHub's 6-hour default,
