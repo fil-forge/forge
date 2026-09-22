@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 18:05Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 17:25Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -50,6 +50,17 @@ table further down the same page. Fixed.
 ## Decisions taken while you were away
 
 Each is cheap to reverse; I took it rather than banking the question.
+
+- **#16 was rebased onto #12's new head and force-pushed** (`fafddf08` →
+  `9ecc21d1`). It had gone `dirty` the moment #12 gained commits. Your standing
+  decision 8 says to rebase rather than merge when that happens, so this is
+  carrying out a decision rather than making one — but it rewrote pushed
+  history on a branch you parked, so it is named here. The one conflict was a
+  comment block both branches had rewritten; I kept your tightened wording and
+  #16's substantive addition. All six guards, `gofmt` and `actionlint` clean
+  afterwards, and the 937-line symbol checker is still deleted per decision 6.
+- **`hilt#77` had `main` merged in** after alanshaw's #79 landed under it.
+  Merged, not rebased — it is a pushed branch. Verified before pushing.
 
 - **#17 is on `claude/agents-md-review-practice`, not the designated
   `claude/forge-monorepo-poc-p9w0yr`.** That branch exists but holds older
@@ -575,11 +586,16 @@ whenever it makes any sense.
 
 Two on `forge`, both listed above under Blocking:
 
-| PR | state | CI | needs |
-|---|---|---|---|
-| [#12](https://github.com/fil-forge/forge/pull/12) | **Open**, reviewer satisfied | running on `0cf3a609`; was green on all 24 at `0ce788a7` | **your merge** |
-| [#17](https://github.com/fil-forge/forge/pull/17) | **draft** | running on `b496a7fe` | a review round, in flight |
-| [#16](https://github.com/fil-forge/forge/pull/16) | **draft**, parked by you | green at `fafddf08`, but stacked on #12 | #12 to merge, then a rebase |
+| PR | head | state | CI | needs |
+|---|---|---|---|---|
+| [#12](https://github.com/fil-forge/forge/pull/12) | `d42939d2` | **Open** | running, 13/24 done, **0 bad** | **your merge** |
+| [#17](https://github.com/fil-forge/forge/pull/17) | `3d3bf37b` | **draft** | running, 0 bad | a satisfied round, then your flip |
+| [#16](https://github.com/fil-forge/forge/pull/16) | `9ecc21d1` | **draft**, parked by you | green pre-rebase; re-running | nothing — rebased onto #12 |
+
+Upstream: `hilt#77` is at `1115b17` after merging its base in (build, vet,
+`go mod tidy -diff` and the full suite all clean). `sprue#106` is **APPROVED by
+alanshaw** and still draft — a real human review, so it carries information an
+agent round does not. It is yours to un-draft.
 
 Merged, for the record:
 
