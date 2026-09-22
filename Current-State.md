@@ -393,7 +393,7 @@ The tally, because the shape is the finding:
 | PR | rounds so far | last verdict | head | state |
 |---|---|---|---|---|
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
-| #14 | 2 | **satisfied** | `d7f00ba9` | **Open** |
+| #14 | 2, **void** | rebuilt; re-review running | `d88f32fa` | **Open**, base `claude/subtree-tool` |
 | #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
 | #13 | 8 | 4 findings, all fixed | `fc20fa81` | **Open, green all 24** — ready to merge. `6f01e5e2` was 23 of 24: the poller flake, fixed by porting `indexing-service#106` |
 | #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
