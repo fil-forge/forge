@@ -43,15 +43,11 @@ cd "$(dirname "$0")/../.."
 #
 # Derived from the service's own source rather than tabulated, so a service
 # that changes its default moves itself.
-# The `|| true` here is belt-and-braces, not load-bearing -- an earlier
-# revision of this comment claimed the latter and a review measured otherwise.
-# grep does exit 2 (an error, not "no match") when a directory does not exist,
-# and most services have no internal/build, which under `set -euo pipefail`
-# would kill the script; but the trailing `|| true` on the whole pipeline
-# already absorbs that, and removing this inner one changes nothing. Kept
-# because it makes the intent local to the grep that can fail, and because the
-# pipeline's shape is what would have to stay true for the outer one to keep
-# covering it.
+# The inner `|| true` is belt-and-braces, not load-bearing. grep exits 2 (an
+# error, not "no match") when a directory does not exist, and most services
+# have no internal/build -- but the trailing `|| true` on the whole pipeline
+# already absorbs that. Kept because it puts the intent next to the grep that
+# can fail, rather than depending on the pipeline keeping its present shape.
 default=$(
   { grep -rhoE 'defaultVersion[[:space:]]+(string[[:space:]]+)?=[[:space:]]*"[^"]+"|Version[[:space:]]*=[[:space:]]*"dev"' \
       "$svc_dir/pkg/build" "$svc_dir/internal/build" 2>/dev/null || true; } \
@@ -99,10 +95,11 @@ while IFS= read -r rel; do
     *"$host_os"*) ;;
     *) continue ;;
   esac
-  # `*all*` unanchored matched any binary whose NAME contains "all" -- wallet,
-  # install, smallfoo -- and selected cross-compiled artifacts that then failed
-  # to exec and were reported as missing a version subcommand. goreleaser's
-  # universal binaries live under `<id>_darwin_all`, so match that, not "all".
+  # Anchored on the directory goreleaser actually uses. An unanchored `*all*`
+  # matches any binary whose NAME contains "all" -- wallet, install, smallfoo --
+  # selecting cross-compiled artifacts that then fail to exec and get reported
+  # as missing a version subcommand. Universal binaries live under
+  # `<id>_darwin_all`, so match that, not "all".
   case "$rel" in
     *"$host_arch"*|*_darwin_all|*_darwin_all/*) ;;
     *) continue ;;
@@ -131,8 +128,8 @@ unassertable=""
 # with no _SigKill, so with nobody calling signal.Notify the signal is swallowed
 # and the process runs on. Measured -- `alarm 3` against a sleeping Go binary
 # was still alive at 15s, while the identical call against /bin/sleep died at 3s
-# with "Alarm clock". Every binary probed here is a Go binary, so the previous
-# revision's cap bounded nothing at all.
+# with "Alarm clock". Every binary probed here is a Go binary, so an alarm-based
+# cap bounds nothing at all.
 #
 # Background the probe, poll, and SIGKILL. No coreutils, no signal handling in
 # the child, works in bash 3.2.
@@ -145,9 +142,8 @@ run_probe() {
   # </dev/null is load-bearing. This loop is driven by a heredoc, so without it
   # the child inherits that heredoc on fd 0 -- and a binary that reads stdin
   # (a cobra command with no args, say) swallows the rest of the list. Measured
-  # on three fixtures with the middle one doing `cat >/dev/null`: the third
-  # binary, which carried the exact defect this script exists for, was never
-  # probed and the script exited 0 saying "2 binary/binaries asserted".
+  # on three fixtures with the middle one doing `cat >/dev/null`: the third was
+  # never probed and the script exited 0 saying "2 binary/binaries asserted".
   "$@" </dev/null >"$out_file" 2>&1 &
   pid=$!
   waited=0
@@ -198,10 +194,9 @@ while IFS= read -r bin; do
   # a stale -X can pass simply by sharing a prefix with the real version.
   #
   # The leading v is optional on the binary's side: goreleaser's {{.Version}}
-  # carries none, and whether a config re-adds it is per-config. An earlier
-  # revision normalised that with `sed 's/\bv\([0-9]\)/\1/g'`, which is a
-  # GNU-ism -- a silent no-op on BSD sed, on the runner this file claims to
-  # support -- and was unreachable anyway.
+  # carries none, and whether a config re-adds it is per-config. Handled in the
+  # pattern rather than by normalising with sed, whose word-boundary escapes are
+  # a GNU-ism that no-ops silently on the BSD sed this file has to support.
   want_bare=${want#v}
   # Every ERE metacharacter, not just the dot. release.yml deliberately admits
   # `+` in a version (its reject class is [^0-9A-Za-z.+-]), and `+` is a
@@ -210,9 +205,9 @@ while IFS= read -r bin; do
   # v1.2.33meta. Wrong in both directions on the same input.
   # The backslash goes EARLY in the bracket expression, not next to the closing
   # `]`: GNU sed reads `\\]` as an escaped bracket, so the class never closes and
-  # sed dies with "unterminated `s' command" -- which made want_re empty and the
-  # assertion reject a correct binary. Caught by the meta-guard's positive test,
-  # which is the one direction a lint of this script can actually check.
+  # sed dies with "unterminated `s' command", leaving want_re empty and the
+  # assertion rejecting a correct binary. The guard's positive test covers this,
+  # which is the one direction a lint of this script can check.
   want_re=$(printf '%s' "$want_bare" | sed 's/[][\\.^$*+?(){}|]/\\&/g')
   if printf '%s' "$out" | grep -qE "(^|[^0-9.])v?${want_re}([^0-9.]|\$)"; then
     echo "ok        $name reports $want"
@@ -228,13 +223,12 @@ done <<EOF
 $bins
 EOF
 
-# FATAL, not a warning. It was a warning, and that left a hole big enough to
-# drive the whole defect through: with one good binary and one whose -X was
-# dead, the good one incremented `asserted`, the dead one fell into this bucket
-# because its fallback ("dev", ingot's) is not version-shaped, and the script
-# exited 0. A guard over part of a chain reads exactly like a guard over the
-# chain -- rule 5. If a binary cannot be asked, this check cannot speak for the
-# release, and says so.
+# FATAL, not a warning, because a warning leaves a hole big enough for the whole
+# defect: with one good binary and one whose -X is dead, the good one increments
+# `asserted` while the dead one lands here -- its fallback ("dev", ingot's) is
+# not version-shaped -- and the script exits 0. A guard over part of a chain
+# reads exactly like a guard over the chain (rule 5). If a binary cannot be
+# asked, this check cannot speak for the release, and says so.
 if [ -n "$unassertable" ]; then
   echo >&2
   echo "NOT ASSERTED:$unassertable" >&2

@@ -13,28 +13,28 @@
 # the defect it is for." So this asserts BOTH directions -- a dead -X must fail,
 # a good one must pass -- and fails if either comes out the other way.
 #
-# EACH NEGATIVE TEST MATCHES ITS OWN MESSAGE, and that is the whole difference
-# between this version and the one before it. Asserting only `exit != 0` cannot
-# tell "refused for the reason under test" from "failed for some other reason",
-# and the gap was not theoretical. Measured on the previous version:
+# EACH NEGATIVE TEST MATCHES ITS OWN MESSAGE and builds its own fixture state.
+# Asserting `exit != 0` alone cannot tell "refused for the reason under test"
+# from "failed for some other reason", and the difference is not theoretical:
+# with the "released AT the fallback" refusal deleted, test 3 still printed its
+# own name, because dist held an earlier test's binary and the script failed
+# down the ordinary mismatch path instead. It passed for the wrong reason.
 #
-#   delete the FATAL exit for unassertable binaries   -> 4x ok, exit 0
-#   delete the "released AT the fallback" refusal     -> 4x ok, exit 0
+# THE FIXTURES ARE DELIBERATELY VARIED, not one well-behaved binary. A single
+# good fixture leaves three branches unreachable -- the multi-binary NOT
+# ASSERTED exit, the "cannot find the fallback" refusal, and run_probe's
+# kill-after-timeout -- so any of them can be lost silently.
 #
-# The second is the more embarrassing: test 3 still printed "releasing at the
-# fallback version is refused" with that refusal deleted, because dist still
-# held test 2's binary reporting v7.7.7 and the script failed down the ordinary
-# mismatch path instead. It was passing for the wrong reason. Every test now
-# builds its own fixture state and greps for the sentence it is about.
-#
-# AND THE FIXTURE IS NO LONGER ONE WELL-BEHAVED BINARY. That single fixture
-# made three whole branches unreachable -- the multi-binary NOT ASSERTED exit,
-# the "cannot find the fallback" refusal, and run_probe's kill-after-timeout --
-# so the script could lose any of them silently.
+# FIXTURE ORDER MATTERS AS MUCH AS COUNT, and test 6 is the case. The
+# stdin-eating binary has to sort BEFORE the binary it is meant to swallow, or
+# there is nothing after it and the test passes with the bug present. `aaa`
+# ahead of the goos does that, and the goarch stays in the name so the host-arch
+# filter still selects it. It depends on the script under test doing `sort -u`
+# on its dist listing: remove that and the order becomes filesystem order, and
+# test 6 quietly reverts to a version that passes with the bug present.
 #
 # VERIFIED BOTH DIRECTIONS, by deleting each fix from the script under test and
-# watching this go red. The list has grown a row per round since; the first four
-# were all GREEN on the version this file replaced:
+# watching this go red:
 #
 #   the FATAL exit for an unassertable binary          -> FAIL (test 5)
 #   the "released AT the fallback" refusal             -> FAIL (test 3)
@@ -45,15 +45,9 @@
 #   the `*_darwin_all` alternative in the dist filter  -> FAIL (test 9)
 #   the host-ARCH `*) continue` arm of the dist filter -> FAIL (test 9b)
 #
-# THE LIST IS THE CLAIM, which is what round six was about: four fixes landed
-# and three were listed, and the unlisted one was the live defect. Test 9 landed
-# a round later with the same omission. Both are on it now.
-#
-# THE FOURTH FIX OF THAT PUSH WAS NOT ON THAT LIST, and that is how it was
-# found: reverting the ERE escaping to `sed 's/\./\\./g'` -- the spelling it
-# had one commit earlier -- left this file printing nine `ok`s and exit 0 while
-# the assertion accepted a stale binary. A guard listing the fixes it covers is
-# a claim; four fixes landed and three were listed. Test 4b closes it.
+# THE LIST ABOVE IS THE CLAIM. A guard that names the fixes it covers is making
+# one, and a list short by one row reads exactly like a complete list -- rule 5.
+# Add the row in the same commit as the test.
 #
 # NOT COVERED, and listed so the next round starts from a set rather than a
 # hunt. Each is a deliberate break that leaves this file green; all are inert
@@ -72,20 +66,6 @@
 #                                                 it blocks good releases
 #                                                 rather than passing bad ones
 #
-# AND ONE DEPENDENCY NOTHING ELSE STATES: test 6 needs the script under test to
-# `sort -u` its dist listing. That sort is what puts the stdin-eating fixture
-# before the binary it swallows. Remove `sort -u` from assert-released-version.sh
-# and the order becomes filesystem order -- test 6 then silently reverts to the
-# "swallows what comes after, with nothing after it" version that passed with
-# the bug present.
-#
-# The last one is a lesson in fixture ORDER rather than fixture count. The
-# stdin-eating binary has to sort BEFORE the binary it is meant to swallow, or
-# there is nothing after it and the test passes with the bug present -- which
-# is exactly what the first version of test 6 did. `aaa` ahead of the goos
-# fixes it, and the goarch stays in the name so the host-arch filter still
-# selects it.
-#
 # COST: about 39s, most of it test 8 waiting out run_probe's own cap on a
 # binary that never exits. That is the price of exercising the cap at all, and
 # it is paid on every `guards` run; worth knowing before adding more.
@@ -93,10 +73,9 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 # An absolute path, not $OLDPWD. Every invocation below runs inside a `( cd … )`
-# subshell, and the old code reached back out with "$script" -- which
-# happens to be the repository root only because the subshell's cd is the first
-# one it performs. It is load-bearing, unexplained, and wrong the moment a test
-# cds twice.
+# subshell, and $OLDPWD is the repository root only while that cd is the first
+# one the subshell performs -- load-bearing, invisible, and wrong the moment a
+# test cds twice.
 root=$(pwd)
 script=$root/.github/scripts/assert-released-version.sh
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/check-assert.XXXXXX")

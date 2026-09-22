@@ -486,13 +486,12 @@ because the lint has *not* gone: the assertion can only speak for services whose
 binaries answer a version probe, which is the "only half the services can be
 asked" problem below, so the two overlap rather than one replacing the other.
 
-One thing the measurement below turned out to predict exactly. It records that
-a stale-path binary reports `v0.0.0` from a container and `v0.0.6` from a
-checkout, because the fallback reads `version.json` by *relative* path. The
-first version of the assertion script did not pin its working directory, and
-goreleaser runs inside `<svc>/` — so run there, the fallback found the file and
-the script said `ok` to the exact defect it exists to catch. It now pins cwd to
-the repository root. Reproduced both directions on a fixture before fixing.
+The measurement below is why that script pins its working directory to the
+repository root. It records a stale-path binary reporting `v0.0.0` from a
+container and `v0.0.6` from a checkout, because the fallback reads
+`version.json` by *relative* path — and goreleaser runs inside `<svc>/`, where
+that file exists. Run from there, the fallback answers and the assertion says
+`ok` to the exact defect it is for.
 
 The reason is that nothing else is loud. `cmd/link` looks the `-X` symbol up
 and gives up silently when it is missing — `addstrdata` in
@@ -797,18 +796,6 @@ paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
 
 - **Pay for goreleaser Pro** and use `monorepo.tag_prefix`. Smallest change,
   costs money, and buys a thing only Go module consumers need.
-**What this table does not settle, and `release.yml` depends on.** Every row
-above was measured with a *prefixed* value. goreleaser's git pipe consults
-`GORELEASER_CURRENT_TAG` before `git describe`, so setting it to the **plain**
-semver (`v1.2.3`) should sidestep the parse entirely — which is exactly what the
-workflow does. **Measured since, twice and independently:** a release ran to
-completion with `GORELEASER_CURRENT_TAG=v9.9.9` against a repository with no
-tags at all — goreleaser reported `couldn't find any tags before "v9.9.9"`,
-took `previous=<unknown> current=v9.9.9`, and the built binary printed
-`version: 9.9.9`. So the plain semver does sidestep the parse. The rows above
-were all measured with a *prefixed* value and still should not be read as
-evidence for this case; this paragraph is.
-
 - **Do not tag for Go at all.** Release these as binaries and images, which is
   what they are; keep `<svc>/vX.Y.Z` in reserve for the day someone wants
   `go get github.com/fil-forge/forge/<svc>`. Costs nothing now and defers the
@@ -818,15 +805,25 @@ evidence for this case; this paragraph is.
   at the cost of rewriting the ldflags in all four configs and losing
   goreleaser's changelog.
 
-The second is what `release.yml` assumes today: it reads the version from
-`version.json` and never itself creates a tag. It no longer uses `--snapshot`
-in either mode — that stamped goreleaser's own `X.Y.Z-SNAPSHOT-<sha>` template
-and then asserted against `version.json`, so the documented-safe default could
-never pass its own check. And **publishing is closed** in that workflow, because
-goreleaser's release pipe creates the GitHub release's tag itself: fed the plain
-semver it would create an unprefixed `v0.2.4` in the namespace ten services
-share. That is the same one-tag-namespace problem this section is about, arriving
-from the other direction.
+**What the table does not settle, and `release.yml` depends on.** Every row
+above was measured with a *prefixed* tag. goreleaser's git pipe consults
+`GORELEASER_CURRENT_TAG` before `git describe`, so setting it to the **plain**
+semver sidesteps the parse entirely, which is what the workflow does. Measured
+twice, independently: a release ran to completion with
+`GORELEASER_CURRENT_TAG=v9.9.9` against a repository with no tags at all —
+goreleaser reported `couldn't find any tags before "v9.9.9"`, took
+`previous=<unknown> current=v9.9.9`, and the built binary printed
+`version: 9.9.9`. The rows above are not evidence for that case; this paragraph
+is.
+
+**Not tagging for Go at all** is what `release.yml` assumes today: it reads the
+version from `version.json` and never itself creates a tag. It does not use
+`--snapshot` in either mode, which would stamp `X.Y.Z-SNAPSHOT-<sha>` — a
+version the assertion can never match, so the documented-safe default could not
+pass its own check. And **publishing is closed** there, because goreleaser's
+release pipe creates the GitHub release's tag itself: fed the plain semver it
+would create an unprefixed `v0.2.4` in the namespace ten services share, which
+is this section's one-tag-namespace problem arriving from the other direction.
 
 # Findings in the imported code
 
@@ -962,9 +959,8 @@ shutdown ordering rather than the test's — whoever fixes this needs to read
 `github.com/fil-forge/go-ipni-tools` rather than in this tree, so half the fix
 is in a different repository.
 
-Recorded without a patch deliberately. The `piri` entry above originally
-carried a patch that raced, and a wrong fix in a document written to be picked
-up later is worse than no entry: it is read as the answer.
+Recorded without a patch deliberately: a wrong fix in a document written to be
+picked up later is worse than no entry, because it is read as the answer.
 
 ## swarf
 

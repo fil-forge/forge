@@ -1,78 +1,59 @@
 name: release
 
-# NOT ARMED, deliberately. There is no `push: tags:` trigger in this file, and
-# this workflow never creates a tag.
+# NOT ARMED, deliberately: no `push: tags:` trigger, and this workflow never
+# creates a tag. It runs by hand, defaults to changing nothing, and exists so
+# the release path is exercised now rather than discovered on the day it is
+# first needed. Arming it is an `on:` block; the hard part is the ownership
+# call.
 #
-# Nothing outside this repository consumes a forge module version yet -- guppy
-# and the other consumers still pin the polyrepo paths -- and most of the fleet
-# is barely tagged upstream: several services have no tag at all and several
-# more have only v0.0.0.
-#
-# The roster is deliberately not enumerated here. It lives in the polyrepos,
-# not in this tree, so nothing in CI can derive or check it, and the version
-# that WAS enumerated had already gone stale -- it omitted swarf, which also
-# has only v0.0.0. What matters for this decision is not which services: it is
-# that `indexing-service` has a live polyrepo release flow cutting its own
-# tags, so cutting a tag here would give that service two sources of truth
-# today. That is a decision about ownership, not a workflow change.
-#
-# So this runs by hand, defaults to changing nothing, and exists so that the
-# release path is exercised now rather than discovered on the day it is first
-# needed. Arming it later is an `on:` block; making the ownership call is the
-# part that is actually hard.
+# WHY NOT ARMED. Nothing outside this repository consumes a forge module
+# version yet -- guppy and the other consumers still pin the polyrepo paths --
+# and most of the fleet is barely tagged upstream. The roster is deliberately
+# not enumerated here: it lives in the polyrepos, so nothing in CI can derive
+# or check a copy. What decides it is narrower anyway. `indexing-service` has
+# a live polyrepo release flow cutting its own tags, so cutting a tag here
+# would give that service two sources of truth today. That is a decision about
+# ownership, not a workflow change.
 #
 # WHAT IS AND IS NOT VERIFIED, precisely, because a vague claim here is worse
 # than none in a repository whose rule 5 is "a green check is a claim about
 # what ran".
 #
 #   Run: every shell step below, and the assertion script, against fixtures.
-#   Run earlier, on another machine: `goreleaser check` over all four configs
-#     and the tag-parsing measurements in MONOREPO_TODO.md (goreleaser v2.18.2).
-#     That is where the `format:` -> `formats:` fix came from.
+#   Run on another machine: `goreleaser check` over all four configs and the
+#     tag-parsing measurements in MONOREPO_TODO.md, on v2.18.2. That is where
+#     the `format:` -> `formats:` fix came from.
 #   NOT run: this workflow. No dispatch has happened, in either mode. The flag
-#     combinations below are reasoned from goreleaser's documented behaviour and
-#     from those measurements; they have not been observed together.
+#     combinations below are reasoned from goreleaser's documented behaviour
+#     and from those measurements; they have not been observed together.
 #
-# An earlier revision of this header said flatly that no goreleaser binary was
-# available. That contradicted the PR's own `goreleaser check` result in the
-# same diff, which is the sort of thing this file is supposed to catch.
+# WHAT A DRY RUN DOES PER SERVICE IS NOT WRITTEN DOWN HERE. It changes whenever
+# the skip list or the assertion does, so narrating it is rule 3 in prose. Ask
+# the command this workflow already runs:
 #
-# AND WHAT A FIRST DISPATCH WILL DO, which an earlier revision of this file
-# said and a later one deleted. Restored, because it is the single most useful
-# sentence here for whoever presses the button:
+#     .github/scripts/assert-released-version.sh "<svc>/dist" "<version>"
 #
-#   WHAT A DEFAULT DRY RUN DOES PER SERVICE IS NOT WRITTEN DOWN HERE. It was,
-#   four times, and four consecutive reviews found the summary contradicting
-#   its own sub-bullets -- because it was a hand-maintained restatement of a
-#   fact that changes whenever the skip list or the assertion does. Rule 3 in
-#   prose. The status is derivable, by the command this workflow already runs:
+# `ok` per binary, or `NOT ASSERTED`, or `CANNOT ASSERT` with the reason.
 #
-#       .github/scripts/assert-released-version.sh "<svc>/dist" "<version>"
+# WHY a service cannot be asserted is durable, being a property of its own code
+# rather than of this file:
 #
-#   `ok` per binary, or `NOT ASSERTED`, or `CANNOT ASSERT` with the reason.
-#   That answer cannot go stale, because nothing here narrates it.
+#   indexing-service  cmd/main.go is a urfave/cli App with no Version and no
+#                     version command: the binary cannot be asked what it is.
+#   sprue             the same from the other framework -- a cobra root with no
+#                     `version` subcommand and no Version field.
+#   piri              has a version surface. Its open question is build time on
+#                     macos-14 inside timeout-minutes: 40, since it
+#                     cross-compiles darwin/amd64 + darwin/arm64 with cgo
+#                     against curio and lotus, then a universal binary, then
+#                     two linux builds. Not measurable without dispatching it.
+#   ingot             has a version surface, and its dist carries images, which
+#                     is why `docker` is in the skip list below.
 #
-#   What IS durable is why a service cannot be asserted, because that is a
-#   property of the service's own code rather than of this file:
-#
-#     indexing-service   cmd/main.go is a urfave/cli App with no Version and
-#                        no version command, so the binary cannot be asked
-#                        what it is.
-#     sprue              the same from the other framework: a cobra root with
-#                        no `version` subcommand and no Version field.
-#     piri               has a version surface; the open question is its build
-#                        time on macos-14 inside timeout-minutes: 40, since it
-#                        cross-compiles darwin/amd64 + darwin/arm64 with cgo
-#                        against curio and lotus, then a universal binary,
-#                        then two linux builds. Not measurable without
-#                        dispatching it.
-#     ingot              has a version surface, and its dist carries images,
-#                        which is why `docker` is in the skip list below.
-#
-#   The fix for the first two is ~15 lines each, modelled on
-#   piri/cmd/cli/version.go, and it is deliberately NOT bundled into this pull
-#   request: softening the assertion to make them pass is the one change that
-#   would make this whole file decorative.
+# The fix for the first two is ~15 lines each, modelled on
+# piri/cmd/cli/version.go, and is deliberately NOT bundled into this pull
+# request: softening the assertion to make them pass is the one change that
+# would make this whole file decorative.
 
 on:
   workflow_dispatch:
@@ -124,7 +105,7 @@ jobs:
       # directory. All four configs sit at depth 2 today, so nothing diverges
       # yet -- but a nested one (ingot/itest/.goreleaser.yaml, say) would be
       # linted and not dispatchable, which is the same shape as the spelling
-      # bug. If one ever appears, this is the note that says it was known.
+      # bug.
       - name: resolve the service
         id: svc
         env:
@@ -158,13 +139,11 @@ jobs:
           # be cross-compiled from linux, so it needs a macOS runner. A service
           # that gains or drops a darwin cgo build moves itself.
           #
-          # Two independent greps over the whole file were not this test: every
-          # config mentions darwin somewhere (a format_override, a comment), so
-          # any config that set CGO_ENABLED=1 for a LINUX build would have been
-          # routed to macOS, where that linux cgo build cannot be done. Read the
-          # builds: list properly instead.
-          # PyYAML is present on the ubuntu runner image; this job always runs
-          # there. Parsing the config beats grepping it -- see above.
+          # Parsed, not grepped: every config mentions darwin somewhere (a
+          # format_override, a comment), so a whole-file grep routes a config
+          # that sets CGO_ENABLED=1 for a LINUX build to macOS, where that
+          # build cannot be done. Read the builds: list. PyYAML is present on
+          # the ubuntu runner image, and this job always runs there.
           needs_macos=$(python3 -c "import sys,yaml;c=yaml.safe_load(open(sys.argv[1])) or {};print('true' if any('darwin' in (b.get('goos') or []) and 'CGO_ENABLED=1' in ' '.join(b.get('env') or []) for b in (c.get('builds') or [])) else 'false')" "$cfg")
           if [ "$needs_macos" = "true" ]; then
             echo "runner=macos-14" >> "$GITHUB_OUTPUT"
@@ -248,12 +227,10 @@ jobs:
       # falls back only on 404/410, and proxy.golang.org drops HTTP/2 streams
       # (golang/go#51323). The pipe form falls back on any error.
       GOPROXY: "https://proxy.golang.org|direct"
-    # READ ONLY, because at this head nothing here can use more. The ghcr login
-    # is gone, `docker` and `publish` are both skipped so goreleaser creates no
-    # release and pushes no image (it runs happily with GITHUB_TOKEN unset --
-    # measured), and the publish step only echoes and exits 1. A third-party
-    # binary was running in a job holding contents:write and packages:write for
-    # no reason, and in real mode was handed the token as well.
+    # READ ONLY, because at this head nothing here can use more: there is no
+    # ghcr login, `docker` and `publish` are both skipped so goreleaser creates
+    # no release and pushes no image (it runs happily with GITHUB_TOKEN unset --
+    # measured), and the publish step only echoes and exits 1.
     #
     # This is a SECOND fail-closed mechanism, independent of the skip list: if
     # a future edit drops `publish` from the skips, goreleaser still cannot
@@ -262,9 +239,9 @@ jobs:
     # A job's permissions are fixed before `inputs` can be read, so this cannot
     # differ by mode. When publishing is armed, contents:write and
     # packages:write come back with it -- along with setup-qemu, setup-buildx
-    # and dropping `docker` from the skip list. The earlier reasoning for
-    # granting them (dispatch-only, so unlike images.yml no fork-pull-request
-    # case to protect) is still sound; it just does not make them needed yet.
+    # and dropping `docker` from the skip list. Granting them is safe whenever
+    # that happens (dispatch-only, so unlike images.yml there is no
+    # fork-pull-request case to protect); it is just not needed yet.
     permissions:
       contents: read
     steps:
@@ -284,12 +261,10 @@ jobs:
           cache: true
           cache-dependency-path: ${{ needs.plan.outputs.dir }}/go.sum
 
-      # NO DOCKER STEPS, and `docker` is in the skip list below -- which is the
-      # part an earlier revision of this comment got wrong.
-      #
-      # That revision deleted setup-qemu and setup-buildx claiming goreleaser's
-      # docker pipe is a *Publisher*, so `--skip=publish` already covered it.
-      # It does not. `docker` is its own skip value in goreleaser v2.18.2:
+      # NO DOCKER STEPS, and `docker` is in the skip list below. It has to be
+      # named there explicitly: `--skip=publish` does not cover it, because the
+      # docker PUSH is a publisher and the docker BUILD is not. `docker` is its
+      # own skip value in goreleaser v2.18.2:
       #
       #   valid options are announce, archive, aur, ..., docker, ..., publish, ...
       #
@@ -301,15 +276,12 @@ jobs:
       #     • building docker image   image=ghcr.io/fil-forge/ingot:0.0.0-amd64
       #   ⨯ release failed after 2m24s
       #
-      # The docker PUSH is a publisher; the docker BUILD is not. On an ubuntu
-      # runner, which does have a daemon, the build would have proceeded --
-      # spending minutes on images this workflow says it does not build, and
-      # then failing on the arm64 one for want of the binfmt handler that the
-      # deleted setup-qemu step installed. Both mistakes at once.
+      # On an ubuntu runner, which does have a daemon, that build proceeds --
+      # spending minutes on images this workflow says it does not build, then
+      # failing on the arm64 one for want of a binfmt handler.
       #
-      # So: skip it explicitly. When publishing is armed, three things come
-      # back together and not separately -- setup-qemu, setup-buildx, and
-      # dropping `docker` from the skip list.
+      # When publishing is armed, three things come back together and not
+      # separately: setup-qemu, setup-buildx, and dropping `docker` here.
       #
       # The consequence worth stating: a green dry run says nothing about
       # `Dockerfile.release` or the arm64 emulation. Exercising those needs
@@ -355,16 +327,12 @@ jobs:
       # `failed to parse tag 'piri/v1.2.3' as semver` against a real run. So it
       # is never shown one. GORELEASER_CURRENT_TAG carries the plain semver from
       # version.json, which is the same string the assertion checks for, so the
-      # stamped version matches in BOTH modes. Previously the dry run stamped
-      # goreleaser's snapshot template (`0.0.1-SNAPSHOT-<sha>`) and then
-      # asserted against version.json, which could never match -- the
-      # documented-safe default could not pass.
-      # PINNED. An earlier revision of this file used
-      # `go run github.com/goreleaser/goreleaser/v2@latest`, which resolves and
-      # executes third-party code at run time in a job holding contents:write
-      # and packages:write, and would silently pick up a v3. Rule 2 -- pin what
-      # we don't own -- and every measurement this workflow reasons from was
-      # taken on v2.18.2, so that is what it runs.
+      # stamped version matches in BOTH modes. This is also why neither mode
+      # uses `--snapshot`: it stamps `0.0.1-SNAPSHOT-<sha>`, which the
+      # assertion can never match.
+      # PINNED, never `@latest`: that resolves and executes third-party code
+      # at run time and would silently pick up a v3. Rule 2, pin what we don't
+      # own. Every measurement this workflow reasons from was taken on v2.18.2.
       - name: build (publishing nothing yet)
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -374,18 +342,15 @@ jobs:
           args: release --clean --skip=validate,publish,sign,announce,docker
         env:
           GORELEASER_CURRENT_TAG: ${{ needs.plan.outputs.version }}
-          # Not on the dry-run path. goreleaser's env pipe does not require the
+          # Not on the dry-run path: goreleaser's env pipe does not require the
           # token when publishing is skipped, and the permissions comment above
-          # claims the dry run reaches no step that uses one -- which was untrue
-          # while this was unconditional.
+          # claims the dry run reaches no step that uses one.
           GITHUB_TOKEN: ${{ !inputs.dry_run && secrets.GITHUB_TOKEN || '' }}
 
-      # This runs BEFORE anything is published, which is the whole point. When
-      # it trailed `goreleaser release`, a stale -X meant the assets were
-      # already live and already wrong; the job just went red afterwards.
-      # Via env for the same reason as the tag step above. The previous revision
-      # fixed that step, wrote a comment saying so, and left this one -- which
-      # takes the identical file-derived value into an identical shell.
+      # BEFORE anything is published, which is the whole point: an assertion
+      # that trails `goreleaser release` finds the assets already live and
+      # already wrong, and only turns the job red afterwards.
+      # Via env, for the same reason as the tag step above.
       - name: assert the binaries report their version
         env:
           DIR: ${{ needs.plan.outputs.dir }}
@@ -393,8 +358,8 @@ jobs:
         run: |
           .github/scripts/assert-released-version.sh "$DIR/dist" "$VERSION"
 
-      # PUBLISHING IS CLOSED, and this is not a placeholder -- it is the answer
-      # to something a review found that invalidates the obvious implementation.
+      # PUBLISHING IS CLOSED, and this is not a placeholder: two properties of
+      # goreleaser's release pipe rule out the obvious implementation.
       #
       # goreleaser's release pipe calls GitHub's create-release API with
       # TagName: ctx.Git.CurrentTag, and sets TargetCommitish only when a config
