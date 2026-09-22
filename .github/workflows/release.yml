@@ -39,10 +39,18 @@ name: release
 # than none in a repository whose rule 5 is "a green check is a claim about
 # what ran".
 #
-#   Run: two dry-run dispatches, both green -- ingot on ubuntu-24.04 (run
-#     35762662020) and piri on macos-14 (run 35765210724). Between them they
-#     cover the runner derivation in both directions, the skip list, the
-#     assertion, and `require the tag` and `publish` both skipping.
+#   Run, THIS file: both pull-request paths, at b9fa2298. Run 35773432670 from
+#     a `release/ingot` branch -- plan resolved ingot, the release job built and
+#     asserted in 2m54s, `require the tag` and `publish` skipped. Run 35773389770
+#     from an ordinary branch -- plan resolved nothing and the release job
+#     skipped. Those two are what exercised the `needs.plan.outputs.dry_run`
+#     gating; nothing before them did.
+#   Run, AN EARLIER FILE: two dry-run dispatches, ingot on ubuntu-24.04 (run
+#     35762662020) and piri on macos-14 (run 35765210724). They are where the
+#     runner derivation, the skip list and the assertion were observed, and
+#     where the timings below come from -- but their `require the tag` and
+#     `publish` skips came from `if: ${{ !inputs.dry_run }}`, the spelling this
+#     file no longer uses. They say nothing about the current gating.
 #   Run: every shell step below, and the assertion script, against fixtures.
 #   Run on another machine: `goreleaser check` over all four configs and the
 #     tag-parsing measurements in MONOREPO_TODO.md, on v2.18.2. That is where
@@ -101,7 +109,13 @@ concurrency:
   # pull requests do not serialise behind each other. Superseding is right for a
   # pull request (a new push obsoletes the run) and wrong for a dispatch, which
   # someone is waiting on.
-  group: ${{ github.workflow }}-${{ inputs.service || github.head_ref }}
+  #
+  # The event is IN the key, not just in `cancel-in-progress`. Without it a
+  # dispatch of `ingot` and a pull request from a branch named `ingot` land in
+  # one group -- and since the joining run's setting decides, the pull request
+  # would cancel the dispatch, which is the thing the line below exists to
+  # prevent.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.service || github.head_ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -175,7 +189,19 @@ jobs:
           case "$GITHUB_EVENT_NAME" in
             workflow_dispatch)
               svc=${SERVICE%/}
-              dry_run=$DRY_RUN
+              # Exactly `true` or `false`, because every downstream test is
+              # `!= 'true'` and therefore FAILS OPEN: any other string -- and an
+              # empty one is reachable, since a dispatch through the API is not
+              # obliged to send the declared default -- selects real-release
+              # mode, which is the mode that passes GITHUB_TOKEN to goreleaser.
+              # `resolve the version` already refuses a version.json value
+              # outside its charset; the flag gating the token was taking any
+              # string at all.
+              case "$DRY_RUN" in
+                true|false) dry_run=$DRY_RUN ;;
+                *) echo "::error::dry_run must be true or false, not '$DRY_RUN'"
+                   exit 1 ;;
+              esac
               ;;
             pull_request)
               dry_run=true
@@ -346,7 +372,28 @@ jobs:
     # is a reading of the docs rather than something measured here, and a `plan`
     # that failed AFTER resolving the service -- on the version, or on the tag
     # check -- must not start a release build under EITHER reading.
-    if: needs.plan.result == 'success' && needs.plan.outputs.dir != ''
+    #
+    # SAME-REPOSITORY PULL REQUESTS ONLY, and this one is not belt-and-braces.
+    # `plan` derives the runner by parsing `<svc>/.goreleaser.yaml` FROM THE
+    # PULL REQUEST'S OWN TREE, so a fork could name a branch `release/ingot`,
+    # add a darwin build with CGO_ENABLED=1 to that config, and put a macos-14
+    # runner under its own goreleaser hooks for the 40 minutes below. This
+    # repository is public and forkable, and every other pull-request workflow
+    # here is pinned to ubuntu, so this file would be the only way a fork
+    # reaches a macOS runner. No secret is exposed -- the token is read-only on
+    # a fork pull request and is not passed to goreleaser in dry-run mode -- but
+    # arbitrary code on a runner we pay for is not something to leave open
+    # because the credential half is covered.
+    #
+    # Cutting the job rather than pinning the runner: piri's darwin cgo build
+    # genuinely cannot be cross-compiled from linux, so a `release/piri` pull
+    # request pinned to ubuntu would fail rather than be safe. Cutting forks
+    # costs nothing real, because cutting this repository's releases is not
+    # something a fork does.
+    if: >-
+      needs.plan.result == 'success' && needs.plan.outputs.dir != '' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ${{ needs.plan.outputs.runner }}
     # In line with e2e (25), images (40) and itest (45). Without it a hung
     # goreleaser or a stalled module fetch sits for GitHub's 6-hour default,
