@@ -82,6 +82,27 @@ table further down the same page. Fixed.
 
 Each is cheap to reverse; I took it rather than banking the question.
 
+- **I opened the repository's first issue,
+  [#21](https://github.com/fil-forge/forge/issues/21)**, rather than putting it
+  on this page. `AGENTS.md` says ordinary unfinished work belongs in issues and
+  not in the four documents, and this is that — but the repository had zero
+  issues, so it is a convention being started rather than followed. *Flips if*
+  you would rather everything stayed in the wiki; it is one click to close.
+
+  Its content is a finding worth your attention independently: **Phase 1 item 6
+  (the rollback direction) would duplicate `TestPinnedPeer` if built as
+  written.** Neither compat test replaces anything — both call `MustNewStack`
+  once and boot a mixed fleet fresh, differing only in which side is the
+  majority. "HEAD fleet with one old service" is `TestPinnedPeer`'s own
+  definition. Item 6 looks separate only because item 8 ("does not upgrade in
+  place") is unfixed, and `TestRollingUpgrade`'s doc comment describes an
+  in-place swap it does not perform. The version of either that would test
+  something new needs a stack operation that does not exist: `pkg/stack` has
+  `Logs`, `Exec`, `Close` and the endpoint getters, and nothing that replaces a
+  running service's image while keeping its volumes. **So I did not build item
+  6**, and the two items are one larger piece of work with no runnable payoff
+  until six more services cut releases.
+
 - **The release-pull-request gate keys on the BRANCH NAME, `release/<svc>`, not
   on a change to `<svc>/version.json`.** The alternative looks more derived and
   is worse: a subtree resync carries upstream's own version bumps, so an
