@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 20:45Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 20:50Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -24,10 +24,36 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1–3 found **six, five, two**; four blocking, all in the first two. Head `a7434b4b`, round 4 running |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1–3 found **five, three, three**; none blocking after the first two. Head `93930ec9`, round 4 running. Both event paths verified green by real runs |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1–4 found **six, five, two, four**; four blocking, all in the first two. Head `a15f00b5`, round 5 running |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1–4 found **five, three, three, three**; none blocking after the first two. Head `d9b82b15`, round 5 running. Both event paths verified green by real runs |
 
-**The pattern stopped at round 3 on both.** Rounds 1 and 2 each found defects
+**You caught a claim the rounds had not: the release model.** I wrote, and a
+review round had asserted, that `ingot:0.0.0` would be overwritten by the next
+publish because `ingot/version.json` still reads `v0.0.0`. You asked why a
+version tag would ever be overwritten — the build published at `foo:1.2.3`
+should be the commit git-tagged `v1.2.3`, typically the commit that incremented
+`version.json`. **That is exactly what the polyrepos do**, measured on the
+upstream workflows rather than inferred from the tag list:
+
+| workflow | trigger | what it does |
+|---|---|---|
+| `releaser.yml` | `push`, `paths: [version.json]` | ipdxco's releaser: reads the new version, **creates git tag `vX.Y.Z` at that commit**, publishes a GitHub release |
+| `tagpush.yml` | `push`, `tags: v*` | the checker |
+| `release-binaries.yml` | `release: [published]` | goreleaser — **this** is what pushes `ghcr.io/fil-forge/<svc>:X.Y.Z` |
+| `publish-ghcr.yml` | `push`, `branches: [main]` | `:main`, `:main-dev`, `:sha-*`, and never a version tag |
+
+So a release *requires* the bump rather than happening in spite of one, and no
+ordinary push republishes a version tag. `fil-forge/ingot` carries exactly one
+git tag, `v0.0.0`, at `6cfb5df4` — so `ingot:0.0.0` is that tagged commit's
+artifact. What its `0.0.0` says is how **old** the pinned peer is: ingot's first
+and only release. That is a coverage statement, not a mutability one, and it
+does not call for pinning baselines by digest.
+
+Both the comment and the `MONOREPO_TODO.md` entry recommending that are
+reverted. **The failure worth keeping**: I acted on a review finding without
+checking its premise, which is the one thing I keep briefing the rounds to do.
+
+**The fix-introduces-the-next-defect pattern stopped at round 3 on both.** Rounds 1 and 2 each found defects
 the previous round's *fixes* had introduced — four of the eleven findings across
 the two pull requests. Round 3 on each found none of that: two counting errors
 on #18 and three claims-about-claims on #19, no regressions. The earlier
