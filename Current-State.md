@@ -217,10 +217,17 @@ Merged onto `main` since the last revision of this page, newest first:
 running.** Neither is blocked on you yet; a draft means a round is open, and the
 flip to Open is yours to make once one comes back satisfied.
 
-| | head | what |
-|---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `5b0ec5b5` | **`compat.yml`** — does what we are about to ship still work against what is already deployed? Round 1 found six, two blocking; all six worked, round 2 running |
-| [#19](https://github.com/fil-forge/forge/pull/19) | `b9fa2298` | **the release-pull-request gate** — a pull request from a `release/<svc>` branch builds that service and asserts its version stamping. Round 1 running |
+- [#18](https://github.com/fil-forge/forge/pull/18) — **`compat.yml`**: does what
+  we are about to ship still work against what is already deployed?
+- [#19](https://github.com/fil-forge/forge/pull/19) — **the release-pull-request
+  gate**: a pull request from a `release/<svc>` branch builds that service and
+  asserts its version stamping.
+
+Heads, round numbers and what each round found live on [[Needs Human Work]] and
+are **not repeated here**. An earlier revision of this page carried them in a
+table and they were two pushes stale within the hour, which is the failure its
+own upkeep note names: a snapshot that is stale is worse than none, because it
+is believed.
 
 Upstream PRs are unchanged; [[Plan]] has the table and [[Needs Human Work]] has
 what each needs from a person.
