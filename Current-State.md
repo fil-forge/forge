@@ -786,11 +786,13 @@ took that trade). `AGENTS.md` carries it.
    `claude/wiki-current`, that this session could not delete. Neither carries
    anything; branch deletion simply fails here.
 
-   [#21](https://github.com/fil-forge/forge/issues/21) is the repository's
-   first issue, and it argues **Phase 1's item 6 should not be built as
-   written** — it would duplicate `TestPinnedPeer`, because neither compat test
-   replaces anything and both boot a mixed fleet fresh. Items 6 and 8 are one
-   piece of work, and it needs a stack operation that does not exist.
+   **Phase 1's item 6 should not be built as written** — it would duplicate
+   `TestPinnedPeer`, because neither compat test replaces anything and both boot
+   a mixed fleet fresh. Items 6 and 8 are one piece of work, and it needs a
+   stack operation that does not exist. Written up in [[Needs Human Work]];
+   [#21](https://github.com/fil-forge/forge/issues/21) carries the same text and
+   is **closed**, having been filed against your standing instruction not to
+   open issues.
 2. ~~**The `forge-2` → `forge` rename**~~ — **done**, and the reasoning it
    turned on is worth keeping: a submodule tag has to be `<svc>/vX.Y.Z` in the
    repository the module path names, so any tag cut in `forge-2` would have had
