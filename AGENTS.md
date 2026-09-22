@@ -150,7 +150,10 @@ and the evidence buries the next thing to do. So:
   glance, and it is never hidden behind a disclosure.
 - **Each finding in its own `<details>`**, whose `<summary>` states it in one
   line — so collapsed, the review reads as a scannable list of findings.
-  `<details open>` for one the agent considers blocking.
+  **Never `<details open>`**, not even for a blocking one: a block that opens
+  itself is the bulk back on the screen, which is the whole thing this avoids.
+  Severity belongs in the verdict line and in the summary's wording, both of
+  which are already visible.
 - **Verification and what checked out: one `<details>`**, collapsed.
 - **Evidence — command output, tables, diffs — goes inside** the relevant
   `<details>`, never above it.
