@@ -39,14 +39,17 @@ name: release
 # than none in a repository whose rule 5 is "a green check is a claim about
 # what ran".
 #
-#   Run, AN EARLIER REVISION OF THIS FILE: both pull-request paths, at
-#     b9fa2298 -- the commit that added the pull_request trigger, before the
+#   Run, THIS file: run 35777398448, a `release/ingot` pull request. plan
+#     resolved ingot in 11s and the release job built and asserted in 3m35s on
+#     ubuntu-24.04, with `require the tag` and `publish` skipped. That the
+#     release job ran at all is the evidence: it needs plan to have succeeded,
+#     `dir` non-empty, and the same-repository condition to hold.
+#   Run, AN EARLIER REVISION: both pull-request paths at b9fa2298, before the
 #     fork gate, the dry_run validation and the concurrency key. Run 35773432670
-#     from a `release/ingot` branch: plan resolved ingot, the release job built
-#     and asserted in 2m54s, `require the tag` and `publish` skipped. Run
-#     35773389770 from an ordinary branch: plan resolved nothing and the release
-#     job skipped. Those two are what exercised the
-#     `needs.plan.outputs.dry_run` gating.
+#     from `release/ingot` built and asserted in 2m54s; run 35773389770 from an
+#     ordinary branch resolved nothing and skipped the release job. Kept because
+#     the second is where the 16s/11s cost of `plan` on an ordinary pull request
+#     is measured, and that path has not changed since.
 #   Run, AN EARLIER FILE: two dry-run dispatches, ingot on ubuntu-24.04 (run
 #     35762662020) and piri on macos-14 (run 35765210724). They are where the
 #     runner derivation, the skip list and the assertion were observed, and
