@@ -1090,11 +1090,11 @@ smelt's Makefile, `$(COMPOSE)` or the snapshot CLI, and every Go path fills all
 eight through `stack.WithPublishedImages()`, whose `publishedImages` table does
 list the indexer. So `e2e` and `itest` are unaffected.
 
-It is not only `make up`, though: `ENV_FILES` (`smelt/Makefile:23`) feeds every
-`$(COMPOSE)` call — seventeen of them, across `up`, `down`, `fresh`, `clean`,
-`nuke`, `logs`, `status`, `pull`, `build`, the `shell-*` targets and
-`debug-upload` — and `smelt/pkg/snapshot/stack.go` attaches the same pair for
-the `smelt snapshot` CLI.
+It is not only `make up`, though: `ENV_FILES` (`smelt/Makefile:23`) is on every
+compose invocation in the Makefile — sixteen through `$(COMPOSE)`, plus
+`debug-upload`, which spells the command out at line 321 — and
+`smelt/pkg/snapshot/stack.go` attaches the same pair for the `smelt snapshot`
+CLI.
 
 **`INDEXER_IMAGE` is easy to miss by hand**, and counting the required set is
 harder than it looks: `systems/*/compose.yml` finds six, recursing into
