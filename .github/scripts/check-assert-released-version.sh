@@ -2,8 +2,13 @@
 # Run assert-released-version.sh against fixtures, both directions.
 #
 # WHY THIS EXISTS. assert-released-version.sh is called from release.yml, which
-# is dispatch-only and has never been dispatched -- so until this guard, nothing
-# in CI executed it. Three separate portability bugs shipped in it as a result,
+# for most of this script's life was dispatch-only and had never been
+# dispatched -- so nothing in CI executed it, and this guard was the only thing
+# that did. That has changed: release.yml now runs on a release pull request and
+# has executed the script in CI. The guard still earns its place, because it
+# covers the paths a real run does not reach -- a dispatch exercises one
+# service's dist on one runner, and the fixtures below exercise the refusals.
+# Three separate portability bugs shipped in it before any of that existed,
 # each found by a reviewer reading rather than by a run: `mapfile` (bash 4, not
 # on the macOS runner it is routed to), a perl `alarm` cap that Go binaries
 # ignore entirely, and `mktemp` with no template (GNU-only). A guard that reads

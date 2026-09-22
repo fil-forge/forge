@@ -191,11 +191,18 @@ GOWORK=off go build ./...  # inside a module: what CI does, standalone
 go build ./...             # workspace mode, across go.work
 ```
 
-CI is four workflows — `ci` (per-module build/vet/staticcheck/tidy/test plus
-the `guards` job), `images`, `e2e`, `itest`. A fifth, `release`, exists but is
-**dispatch-only and never runs on a push**, so it is not part of what a change
-costs. **Nothing is filtered by path, on purpose**: `ci.yml`'s header says why,
-and `MONOREPO_TODO.md` carries the question of whether that should change. A
+CI is five workflows — `ci` (per-module build/vet/staticcheck/tidy/test plus
+the `guards` job), `images`, `e2e`, `itest`, and `release`. `release` runs by
+hand and on a pull request; on one that is not from a `release/<svc>` branch it
+resolves no service and its build job skips, so what it costs an ordinary change
+is one short `plan` job — **under twenty seconds, every run so far**. A bound
+rather than a figure: a single number stood here first and was the slowest
+sample, and the range that replaced it went stale on the next push, because the
+run that measures this sentence always postdates it. It publishes nothing in
+either mode.
+
+**Nothing is filtered by path, on purpose**: `ci.yml`'s header says why, and
+`MONOREPO_TODO.md` carries the question of whether that should change. A
 documentation-only change therefore costs a full run; that is known, not an
 oversight.
 
