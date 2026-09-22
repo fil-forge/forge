@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 15:00Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 16:20Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -393,7 +393,7 @@ The tally, because the shape is the finding:
 | PR | rounds so far | last verdict | head | state |
 |---|---|---|---|---|
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
-| #14 | 4 on the rebuild | **satisfied** | `26061659` | **Open, GREEN all 24** — ready to merge |
+| #14 | 4 on the rebuild | **satisfied** | — | **MERGED** as `88ca8c69` |
 | #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
 | #13 | 8 | 4 findings, all fixed | — | **MERGED** as `226aa57d` |
 | #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
