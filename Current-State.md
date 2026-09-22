@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 18:15Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 19:40Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -189,7 +189,8 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is `699f929f`, the import phase is closed, and no `forge` pull request is open.** All **ten** in-scope
+**`main` is `699f929f`, the import phase is closed, and two `forge` pull
+requests are open, both drafts.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
 digest, the checks the per-service `.github/` directories took with them
@@ -202,6 +203,9 @@ Merged onto `main` since the last revision of this page, newest first:
 
 | | merged | what |
 |---|---|---|
+| [#17](https://github.com/fil-forge/forge/pull/17) | 2026-09-22 18:07Z | `AGENTS.md`: the review practice written down, and the six classes a clean subtree merge hides |
+| [#16](https://github.com/fil-forge/forge/pull/16) | 2026-09-22 18:06Z | four Makefiles stamped nothing and one would not build at all. **The guard was dropped on Petra's call** — the fixes without it |
+| [#12](https://github.com/fil-forge/forge/pull/12) | 2026-09-22 17:44Z | `release.yml` — written, verified, deliberately not armed. Seven review rounds; see below for why it would not converge |
 | [#14](https://github.com/fil-forge/forge/pull/14) | 2026-09-22 12:17Z | **the final subtree resync**, rebuilt on #13 and driven through its tooling. Every prefix is at its upstream `main` |
 | [#13](https://github.com/fil-forge/forge/pull/13) | 2026-09-22 10:48Z | `finish-subtree-pull.sh` — the rename/delete three-way merge, plus the audit for the deletions git raises no conflict for |
 | [#15](https://github.com/fil-forge/forge/pull/15) | 2026-09-21 13:56Z | the build-metadata entry in `MONOREPO_TODO.md` |
@@ -209,16 +213,27 @@ Merged onto `main` since the last revision of this page, newest first:
 | [#11](https://github.com/fil-forge/forge/pull/11) | 2026-09-18 17:04Z | shard `itest ingot` across three runners |
 | [#9](https://github.com/fil-forge/forge/pull/9) | 2026-09-18 14:20Z | every goreleaser `-X` ldflag named a pre-consolidation module path; a release would have shipped binaries reporting `v0.0.0` |
 
-**One `forge` pull request is open and ready to merge**:
-[#12](https://github.com/fil-forge/forge/pull/12), the release workflow — green
-on all 24 checks, reviewer satisfied, waiting only on you.
-[#16](https://github.com/fil-forge/forge/pull/16) is the draft you parked,
-stacked on #12. Upstream PRs are unchanged; [[Plan]] has the table and
-[[Needs Human Work]] has what each needs from a person.
+**Two `forge` pull requests are open, both drafts, both with a review round
+running.** Neither is blocked on you yet; a draft means a round is open, and the
+flip to Open is yours to make once one comes back satisfied.
 
-**#12 merges before the goreleaser dry run**, not after: GitHub registers a
-`workflow_dispatch` workflow from the default branch, so `release.yml` cannot be
-dispatched while it exists only on the branch.
+| | head | what |
+|---|---|---|
+| [#18](https://github.com/fil-forge/forge/pull/18) | `5b0ec5b5` | **`compat.yml`** — does what we are about to ship still work against what is already deployed? Round 1 found six, two blocking; all six worked, round 2 running |
+| [#19](https://github.com/fil-forge/forge/pull/19) | `b9fa2298` | **the release-pull-request gate** — a pull request from a `release/<svc>` branch builds that service and asserts its version stamping. Round 1 running |
+
+Upstream PRs are unchanged; [[Plan]] has the table and [[Needs Human Work]] has
+what each needs from a person.
+
+**The release path has now run for real, twice, and the workflow's own header
+said it never had.** Both dispatches were dry runs and both were green:
+[ingot](https://github.com/fil-forge/forge/actions/runs/35762662020) at 3m11s on
+`ubuntu-24.04`, and [piri](https://github.com/fil-forge/forge/actions/runs/35765210724)
+at **8m47s** on `macos-14` against a 40-minute cap — the number the file had
+called "not measurable without dispatching it". Between them they cover the
+runner derivation in both directions, the skip list, the version assertion, and
+`require the tag` and `publish` both skipping. #19 corrects the header and
+carries the measurement to `timeout-minutes`, which is the decision it changes.
 
 **Two corrections to earlier revisions of this page**, both since verified
 against the tree rather than asserted:
@@ -285,13 +300,20 @@ repository has shown it cannot trust. And #15 was reviewed by nobody: its four
 factual errors were found by re-reading my own work, and its correction
 (`8972b1f6`) has had no second pair of eyes at all.
 
-**Five rounds are running now**, each given the previous round's full report and
-told to grade every finding FIXED / PARTIALLY FIXED / NOT FIXED / FIX
-INTRODUCED A NEW DEFECT, and to end with an explicit verdict on whether it is
-satisfied at the current head. A PR is not done being reviewed until one says
-so. **Four have reported. Three were not satisfied, and every one of the three
-found defects that round two's fixes had introduced** — which is the argument
-for the round, and the argument for never having skipped it.
+That gap is closed: every one of those five was driven to a satisfied round
+before it merged, and the practice is now written into `AGENTS.md` by
+[#17](https://github.com/fil-forge/forge/pull/17) rather than living here.
+
+**It failed once more since, in a new way, and Petra caught it.**
+[#18](https://github.com/fil-forge/forge/pull/18) was opened as a draft with no
+round started — so the draft state, which rule 10 makes half of the signal, was
+signalling nothing. Round 1 then found six things, **two of them blocking and
+both fatal to the suite**: neither compat test could boot a stack at all (seven
+of eight image variables unset against required compose interpolations), and
+nothing in CI compiled the suite, because `ci.yml`'s `tagged_suites` list is
+hand-maintained and nobody added `compat` to it. The second is why the first
+reached a pull request. Both are fixed, and the tag list now carries the command
+that enumerates it.
 
 **Why forge#12 would not converge, and the fix that makes it.** Petra asked
 whether seven rounds meant the reviews were being picky about wording. They
@@ -754,25 +776,34 @@ took that trade). `AGENTS.md` carries it.
 
 ## Next
 
-1. **Review the ten open pull requests.** Nothing here is blocked on the
-   agent. Read
-   [#14](https://github.com/fil-forge/forge/pull/14) first — it is the final
-   subtree resync and **Phase 1 is gated on it landing**. Then
-   [#13](https://github.com/fil-forge/forge/pull/13), which supersedes the
-   merged #10's interface. The five upstream ones stay draft until they have
-   been looked at, so nobody else spends time first. [[Needs Human Work]] has
-   the per-PR detail.
+1. **Two `forge` drafts and the upstream ones.** Nothing here is blocked on
+   the agent. [#18](https://github.com/fil-forge/forge/pull/18) (compat) and
+   [#19](https://github.com/fil-forge/forge/pull/19) (the release-pull-request
+   gate) each have a round running; they go Open when one comes back satisfied,
+   and that flip is yours. The upstream ones stay draft until they have been
+   looked at, so nobody else spends time first. [[Needs Human Work]] has the
+   per-PR detail — including one branch, `release/ingot`, that this session
+   could not delete.
 2. ~~**The `forge-2` → `forge` rename**~~ — **done**, and the reasoning it
    turned on is worth keeping: a submodule tag has to be `<svc>/vX.Y.Z` in the
    repository the module path names, so any tag cut in `forge-2` would have had
    to be cut again afterwards. That hazard is gone; tags can now be cut where
    they resolve.
 3. **Phase 1** — release tags, `compat.yml`, publishing. Bigger than the plan
-   assumed, because **the machinery it says to use does not exist here.** The
+   assumed, because **the machinery it says to use did not exist here.** The
    plan reads "cut initial release tags via the *existing* `release.yml`
-   flow"; `main` has four workflows — `ci`, `e2e`, `images`, `itest` — and
-   none of them tags, releases or publishes. What survives from the polyrepo
-   is raw material, and uneven:
+   flow"; `main` had four workflows — `ci`, `e2e`, `images`, `itest` — and none
+   of them tagged, released or published.
+
+   `release.yml` now exists, on `main` since
+   [#12](https://github.com/fil-forge/forge/pull/12), and has run twice. It is
+   still **dispatch-only and publishes nothing**: the `publish` step exits 1 on
+   purpose, because goreleaser would create an *unprefixed* tag in a namespace
+   ten services share, and `release: mode: keep-existing` would then merge one
+   service's artifacts into another's release. That is the ownership decision,
+   not a workflow change, and it is what Phase 1 is actually waiting on.
+
+   The raw material the polyrepo left is still uneven:
 
    Per service, derived from the tree rather than asserted — "in list" is the
    old `release.yml`'s hard-coded allowlist `piri|hilt|sprue|ingot`:

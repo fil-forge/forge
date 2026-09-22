@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 18:00Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 19:45Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -8,6 +8,37 @@ why each item exists.
 <!-- UPKEEP: work that is merely unfinished does not belong on this page — it
      belongs in issues. Items leave via **Recently cleared**, which is pruned
      once it stops being useful. Kept current as things move. -->
+
+## Since you went AFK (Tuesday 18:05Z → 19:45Z)
+
+**#12, #16 and #17 all merged; `main` is `699f929f`.** Nothing on `forge` is
+waiting on you to unblock the agent right now.
+
+**The release path ran for real, twice, both dry runs, both green.** ingot 3m11s
+on `ubuntu-24.04`; piri **8m47s** on `macos-14` against a 40-minute cap, with
+the darwin cgo cross-build and the version assertion green. `release.yml`'s own
+header had said that time was "not measurable without dispatching it", which is
+now corrected in #19.
+
+**Two new drafts, both with a round running:**
+
+| | what | state |
+|---|---|---|
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | round 1 found **six, two blocking**; all six worked and pushed. Round 2 running. CI green on the previous head |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | round 1 running. Both event paths verified by real runs |
+
+**Round 1 on #18 is the one worth reading.** Its two blocking findings were the
+same failure from both ends: **neither compat test could boot a stack** (seven
+of eight image variables unset against required compose interpolations —
+`${HILT_IMAGE:?...}` and siblings), and **nothing in CI compiled the suite**,
+because `ci.yml`'s `tagged_suites` is a hand-maintained list nobody added
+`compat` to. The second is how the first reached a pull request at all. The tag
+list now carries the command that enumerates it, which reports `e2e` and
+`compat` over all twelve modules and nothing else.
+
+**You also caught a hole in rule 10 before you left**: #18 was opened as a draft
+with no round started, so the draft state — half of the rule's two-signal
+design — was signalling nothing. Both drafts now have one open.
 
 ## Since you last looked (Monday 14:55Z → Tuesday 18:05Z)
 
@@ -50,6 +81,34 @@ table further down the same page. Fixed.
 ## Decisions taken while you were away
 
 Each is cheap to reverse; I took it rather than banking the question.
+
+- **The release-pull-request gate keys on the BRANCH NAME, `release/<svc>`, not
+  on a change to `<svc>/version.json`.** The alternative looks more derived and
+  is worse: a subtree resync carries upstream's own version bumps, so an
+  unrelated pull request would pay for up to four release builds, piri's alone
+  8m47s. Narrowing it to "version bumps and nothing else" then excludes a
+  release pull request that also edits a changelog. *Flips if* you would rather
+  have the gap closed (bump a version on any other branch and nothing looks)
+  at that cost — it is a different `case` in one step.
+- **#19 does NOT wire compat into a release pull request**, although that is
+  half of what "the release-PR gate" means. It wants `compat.yml`, which is
+  still open in #18 and under review; editing it from another branch makes both
+  harder to review. *Flips if* you would rather have one larger pull request —
+  then #19 stacks on #18. It follows as its own change once #18 lands.
+- **I opened a throwaway pull request, [#20](https://github.com/fil-forge/forge/pull/20),
+  and closed it.** A trigger keyed on a branch name cannot be tested except by
+  triggering it, and #19's own branch is not a `release/*` one. #20 carried
+  #19's exact commits under the name `release/ingot`; its release job went green
+  in 2m54s, and #19's stayed skipped. Closed as soon as it reported.
+  **`release/ingot` could not be deleted** — three `git push origin --delete`
+  attempts with backoff all end in `the remote end hung up unexpectedly`. The
+  branch is inert but wants deleting by hand.
+- **`TestRollingUpgrade` now requires a released image for every service in the
+  workspace, not four.** It was pinning four and building the other four from
+  HEAD inside a fleet its own comments called old — one of them the indexer,
+  which is on the path it asserts over. Making it honest means it skips until
+  all eight publish version tags, which is further out than four. *Flips if* you
+  would rather it tested the four-service window now and said so.
 
 - **#16 was rebased onto #12's new head and force-pushed** (`fafddf08` →
   `9ecc21d1`). It had gone `dirty` the moment #12 gained commits. Your standing
