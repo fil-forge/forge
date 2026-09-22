@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-21 20:05Z, Monday evening.** For history and
+**Snapshot as of 2026-09-22 15:00Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -393,9 +393,9 @@ The tally, because the shape is the finding:
 | PR | rounds so far | last verdict | head | state |
 |---|---|---|---|---|
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
-| #14 | 2, **void** | rebuilt; re-review running | `d88f32fa` | **Open**, base `claude/subtree-tool` |
+| #14 | 2, **void**; re-review running | rebuilt on #13 | `958dc4cb` | **Open**, base back to `main` now #13 has merged |
 | #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
-| #13 | 8 | 4 findings, all fixed | `fc20fa81` | **Open, green all 24** — ready to merge. `6f01e5e2` was 23 of 24: the poller flake, fixed by porting `indexing-service#106` |
+| #13 | 8 | 4 findings, all fixed | — | **MERGED** as `226aa57d` |
 | #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
 
 **#15 is merged; #14 is Open and signed off.** #15 took five revisions of one Markdown entry to get
