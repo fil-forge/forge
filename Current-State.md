@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 16:20Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 17:20Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -189,7 +189,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is `0d8fb04c` and the import phase is closed.** All **ten** in-scope
+**`main` is `88ca8c69` and the import phase is closed.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
 digest, the checks the per-service `.github/` directories took with them
@@ -202,21 +202,23 @@ Merged onto `main` since the last revision of this page, newest first:
 
 | | merged | what |
 |---|---|---|
+| [#14](https://github.com/fil-forge/forge/pull/14) | 2026-09-22 12:17Z | **the final subtree resync**, rebuilt on #13 and driven through its tooling. Every prefix is at its upstream `main` |
+| [#13](https://github.com/fil-forge/forge/pull/13) | 2026-09-22 10:48Z | `finish-subtree-pull.sh` — the rename/delete three-way merge, plus the audit for the deletions git raises no conflict for |
+| [#15](https://github.com/fil-forge/forge/pull/15) | 2026-09-21 13:56Z | the build-metadata entry in `MONOREPO_TODO.md` |
 | [#10](https://github.com/fil-forge/forge/pull/10) | 2026-09-18 19:08Z | the subtree merge tool. **[#13](https://github.com/fil-forge/forge/pull/13) supersedes its interface** — same script, renamed `finish-subtree-pull.sh`, with the deletion audit #10 could not do |
 | [#11](https://github.com/fil-forge/forge/pull/11) | 2026-09-18 17:04Z | shard `itest ingot` across three runners |
 | [#9](https://github.com/fil-forge/forge/pull/9) | 2026-09-18 14:20Z | every goreleaser `-X` ldflag named a pre-consolidation module path; a release would have shipped binaries reporting `v0.0.0` |
 
-**Ten pull requests are open and every one is green**, five on `forge` and
-five upstream. Nothing has been red since Sunday evening, nothing is blocked on
-the agent, and every review finding raised against the five `forge` PRs has
-been worked and pushed — but **no reviewer has yet confirmed any of those
-fixes**; a second round is running now (below). **They are waiting on you and
-on that.**
-[[Plan]] has the table; [[Needs Human Work]] has what each needs from a person.
-The one that matters for sequencing is
-[#14](https://github.com/fil-forge/forge/pull/14), **the final subtree
-resync** — 37 commits across eight prefixes, every prefix now at its upstream
-`main`. Phase 1 waits on it.
+**One `forge` pull request is open and ready to merge**:
+[#12](https://github.com/fil-forge/forge/pull/12), the release workflow — green
+on all 24 checks, reviewer satisfied, waiting only on you.
+[#16](https://github.com/fil-forge/forge/pull/16) is the draft you parked,
+stacked on #12. Upstream PRs are unchanged; [[Plan]] has the table and
+[[Needs Human Work]] has what each needs from a person.
+
+**#12 merges before the goreleaser dry run**, not after: GitHub registers a
+`workflow_dispatch` workflow from the default branch, so `release.yml` cannot be
+dispatched while it exists only on the branch.
 
 **Two corrections to earlier revisions of this page**, both since verified
 against the tree rather than asserted:
