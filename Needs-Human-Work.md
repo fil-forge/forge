@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-21 18:50Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 18:05Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -9,54 +9,75 @@ why each item exists.
      belongs in issues. Items leave via **Recently cleared**, which is pruned
      once it stops being useful. Kept current as things move. -->
 
-## Since you last looked (Sunday 16:10Z → Monday 14:55Z)
+## Since you last looked (Monday 14:55Z → Tuesday 18:05Z)
 
-Five things. Only the first changes what the PRs are waiting on:
+**Three PRs merged and `main` is `88ca8c69`.** [#13](https://github.com/fil-forge/forge/pull/13)
+(the subtree tool), [#14](https://github.com/fil-forge/forge/pull/14) (the final
+resync, rebuilt on #13's tooling) and
+[#15](https://github.com/fil-forge/forge/pull/15) (the build-metadata entry).
+The import phase is closed.
 
-1. **The review practice was being run half-way, and that is now corrected.**
-   Your instruction was "respond to its reviews *until it's satisfied*". Four
-   PRs got a round, every round found something real, the findings were worked
-   and pushed — **and no reviewer was ever sent back to check the fix.** No
-   reviewer has seen any current head. #15 was never reviewed by anyone but me
-   at all. That matters here more than it would elsewhere, because **four of
-   the defects found this weekend were in fixes made by the round before**. Five
-   rounds are running now against the current heads, each holding the previous
-   report and asked to end with an explicit verdict. [[Current State]] has the
-   head-by-head table. **All five reported; four were not satisfied, and every
-   one of the four found defects that the previous round's fixes had
-   introduced.** #14 is the one that passed, and it is now signed off and Open.
-   #13's three blocking defects were *all* in round two's fixes; #16's guard
-   printed its round-one output again, word for word, because round two's fix
-   was verified on a fixture whose shape does not match this repository's;
-   #15's rewrite fixed four errors and introduced two; and **#12's meta-guard
-   did not cover the one fix made in the same push as the guard's own rewrite**
-   — the sharpest of the weekend. All worked and pushed, and a further round is
-   running on the four not yet signed off.
+**[#12](https://github.com/fil-forge/forge/pull/12) is the one thing waiting on
+you, and it is the thing that unblocks everything else.** You said the
+commentary was verbose — too much about the process of getting here, not enough
+about how things are today. I first tightened the PR *body*; you meant the
+changed files. `0cf3a609` does that:
 
-   **Two new signals, both yours, so you can tell at a glance what is ready:**
-   a satisfied reviewer now posts its own `[From Claude:]` approval comment on
-   the PR and an unsatisfied one posts nothing; and a `forge` PR stays a
-   **draft** while a review is open, going **Open** only when its reviewer
-   signs off. Everything here is attributed to one GitHub user, so a real
-   approval would carry no information — these do.
-2. **Every `forge` PR got an adversarial review, and every one found something
-   real.** The sharpest finding was that **four of the defects were in fixes
-   made by the round before**. All of them are fixed and pushed — but see item
-   1 for what "fixed" is and is not worth here. Detail below and on
-   [[Current State]].
-3. **`forge`#16 is new** — four Makefiles injected `-X` ldflags that stamped
-   nothing, and `piri`'s `make build` did not resolve its own target. It is
-   **hard-stacked on #12**, which must merge first.
-4. **hilt#76 (bajtos's) merged** at 11:29Z, which left our hilt#77 behind its
-   base. Merged `main` in, verified, pushed; it is green again.
-5. **`forge#14` went red once overnight** — a Docker Hub connection reset
-   pulling `redis`, before any test body ran. It passed on its one re-run.
+| file | lines | comment lines |
+|---|---|---|
+| `release.yml` | 428 → 393 | 256 → 221 |
+| `check-assert-released-version.sh` | 468 → 447 | 204 → 183 |
+| `assert-released-version.sh` | 257 → 251 | 115 → 109 |
+
+**No executable line changed** in any of the three — verified by filtering the
+diff for non-comment lines and getting 0 for each. It also fixes the
+`MONOREPO_TODO.md` list splice that was on the PR's own deliberately-not-fixed
+list: four lines, so it is fixed rather than listed.
+
+**[#17](https://github.com/fil-forge/forge/pull/17) is new, and draft.** Two
+things that existed only in commit messages: rule 10 (the agent-review practice
+and its two signals) and a section listing the six classes of subtree-pull
+damage that raise no conflict, so neither script can see them. Per your call,
+**the whole PR process is filed as scaffolding** — it lasts as long as the
+consolidation and the team develops its own afterwards — so rule 10 is listed
+among what a replacement drops.
+
+**This page's sibling had gone stale in the way its own UPKEEP note warns
+about.** [[Current State]] still named `main` as `0d8fb04c` and claimed ten open
+PRs with no reviewer having confirmed anything, both contradicting the tally
+table further down the same page. Fixed.
+
+## Decisions taken while you were away
+
+Each is cheap to reverse; I took it rather than banking the question.
+
+- **#17 is on `claude/agents-md-review-practice`, not the designated
+  `claude/forge-monorepo-poc-p9w0yr`.** That branch exists but holds older
+  consolidation-docs commits not based on current `main`, so a PR from it would
+  carry unrelated history. Every merged `forge` PR so far used a per-PR
+  descriptive branch. *Flips if* you want the shared branch name to win over
+  per-PR isolation — then it is a rebase and a re-push.
+- **Fixed the `MONOREPO_TODO.md` list splice inside #12** rather than leaving it
+  on the not-fixed list. It is four lines and the list rendered broken. *Flips
+  if* you wanted #12's diff frozen for re-review.
+- **Fixed `check-module-paths.sh`'s stale header inside #17** rather than as its
+  own PR. The header said `.mockery.yaml` and `renovate.json` "are rewritten by
+  this pull request", untrue since that PR merged — the same fault #17 is about.
+  I verified all three of its substance claims still hold before touching the
+  tense. *Flips if* you want #17 to be documentation only.
 
 ## Blocking
 
-**Nothing is blocked. Ten pull requests and one issue are waiting for you,
-and all ten are green.** The five `forge` ones are also waiting on the
-re-review round described above — not on you, and not for long.
+**Nothing is blocked on a permission. One `forge` PR is waiting on you:**
+[#12](https://github.com/fil-forge/forge/pull/12), whose commentary you asked to
+have tightened and which now is. Merging it unblocks two queued items — the
+goreleaser dry run (which cannot happen sooner, since `workflow_dispatch`
+registers from the default branch) and
+[#16](https://github.com/fil-forge/forge/pull/16), which is hard-stacked on it.
+
+[#17](https://github.com/fil-forge/forge/pull/17) is a draft under review and
+needs nothing from you yet. Upstream PRs are unchanged.
+
 Per your call on 2026-09-19, **`forge` PRs are fully Open** when they look
 ready — you are the only one looking at them right now — while
 **upstream PRs stay draft** so other engineers do not spend time on them before
@@ -552,7 +573,22 @@ whenever it makes any sense.
 
 ## Open pull requests
 
-All four are listed above under Blocking. Merged earlier today, for the record:
+Two on `forge`, both listed above under Blocking:
+
+| PR | state | CI | needs |
+|---|---|---|---|
+| [#12](https://github.com/fil-forge/forge/pull/12) | **Open**, reviewer satisfied | running on `0cf3a609`; was green on all 24 at `0ce788a7` | **your merge** |
+| [#17](https://github.com/fil-forge/forge/pull/17) | **draft** | running on `b496a7fe` | a review round, in flight |
+| [#16](https://github.com/fil-forge/forge/pull/16) | **draft**, parked by you | green at `fafddf08`, but stacked on #12 | #12 to merge, then a rebase |
+
+Merged, for the record:
+
+- **[#14](https://github.com/fil-forge/forge/pull/14)** 2026-09-22 12:17Z as
+  `88ca8c69` — the final subtree resync, rebuilt on #13's tooling.
+- **[#13](https://github.com/fil-forge/forge/pull/13)** 2026-09-22 10:48Z as
+  `226aa57d` — `finish-subtree-pull.sh`.
+- **[#15](https://github.com/fil-forge/forge/pull/15)** 2026-09-21 13:56Z as
+  `74be2e39` — the build-metadata entry.
 
 - **[#11](https://github.com/fil-forge/forge/pull/11)** 17:04Z as `9870d48a` —
   itest sharding.
