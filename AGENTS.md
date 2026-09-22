@@ -160,9 +160,12 @@ wrong are worth more than the ones that did not.
 The `guards` job runs the `check-*.sh` scripts in `.github/scripts/`. **That
 directory is the list** — this file deliberately does not enumerate them,
 because a hand-maintained copy of a derivable list is the thing that goes
-stale (rule 3). Each script's header says what it enforces and why. Between
-them they cover in-repo `replace` directives, Dockerfile `FROM` pins and
-compose `image:` pins.
+stale (rule 3). Each script's header says what it enforces and why: read the
+directory, not this paragraph.
+
+It used to end with a summary of what they cover between them. By the time a
+sixth guard arrived, that sentence named three of five — which is rule 3
+happening to the very paragraph that states it. Gone rather than extended.
 
 Image references in **Go** are deliberately unguarded — every pattern narrow
 enough to avoid hundreds of false positives also misses real references, and
@@ -328,12 +331,20 @@ their parent's alternative. Add `| grep -v 'https\?://'` if you only want
 module paths: most of the hits are repository URLs the monorepo deliberately
 left pointing at their own repositories.
 
-**A guard script for this does not exist on this branch.** An earlier revision
-of this paragraph named `check-module-paths.sh` as though it did; it is added by
-the subtree-resync pull request, not this one, and `.github/scripts/` is the
-list (rule 3) — a reader who looked there found nothing and either skipped the
-step or assumed it had run. When that script lands, this block becomes a call to
-it.
+**`check-module-paths.sh` is that sweep, and `guards` runs it**, so the grep
+above is for looking at a single prefix mid-pull; CI covers the tree. It reads
+`*.go` and `go.mod` only — its header names what it does not read (`Makefile`,
+`*.yaml`, `*.json`, `*.sh`, `go.sum`), because a success line that reads as
+total over a partial check is what rule 5 is about.
+
+**It is not a substitute for building.** Most of what the sweep finds is an
+import, and an import on the old path fails `go build` one step later — on the
+resync that produced this branch, swarf's two were a build error and piri's ten
+were caught by `go mod tidy`. The ones only the sweep sees are the references
+that still compile: piri's otel meter name
+(`Meter("github.com/fil-forge/piri/pkg/service/publisher")`) was one, and it
+would have shipped a metric attributed to a module path that does not exist
+here.
 
 ## Conventions
 
