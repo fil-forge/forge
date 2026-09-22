@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 20:50Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 21:15Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -66,7 +66,42 @@ round 1's fork gate covered the build job and not `plan`, which still ran a
 fork's shell. Four of the nine findings across the two are in fixes made by the
 round before.
 
-**#19's security work took two rounds and the second was the real one.**
+**The fork gate is gone, on Petra's word, because forks were never part of
+this.** She asked how forks came into any of it. They do not: pull requests here
+come from the team with push access, the only fork is `fil-forge/forge-2` — our
+own archived copy of the migration — and `ci`, `e2e`, `images` and `itest` have
+all triggered on `pull_request` since before `release.yml` did, so a fork
+opening pull requests would already be spending 23 minutes of `itest`. Adding
+the trigger changed nothing about who can run what.
+
+Audited rather than assumed, and this is the part worth keeping: a
+`pull_request` from a fork runs in **this** repository's Actions with no secrets
+and a read-only token — which is what `pull_request_target` exists to provide,
+and why that event and not this one is the dangerous one.
+
+| | |
+|---|---|
+| `pull_request_target` anywhere | none |
+| `runs-on:` | all GitHub-hosted and ephemeral |
+| secrets referenced, whole tree | `secrets.GITHUB_TOKEN` ×1, provisioned not stored |
+| every `permissions:` block | `contents: read` |
+
+Public repo, so nothing to exfiltrate. What remains is compute on free minutes.
+**Where forks would become real is arming publishing**, which needs
+`packages: write` and a registry credential.
+
+The condition also could not do what it appeared to — a `pull_request` runs the
+workflow definitions from the pull request's own commit, so a fork's copy of
+that file is whatever the fork wrote. A guard reading as total while covering
+nothing is rule 5's case for shipping none, and it had produced two wrong
+comments about itself. **The `${{ }}`-into-shell fix survives** and always
+should have: it is right regardless of who opens the pull request.
+
+**The failure was mine and it was not the gate.** I imported an
+open-source-contribution threat model into a repository whose working model is a
+team with push access, spent two rounds on it, and only stopped when she asked.
+
+The original round-1 write-up, for context:
 Round 1 found that `plan` derives the release runner by parsing
 `<svc>/.goreleaser.yaml` **from the pull request's own tree**, so a fork could
 name a branch `release/ingot`, add a darwin `CGO_ENABLED=1` build to that
@@ -106,7 +141,7 @@ Round 1's other four: the header cited two runs that executed a *different*
 `dry_run` failed open on any string but `true`, and it gates the token; a pull
 request could cancel an in-flight dispatch through a shared concurrency group;
 and `AGENTS.md` still said this workflow "is not part of what a change costs",
-now measured at 16s of `plan` per pull request.
+now one short `plan` job per pull request, under twenty seconds every run so far (a bound, not a figure: the single number first published there was the slowest sample, and the range that replaced it was stale by its own next push).
 
 **Round 1 on #18 is the other one worth reading.** Its two blocking findings were the
 same failure from both ends: **neither compat test could boot a stack** (seven
