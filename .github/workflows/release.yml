@@ -49,11 +49,16 @@ name: release
 #     from `release/ingot` built and asserted in 2m54s; run 35773389770 from an
 #     ordinary branch resolved nothing and skipped the release job.
 #
-# WHAT AN ORDINARY PULL REQUEST COSTS: `plan` runs and the build job does not.
-# Five runs of that path across this branch measured 8-16s, of which the
-# fetch-depth: 0 checkout was 4-11s. The 16s is the first run and the slowest;
-# the other four are 8-11s. A single figure was published here and in AGENTS.md
-# and it was that outlier, which overstated the cost by about half.
+# WHAT AN ORDINARY PULL REQUEST COSTS: `plan` runs, the build job does not, and
+# it has never taken twenty seconds. A BOUND rather than a figure, on purpose.
+# A single number was published here and in AGENTS.md and it was the slowest of
+# the samples, overstating by about half; replacing it with the observed range
+# then went stale on the next push, because the run that measures this text
+# always postdates it. The bound is what a reader's decision turns on and it
+# does not rot. To see the samples:
+#
+#   gh run list --workflow release.yml --branch <branch> --event pull_request
+#   # then the `plan` job's duration on any of them
 #   Run, AN EARLIER FILE: two dry-run dispatches, ingot on ubuntu-24.04 (run
 #     35762662020) and piri on macos-14 (run 35765210724). They are where the
 #     runner derivation, the skip list and the assertion were observed, and

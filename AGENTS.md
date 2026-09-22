@@ -195,9 +195,11 @@ CI is five workflows — `ci` (per-module build/vet/staticcheck/tidy/test plus
 the `guards` job), `images`, `e2e`, `itest`, and `release`. `release` runs by
 hand and on a pull request; on one that is not from a `release/<svc>` branch it
 resolves no service and its build job skips, so what it costs an ordinary change
-is one short `plan` job — **8-16s over five runs**, of which the `fetch-depth: 0`
-checkout the tag check needs was 4-11s. A single figure stood here first and it
-was the slowest of the five. It publishes nothing in either mode.
+is one short `plan` job — **under twenty seconds, every run so far**. A bound
+rather than a figure: a single number stood here first and was the slowest
+sample, and the range that replaced it went stale on the next push, because the
+run that measures this sentence always postdates it. It publishes nothing in
+either mode.
 
 **Nothing is filtered by path, on purpose**: `ci.yml`'s header says why, and
 `MONOREPO_TODO.md` carries the question of whether that should change. A
