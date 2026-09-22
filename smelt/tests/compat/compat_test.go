@@ -129,6 +129,21 @@ func pinnedVersions(t *testing.T, service string) []string {
 	return out
 }
 
+// A VERSION-SHAPED TAG IS NOT PROOF OF A RELEASE, and one of the two this suite
+// pins today is not one. ingot's version.json reads v0.0.0 -- the placeholder
+// hilt and swarf also carry -- so ghcr.io/fil-forge/ingot:0.0.0 is what its CI
+// publishes for an unstamped build, and the next publish overwrites that same
+// tag unless someone bumps the file first. That is a moving tag wearing a
+// version's shape, which is the ambiguity this suite refuses `:main` to avoid,
+// and `[0-9]+\.[0-9]+\.[0-9]+` cannot tell them apart.
+//
+// Left as it is, deliberately. piri (v0.2.4) and the indexer (v1.13.4) carry
+// version.json values matching their published tags, so those baselines are
+// real. The fix that would actually guard ingot's is pinning the baseline by
+// DIGEST, which rule 2 already calls for and which needs the resolved digest
+// carried from the workflow into the test -- a change worth making on its own
+// rather than folded in here. MONOREPO_TODO.md carries it.
+
 // pinFor maps a smelt service name to the option that pins its image. The
 // names are workspace.Detect()'s, which are the names the stack itself uses,
 // so TestRollingUpgrade can walk that list and pin every entry.
@@ -181,12 +196,17 @@ func TestPinnedPeer(t *testing.T) {
 
 					// WithPublishedImages is not garnish. Every service
 					// this repository builds is a REQUIRED compose
-					// interpolation -- ${HILT_IMAGE:?...} and its
+					// interpolation -- ${HILT_IMAGE:?...} and seven
 					// siblings -- and config.buildEnv() omits a variable
 					// it has no value for, so compose refuses to start,
 					// naming the variable. Workspace binaries do not
 					// cover for that: they are bind mounts over an image,
 					// not an image.
+					//
+					// Eight, and counted over every compose.yml under
+					// systems/ rather than over systems/*/compose.yml:
+					// INDEXER_IMAGE is one level down, so a flat glob
+					// says seven.
 					//
 					// The exclusion is load-bearing too. Without it the
 					// workspace binary is mounted over the pinned image

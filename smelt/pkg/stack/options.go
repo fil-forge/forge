@@ -246,8 +246,13 @@ func WithWorkspaceBinaries() Option {
 // WithPublishedImages is in that example because the stack does not boot
 // without it. Workspace binaries are bind mounts over an image; they are not
 // an image, and every service this repository builds is a required compose
-// interpolation. Pinning one service and building the rest leaves the other
-// six with no image at all, and compose refuses, naming the variable.
+// interpolation -- EIGHT of them. Pinning one service and building the rest
+// leaves the other seven with no image at all, and compose refuses, naming the
+// variable.
+//
+// Eight, counted over `find smelt/systems -name compose.yml` and not over
+// `systems/*/compose.yml`: INDEXER_IMAGE lives one level down, in
+// systems/indexing/indexer/, and a flat glob reports seven.
 func WithWorkspaceBinariesExcept(services ...string) Option {
 	return func(c *config) {
 		c.workspaceBinaries = true
