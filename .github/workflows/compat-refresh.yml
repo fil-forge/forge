@@ -64,10 +64,25 @@ permissions:
   pull-requests: read
   actions: write
 
-# DELIBERATELY REF-LESS, unlike every other workflow here. This one is a
-# singleton by intent: it only ever runs from the default branch, and two
-# refreshers re-running the same pull request's run would race for it. compat.yml
-# is the opposite case and keys its group by ref -- see the note there.
+# DELIBERATELY REF-LESS, unlike every other workflow here, and the ref-lessness
+# is load-bearing rather than a leftover.
+#
+# WHAT THIS JOB CONTENDS FOR IS NOT A REF. It re-runs every open release pull
+# request's run, so two refreshers race over the same pull requests whatever ref
+# each was started from. A ref-keyed group would put a `workflow_dispatch` on
+# some branch in a different group from the scheduled run and let both go at
+# once, which is the collision the group exists to prevent.
+#
+# An earlier revision justified this with "it only ever runs from the default
+# branch", which is false and, worse, argued the group was redundant: only
+# `schedule:` is default-branch-only. A dispatch runs on whatever ref is picked
+# -- `gh workflow run --ref`, the UI's branch dropdown, or `ref` in the REST
+# body -- and that is precisely the case the ref-less group covers.
+# https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow
+#
+# compat.yml is the opposite case and keys its group by ref -- see the note
+# there. The difference is what each one contends for: a pull request's own
+# check, versus all of them at once.
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -164,13 +179,26 @@ jobs:
             echo "re-running $run (created $created)"
             if ! gh run rerun "$run" --repo "$REPO"; then
               # AGE IS DIAGNOSIS, NOT CONTROL. The attempt above is the only
-              # authority on whether a re-run was allowed; the age is carried to
-              # explain the one refusal whose cause the API error never names.
-              # STATED ONLY WHEN IT APPLIES: an earlier revision appended the
-              # ceiling to every failure, so a run refused for being already in
-              # progress was reported as one day old and then told the reader
-              # about a 30-day limit. A reason offered for the wrong failure is
-              # worse than none -- it is the next person's wasted hour.
+              # authority on whether a re-run was allowed.
+              #
+              # WHAT THIS ADDS IS PRECISION AND CONSEQUENCE, not the cause. An
+              # earlier revision said it explained "the refusal whose cause the
+              # API error never names", which is backwards: GitHub answers the
+              # age refusal with "Unable to retry this workflow run because it
+              # was created over a month ago", and `gh run rerun`'s whole-run
+              # path forwards the server message verbatim. (Its `--job` path is
+              # the one that discards it -- a different command.) So the reader
+              # already learns WHY. What they do not learn is how old, that the
+              # rule is 30 days rather than a vague "over a month", and that
+              # this pull request's compat check is now unrefreshable.
+              #
+              # STATED ONLY WHEN IT APPLIES: a first draft appended the ceiling
+              # to every failure, so a run refused for being already in progress
+              # was reported as one day old and then told the reader about a
+              # 30-day limit. A reason offered for the wrong failure is worse
+              # than none -- it is the next person's wasted hour. Below 30 days
+              # the age line says only how old, which is what rules the ceiling
+              # out.
               why=""
               if [ -n "$created" ] && created_s=$(date -u -d "$created" +%s 2>/dev/null); then
                 days=$(( ( $(date -u +%s) - created_s ) / 86400 ))
