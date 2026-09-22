@@ -24,7 +24,10 @@ name: compat
 # green is no longer known to be. That workflow re-runs THIS one on every open
 # release pull request, daily. Re-runs, rather than starting a fresh run against
 # the branch, because a re-run stays attached to the pull request and so lands
-# the fresh answer where the merge decision is made.
+# the fresh answer where the merge decision is made. GitHub stops allowing that
+# 30 days after the original run, so a release pull request open longer than a
+# month keeps an answer nothing can refresh; the refresher says so and fails
+# rather than leaving the stale green unremarked.
 #
 # Also on demand.
 #
@@ -54,17 +57,34 @@ on:
 permissions:
   contents: read
 
+# KEYED BY REF, which it was not until this trigger arrived. A group of just
+# `${{ github.workflow }}` was harmless while this ran only on a schedule and on
+# demand; with `pull_request:` it is not. GitHub holds one run per group and
+# cancels any PREVIOUSLY PENDING one when a newer arrives, so with a global key
+# a release pull request's hour-long compat run would make every other pull
+# request's compat run pend behind it -- and the third arrival would cancel the
+# second outright. A release pull request could have its compat check cancelled
+# by an unrelated pull request, which is the one thing this workflow must not do.
+# https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/control-the-concurrency-of-workflows-and-jobs
+#
+# `head_ref` for a pull request, `ref` for a dispatch; a re-run reuses its
+# original event, so it lands back in the same group.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: false
 
 jobs:
   window:
     name: Resolve the published window
     # A release pull request, or a dispatch. Every other pull request skips
-    # this job, and `compat` needs it, so both skip together -- which costs an
-    # ordinary pull request nothing, and matters because the compat job below
-    # is capped at an hour.
+    # this job, and `compat` needs it, so both skip together -- measured on
+    # run 35788998286, an ordinary pull request, where both report `skipped`.
+    # That matters because the compat job below is capped at an hour.
+    #
+    # NOT "costs an ordinary pull request nothing", which this said until the
+    # concurrency note above was written: the run is still created and still
+    # joins the group. What it costs is a queue slot, which is why that group
+    # is now keyed by ref.
     if: >-
       github.event_name != 'pull_request' ||
       startsWith(github.head_ref, 'release/')

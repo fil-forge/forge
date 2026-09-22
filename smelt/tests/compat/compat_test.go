@@ -35,6 +35,8 @@
 // red there means do not merge this release. `compat-refresh.yml` re-runs it
 // daily on every open release pull request, because the pinned side is read
 // live from the registry and so the answer goes stale without the code moving.
+// GitHub allows that for 30 days after the original run and no longer, so a
+// release pull request open past a month keeps an answer nothing refreshes.
 //
 // # Where the pinned side comes from
 //

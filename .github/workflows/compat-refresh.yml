@@ -23,6 +23,17 @@ name: compat-refresh
 # own run, at its own commit, and replaces the check in place. That attachment
 # is the whole reason for this file's shape.
 #
+# A RE-RUN EXPIRES, AND SO DOES THE ANSWER. GitHub allows a run to be re-run for
+# 30 days after its initial run, and at most 50 times. A release pull request
+# open longer than that keeps a compat check nothing can refresh: green, and
+# about a fleet that has moved on. There is no fix inside this design -- a fresh
+# dispatch would refresh the answer and put it somewhere nobody is looking,
+# which is the trade the previous paragraph already rejected -- so the run below
+# reports the expiry loudly and fails, rather than letting the stale green
+# stand unmentioned. A release pull request open for a month has a larger
+# problem than its compat check.
+# https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
+#
 # WHAT IT GIVES UP: nothing runs while no release pull request is open. An
 # upstream incompatibility that lands in a quiet week is then found when the
 # next release is proposed rather than when it appeared. That is deliberate --
@@ -37,13 +48,26 @@ on:
   workflow_dispatch:
 
 # The first workflow here to want more than `contents: read`, so it is worth
-# saying what for: listing pull requests, and re-running a workflow run. It
-# starts nothing new and can reach nothing this repository does not already run.
+# saying what for: listing pull requests, and re-running a workflow run.
+#
+# `actions: write` IS WIDER THAN WHAT THIS USES. It is also the scope that
+# permits `POST /actions/workflows/{id}/dispatches`, and a `workflow_dispatch`
+# raised with GITHUB_TOKEN is one of the two events exempt from the rule that
+# GITHUB_TOKEN-triggered events start no run -- so this token could start
+# release.yml. An earlier revision of this comment claimed the opposite
+# ("starts nothing new"), which was wrong. GitHub has no narrower scope to ask
+# for; what bounds this is that the step below runs fixed commands over data it
+# only ever reads, not that the permission is small.
+# https://docs.github.com/en/actions/concepts/security/github_token
 permissions:
   contents: read
   pull-requests: read
   actions: write
 
+# DELIBERATELY REF-LESS, unlike every other workflow here. This one is a
+# singleton by intent: it only ever runs from the default branch, and two
+# refreshers re-running the same pull request's run would race for it. compat.yml
+# is the opposite case and keys its group by ref -- see the note there.
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
@@ -92,7 +116,8 @@ jobs:
             exit 0
           fi
 
-          stale=0
+          missing=0
+          failed=0
           for row in "${prs[@]}"; do
             num=${row%%$'\t'*}; rest=${row#*$'\t'}
             branch=${rest%%$'\t'*}; sha=${rest##*$'\t'}
@@ -101,31 +126,77 @@ jobs:
             # The pull request's OWN latest compat run, matched on the head sha
             # so a re-run cannot resurrect a run for code the branch has moved
             # past. `--json` rather than parsing the table, because the table's
-            # columns are a display format.
-            if ! run=$(gh run list --repo "$REPO" --workflow compat.yml \
-                         --branch "$branch" --limit 20 \
-                         --json databaseId,headSha,event \
-                         --jq "[.[] | select(.headSha == \"$sha\" and .event == \"pull_request\")]
-                               | first | .databaseId // empty"); then
-              echo "::error::could not list compat runs for $branch." >&2
-              exit 1
+            # columns are a display format. `createdAt` is carried only to
+            # explain a failure below, never to decide whether to try.
+            if ! found=$(gh run list --repo "$REPO" --workflow compat.yml \
+                           --branch "$branch" --limit 20 \
+                           --json databaseId,headSha,event,createdAt \
+                           --jq "[.[] | select(.headSha == \"$sha\" and .event == \"pull_request\")]
+                                 | first | \"\(.databaseId // \"\")\t\(.createdAt // \"\")\""); then
+              # Counted and carried on, for the reason the re-run below gives:
+              # aborting here would leave every later pull request untried on
+              # one that could not be listed.
+              echo "::error::#$num ($branch): could not list its compat runs," \
+                   "so nothing was refreshed for it." >&2
+              failed=$((failed + 1))
+              echo "::endgroup::"
+              continue
             fi
+            run=${found%%$'\t'*}; created=${found#*$'\t'}
 
             if [ -z "$run" ]; then
               # Not a failure: a pull request opened since the last compat run,
-              # or one whose run has aged out of retention. Said out loud rather
-              # than passed over, because "nothing to re-run" and "re-ran
-              # nothing" read the same in a green log.
-              echo "no compat run at $sha yet -- nothing to re-run" >&2
-              stale=$((stale + 1))
+              # or one whose run has aged out of retention. An ANNOTATION rather
+              # than a log line, because a log line here is inside a collapsed
+              # group in an otherwise green run, which is the same as not saying
+              # it -- "nothing to re-run" and "re-ran nothing" read alike.
+              echo "::warning::#$num ($branch): no compat run at $sha -- nothing" \
+                   "to re-run, so its compat check is whatever it already was."
+              missing=$((missing + 1))
               echo "::endgroup::"
               continue
             fi
 
-            echo "re-running $run"
-            gh run rerun "$run" --repo "$REPO"
+            # NOT `set -e`'s problem to handle: a failed re-run used to abort
+            # the loop here, so one pull request GitHub refused left every later
+            # one untried, the tally unprinted and the group unclosed. Each is
+            # independent; one failing says nothing about the next.
+            echo "re-running $run (created $created)"
+            if ! gh run rerun "$run" --repo "$REPO"; then
+              # AGE IS DIAGNOSIS, NOT CONTROL. The attempt above is the only
+              # authority on whether a re-run was allowed; the age is carried to
+              # explain the one refusal whose cause the API error never names.
+              # STATED ONLY WHEN IT APPLIES: an earlier revision appended the
+              # ceiling to every failure, so a run refused for being already in
+              # progress was reported as one day old and then told the reader
+              # about a 30-day limit. A reason offered for the wrong failure is
+              # worse than none -- it is the next person's wasted hour.
+              why=""
+              if [ -n "$created" ] && created_s=$(date -u -d "$created" +%s 2>/dev/null); then
+                days=$(( ( $(date -u +%s) - created_s ) / 86400 ))
+                why=" That run is $days days old."
+                if [ "$days" -ge 30 ]; then
+                  why="$why PAST THE 30-DAY RE-RUN CEILING: nothing can refresh"
+                  why="$why this pull request's compat check any more, and the"
+                  why="$why answer it shows is $days days old too."
+                fi
+              fi
+              echo "::error::#$num ($branch): could not re-run compat run $run.$why" \
+                   "Its compat check still shows an earlier answer against today's fleet."
+              failed=$((failed + 1))
+            fi
             echo "::endgroup::"
           done
 
           echo
-          echo "${#prs[@]} open release pull request(s), $stale with no run to re-run."
+          # "could not refresh", not "re-run refused": $failed also counts the
+          # pull request whose runs could not be listed, which never reached a
+          # re-run at all.
+          echo "${#prs[@]} open release pull request(s):" \
+               "$missing with no run to re-run, $failed that could not be refreshed."
+
+          # Non-zero on a failure, so the stale check has somewhere to be seen.
+          # `missing` does not fail the run: a pull request opened since the last
+          # compat run is the ordinary case, and its own `pull_request` run is
+          # already on its way.
+          [ "$failed" -eq 0 ]
