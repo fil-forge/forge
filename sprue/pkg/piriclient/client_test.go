@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fil-forge/forge/sprue/internal/testutil"
 	blobcmds "github.com/fil-forge/libforge/commands/blob"
 	"github.com/fil-forge/libforge/identity"
 	ucanlib "github.com/fil-forge/libforge/ucan"
-	"github.com/fil-forge/forge/sprue/internal/testutil"
 	"github.com/fil-forge/ucantone/binding"
 	"github.com/fil-forge/ucantone/client"
 	"github.com/fil-forge/ucantone/did/key"
