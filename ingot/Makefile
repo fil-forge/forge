@@ -30,13 +30,17 @@ itest:
 
 # itest sharding. The suite is one Go package, so its tests run serially and
 # every top-level test boots its own Forge stack (~40s of the runtime below).
-# CI runs the shards on separate runners so the wall clock is the slowest
-# shard rather than the sum (.github/workflows/go-test.yml, job
-# `itest-shards`).
+# Upstream runs these shards on separate CI runners, from its own
+# .github/workflows/go-test.yml -- which does not exist here: this repository
+# deleted every per-service workflow on import and shards ingot from the root
+# .github/workflows/itest.yml instead, deriving the split rather than reading
+# the names below. So these shards are for local use; CI does not consult them.
 #
 # Shards are balanced by measured runtime, not by file or theme. The comments
 # are the time each test takes with its stack boot included; rebalance here
-# when `go test -tags itest -v` shows one has moved.
+# when `cd itest && go test -v ./...` shows one has moved. (Upstream says
+# `go test -tags itest -v` there; itest/ is its own module here, so the tag
+# does nothing -- same correction as the SHARD_ALL line below.)
 SHARD_encryption  := TestForgeEncryption              # 6m00
 SHARD_conformance := TestForgeVersity                 # 3m48
 SHARD_conformance += TestForgeAWSCLI                  # 1m09

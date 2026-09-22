@@ -343,9 +343,25 @@ the resync that produced this branch swarf's two failed `go build` outright and
 piri's ten stopped `go mod tidy`. But an earlier resync had the opposite: tidy
 *resolved* a polyrepo import instead of refusing it, adding
 `github.com/fil-forge/sprue` to sprue's own `go.mod` pinned to the commit being
-merged — which builds green against code downloaded from the polyrepo. Which of
-the two you get depends only on whether the old path still resolves through the
-proxy, so neither outcome is a check.
+merged — which builds green against code downloaded from the polyrepo, and that
+one is not history: `go get github.com/fil-forge/sprue/pkg/service/handlers`
+still succeeds today.
+
+**Resolution is not the discriminator**, which an earlier revision of this
+paragraph claimed. All four in-repo modules still resolve through the proxy.
+What differs is what the proxy serves for each path — whether the version it
+has declares the matching module path and contains the package — so there are
+three outcomes, not two, and none of them is ours to control:
+
+```
+go get github.com/fil-forge/sprue/pkg/service/handlers   ok, silently
+go get github.com/fil-forge/piri/pkg/service/publisher   refused: v0.2.4 declares
+                                                         module github.com/storacha/piri
+go get github.com/fil-forge/swarf/pkg/api                refused: v0.0.0 found, but
+                                                         does not contain the package
+```
+
+None of the three is a check.
 
 And some of them compile either way: piri's otel meter name
 (`Meter("github.com/fil-forge/piri/pkg/service/publisher")`) is a string, so no
