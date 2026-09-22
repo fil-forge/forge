@@ -250,9 +250,11 @@ func WithWorkspaceBinaries() Option {
 // leaves the other seven with no image at all, and compose refuses, naming the
 // variable.
 //
-// Eight, counted over `find smelt/systems -name compose.yml` and not over
-// `systems/*/compose.yml`: INDEXER_IMAGE lives one level down, in
-// systems/indexing/indexer/, and a flat glob reports seven.
+// Eight, and it takes three places to reach that: `systems/*/compose.yml` gives
+// six, recursing into systems/ adds INDEXER_IMAGE (one level down, in
+// indexing/indexer/), and PIRI_IMAGE has no compose.yml at all -- it is emitted
+// by pkg/generate/compose.go into generated/compose/piri.yml. A flat glob says
+// six and a recursive one says seven; both look complete.
 func WithWorkspaceBinariesExcept(services ...string) Option {
 	return func(c *config) {
 		c.workspaceBinaries = true

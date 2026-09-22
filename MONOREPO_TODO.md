@@ -1072,8 +1072,8 @@ published image. `make up` loads `.env.published` and then `.env`, and between
 them they supply seven:
 
 ```
-$ find smelt/systems -name compose.yml -print0 | xargs -0 grep -ho '${[A-Z_]*_IMAGE:?' \
-    | sort -u | tr -d '${:?'
+$ { find smelt/systems -name compose.yml -print0 | xargs -0 grep -ho '${[A-Z_]*_IMAGE:?'
+    grep -ho '${[A-Z_]*_IMAGE:?' smelt/pkg/generate/compose.go; } | sort -u | tr -d '${:?'
 DELEGATOR_IMAGE  HILT_IMAGE  INDEXER_IMAGE  INGOT_IMAGE
 PIRI_IMAGE  SIGNER_IMAGE  SWARF_IMAGE  UPLOAD_IMAGE
 
@@ -1085,39 +1085,26 @@ $ grep -cvE '^\s*(#|$)' smelt/.env
 ```
 
 `INDEXER_IMAGE` is in neither. **Pre-existing on `main`**, not something the
-compat work introduced, and invisible to CI: every Go path fills all eight
-through `stack.WithPublishedImages()`, whose `publishedImages` table does list
-the indexer, so `e2e` and `itest` are unaffected. Only a human running
-`make up` hits it.
+compat work introduced, and **invisible to CI**: nothing under `.github/` runs
+smelt's Makefile, `$(COMPOSE)` or the snapshot CLI, and every Go path fills all
+eight through `stack.WithPublishedImages()`, whose `publishedImages` table does
+list the indexer. So `e2e` and `itest` are unaffected.
 
-**`INDEXER_IMAGE` is easy to miss by hand**, which is presumably how: it is the
-one required variable not at `systems/*/compose.yml`. It lives one level down,
-in `systems/indexing/indexer/compose.yml`, so a flat glob reports seven of eight
-and looks complete. Two review rounds on
-[#18](https://github.com/fil-forge/forge/pull/18) counted it wrong in opposite
-directions for the same reason.
+It is not only `make up`, though: `ENV_FILES` (`smelt/Makefile:23`) feeds every
+`$(COMPOSE)` call — seventeen of them, across `up`, `down`, `fresh`, `clean`,
+`nuke`, `logs`, `status`, `pull`, `build`, the `shell-*` targets and
+`debug-upload` — and `smelt/pkg/snapshot/stack.go` attaches the same pair for
+the `smelt snapshot` CLI.
+
+**`INDEXER_IMAGE` is easy to miss by hand**, and counting the required set is
+harder than it looks: `systems/*/compose.yml` finds six, recursing into
+`systems/` adds `INDEXER_IMAGE` (one level down, in `indexing/indexer/`), and
+`PIRI_IMAGE` has no `compose.yml` at all — `pkg/generate/compose.go` emits it
+into `generated/compose/piri.yml`. Either glob on its own looks complete. Three
+review rounds on [#18](https://github.com/fil-forge/forge/pull/18) got the
+number wrong, in both directions.
 
 The fix is a line in `.env.published`. Whether that file should be *generated*
 from `publishedImages` rather than maintained beside it is the larger question,
 and it is rule 3's shape exactly: two lists of the same eight services that can
 disagree, and did.
-
-## The compat baseline for `ingot` is a placeholder, not a release
-
-`ingot/version.json` reads `v0.0.0` — the same placeholder `hilt` and `swarf`
-carry — so `ghcr.io/fil-forge/ingot:0.0.0` is what its CI publishes for an
-unstamped build, and **the next publish overwrites that tag** unless the file is
-bumped first. `piri` (v0.2.4) and `indexing-service` (v1.13.4) carry version.json
-values matching their published tags; `ingot` does not.
-
-That makes the ingot baseline a moving tag wearing a version's shape, which is
-the ambiguity the suite refuses `:main` to avoid, and a
-`[0-9]+\.[0-9]+\.[0-9]+` test cannot separate the two. Nothing has moved so far.
-
-**The fix is rule 2 applied here: pin the baseline by digest.** The workflow
-already resolves each service's newest version against the registry, so it can
-resolve the digest in the same request and carry it through; the version stays
-in the subtest name and the image reference becomes `<pkg>@sha256:…`. Left out
-of #18 deliberately — it changes the shape of what the workflow hands the test,
-so it wants its own change and its own review round rather than being folded
-into one that has already had three.

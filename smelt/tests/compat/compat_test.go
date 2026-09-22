@@ -129,20 +129,19 @@ func pinnedVersions(t *testing.T, service string) []string {
 	return out
 }
 
-// A VERSION-SHAPED TAG IS NOT PROOF OF A RELEASE, and one of the two this suite
-// pins today is not one. ingot's version.json reads v0.0.0 -- the placeholder
-// hilt and swarf also carry -- so ghcr.io/fil-forge/ingot:0.0.0 is what its CI
-// publishes for an unstamped build, and the next publish overwrites that same
-// tag unless someone bumps the file first. That is a moving tag wearing a
-// version's shape, which is the ambiguity this suite refuses `:main` to avoid,
-// and `[0-9]+\.[0-9]+\.[0-9]+` cannot tell them apart.
+// A VERSION-SHAPED TAG HERE IS A CUT RELEASE, which is worth stating because an
+// earlier revision of this comment claimed the opposite. The polyrepos use
+// ipdxco's releaser chain: `releaser.yml` fires on a push that CHANGES
+// version.json, creates the git tag vX.Y.Z at that commit and publishes a
+// GitHub release; `release-binaries.yml` fires on that release and is what
+// pushes ghcr.io/fil-forge/<svc>:X.Y.Z. An ordinary push to main runs only
+// publish-ghcr.yml, which produces :main, :main-dev and :sha-* and never a
+// version tag. So a version image tag corresponds to a git tag on the commit
+// that incremented version.json, and no push republishes one.
 //
-// Left as it is, deliberately. piri (v0.2.4) and the indexer (v1.13.4) carry
-// version.json values matching their published tags, so those baselines are
-// real. The fix that would actually guard ingot's is pinning the baseline by
-// DIGEST, which rule 2 already calls for and which needs the resolved digest
-// carried from the workflow into the test -- a change worth making on its own
-// rather than folded in here. MONOREPO_TODO.md carries it.
+// What ingot's 0.0.0 says is how OLD the baseline is, not that it is
+// unstamped: fil-forge/ingot carries exactly one tag, v0.0.0, so the pinned
+// peer is its first and only release.
 
 // pinFor maps a smelt service name to the option that pins its image. The
 // names are workspace.Detect()'s, which are the names the stack itself uses,
@@ -203,10 +202,11 @@ func TestPinnedPeer(t *testing.T) {
 					// cover for that: they are bind mounts over an image,
 					// not an image.
 					//
-					// Eight, and counted over every compose.yml under
-					// systems/ rather than over systems/*/compose.yml:
-					// INDEXER_IMAGE is one level down, so a flat glob
-					// says seven.
+					// Eight takes three places to reach:
+					// systems/*/compose.yml gives six, recursing adds
+					// INDEXER_IMAGE (in indexing/indexer/), and
+					// PIRI_IMAGE has no compose.yml -- pkg/generate
+					// emits it. Either glob alone looks complete.
 					//
 					// The exclusion is load-bearing too. Without it the
 					// workspace binary is mounted over the pinned image
