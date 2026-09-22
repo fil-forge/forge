@@ -49,8 +49,7 @@
 # one, and a list short by one row reads exactly like a complete list -- rule 5.
 # Add the row in the same commit as the test.
 #
-# NOT COVERED, and listed so the next round starts from a set rather than a
-# hunt. Each is a deliberate break that leaves this file green; all are inert
+# NOT COVERED, and listed so a reader starts from a set rather than a hunt. Each is a deliberate break that leaves this file green; all are inert
 # in the tree today, which is why they are documented rather than tested:
 #   dropping the LEADING anchor `(^|[^0-9.])`  -> v1.2.3 accepts v11.2.3
 #   `--version` dropped from the probe list    -> a service answering only that
@@ -66,7 +65,7 @@
 #                                                 it blocks good releases
 #                                                 rather than passing bad ones
 #
-# COST: about 39s, most of it test 8 waiting out run_probe's own cap on a
+# COST: about 40s, most of it test 8 waiting out run_probe's own cap on a
 # binary that never exits. That is the price of exercising the cap at all, and
 # it is paid on every `guards` run; worth knowing before adding more.
 set -euo pipefail
@@ -190,7 +189,7 @@ accepts() { # $1 = label, $2.. = script args
 
 # 1. A dead -X must FAIL, naming the binary and what it reported. This is the
 #    defect the script exists for, and the one a cwd-dependent version.json
-#    fallback used to hide.
+#    fallback hides when the working directory is not pinned.
 build_fixture 'example.com/fixture/pkg/buildTYPO'
 refuses "a dead -X is rejected" "was built for v7.7.7 but reports" dist v7.7.7
 
@@ -312,8 +311,8 @@ refuses_in "$nobuild" "a service with no build package is refused" \
   "could not find" dist v7.7.7
 
 # 8. A BINARY THAT NEVER EXITS MUST NOT HANG THE RELEASE. This is the only
-#    test that exercises run_probe's cap at all, and it is why the suite costs
-#    ~40s rather than ~18s.
+#    test that exercises run_probe's cap, and it is most of the COST figure at
+#    the top of this file.
 build_fixture 'example.com/fixture/pkg/build'
 stuck=$svc/dist/fixture_$(go env GOHOSTOS)_$(go env GOHOSTARCH)_zzz
 mkdir -p "$stuck"
@@ -413,7 +412,7 @@ rm -rf "$uni"
 #     **0 os-skip**. The host-OS skip arm is still unreached and deleting the
 #     whole host-OS `case` still gives 14 ok / exit 0 -- it is in NOT COVERED
 #     below, because a list of what a guard does not check is a claim like any
-#     other and this one was missing an entry the same push measured.
+#     other.
 #
 #     It is also a tripwire on the shim, which is load-bearing and was otherwise
 #     unasserted. The shim answers ONE variable per call and delegates the rest,
@@ -422,9 +421,8 @@ rm -rf "$uni"
 #     both reads get the same answer: rewriting lines 88-89 to
 #     `go env GOHOSTOS GOHOSTARCH | head -1` and `| tail -1` leaves `host_arch`
 #     holding "darwin", not empty, and `*darwin*` then matches every path under
-#     dist. (An earlier version of this comment said "empty" and `*""*`; the
-#     effect is the same and the mechanism was not, which is the kind of claim
-#     these reviews exist to catch.) Test 9 then passes WITH the `_darwin_all`
+#     dist -- "darwin", not empty, which is the part worth reading twice.
+#     Test 9 then passes WITH the `_darwin_all`
 #     arm deleted. Under 9b the same degradation turns this red, because an
 #     unfiltered amd64 binary is stale.
 mkdir -p "$amd"

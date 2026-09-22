@@ -522,14 +522,28 @@ binaries their version, and today `sprue --version` cannot answer.
 
 **Do not shortcut it by grepping the binary for the version string.** That is
 uniform without touching any service, and it tests the wrong thing — whether
-the bytes are present, not whether the program reports them. `indexing-service`
-shows why: its config injects two `-X` flags naming the same field, so the
-string is in the binary either way and only the `v` prefix separates them.
-(This paragraph had the two the wrong way round until the build-metadata entry
-below was checked against the tree: it is `-X main.version` that is **dead** —
-`indexing-service/cmd` declares no such symbol — and the `pkg/build.version`
-one that works. `check-goreleaser-ldflags.sh` passes the `main.*` flags because
-it special-cases `main`. The point about grepping the binary is unaffected.)
+the bytes are present, not whether the program reports them.
+The mechanism is the one two paragraphs above: **`go version -m` records the
+`-ldflags` argument in the binary**, so a dead `-X` writes its own version
+string there verbatim. Measured on a fixture whose `-X` names a package that
+does not exist:
+
+```
+$ ./dead                                 # what the program reports
+version: v0.0.0
+$ strings dead | grep -c 'v7\.7\.7'      # what a grep finds
+2
+$ go version -m dead | grep ldflags
+	build	-ldflags="-X example.com/fx/pkg/buildTYPO.Version=v7.7.7"
+```
+
+Both hits are inside that recorded line. The grep passes; the binary is broken.
+
+`indexing-service` carried a live example of the same shape until this pull
+request: two `-X` flags for one version, of which **`-X main.version` was
+dead** — `indexing-service/cmd` declares no such symbol — while the
+`pkg/build.version` one worked. `check-goreleaser-ldflags.sh` passed the
+`main.*` flags because it special-cases `main`. This pull request drops them.
 
 What the assertion buys over the lint: it also catches the linker's other
 silent branches, notably a correct `-X` against a symbol that got dead-code
@@ -819,7 +833,7 @@ goreleaser reported `couldn't find any tags before "v9.9.9"`, took
 is.
 
 **`release.yml` reaches the third option's outcome by a different mechanism,
-and so pays its cost.** It reads the version from `version.json`, never creates
+and so does not pay its cost.** It reads the version from `version.json`, never creates
 a tag, and hands goreleaser the plain semver through `GORELEASER_CURRENT_TAG`
 so the parse never happens — while still requiring the Go-scheme
 `<svc>/vX.Y.Z` tag to exist, and to point at the commit being built, before a
@@ -958,8 +972,8 @@ branch only — `git merge-base --is-ancestor 2c48785 origin/main` exits 1. A
 `git subtree pull` tracks the default branch, so until that branch merges, this
 repository keeps the racy copy described above and the entry stays live.
 
-Measured here at 80 runs across eight concurrent `go test -race -count=10`
-processes, **zero failures**. It needed two barriers, not one, which is the part
+Measured with that patch applied here: 80 runs across eight concurrent
+`go test -race -count=10` processes, **zero failures**. It needed two barriers, not one, which is the part
 worth reading. Moving `wg.Done()` into `Delete`'s `Run` hook — the obvious
 repair, and the right barrier for that expectation — took it from 4 in 80 only
 to **1 in 80**. The remaining failure was a different unmet expectation:
