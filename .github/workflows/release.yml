@@ -1,10 +1,30 @@
 name: release
 
 # NOT ARMED, deliberately: no `push: tags:` trigger, and this workflow never
-# creates a tag. It runs by hand, defaults to changing nothing, and exists so
-# the release path is exercised now rather than discovered on the day it is
-# first needed. Arming it is an `on:` block; the hard part is the ownership
-# call.
+# creates a tag. It defaults to changing nothing, publishes nothing at all
+# today (the `publish` step exits 1 on purpose), and exists so the release path
+# is exercised now rather than discovered on the day it is first needed. Arming
+# it is an `on:` block; the hard part is the ownership call.
+#
+# IT RUNS BY HAND AND ON A RELEASE PULL REQUEST. A pull request from a branch
+# named `release/<svc>` builds that service and asserts its version stamping,
+# publishing nothing -- so a release is proved buildable before it is cut,
+# instead of the first dispatch after a tag discovering it is not. Every other
+# pull request resolves no service and the build job skips, which costs the few
+# seconds `plan` takes.
+#
+# DERIVED FROM THE BRANCH NAME, not from the diff, and the rejected alternative
+# is worth recording. Firing when a `<svc>/version.json` changes fires on a
+# subtree resync, which routinely carries upstream's own version bumps and is
+# not a release -- up to four services at up to nine minutes each, on a pull
+# request about something else. Narrowing that to "the diff is version bumps and
+# nothing else" then excludes a release pull request that also edits a changelog.
+# A branch name states the intent, which is the thing being detected.
+#
+# What that costs is a gap: bump a version on any other branch and nothing here
+# looks, so a release can still be cut without this having run -- exactly the
+# position every service is in today. It closes when the tag becomes something
+# this workflow reacts to, which is the ownership call below.
 #
 # WHY NOT ARMED. Nothing outside this repository consumes a forge module
 # version yet -- guppy and the other consumers still pin the polyrepo paths --
@@ -70,10 +90,19 @@ on:
         description: "Build and assert, publish nothing. Leave on unless you mean it."
         type: boolean
         default: true
+  # No `paths:`, because there is no path to filter on -- what selects a service
+  # here is the branch name, and `plan` resolves none for an ordinary pull
+  # request. A filter would also report *skipped*, which never satisfies a
+  # required status check, if this ever becomes one.
+  pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.service }}
-  cancel-in-progress: false
+  # A dispatch is keyed by service; a pull request by its branch, so two release
+  # pull requests do not serialise behind each other. Superseding is right for a
+  # pull request (a new push obsoletes the run) and wrong for a dispatch, which
+  # someone is waiting on.
+  group: ${{ github.workflow }}-${{ inputs.service || github.head_ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Split from `release` because `runs-on` is fixed when a job starts, and the
@@ -90,8 +119,24 @@ jobs:
       version: ${{ steps.ver.outputs.version }}
       runner: ${{ steps.svc.outputs.runner }}
       needs_docker: ${{ steps.svc.outputs.needs_docker }}
+      # ONE mode value, read by every `if:` downstream. `inputs` does not exist
+      # on a pull_request event, so `inputs.dry_run` is null there and
+      # `!inputs.dry_run` -- which is how the steps below used to spell it --
+      # evaluates TRUE. That would run `require the tag` on a pull request whose
+      # tag is not supposed to exist yet, and hand GITHUB_TOKEN to a build
+      # triggered by a fork. Resolving the mode once, here, is the fix; there is
+      # no `inputs.dry_run` left in the release job.
+      dry_run: ${{ steps.svc.outputs.dry_run }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Tags, for the "not already released" check below. A default checkout
+          # fetches none, which would make that check pass by seeing nothing.
+          # Not `fetch-tags: true` with a shallow clone, which would be cheaper:
+          # checkout ignores an input it does not know with a warning, so on an
+          # older v4 that spelling fails OPEN -- no tags, check green. Depth 0
+          # cannot do that, and measures ~6s on this repository.
+          fetch-depth: 0
 
       # Which services are releasable is DERIVED from which ones carry a
       # goreleaser config, so a service that gains or loses one needs no edit
@@ -114,19 +159,62 @@ jobs:
         id: svc
         env:
           SERVICE: ${{ inputs.service }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           set -euo pipefail
+
+          # WHICH SERVICE, and in which mode. Two events reach this job and they
+          # answer differently; everything after this point is common.
+          #
+          # HEAD_REF is attacker-controlled on a fork pull request -- a branch
+          # can be named anything -- so it arrives by env, like SERVICE, and is
+          # only ever COMPARED against the releasable list below. Nothing
+          # derived from it reaches $GITHUB_OUTPUT unless it is exactly equal to
+          # one of this repository's own directory names.
+          case "$GITHUB_EVENT_NAME" in
+            workflow_dispatch)
+              svc=${SERVICE%/}
+              dry_run=$DRY_RUN
+              ;;
+            pull_request)
+              dry_run=true
+              case "$HEAD_REF" in
+                release/*) svc=${HEAD_REF#release/} ;;
+                *)
+                  echo "$HEAD_REF is not a release/* branch, so there is no" \
+                       "service to release. Skipping the build."
+                  echo "dir=" >> "$GITHUB_OUTPUT"
+                  echo "dry_run=true" >> "$GITHUB_OUTPUT"
+                  # `runs-on:` reads this even though the job is about to be
+                  # skipped, and an empty string is not a runner label. Written
+                  # once per path rather than as an overridden default, because
+                  # a repeated key in $GITHUB_OUTPUT is not a documented
+                  # last-one-wins.
+                  echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
+                  exit 0
+                  ;;
+              esac
+              ;;
+            *)
+              echo "::error::unhandled event $GITHUB_EVENT_NAME"
+              exit 1
+              ;;
+          esac
+          echo "dry_run=$dry_run" >> "$GITHUB_OUTPUT"
+
           mapfile -t releasable < <(find . -mindepth 2 -maxdepth 2 \
             \( -name '.goreleaser.yaml' -o -name '.goreleaser.yml' \) \
             -printf '%h\n' | sed 's|^\./||' | sort -u)
           printf 'releasable: %s\n' "${releasable[*]}"
-          svc=${SERVICE%/}
           found=
           for r in "${releasable[@]}"; do
             [ "$r" = "$svc" ] && found=1 && break
           done
           if [ -z "$found" ]; then
-            echo "::error::'$svc' has no goreleaser config. Releasable: ${releasable[*]}"
+            echo "::error::'$svc' has no goreleaser config. Releasable:" \
+                 "${releasable[*]}. (On a pull request the name comes from the" \
+                 "branch: release/<svc>.)"
             exit 1
           fi
           echo "dir=$svc" >> "$GITHUB_OUTPUT"
@@ -186,6 +274,10 @@ jobs:
       # label it another.
       - name: resolve the version
         id: ver
+        # `exit 0` above ends the step, not the job, so without this an ordinary
+        # pull request reaches here with no service and fails on a missing
+        # /version.json.
+        if: steps.svc.outputs.dir != ''
         run: |
           set -euo pipefail
           f="${{ steps.svc.outputs.dir }}/version.json"
@@ -212,8 +304,49 @@ jobs:
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "Releasing ${{ steps.svc.outputs.dir }} $v"
 
+      # The mirror image of `require the tag`, which the release job runs for a
+      # real release: there the tag must already exist at this commit, here it
+      # must not exist at all. A release pull request proposing a version that
+      # is already cut is a forgotten bump, and merging it would either fail at
+      # tag time or quietly re-point a released version.
+      #
+      # IT CANNOT FAIL TODAY, which is worth saying rather than leaving a green
+      # check to imply otherwise: `git ls-remote --tags origin` is empty, so a
+      # runner's checkout has no tags of any kind to find and every service
+      # passes. It starts meaning something the day the first one is cut.
+      # Verified in both directions against a scratch tag, not by reading it.
+      #
+      # A working clone can disagree, and misleadingly: adding the upstream
+      # polyrepos as remotes brings their tags in, so `git tag` locally shows
+      # v0.0.0, v0.2.4 and v1.13.4 -- all unprefixed, none of them this
+      # repository's, and none of them on origin.
+      - name: the version must not already be released
+        if: steps.svc.outputs.dir != '' && github.event_name == 'pull_request'
+        env:
+          DIR: ${{ steps.svc.outputs.dir }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="$DIR/$VERSION"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            at=$(git rev-parse "refs/tags/$tag^{commit}")
+            echo "::error::tag '$tag' already exists, at $at. Bump" \
+                 "$DIR/version.json to the version you mean to release."
+            exit 1
+          fi
+          echo "$tag is not taken"
+
   release:
     needs: plan
+    # `dir` is empty on an ordinary pull request, so this is what keeps a pull
+    # request that is not a release down to the cost of `plan` alone.
+    #
+    # The `result` clause is explicit on purpose, and not redundant to delete.
+    # Whether a job's own `if:` overrides the default "skip me if a need failed"
+    # is a reading of the docs rather than something measured here, and a `plan`
+    # that failed AFTER resolving the service -- on the version, or on the tag
+    # check -- must not start a release build under EITHER reading.
+    if: needs.plan.result == 'success' && needs.plan.outputs.dir != ''
     runs-on: ${{ needs.plan.outputs.runner }}
     # In line with e2e (25), images (40) and itest (45). Without it a hung
     # goreleaser or a stalled module fetch sits for GitHub's 6-hour default,
@@ -242,12 +375,20 @@ jobs:
     # a future edit drops `publish` from the skips, goreleaser still cannot
     # create the release, because the token cannot write.
     #
-    # A job's permissions are fixed before `inputs` can be read, so this cannot
-    # differ by mode. When publishing is armed, contents:write and
-    # packages:write come back with it -- along with setup-qemu, setup-buildx
-    # and dropping `docker` from the skip list. Granting them is safe whenever
-    # that happens (dispatch-only, so unlike images.yml there is no
-    # fork-pull-request case to protect); it is just not needed yet.
+    # A job's permissions are fixed before any input or output can be read, so
+    # this cannot differ by mode -- which is the property that makes it a second
+    # mechanism rather than a restatement of the first.
+    #
+    # THE FORK-PULL-REQUEST CASE IS REAL HERE NOW, which it was not while this
+    # workflow was dispatch-only. A pull request from a fork can name its branch
+    # `release/piri` and get this job to run its own code. Three things hold it:
+    # GITHUB_TOKEN is read-only for a fork pull request whatever this block
+    # says, `dry_run` is resolved to true for every pull request regardless of
+    # the input, and the token is not passed to goreleaser at all in that mode.
+    # So arming publishing is no longer a matter of granting contents:write and
+    # packages:write here -- doing that alone would hand a fork's branch a
+    # writable token. It needs the grant to be conditional on the event, or the
+    # publish path moved to a workflow a pull request cannot trigger.
     permissions:
       contents: read
     steps:
@@ -309,7 +450,7 @@ jobs:
       # write tokens. The `service` input is already handled this way; the
       # file-derived value was not.
       - name: require the tag, at this commit, for a real release
-        if: ${{ !inputs.dry_run }}
+        if: needs.plan.outputs.dry_run != 'true'
         env:
           DIR: ${{ needs.plan.outputs.dir }}
           VERSION: ${{ needs.plan.outputs.version }}
@@ -351,7 +492,7 @@ jobs:
           # Not on the dry-run path: goreleaser's env pipe does not require the
           # token when publishing is skipped, and the permissions comment above
           # claims the dry run reaches no step that uses one.
-          GITHUB_TOKEN: ${{ !inputs.dry_run && secrets.GITHUB_TOKEN || '' }}
+          GITHUB_TOKEN: ${{ needs.plan.outputs.dry_run != 'true' && secrets.GITHUB_TOKEN || '' }}
 
       # BEFORE anything is published, which is the whole point: an assertion
       # that trails `goreleaser release` finds the assets already live and
@@ -388,7 +529,7 @@ jobs:
       # decision this workflow is already waiting on. Until then the build and
       # the assertion above are the useful part, and they run in both modes.
       - name: publish
-        if: ${{ !inputs.dry_run }}
+        if: needs.plan.outputs.dry_run != 'true'
         run: |
           echo "::error::Publishing is deliberately closed. goreleaser would" \
                "create an unprefixed tag in a namespace ten services share," \
