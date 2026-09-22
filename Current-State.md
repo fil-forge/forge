@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 19:40Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 22:30Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -189,8 +189,9 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is `699f929f`, the import phase is closed, and two `forge` pull
-requests are open, both drafts.** All **ten** in-scope
+**`main` is `4611cbcb` (#22's merge), the import phase is closed, and
+[#18](https://github.com/fil-forge/forge/pull/18) is the only `forge` pull
+request open — and it is Open, not a draft.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
 digest, the checks the per-service `.github/` directories took with them

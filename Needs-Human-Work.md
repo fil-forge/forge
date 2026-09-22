@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 21:55Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 22:30Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -11,8 +11,9 @@ why each item exists.
 
 ## Since you went AFK (Tuesday 18:05Z → 19:45Z)
 
-**#12, #16 and #17 all merged; `main` is `699f929f`.** Nothing on `forge` is
-waiting on you to unblock the agent right now.
+**#12, #16 and #17 all merged, then #19 and #22 behind them; `main` is
+`4611cbcb`.** Nothing on `forge` is waiting on you to unblock the agent right
+now, and **#18 is the only pull request left open there**.
 
 **The release path ran for real, twice, both dry runs, both green.** ingot 3m11s
 on `ubuntu-24.04`; piri **8m47s** on `macos-14` against a 40-minute cap, with
@@ -24,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `d18b640b`, CI running. One round open on the new workflow — it is shell, not comments, so rule 10's skip does not apply |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `2864c295`. Round six found six, one blocking; all worked and pushed, round seven running. `d18b640b` was green: 28 checks, 25 success, 3 deliberate skips |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 
@@ -50,6 +51,52 @@ So, at `d18b640b`:
   Re-running rather than dispatching against the branch is the whole point: a
   re-run stays attached to the pull request and replaces its check in place, so
   the fresh answer lands where the merge decision is made.
+
+### Round six on #18, and the one that was blocking
+
+Six findings against `d18b640b`, each verified before being acted on rather
+than taken on report. The blocking one is worth knowing beyond this PR:
+
+**`compat.yml`'s concurrency group had no ref in it** — harmless while it ran
+only on a schedule, and not once `pull_request:` was added. GitHub holds one run
+per group and [cancels any *previously pending* one when a newer
+arrives](https://docs.github.com/actions/writing-workflows/choosing-what-your-workflow-does/control-the-concurrency-of-workflows-and-jobs),
+so a release pull request's hour-long compat run made every other pull request's
+compat run pend behind it, and the next arrival cancelled the pending one. **A
+release pull request could have lost its compat check to an unrelated pull
+request** — the one thing that workflow must not do. Keyed by
+`head_ref || ref` now, which the five other workflows here already did.
+
+It also falsified a comment I had written: an ordinary pull request's jobs do
+skip (measured — both `skipped` on run 35788998286), but its *run* is still
+created and still takes a queue slot, so "costs an ordinary pull request
+nothing" was wrong about the part that mattered.
+
+The other five: a failed `gh run rerun` aborted the whole loop, so one refusal
+left every later pull request untried (reproduced against a stubbed `gh`); the
+same abort in `gh run list`, fixed with it rather than left as a partial guard;
+**a re-run is refused past 30 days and past 50 re-runs**, so "re-runs it daily"
+was unqualified in three places and a release pull request open past a month
+keeps an answer nothing can refresh; `actions: write` is wider than the job uses
+(it is also the scope for dispatching any workflow, and `workflow_dispatch` is
+exempt from the rule that `GITHUB_TOKEN` events start no run — so it could start
+`release.yml`), where the comment had claimed the opposite; and the "no compat
+run at this sha" line sat inside a collapsed group in a green run, which is the
+same as not saying it.
+
+One finding is **deliberately not acted on**: a fork pull request with a
+`release/*` head passes the gate. Forks are not this repository's threat model,
+and the fork gate removed in `d4e95ea2` could not have worked anyway.
+
+### A near miss worth recording, about this wiki
+
+Updating these pages, I found them describing ten open pull requests and rewrote
+the state-bearing sections wholesale. They were not stale — **my checkout was,
+by 31 commits.** The push was refused as a non-fast-forward, which is the only
+reason a day of updates was not clobbered. Two compounding slips: I did not
+fetch before reading, and my push check was `git push ... | tail`, whose status
+is `tail`'s, so it reported success on a failed push. `git fetch` first, and
+never test the status of a pipe.
 
 **A bug was caught by testing it rather than reading it**, and it is the same
 class as the `|| true` removed from `compat-window.sh` one file over:
