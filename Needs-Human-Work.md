@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 17:25Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 18:00Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.

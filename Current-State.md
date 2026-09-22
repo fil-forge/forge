@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 17:45Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 18:00Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -397,9 +397,23 @@ The tally, because the shape is the finding:
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
 | #14 | 4 on the rebuild | **satisfied** | — | **MERGED** as `88ca8c69` |
 | #13 | 8 | 4 findings, all fixed | — | **MERGED** as `226aa57d` |
-| #12 | 15 | round 16 running | `7c5506ff` | **Open** — waiting on her merge |
-| #17 | 2 | round 3 running | `e1985b7a` | draft |
-| #16 | — | **PARKED** by Petra | `9ecc21d1` | draft, rebased onto #12 |
+| #12 | 16 | all fixed | `ed372c8d` | **Open** — rebased onto `main`, waiting on her merge |
+| #17 | 3 | all fixed | `6d8fc17e` | draft |
+| #16 | — | **PARKED** by Petra | `2b6af145` | draft, re-rebased onto #12 |
+
+**#12 was genuinely conflicted and I reported otherwise.** `git merge-tree`
+in its three-argument form printed no conflict markers for a branch that a real
+`git merge` refuses, so a `dirty` from the API was dismissed as async lag. The
+same error produced a second wrong conclusion: **a conflicted PR gets no CI at
+all**, because GitHub builds `pull_request` runs from `refs/pull/N/merge` and
+that ref does not exist while the PR conflicts. "0/0 checks" beside `dirty` is
+one symptom, not two problems. Petra caught it. Rebased at her instruction; CI
+returned by itself.
+
+The conflict was worth having: `main` had independently corrected the same
+`MONOREPO_TODO.md` paragraph, and its correction — that `-X main.version` was
+the **dead** flag — matches what round 16 measured. The resolution keeps both
+that fact and the measured `go version -m` mechanism.
 
 **Rounds 14 and 15 on #12 were about the commentary, not the code**, and both
 found real things: a list-splice fix that named the wrong option, a race entry
