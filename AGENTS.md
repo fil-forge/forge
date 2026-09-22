@@ -166,6 +166,16 @@ finding and three lines of evidence stays flat.
 not**, precisely because everything here is authored by one account. Surface
 it; do not treat it as the signal above.
 
+**Scope the brief to what the PR can get wrong.** A round finds what it is
+asked to look for, so a wide brief on a narrow change buys prose edits at the
+price of a review cycle. For a **documentation-only** PR the brief is: *verify
+every derived number and factual claim against the tree, and report nothing
+else* — no prose, no cross-references, no line lengths, no consistency of
+phrasing. Measured on this file's own pull request: three wide rounds produced
+fifteen findings, of which **one** changed anything (a pull count copied out of
+a commit message, wrong in both its number and its causal claim), and a
+numbers-only brief would have caught that one and none of the other fourteen.
+
 **A number earns its place only if a reader's decision changes with it.** This
 applies to review comments, PR bodies and code comments alike, and it is the
 rule this repository breaks most often: the commentary drifts toward narrating
