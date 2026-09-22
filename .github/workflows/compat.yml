@@ -1,0 +1,113 @@
+name: compat
+
+# Does what we are about to ship still work against what is already deployed?
+#
+# `ci`, `itest` and `e2e` all boot this commit against itself, which is the
+# guarantee the monorepo gives for free and is a development-time one. The
+# field is a mix: we run sprue and hilt, third-party operators run piri and
+# ingot and upgrade on their own schedule. This workflow tests that skew.
+#
+# NIGHTLY, NOT PER-PR, because it needs published images and a pull request's
+# code has not been released. Also on demand.
+#
+# THE PINNED SIDE IS THE POLYREPOS' IMAGES -- ghcr.io/fil-forge/<svc>. Those
+# are what ships to the network today, so they are what "already deployed"
+# means. This repository publishes no images (images.yml runs with push: false)
+# and carries no service-prefixed tags; neither is a prerequisite here, which
+# is why this can run before the release-ownership question is settled.
+#
+# THE VERSION SET COMES FROM THE REGISTRY, not from git tags, because the two
+# disagree: the polyrepos tag git `v0.2.4` and publish the image `0.2.4`.
+# Reading the registry asks the question the test actually has -- "what can I
+# pin against?" -- and cannot drift from it.
+
+on:
+  schedule:
+    # 07:00 UTC daily -- after the US evening merges, before the EU morning.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      window:
+        description: 'How many recent releases per service to test against'
+        required: false
+        default: '2'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  window:
+    name: Resolve the published window
+    runs-on: ubuntu-latest
+    outputs:
+      piri: ${{ steps.resolve.outputs.piri }}
+      ingot: ${{ steps.resolve.outputs.ingot }}
+      base_piri: ${{ steps.resolve.outputs.base_piri }}
+      base_ingot: ${{ steps.resolve.outputs.base_ingot }}
+      base_sprue: ${{ steps.resolve.outputs.base_sprue }}
+      base_hilt: ${{ steps.resolve.outputs.base_hilt }}
+      pinnable: ${{ steps.resolve.outputs.pinnable }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve versions from the registry
+        id: resolve
+        env:
+          N: ${{ inputs.window || '2' }}
+        run: .github/scripts/compat-window.sh "$N" >> "$GITHUB_OUTPUT"
+
+  compat:
+    name: Version skew
+    needs: window
+    # Nothing to pin against is not a failure. A service that has not published
+    # a release yet should not give this a permanent red.
+    if: needs.window.outputs.pinnable == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache-dependency-path: |
+            piri/go.sum
+            hilt/go.sum
+            sprue/go.sum
+            ingot/go.sum
+            smelt/go.sum
+
+      # GOWORK stays ON: the services NOT pinned to a released image are built
+      # from HEAD by pkg/workspace, which is the whole point of the comparison.
+      - name: Run compatibility suite
+        working-directory: smelt
+        env:
+          COMPAT_PIRI_VERSIONS: ${{ needs.window.outputs.piri }}
+          COMPAT_INGOT_VERSIONS: ${{ needs.window.outputs.ingot }}
+          COMPAT_BASELINE_PIRI: ${{ needs.window.outputs.base_piri }}
+          COMPAT_BASELINE_INGOT: ${{ needs.window.outputs.base_ingot }}
+          COMPAT_BASELINE_SPRUE: ${{ needs.window.outputs.base_sprue }}
+          COMPAT_BASELINE_HILT: ${{ needs.window.outputs.base_hilt }}
+        run: go test -tags compat -v -timeout 55m -parallel 1 ./tests/compat/...
+
+      - name: Dump container state on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/container-logs
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "/tmp/container-logs/$c.log" 2>&1 || true
+            echo "::group::$c"; tail -200 "/tmp/container-logs/$c.log"; echo "::endgroup::"
+          done
+
+      - name: Upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compat-container-logs
+          path: /tmp/container-logs/
+          if-no-files-found: ignore
+          retention-days: 7
