@@ -27,16 +27,26 @@
 # Output is `key=value` lines on stdout, suitable for appending to
 # $GITHUB_OUTPUT, and readable on a terminal:
 #
-#   base_<svc>=<newest version>     empty when the service publishes none
-#   <svc>=<newest N, comma sep>     piri and ingot only -- the two services
-#                                   TestPinnedPeer pins, because they are the
-#                                   ones third parties run and so can lag
+#   base_<PKG>=<newest version>     empty when the service publishes none.
+#                                   Readable form; nothing consumes it
+#   <svc>=<newest N, comma sep>     likewise, piri and ingot only
+#   baselines={"PKG":"ver",...}     ONE output carrying every baseline, so the
+#                                   workflow needs no per-service `outputs:`
+#                                   entry -- a hand-maintained list that fed
+#                                   COMPAT_BASELINE_SPRUE to a test reading
+#                                   COMPAT_BASELINE_UPLOAD, and silently omitted
+#                                   four services when the fleet grew
+#   windows={"PKG":"v1,v2",...}     the same, for the pinned-peer window
 #   pinnable=true|false             false when NOTHING can be pinned. Since the
 #                                   registry failing is now fatal, that can only
 #                                   mean piri and ingot both publish no
 #                                   version-tagged image -- the bootstrap case,
 #                                   which should not give the nightly a
 #                                   permanent red.
+#
+# The KEY is the package name upper-cased with `-` as `_`, which is what the
+# test reads as COMPAT_BASELINE_<KEY>. Package, never smelt's service name:
+# three of the nine differ, and the registry knows only the former.
 #
 # Usage: compat-window.sh [N]        N defaults to 2
 set -euo pipefail
@@ -73,9 +83,14 @@ tags_for() {
     echo "$svc: could not reach $api to mint a pull token" >&2; return 1; }
   case "$code" in
     200) ;;
-    401|403|404)
-      # Measured: a package that does not exist is refused HERE, at the token
-      # endpoint, with 403 DENIED -- not at tags/list with a 404.
+    403)
+      # 403 ONLY, because 403 is the only one measured: a package that does not
+      # exist is refused HERE, at the token endpoint, with 403 DENIED -- not at
+      # tags/list with a 404. 401 and 404 were in this list as a guess, and a
+      # guess in this position fails open: simulated, a 401 gave four "no
+      # version-tagged image" lines, exit 0, pinnable=false, the compat job
+      # skipped and the nightly green having asserted nothing. That is the exact
+      # failure the `|| true` above it was removed to close.
       return 10 ;;
     *) echo "$svc: token endpoint answered HTTP $code" >&2; return 1 ;;
   esac
@@ -114,8 +129,30 @@ print("\n".join(sorted(out, key=lambda v: [int(p) for p in v.split(".")], revers
 '
 }
 
+# THE SERVICE LIST IS DERIVED, from the one table the Go side already keys on:
+# `publishedImages` in smelt/pkg/stack/options.go names a ghcr.io reference per
+# service this repository builds. A service added there needs no edit here, and
+# the two cannot disagree about who is in the fleet.
+#
+# These are PACKAGE names, which is what the registry knows and what the test
+# reads as COMPAT_BASELINE_<NAME>. They are not smelt's service names: three
+# differ, and asking ghcr.io for fil-forge/upload, fil-forge/indexer or
+# fil-forge/signing-service gets a 403.
+here=$(cd "$(dirname "$0")" && pwd)
+services=$(sed -n 's|.*"ghcr\.io/fil-forge/\([a-z0-9-]*\):main".*|\1|p' \
+           "$here/../../smelt/pkg/stack/options.go")
+if [ -z "$services" ]; then
+  echo "::error::could not derive the service list from" \
+       "smelt/pkg/stack/options.go. Refusing to resolve a guessed list." >&2
+  exit 2
+fi
+
+key_for() { printf '%s' "$1" | tr 'a-z-' 'A-Z_'; }
+
 pinnable=false
-for svc in piri ingot sprue hilt; do
+baselines=
+windows=
+for svc in $services; do
   set +e
   raw=$(tags_for "$svc")
   rc=$?
@@ -124,7 +161,8 @@ for svc in piri ingot sprue hilt; do
     0) ;;
     10)
       echo "$svc: no such package at $api -- reporting none" >&2
-      echo "base_${svc}="
+      echo "base_$(key_for "$svc")="
+      baselines="$baselines$(key_for "$svc")\t\n"
       continue ;;
     *)
       echo "::error::could not read $svc's tags; refusing to report that as" \
@@ -137,18 +175,44 @@ for svc in piri ingot sprue hilt; do
 
   if [ -z "$all" ]; then
     echo "$svc publishes no version-tagged image; anything needing it will skip" >&2
-    echo "base_${svc}="
+    echo "base_$(key_for "$svc")="
+    baselines="$baselines$(key_for "$svc")\t\n"
     continue
   fi
 
-  echo "base_${svc}=$(printf '%s\n' "$all" | head -n 1)"
+  newest=$(printf '%s\n' "$all" | head -n 1)
+  echo "base_$(key_for "$svc")=$newest"
+  baselines="$baselines$(key_for "$svc")\t$newest\n"
 
+  # THE WINDOW IS piri AND ingot ONLY, and that is a decision rather than an
+  # omission: they are the services third parties run, and therefore the ones
+  # that can lag behind us. sprue and hilt we deploy ourselves and can upgrade
+  # together, so a skew between them is our scheduling problem rather than a
+  # compatibility contract; everything else here is ours too. TestPinnedPeer
+  # pins exactly this pair.
   case "$svc" in
     piri|ingot)
-      echo "${svc}=$(printf '%s\n' "$all" | head -n "$n" | paste -sd, -)"
+      window=$(printf '%s\n' "$all" | head -n "$n" | paste -sd, -)
+      echo "${svc}=$window"
+      windows="$windows$(key_for "$svc")\t$window\n"
       pinnable=true
       ;;
   esac
 done
 
+as_json() {
+  printf '%b' "$1" | python3 -c '
+import json, sys
+out = {}
+for line in sys.stdin:
+    line = line.rstrip("\n")
+    if not line:
+        continue
+    k, _, v = line.partition("\t")
+    out[k] = v
+print(json.dumps(out, sort_keys=True))
+'
+}
+echo "baselines=$(as_json "$baselines")"
+echo "windows=$(as_json "$windows")"
 echo "pinnable=${pinnable}"

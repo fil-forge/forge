@@ -61,6 +61,22 @@ var Services = map[string]serviceBuild{
 	"swarf":           {moduleDir: "swarf", buildTarget: "./cmd/swarf", binPath: "/usr/bin/swarf", configPath: "/etc/swarf/config.yaml"},
 }
 
+// ModuleDir is the repository directory a smelt service is built from, and
+// therefore also its name everywhere outside smelt: its polyrepo, its module
+// path segment, and its GHCR package. Three of the nine differ from the service
+// name -- upload/sprue, indexer/indexing-service, signing-service/piri-signing-service --
+// so anything naming a service to the outside world has to go through this
+// rather than passing the service name along.
+//
+// Exported because the compat suite builds image references from Detect()'s
+// output, and passing those names straight through asked ghcr.io for
+// fil-forge/upload, fil-forge/indexer and fil-forge/signing-service, none of
+// which exist.
+func ModuleDir(service string) (string, bool) {
+	b, ok := Services[service]
+	return b.moduleDir, ok
+}
+
 // libforgeDir is the workspace dir of the shared library. Its presence in the
 // use-list forces a rebuild of every service (see package doc).
 const libforgeDir = "libforge"

@@ -55,6 +55,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -68,15 +69,28 @@ import (
 // so a registry move is a single edit.
 const imageRepo = "ghcr.io/fil-forge"
 
-// imageFor builds the image reference for a released version.
+// imageFor builds the image reference for a released version of a service.
+//
+// THE SERVICE NAME IS NOT THE PACKAGE NAME for three of the nine, and passing it
+// through is a silent 403: measured at the token endpoint, fil-forge/upload,
+// fil-forge/indexer and fil-forge/signing-service all answer 403 while
+// fil-forge/sprue, fil-forge/indexing-service and fil-forge/piri-signing-service
+// answer 200. workspace.ModuleDir is the mapping, and it is the same one that
+// decides what gets built, so the two cannot disagree.
 //
 // The leading `v` is stripped, and that is load-bearing rather than tidiness:
 // the polyrepos tag git with `v0.2.4` and publish the image as `0.2.4`.
 // Measured against the registry — ghcr.io/fil-forge/piri:0.2.4 answers 200 and
 // :v0.2.4 answers 404 — so passing a git tag through unchanged pulls nothing
 // and the failure surfaces as an unrelated container timeout.
-func imageFor(service, version string) string {
-	return fmt.Sprintf("%s/%s:%s", imageRepo, service, strings.TrimPrefix(version, "v"))
+func imageFor(t *testing.T, service, version string) string {
+	t.Helper()
+	pkg, ok := workspace.ModuleDir(service)
+	if !ok {
+		t.Fatalf("no module directory known for service %q, so its registry "+
+			"package name cannot be derived", service)
+	}
+	return fmt.Sprintf("%s/%s:%s", imageRepo, pkg, strings.TrimPrefix(version, "v"))
 }
 
 func TestMain(m *testing.M) {
@@ -89,9 +103,11 @@ func TestMain(m *testing.M) {
 }
 
 // pinnedVersions reads the versions to test against from the environment, as
-// COMPAT_<SERVICE>_VERSIONS, comma separated. The workflow fills these from the
+// COMPAT_<PACKAGE>_VERSIONS, comma separated. The workflow fills these from the
 // version-shaped tags that actually exist in the registry; a developer can set
-// one by hand.
+// one by hand. Package, not service, for the reason envSuffix gives -- it
+// happens to make no difference for piri and ingot, and would the moment a
+// service whose names differ joined the window.
 //
 //	COMPAT_PIRI_VERSIONS=0.2.4 go test -tags compat ./tests/compat
 //
@@ -99,7 +115,7 @@ func TestMain(m *testing.M) {
 // nothing to test against, and that should not be a permanent red.
 func pinnedVersions(t *testing.T, service string) []string {
 	t.Helper()
-	key := "COMPAT_" + strings.ToUpper(service) + "_VERSIONS"
+	key := "COMPAT_" + envSuffix(t, service) + "_VERSIONS"
 	raw := os.Getenv(key)
 	if strings.TrimSpace(raw) == "" {
 		t.Skipf("%s unset; no published release window for %s", key, service)
@@ -133,9 +149,17 @@ var pinFor = map[string]func(string) stack.Option{
 	"guppy":           stack.WithGuppyImage,
 }
 
-// envSuffix is a service's name as it appears in COMPAT_BASELINE_<SUFFIX>.
-func envSuffix(service string) string {
-	return strings.ToUpper(strings.ReplaceAll(service, "-", "_"))
+// envSuffix is a service's PACKAGE name as it appears in
+// COMPAT_BASELINE_<SUFFIX>, not its service name. The workflow fills these from
+// the registry, which knows only package names, so keying on the service name
+// made it feed COMPAT_BASELINE_SPRUE to a test reading COMPAT_BASELINE_UPLOAD.
+func envSuffix(t *testing.T, service string) string {
+	t.Helper()
+	pkg, ok := workspace.ModuleDir(service)
+	if !ok {
+		t.Fatalf("no module directory known for service %q", service)
+	}
+	return strings.ToUpper(strings.ReplaceAll(pkg, "-", "_"))
 }
 
 // TestPinnedPeer boots the stack with one service at a released image and every
@@ -149,7 +173,7 @@ func TestPinnedPeer(t *testing.T) {
 		t.Run(service, func(t *testing.T) {
 			for _, version := range pinnedVersions(t, service) {
 				t.Run(version, func(t *testing.T) {
-					image := imageFor(service, version)
+					image := imageFor(t, service, version)
 					pin, ok := pinFor[service]
 					if !ok {
 						t.Fatalf("no pin option for %s", service)
@@ -200,13 +224,15 @@ func TestPinnedPeer(t *testing.T) {
 // this go.work, and one of the four it missed was the indexer, which sits on
 // the path this test asserts over.
 //
-// So it needs a released image for every one of them, and skips naming the
-// ones it lacks. sprue and hilt publish no version-tagged images today (only
-// :main and :sha-*), and neither do the indexer, delegator, signing service or
-// swarf, so the skip is the expected outcome until they cut releases. It is a
-// skip rather than a substitution on purpose: :main is a moving tag, and
-// pinning a compatibility baseline to something that moves is how a red
-// becomes ambiguous.
+// So it needs a released image for every one of them, and skips naming the ones
+// it lacks. Five of the eight publish no version-tagged image today, only :main
+// and :sha-*: sprue, hilt, the signing service, delegator and swarf. The other
+// three do -- piri 0.2.4, ingot 0.0.0 and the INDEXER at 1.13.4, which is worth
+// naming because an earlier revision of this comment counted it among the
+// missing. So the skip is the expected outcome until the five cut releases. It
+// is a skip rather than a substitution on purpose: :main is a moving tag, and
+// pinning a compatibility baseline to something that moves is how a red becomes
+// ambiguous.
 func TestRollingUpgrade(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("skipping on darwin (docker-in-docker flakiness)")
@@ -218,7 +244,7 @@ func TestRollingUpgrade(t *testing.T) {
 	}
 
 	// Per-service semver means there is no single baseline VERSION -- there is
-	// a baseline SET, one release per service. COMPAT_BASELINE_<SERVICE>
+	// a baseline SET, one release per service. COMPAT_BASELINE_<PACKAGE>
 	// carries each; the workflow fills them from the registry.
 	baseline := map[string]string{}
 	var missing []string
@@ -228,27 +254,40 @@ func TestRollingUpgrade(t *testing.T) {
 				"cannot pin it and would boot it from HEAD inside a fleet that is "+
 				"supposed to be old. Add it.", svc)
 		}
-		v := strings.TrimSpace(os.Getenv("COMPAT_BASELINE_" + envSuffix(svc)))
+		key := "COMPAT_BASELINE_" + envSuffix(t, svc)
+		v := strings.TrimSpace(os.Getenv(key))
 		if v == "" {
-			missing = append(missing, svc)
+			// The VARIABLE, not the service name. Naming the service sends a
+			// reader to COMPAT_BASELINE_UPLOAD, which nothing reads -- the same
+			// service-versus-package confusion this file was just corrected for.
+			missing = append(missing, key)
 			continue
 		}
 		baseline[svc] = v
 	}
 	if len(missing) > 0 {
-		t.Skipf("no published release to upgrade from for %s "+
-			"(set COMPAT_BASELINE_<SERVICE> for each)", strings.Join(missing, ", "))
+		t.Skipf("no published release to upgrade from; unset: %s",
+			strings.Join(missing, " "))
 	}
 
 	for _, upgraded := range []string{"piri", "ingot"} {
 		t.Run("upgrade_"+upgraded, func(t *testing.T) {
+			// A service outside the fleet makes otherThan exclude every member,
+			// so nothing is built from HEAD and the subtest passes having
+			// compared released against released. Not reachable with this
+			// repository's go.work; reachable with a narrowed one, which
+			// pkg/workspace's own error text tells people to make.
+			if !slices.Contains(fleet, upgraded) {
+				t.Skipf("%s is not in the active workspace (%v), so there is "+
+					"nothing to upgrade it from HEAD", upgraded, fleet)
+			}
 			opts := []stack.Option{
 				stack.WithPublishedImages(),
 				stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
 			}
 			// Everything from the released baseline set...
 			for _, svc := range fleet {
-				opts = append(opts, pinFor[svc](imageFor(svc, baseline[svc])))
+				opts = append(opts, pinFor[svc](imageFor(t, svc, baseline[svc])))
 			}
 			// ...except the one service under upgrade, which comes from HEAD.
 			// Excluding every other workspace service is what keeps the rest

@@ -44,13 +44,14 @@ jobs:
   window:
     name: Resolve the published window
     runs-on: ubuntu-latest
+    # TWO JSON OBJECTS, not one entry per service. A hand-written list here was
+    # wrong in both available directions at once: it named `base_sprue`, which
+    # the test read as COMPAT_BASELINE_UPLOAD and never saw, and it omitted the
+    # four services the fleet gained. `outputs:` cannot be generated, so the
+    # thing that varies moves inside a value instead.
     outputs:
-      piri: ${{ steps.resolve.outputs.piri }}
-      ingot: ${{ steps.resolve.outputs.ingot }}
-      base_piri: ${{ steps.resolve.outputs.base_piri }}
-      base_ingot: ${{ steps.resolve.outputs.base_ingot }}
-      base_sprue: ${{ steps.resolve.outputs.base_sprue }}
-      base_hilt: ${{ steps.resolve.outputs.base_hilt }}
+      baselines: ${{ steps.resolve.outputs.baselines }}
+      windows: ${{ steps.resolve.outputs.windows }}
       pinnable: ${{ steps.resolve.outputs.pinnable }}
     steps:
       - uses: actions/checkout@v4
@@ -87,17 +88,34 @@ jobs:
             ingot/go.sum
             smelt/go.sum
 
+      # Expanded here rather than listed as `env:` entries, for the reason the
+      # `outputs:` comment gives. The key is already the package name the test
+      # asks for, so this adds no mapping of its own -- it writes exactly what
+      # the registry answered.
+      - name: Expand the resolved versions
+        env:
+          BASELINES: ${{ needs.window.outputs.baselines }}
+          WINDOWS: ${{ needs.window.outputs.windows }}
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF' >> "$GITHUB_ENV"
+          import json, os, re
+          for var, prefix, suffix in (("BASELINES", "COMPAT_BASELINE_", ""),
+                                      ("WINDOWS", "COMPAT_", "_VERSIONS")):
+              for k, v in json.loads(os.environ[var]).items():
+                  # The key comes from a package name the registry confirmed, so
+                  # it cannot carry a newline -- but $GITHUB_ENV is parsed line
+                  # by line, and a check here costs nothing.
+                  assert re.fullmatch(r"[A-Z0-9_]+", k), k
+                  assert "\n" not in v, v
+                  print(f"{prefix}{k}{suffix}={v}")
+          EOF
+          echo "--- resolved ---"; grep '^COMPAT_' "$GITHUB_ENV"
+
       # GOWORK stays ON: the services NOT pinned to a released image are built
       # from HEAD by pkg/workspace, which is the whole point of the comparison.
       - name: Run compatibility suite
         working-directory: smelt
-        env:
-          COMPAT_PIRI_VERSIONS: ${{ needs.window.outputs.piri }}
-          COMPAT_INGOT_VERSIONS: ${{ needs.window.outputs.ingot }}
-          COMPAT_BASELINE_PIRI: ${{ needs.window.outputs.base_piri }}
-          COMPAT_BASELINE_INGOT: ${{ needs.window.outputs.base_ingot }}
-          COMPAT_BASELINE_SPRUE: ${{ needs.window.outputs.base_sprue }}
-          COMPAT_BASELINE_HILT: ${{ needs.window.outputs.base_hilt }}
         run: go test -tags compat -v -timeout 55m -parallel 1 ./tests/compat/...
 
       - name: Dump container state on failure
