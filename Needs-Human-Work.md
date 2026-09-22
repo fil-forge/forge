@@ -102,7 +102,10 @@ Each is cheap to reverse; I took it rather than banking the question.
   in 2m54s, and #19's stayed skipped. Closed as soon as it reported.
   **`release/ingot` could not be deleted** — three `git push origin --delete`
   attempts with backoff all end in `the remote end hung up unexpectedly`. The
-  branch is inert but wants deleting by hand.
+  branch is inert but wants deleting by hand. **Branch deletion appears blocked
+  for this session generally**, not just for that ref: a stray
+  `claude/wiki-current` (pushed by a slip, now identical to `wiki`) refuses the
+  same way. Two branches to delete, neither carrying anything.
 - **`TestRollingUpgrade` now requires a released image for every service in the
   workspace, not four.** It was pinning four and building the other four from
   HEAD inside a fleet its own comments called old — one of them the indexer,

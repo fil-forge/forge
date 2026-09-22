@@ -782,8 +782,9 @@ took that trade). `AGENTS.md` carries it.
    gate) each have a round running; they go Open when one comes back satisfied,
    and that flip is yours. The upstream ones stay draft until they have been
    looked at, so nobody else spends time first. [[Needs Human Work]] has the
-   per-PR detail — including one branch, `release/ingot`, that this session
-   could not delete.
+   per-PR detail — including two branches, `release/ingot` and
+   `claude/wiki-current`, that this session could not delete. Neither carries
+   anything; branch deletion simply fails here.
 2. ~~**The `forge-2` → `forge` rename**~~ — **done**, and the reasoning it
    turned on is worth keeping: a submodule tag has to be `<svc>/vX.Y.Z` in the
    repository the module path names, so any tag cut in `forge-2` would have had
