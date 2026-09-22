@@ -348,20 +348,24 @@ one is not history: `go get github.com/fil-forge/sprue/pkg/service/handlers`
 still succeeds today.
 
 **Resolution is not the discriminator**, which an earlier revision of this
-paragraph claimed. All four in-repo modules still resolve through the proxy.
-What differs is what the proxy serves for each path — whether the version it
-has declares the matching module path and contains the package — so there are
-three outcomes, not two, and none of them is ours to control:
+paragraph claimed. Each of the four prefixes that carried a polyrepo reference
+in that resync — ingot, piri, sprue, swarf — still resolves through the proxy
+under its OLD path. What differs is what the proxy serves for each: whether the
+version it has declares the matching module path, and whether it contains the
+package. Three outcomes, none of them ours to control:
 
 ```
-go get github.com/fil-forge/sprue/pkg/service/handlers   ok, silently
+go get github.com/fil-forge/sprue/pkg/service/handlers   ok, SILENTLY
+go get github.com/fil-forge/ingot/registry               ok, SILENTLY
 go get github.com/fil-forge/piri/pkg/service/publisher   refused: v0.2.4 declares
                                                          module github.com/storacha/piri
 go get github.com/fil-forge/swarf/pkg/api                refused: v0.0.0 found, but
                                                          does not contain the package
 ```
 
-None of the three is a check.
+Two of the four succeed, which is the outcome with no symptom. None of the four
+is a check. And note what the first two prove: this is live, not a story about
+one bad afternoon — run those two today and they still work.
 
 And some of them compile either way: piri's otel meter name
 (`Meter("github.com/fil-forge/piri/pkg/service/publisher")`) is a string, so no
