@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 21:15Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 21:30Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -24,8 +24,41 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1–4 found **six, five, two, four**; four blocking, all in the first two. Head `a15f00b5`, round 5 running |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1–4 found **five, three, three, three**; none blocking after the first two. Head `d9b82b15`, round 5 running. Both event paths verified green by real runs |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | head `12eed736`, CI **24/24 green**. Five rounds; **rounds stopped on Petra's call** — ready for her |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | head `55d55a2a`, CI green bar one `itest` leg still running. Five rounds; **rounds stopped on Petra's call** — ready for her. Both event paths verified green by real runs |
+
+## The review rounds are stopped on both, and the reason is measurable
+
+**Fourteen behavioural findings in rounds 1–2 across the two pull requests.
+Zero in rounds 3–5.** Nineteen findings in rounds 3–5, every one of them about a
+*claim* — a comment, a count, a PR body — rather than about what the code does.
+
+| | #19 | #18 |
+|---|---|---|
+| round 1 | 3 behaviour, 1 claim, 1 wrong premise | 5 behaviour, 1 claim |
+| round 2 | 2 behaviour, 1 claim | 4 behaviour, 1 claim |
+| rounds 3–5 | **0 behaviour**, 9 claims | **0 behaviour**, 10 claims |
+
+And the claim-findings sustain themselves: each fix to a comment is a new
+comment the next round finds slightly off. Two proofs from this run —
+
+- **The timing number could not converge.** A single figure was the slowest
+  sample; the range that replaced it was stale by its own next push, because the
+  run that measures the sentence always postdates it. Only deleting the number
+  fixed it.
+- **The release-mechanism paragraph went through three wrong versions**, one
+  seeded by a review round's own wrong premise. Deleting it was right and should
+  have been the move at round 3.
+
+**The diagnosis worth keeping is about rule 10, not about these two.**
+`release.yml`'s diff is ~305 lines and the great majority is commentary, so the
+rounds were reviewing the commentary. A reviewer briefed to verify every factual
+claim against the tree will always find something in 300 lines of prose — which
+means **the "satisfied" signal may be unreachable by construction on a
+comment-heavy diff.** The two-signal design assumes a round converges; here it
+oscillated. The small fix, if it is wanted: scope each round to what changed
+*since the last round*, and skip the round when that is comments only. **Petra's
+call, not taken.**
 
 **You caught a claim the rounds had not: the release model.** I wrote, and a
 review round had asserted, that `ingot:0.0.0` would be overwritten by the next
