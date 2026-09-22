@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 20:20Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 20:45Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -24,11 +24,14 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1 and 2 found **six and five**, four blocking between them. All fixed; head `008335bb`. Round 3 running |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1 and 2 found **five and three**. All fixed; head `dcfbe0bc`. Round 3 running. Both event paths **verified green at the current head** |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1–3 found **six, five, two**; four blocking, all in the first two. Head `a7434b4b`, round 4 running |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1–3 found **five, three, three**; none blocking after the first two. Head `93930ec9`, round 4 running. Both event paths verified green by real runs |
 
-**The rounds are finding things the round before introduced, on both pull
-requests, and that is now the most useful thing about them.** Round 2 on #18
+**The pattern stopped at round 3 on both.** Rounds 1 and 2 each found defects
+the previous round's *fixes* had introduced — four of the eleven findings across
+the two pull requests. Round 3 on each found none of that: two counting errors
+on #18 and three claims-about-claims on #19, no regressions. The earlier
+pattern, which is the argument for running the rounds at all: Round 2 on #18
 found that round 1's fleet-list fix asked the registry for three services that
 do not exist (`upload`, `indexer`, `signing-service` are smelt's names; the
 packages are `sprue`, `indexing-service`, `piri-signing-service` — measured, the
@@ -168,7 +171,9 @@ Each is cheap to reverse; I took it rather than banking the question.
   `Logs`, `Exec`, `Close` and the endpoint getters, and nothing that replaces a
   running service's image while keeping its volumes. **So I did not build item
   6**, and the two items are one larger piece of work with no runnable payoff
-  until six more services cut releases.
+  until **five** more services cut releases. (Five, not six: the indexer already
+  publishes `1.13.4` — an earlier revision of this entry, and of #18's own
+  comment, counted it among the missing.)
 
   What the work would be, if you want it scheduled: give `pkg/stack` a way to
   replace a running service's image in place keeping its volumes; rewrite
