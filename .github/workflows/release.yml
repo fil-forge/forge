@@ -47,9 +47,10 @@ name: release
 #   Run, AN EARLIER REVISION: both pull-request paths at b9fa2298, before the
 #     fork gate, the dry_run validation and the concurrency key. Run 35773432670
 #     from `release/ingot` built and asserted in 2m54s; run 35773389770 from an
-#     ordinary branch resolved nothing and skipped the release job. Kept because
-#     the second is where the 16s/11s cost of `plan` on an ordinary pull request
-#     is measured, and that path has not changed since.
+#     ordinary branch resolved nothing and skipped the release job. Kept
+#     because the second is where the 16s/11s COST of `plan` on an ordinary
+#     pull request is measured, and that cost has not changed -- the path has,
+#     since every pull request now also runs the fork check.
 #   Run, AN EARLIER FILE: two dry-run dispatches, ingot on ubuntu-24.04 (run
 #     35762662020) and piri on macos-14 (run 35765210724). They are where the
 #     runner derivation, the skip list and the assertion were observed, and
@@ -414,17 +415,30 @@ jobs:
     # that failed AFTER resolving the service -- on the version, or on the tag
     # check -- must not start a release build under EITHER reading.
     #
-    # SAME-REPOSITORY PULL REQUESTS ONLY, and this one is not belt-and-braces.
-    # `plan` derives the runner by parsing `<svc>/.goreleaser.yaml` FROM THE
-    # PULL REQUEST'S OWN TREE, so a fork could name a branch `release/ingot`,
-    # add a darwin build with CGO_ENABLED=1 to that config, and put a macos-14
-    # runner under its own goreleaser hooks for the 40 minutes below. This
-    # repository is public and forkable, and every other pull-request workflow
-    # here is pinned to ubuntu, so this file would be the only way a fork
-    # reaches a macOS runner. No secret is exposed -- the token is read-only on
-    # a fork pull request and is not passed to goreleaser in dry-run mode -- but
-    # arbitrary code on a runner we pay for is not something to leave open
-    # because the credential half is covered.
+    # SAME-REPOSITORY PULL REQUESTS ONLY. `plan` derives the runner by parsing
+    # `<svc>/.goreleaser.yaml` FROM THE PULL REQUEST'S OWN TREE, so without this
+    # a fork could name a branch `release/ingot`, add a darwin build with
+    # CGO_ENABLED=1 to that config, and put a macos-14 runner under its own
+    # goreleaser hooks for the 40 minutes below.
+    #
+    # WHAT THIS DOES NOT DO, said plainly because an earlier revision of this
+    # comment claimed it: it does not stop a fork reaching a macOS runner. A
+    # `pull_request` event runs the workflow definitions from the PULL
+    # REQUEST's commit -- that is the difference from `pull_request_target`,
+    # and it is why the trigger above could be tested before it merged -- so a
+    # fork can write `runs-on: macos-14` into its own copy of this file, or add
+    # a workflow of its own, and this condition is not in the code that runs.
+    # What governs that is the repository's "Fork pull request workflows from
+    # outside collaborators" setting, which is not readable from here and is
+    # worth confirming; the public default approves a returning contributor
+    # automatically.
+    #
+    # What it does do is remove fork-controlled input from OUR code path: after
+    # this, nothing a fork writes decides which runner we start or reaches the
+    # shell in the job below. That is the half this file can own.
+    #
+    # No secret is exposed either way -- the token is read-only on a fork pull
+    # request and is not passed to goreleaser in dry-run mode.
     #
     # Cutting the job rather than pinning the runner: piri's darwin cgo build
     # genuinely cannot be cross-compiled from linux, so a `release/piri` pull
