@@ -39,12 +39,14 @@ name: release
 # than none in a repository whose rule 5 is "a green check is a claim about
 # what ran".
 #
-#   Run, THIS file: both pull-request paths, at b9fa2298. Run 35773432670 from
-#     a `release/ingot` branch -- plan resolved ingot, the release job built and
-#     asserted in 2m54s, `require the tag` and `publish` skipped. Run 35773389770
-#     from an ordinary branch -- plan resolved nothing and the release job
-#     skipped. Those two are what exercised the `needs.plan.outputs.dry_run`
-#     gating; nothing before them did.
+#   Run, AN EARLIER REVISION OF THIS FILE: both pull-request paths, at
+#     b9fa2298 -- the commit that added the pull_request trigger, before the
+#     fork gate, the dry_run validation and the concurrency key. Run 35773432670
+#     from a `release/ingot` branch: plan resolved ingot, the release job built
+#     and asserted in 2m54s, `require the tag` and `publish` skipped. Run
+#     35773389770 from an ordinary branch: plan resolved nothing and the release
+#     job skipped. Those two are what exercised the
+#     `needs.plan.outputs.dry_run` gating.
 #   Run, AN EARLIER FILE: two dry-run dispatches, ingot on ubuntu-24.04 (run
 #     35762662020) and piri on macos-14 (run 35765210724). They are where the
 #     runner derivation, the skip list and the assertion were observed, and
@@ -115,7 +117,12 @@ concurrency:
   # one group -- and since the joining run's setting decides, the pull request
   # would cancel the dispatch, which is the thing the line below exists to
   # prevent.
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.service || github.head_ref }}
+  #
+  # The pull request's NUMBER, not its branch name, for the same reason one step
+  # further out: a fork's `release/ingot` and ours are the same `head_ref`, so a
+  # fork pull request would cancel our in-flight release build. The number is
+  # unique across both.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.service || github.event.pull_request.number }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -175,6 +182,7 @@ jobs:
           SERVICE: ${{ inputs.service }}
           DRY_RUN: ${{ inputs.dry_run }}
           HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
         run: |
           set -euo pipefail
 
@@ -205,19 +213,34 @@ jobs:
               ;;
             pull_request)
               dry_run=true
+              # A FORK RESOLVES NOTHING. Everything below reads the PULL
+              # REQUEST's tree -- `actions/checkout` takes refs/pull/N/merge --
+              # so on a fork the releasable list, the goreleaser config that
+              # picks the runner, and the version.json that is read are all the
+              # fork's. Refusing here is one condition instead of hardening each
+              # of those, and cutting this repository's releases is not
+              # something a fork does.
+              if [ "$HEAD_REPO" != "$GITHUB_REPOSITORY" ]; then
+                echo "$HEAD_REPO is not $GITHUB_REPOSITORY; resolving no" \
+                     "service for a fork pull request."
+                { echo "dir="
+                  echo "dry_run=true"
+                  echo "runner=ubuntu-24.04"; } >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
               case "$HEAD_REF" in
                 release/*) svc=${HEAD_REF#release/} ;;
                 *)
                   echo "$HEAD_REF is not a release/* branch, so there is no" \
                        "service to release. Skipping the build."
-                  echo "dir=" >> "$GITHUB_OUTPUT"
-                  echo "dry_run=true" >> "$GITHUB_OUTPUT"
-                  # `runs-on:` reads this even though the job is about to be
-                  # skipped, and an empty string is not a runner label. Written
-                  # once per path rather than as an overridden default, because
-                  # a repeated key in $GITHUB_OUTPUT is not a documented
+                  # `runs-on:` reads `runner` even though the job is about to
+                  # be skipped, and an empty string is not a runner label.
+                  # Written once per path rather than as an overridden default,
+                  # because a repeated key in $GITHUB_OUTPUT is not a documented
                   # last-one-wins.
-                  echo "runner=ubuntu-24.04" >> "$GITHUB_OUTPUT"
+                  { echo "dir="
+                    echo "dry_run=true"
+                    echo "runner=ubuntu-24.04"; } >> "$GITHUB_OUTPUT"
                   exit 0
                   ;;
               esac
@@ -304,9 +327,24 @@ jobs:
         # pull request reaches here with no service and fails on a missing
         # /version.json.
         if: steps.svc.outputs.dir != ''
+        # BY env, NOT `${{ }}` INTO THE SCRIPT, which is how every other step
+        # here already takes a resolved value and is not a style preference:
+        # `${{ }}` is substituted textually before bash sees the line, so
+        # whatever `dir` holds becomes shell source. On a `pull_request`,
+        # `dir` is fork-controlled -- see the step above -- and the chain is
+        # short: a fork adds a directory literally named
+        # `evil$(touch${IFS}PWNED)x` with a .goreleaser.yaml, pushes the branch
+        # `release/evil$(touch${IFS}PWNED)x` (git accepts `$ ( ) { }` in a ref;
+        # only space is illegal, and ${IFS} covers that), the `find` below
+        # enumerates the PULL REQUEST's tree so the directory is in
+        # `releasable`, the name matches, and this line runs the substitution.
+        # Reproduced end to end. The same-repository gate above closes it too;
+        # this is the half that does not depend on getting a condition right.
+        env:
+          DIR: ${{ steps.svc.outputs.dir }}
         run: |
           set -euo pipefail
-          f="${{ steps.svc.outputs.dir }}/version.json"
+          f="$DIR/version.json"
           if [ ! -f "$f" ]; then
             echo "::error::$f is missing, so there is no version to release."
             exit 1
@@ -328,7 +366,7 @@ jobs:
             exit 1
           fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
-          echo "Releasing ${{ steps.svc.outputs.dir }} $v"
+          echo "Releasing $DIR $v"
 
       # The mirror image of `require the tag`, which the release job runs for a
       # real release: there the tag must already exist at this commit, here it
