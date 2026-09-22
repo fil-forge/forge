@@ -30,10 +30,10 @@ and its CI rather than about moving it, and the commands and conventions at the
 end. What it probably drops: rules 1 and 6 through 10, the agent-review
 practice among them (it lasts only until the rest of the team is reviewing),
 the wiki, most of the document table, and the per-pull-request
-**skippable-checks block**. By then
-the wiki's content belongs in the repository or in issues, *Needs Human Work*
-should be empty, and the blocks should have been replaced by real filtering
-designed from what they turned out to say. Do not treat that split as settled;
+**skippable-checks block**. By then the wiki's content belongs in the
+repository or in issues, *Needs Human Work* should be empty, and the blocks
+should have been replaced by real filtering designed from what they turned out
+to say. Do not treat that split as settled;
 decide it when you can see the finished shape.
 
 ## Where state lives, and what goes where
@@ -150,7 +150,7 @@ and the evidence buries the next thing to do. So:
   glance, and it is never hidden behind a disclosure.
 - **Each finding in its own `<details>`**, whose `<summary>` states it in one
   line — so collapsed, the review reads as a scannable list of findings.
-  `<details open>` for one the reviewer considers blocking.
+  `<details open>` for one the agent considers blocking.
 - **Verification and what checked out: one `<details>`**, collapsed.
 - **Evidence — command output, tables, diffs — goes inside** the relevant
   `<details>`, never above it.
@@ -462,7 +462,8 @@ practice means an agent, at least on the first pass). Every entry below is a
 thing that actually happened, and recurrence is the norm rather than the
 exception: the build tag and the itest-only bump were each fixed in one resync
 and back in the next, and the polyrepo-import class has shown up in every
-resync so far, in two different shapes (see below).
+resync so far, in two different shapes — a `go build` failure, and a
+`go mod tidy` that *resolves* the polyrepo path instead of refusing it.
 
 - **A polyrepo import path in a hunk that merged cleanly.** Upstream adds an
   import, or touches a file we never rewrote, and `github.com/fil-forge/<svc>`
