@@ -115,10 +115,12 @@ go build ./...             # workspace mode, across go.work
 ```
 
 CI is four workflows — `ci` (per-module build/vet/staticcheck/tidy/test plus
-the `guards` job), `images`, `e2e`, `itest`. **Nothing is filtered by path, on
-purpose**: `ci.yml`'s header says why, and `MONOREPO_TODO.md` carries the
-question of whether that should change. A documentation-only change therefore
-costs a full run; that is known, not an oversight.
+the `guards` job), `images`, `e2e`, `itest`. A fifth, `release`, exists but is
+**dispatch-only and never runs on a push**, so it is not part of what a change
+costs. **Nothing is filtered by path, on purpose**: `ci.yml`'s header says why,
+and `MONOREPO_TODO.md` carries the question of whether that should change. A
+documentation-only change therefore costs a full run; that is known, not an
+oversight.
 
 ### Every pull request opens with which checks are safe to skip
 

@@ -1,12 +1,26 @@
 version: 2
 
+# Without this goreleaser infers the project name from the git remote, which
+# in a monorepo is `forge` -- so every artifact would be named
+# forge_1.13.4_linux_amd64.tar.gz and dist/ would be forge_linux_amd64_v1/.
+# The other three configs all set it.
+project_name: indexing-service
+
 builds:
   - main: ./cmd
     binary: indexing-service
     ldflags:
-      # Sets the version variable in the build package to the build version prefixed with a 'v'
-      # Sets the main.date to a static date for checksum verification. See https://goreleaser.com/customization/builds/#reproducible-builds.
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.CommitDate}} -X main.builtBy=goreleaser -X github.com/fil-forge/forge/indexing-service/pkg/build.version=v{{.Version}}
+      # Sets the version variable in the build package to the build version,
+      # prefixed with a 'v'.
+      #
+      # `-X main.version`, `main.commit`, `main.date` and `main.builtBy` used to
+      # be here too, and all four were dead: package main under ./cmd declares
+      # none of them, and cmd/link drops an -X for a missing symbol in silence.
+      # check-goreleaser-ldflags.sh passed them because it special-cases `main`,
+      # so this was the live instance of the very thing this PR's assertion
+      # script exists to catch, in the one config the PR touches. Dropped rather
+      # than declared: nothing reads them.
+      - -s -w -X github.com/fil-forge/forge/indexing-service/pkg/build.version=v{{.Version}}
     goos:
       - linux
       - windows
@@ -23,9 +37,9 @@ universal_binaries:
 archives:
   - format_overrides:
     - goos: windows
-      format: zip
+      formats: zip
     - goos: darwin
-      format: zip
+      formats: zip
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_
       {{- if eq .Os "darwin" }}mac_os

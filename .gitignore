@@ -4,3 +4,9 @@
 # only here, leaving a per-module go.sum incomplete — guarded by the
 # per-module `go mod tidy` diff check in ci.yml.
 go.work.sum
+
+# goreleaser writes dist/config.yaml BEFORE it builds, so an untracked dist/
+# flips Go's vcs.modified stamp to true and every service that appends
+# revision.Revision advertises a "-dirty" version from a clean release. Only
+# piri/.gitignore had this.
+dist/

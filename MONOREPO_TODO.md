@@ -422,11 +422,19 @@ The seven services pruned earlier carry no equivalent risk: the only
 ## Phase 1 needs machinery this repository does not have
 
 The consolidation plan says to "cut initial release tags … via the *existing*
-`release.yml` flow". **There is no `release.yml`.** `main` has four workflows —
-`ci`, `e2e`, `images`, `itest` — and none of them tags, releases or publishes.
-The plan treated `forge` at `f60dd59` as a starting point that already had that
-apparatus; this repository was built from subtree imports instead, and the
-apparatus was never part of them.
+`release.yml` flow". **There was no `release.yml`**; `main` had four workflows —
+`ci`, `e2e`, `images`, `itest` — and none of them tagged, released or
+published. The plan treated `forge` at `f60dd59` as a starting point that
+already had that apparatus; this repository was built from subtree imports
+instead, and the apparatus was never part of them.
+
+**There is one now, and it is deliberately not armed** — dispatch-only, dry-run
+by default, and it never creates a tag. It does not close this entry. What it
+supplies is the build-and-verify path; what remains is the part that was always
+the hard bit, and it is a decision rather than a workflow: **while the polyrepo
+still releases these same services, a tag cut here gives each one two sources
+of truth.** Until that is settled, nothing should be tagged in this
+repository.
 
 What survives is raw material, and it is uneven:
 
@@ -471,7 +479,19 @@ the deployed network.
 `check-goreleaser-ldflags.sh` catches today's defect — four `.goreleaser.yaml`
 files naming pre-consolidation module paths — by checking that every `-X` names
 a package in the module that builds it. That is a check on the *path*. The
-release flow should eventually check the *effect*, and then this lint can go.
+release flow should check the *effect*, and then this lint can go.
+
+**Built, as `.github/scripts/assert-released-version.sh`.** Keeping this entry
+because the lint has *not* gone: the assertion can only speak for services whose
+binaries answer a version probe, which is the "only half the services can be
+asked" problem below, so the two overlap rather than one replacing the other.
+
+The measurement below is why that script pins its working directory to the
+repository root. It records a stale-path binary reporting `v0.0.0` from a
+container and `v0.0.6` from a checkout, because the fallback reads
+`version.json` by *relative* path — and goreleaser runs inside `<svc>/`, where
+that file exists. Run from there, the fallback answers and the assertion says
+`ok` to the exact defect it is for.
 
 The reason is that nothing else is loud. `cmd/link` looks the `-X` symbol up
 and gives up silently when it is missing — `addstrdata` in
@@ -502,14 +522,28 @@ binaries their version, and today `sprue --version` cannot answer.
 
 **Do not shortcut it by grepping the binary for the version string.** That is
 uniform without touching any service, and it tests the wrong thing — whether
-the bytes are present, not whether the program reports them. `indexing-service`
-shows why: its config injects two `-X` flags naming the same field, so the
-string is in the binary either way and only the `v` prefix separates them.
-(This paragraph had the two the wrong way round until the build-metadata entry
-below was checked against the tree: it is `-X main.version` that is **dead** —
-`indexing-service/cmd` declares no such symbol — and the `pkg/build.version`
-one that works. `check-goreleaser-ldflags.sh` passes the `main.*` flags because
-it special-cases `main`. The point about grepping the binary is unaffected.)
+the bytes are present, not whether the program reports them.
+The mechanism is the one two paragraphs above: **`go version -m` records the
+`-ldflags` argument in the binary**, so a dead `-X` writes its own version
+string there verbatim. Measured on a fixture whose `-X` names a package that
+does not exist:
+
+```
+$ ./dead                                 # what the program reports
+version: v0.0.0
+$ strings dead | grep -c 'v7\.7\.7'      # what a grep finds
+2
+$ go version -m dead | grep ldflags
+	build	-ldflags="-X example.com/fx/pkg/buildTYPO.Version=v7.7.7"
+```
+
+Both hits are inside that recorded line. The grep passes; the binary is broken.
+
+`indexing-service` carried a live example of the same shape until this pull
+request: two `-X` flags for one version, of which **`-X main.version` was
+dead** — `indexing-service/cmd` declares no such symbol — while the
+`pkg/build.version` one worked. `check-goreleaser-ldflags.sh` passed the
+`main.*` flags because it special-cases `main`. This pull request drops them.
 
 What the assertion buys over the lint: it also catches the linker's other
 silent branches, notably a correct `-X` against a symbol that got dead-code
@@ -747,6 +781,76 @@ equipped to avoid it. Open as [#16](https://github.com/fil-forge/forge/pull/16).
 same question for the polyrepo images, where it waits on a decision rather than
 on the monorepo.
 
+### The tag scheme Go requires is one goreleaser cannot read
+
+Two requirements that do not currently meet. Both measured, not looked up.
+
+**Go requires a subdirectory prefix.** A module at `piri/` is served from the
+tag `piri/vX.Y.Z`, not `vX.Y.Z`. That is not a convention, it is the fetcher:
+`cmd/go/internal/modfetch/coderepo.go:538` reads *"Tag must have a prefix
+matching codeDir"* and builds `tagPrefix = r.codeDir + "/"`. All ten services
+are in subdirectories, so all ten would need it.
+
+**goreleaser OSS cannot parse such a tag.** Measured on v2.18.2:
+
+| | |
+|---|---|
+| tag `piri/v1.2.3`, plain build | `⨯ failed to parse tag 'piri/v1.2.3' as semver` |
+| same, with `GORELEASER_CURRENT_TAG` set to the **prefixed** tag `piri/v1.2.3` | identical failure — setting the variable does not make goreleaser accept a non-semver value |
+| same, with `--snapshot` | "runs", and calls the version `piri/v1.2.3-SNAPSHOT-bb5b7f5` |
+| a `monorepo:` block with `tag_prefix` | `field monorepo not found in type config.Project` |
+
+That last row is the crux: `monorepo.tag_prefix` exists to solve exactly this
+and is **GoReleaser Pro**. The OSS binary has no such field.
+
+**What someone has to choose.** Not urgent, because the conflict only bites if
+something consumes a forge module *by version*, and today nothing does —
+`guppy`, `ucantone`, `libforge` and `automobile` all still pin the polyrepo
+paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
+
+- **Pay for goreleaser Pro** and use `monorepo.tag_prefix`. Smallest change,
+  costs money, and buys a thing only Go module consumers need.
+- **Do not tag for Go at all.** Release these as binaries and images, which is
+  what they are; keep `<svc>/vX.Y.Z` in reserve for the day someone wants
+  `go get github.com/fil-forge/forge/<svc>`. Costs nothing now and defers the
+  decision to the moment it has a concrete requester.
+- **Drive goreleaser without a tag**, templating the version from an
+  environment variable rather than `{{.Version}}`. Keeps OSS and the Go scheme,
+  at the cost of rewriting the ldflags in all four configs. (An earlier version
+  of this bullet also listed goreleaser's changelog as a cost. It is not one,
+  under any of these three options: all four configs already set
+  `changelog: disable: true`.)
+
+**What the table does not settle, and `release.yml` depends on.** Every row in
+the table above was measured with a *prefixed* tag. goreleaser's git pipe consults
+`GORELEASER_CURRENT_TAG` before `git describe`, so setting it to the **plain**
+semver sidesteps the parse entirely, which is what the workflow does. Measured
+twice, independently: a release ran to completion with
+`GORELEASER_CURRENT_TAG=v9.9.9` against a repository with no tags at all —
+goreleaser reported `couldn't find any tags before "v9.9.9"`, took
+`previous=<unknown> current=v9.9.9`, and the built binary printed
+`version: 9.9.9`. The rows above are not evidence for that case; this paragraph
+is.
+
+**`release.yml` reaches the third option's outcome by a different mechanism,
+and so does not pay its cost.** It reads the version from `version.json`, never creates
+a tag, and hands goreleaser the plain semver through `GORELEASER_CURRENT_TAG`
+so the parse never happens — while still requiring the Go-scheme
+`<svc>/vX.Y.Z` tag to exist, and to point at the commit being built, before a
+real release proceeds. That is the bullet's aim (keep OSS, keep the Go scheme)
+without its method: because `GORELEASER_CURRENT_TAG` makes `{{.Version}}`
+resolve correctly on its own, the four configs keep templating from it and no
+ldflags are rewritten. The bullet's method — templating from an environment
+variable instead — is what would force that rewrite.
+
+It does not use `--snapshot` in either mode, which would stamp
+`X.Y.Z-SNAPSHOT-<sha>` — a version the assertion can never match, so the
+documented-safe default could not pass its own check. And **publishing is
+closed** there, because goreleaser's release pipe creates the GitHub release's
+tag itself: fed the plain semver it would create an unprefixed `v0.2.4` in the
+namespace ten services share, which is this section's one-tag-namespace problem
+arriving from the other direction.
+
 # Findings in the imported code
 
 Problems noticed while bringing a service in, and deliberately not fixed by
@@ -757,6 +861,142 @@ against the owning code once someone picks them up — nobody has filed them
 yet.
 
 Each was checked against the tree rather than taken on the reviewer's word.
+
+## piri: `TestPeriodicRotator` is a wall-clock race
+
+`piri/pkg/store/local/retrievaljournal/periodic_rotator_test.go` starts a
+rotator with a **1 ms** ticker, sleeps **30 ms**, then asserts that all six
+non-`cid.Undef` batches were rotated. Under CPU contention the rotator
+goroutine does not get six ticks in that window and the test fails with four.
+
+It went red once in CI on a branch whose whole diff was comments in a shell
+script. Reproduced locally — twelve concurrent `go test -count=20 -race`
+processes:
+
+```
+total FAILs: 2 / 240
+```
+
+Zero failures in fifty consecutive solo runs, with and without `-race`. The
+re-run passed.
+
+**Its failure output reads backwards**, which matters if you meet it:
+
+```go
+require.Equal(t, actualBatches, expectedBatches)
+```
+
+`require.Equal` is `(t, expected, actual)`, so the log's `expected: … len=4` is
+what happened and `actual: … len=6` is what was wanted. At face value it looks
+like the rotator fired too often; it fired too few times.
+
+The fix belongs upstream in `piri`, not in whichever branch next trips over it.
+
+**The obvious fix is wrong, and wrong in a way that is worse than the bug**, so
+it is written down here rather than left to be rediscovered. Replacing the
+sleep with a bare `require.Eventually` on `len(actualBatches)` races:
+`RotateFunc` is called from the rotator's own goroutine
+(`periodic_rotator.go:51`) and appends to a slice the test goroutine owns, which
+is safe today only because `pr.Stop()` synchronises before the read.
+`Eventually` evaluates its condition on a **third** goroutine, so the read races
+the appends. Measured — the patch does not flake, it fails every time under the
+`-race` that `ci.yml:157` already runs:
+
+```
+WARNING: DATA RACE
+--- FAIL: TestPeriodicRotator (0.01s)
+    testing.go:1865: race detected during execution of test
+```
+
+All six rotations were logged: the logic succeeded and the test still failed.
+Moving the call after `Stop()` does not rescue it either — the rotator is dead
+by then and the condition can never become true.
+
+What works, measured at 0 failures in 240 runs across twelve concurrent
+`-race` processes:
+
+```go
+var mu sync.Mutex
+pr.RotateFunc = func(batchID cid.Cid) {
+    mu.Lock()
+    actualBatches = append(actualBatches, batchID)
+    mu.Unlock()
+    t.Logf("Rotated batch: %s", batchID)
+}
+
+// HOIST the expectedBatches loop above this point. In the file today it sits
+// AFTER pr.Stop(), so pasting the block below without moving it does not
+// compile -- expectedBatches is not in scope yet.
+pr.Start()
+// assert, not require: require aborts the test goroutine, so pr.Stop() would
+// never run and the rotator would leak.
+assert.Eventually(t, func() bool {
+    mu.Lock()
+    defer mu.Unlock()
+    return len(actualBatches) == len(expectedBatches)
+}, 2*time.Second, time.Millisecond)
+err := pr.Stop(t.Context())
+require.NoError(t, err)
+
+mu.Lock()
+defer mu.Unlock()
+require.Equal(t, expectedBatches, actualBatches)
+```
+
+A deadline instead of a fixed sleep removes the dependence on how much CPU the
+runner has, and costs the passing case nothing.
+
+## indexing-service: `TestCachingQueuePoller_BatchProcessing` synchronises on the wrong call
+
+`indexing-service/pkg/service/providercacher/cachingqueuepoller_test.go` counts
+down its `sync.WaitGroup` inside the `Run` hook of
+`CacheProviderForIndexRecords`, then calls `poller.Stop()` as soon as
+`wg.Wait()` returns. But the poller calls `Delete` **after** the cache call, and
+the test also expects `Delete` `Times(numJobs)`. So the barrier releases one
+call too early and `Stop()` can cut off the last `Delete`:
+
+```
+--- FAIL: TestCachingQueuePoller_BatchProcessing
+    mock_CachingQueue.go:23: FAIL:  Delete(string,string)
+    mock_CachingQueue.go:23: FAIL: 3 out of 4 expectation(s) were met.
+        The code you are testing needs to make 1 more call(s).
+```
+
+Measured: **4 failures in 80 runs** across eight concurrent
+`go test -race -count=10` processes; **zero** in ten solo runs. It went red once
+in CI, on a branch touching only `.github/scripts/` and `AGENTS.md`.
+
+**A verified fix exists, and it is NOT on a branch a pull will deliver.** It is
+`indexing-service` `2c48785`, on that repository's `claude/forge-monorepo-poc-p9w0yr`
+branch only — `git merge-base --is-ancestor 2c48785 origin/main` exits 1. A
+`git subtree pull` tracks the default branch, so until that branch merges, this
+repository keeps the racy copy described above and the entry stays live.
+
+Measured with that patch applied here: 80 runs across eight concurrent
+`go test -race -count=10` processes, **zero failures**. It needed two barriers, not one, which is the part
+worth reading. Moving `wg.Done()` into `Delete`'s `Run` hook — the obvious
+repair, and the right barrier for that expectation — took it from 4 in 80 only
+to **1 in 80**. The remaining failure was a different unmet expectation:
+
+```
+    mock_CachingQueue.go:23: FAIL:  Read(string,int)
+        at: [...cachingqueuepoller_test.go:58]
+```
+
+the `Read` expectation declared `.Once()` that blocks on `<-ctx.Done()`. That
+call is simply never made: the poll loop `select`s on its root context and
+returns the moment `Stop()` cancels it, so it never comes round to
+`processJobs` again (`go-ipni-tools`, `pkg/queue/poller.go:173-178`).
+
+**The two barriers answer two different mechanisms, which is the easy thing to
+get wrong here.** `Stop()` cancels the root context, waits for the loop to
+close `stopped`, and only *then* calls the job queue's `Shutdown` with that
+same, already-cancelled context — so `Shutdown` takes its `ctx.Done()` arm and
+returns without draining, losing a `Delete` still in flight. `wg.Done()` in
+`Delete`'s `Run` hook covers that one. The unissued final `Read` above is the
+other, and the `parked` channel — closed by that `Read`'s own `Run` hook —
+covers it, holding the test until the poll loop has actually parked. Both must
+be satisfied before `Stop()` is called.
 
 ## swarf
 
