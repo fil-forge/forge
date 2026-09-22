@@ -805,8 +805,8 @@ paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
   at the cost of rewriting the ldflags in all four configs and losing
   goreleaser's changelog.
 
-**What the table does not settle, and `release.yml` depends on.** Every row
-above was measured with a *prefixed* tag. goreleaser's git pipe consults
+**What the table does not settle, and `release.yml` depends on.** Every row in
+the table above was measured with a *prefixed* tag. goreleaser's git pipe consults
 `GORELEASER_CURRENT_TAG` before `git describe`, so setting it to the **plain**
 semver sidesteps the parse entirely, which is what the workflow does. Measured
 twice, independently: a release ran to completion with
@@ -816,14 +816,23 @@ goreleaser reported `couldn't find any tags before "v9.9.9"`, took
 `version: 9.9.9`. The rows above are not evidence for that case; this paragraph
 is.
 
-**Not tagging for Go at all** is what `release.yml` assumes today: it reads the
-version from `version.json` and never itself creates a tag. It does not use
-`--snapshot` in either mode, which would stamp `X.Y.Z-SNAPSHOT-<sha>` — a
-version the assertion can never match, so the documented-safe default could not
-pass its own check. And **publishing is closed** there, because goreleaser's
-release pipe creates the GitHub release's tag itself: fed the plain semver it
-would create an unprefixed `v0.2.4` in the namespace ten services share, which
-is this section's one-tag-namespace problem arriving from the other direction.
+**`release.yml` sits closest to the third option, and reaches it more cheaply
+than that bullet describes.** It reads the version from `version.json`, never
+creates a tag, and hands goreleaser the plain semver through
+`GORELEASER_CURRENT_TAG` so the parse never happens — while still requiring the
+Go-scheme `<svc>/vX.Y.Z` tag to exist, and to point at the commit being built,
+before a real release proceeds. Neither cost that bullet names is actually
+paid: all four configs already stamp `-X …=v{{.Version}}`, so no ldflags need
+rewriting, and all four already set `changelog: disable: true`, so there is no
+changelog to lose.
+
+It does not use `--snapshot` in either mode, which would stamp
+`X.Y.Z-SNAPSHOT-<sha>` — a version the assertion can never match, so the
+documented-safe default could not pass its own check. And **publishing is
+closed** there, because goreleaser's release pipe creates the GitHub release's
+tag itself: fed the plain semver it would create an unprefixed `v0.2.4` in the
+namespace ten services share, which is this section's one-tag-namespace problem
+arriving from the other direction.
 
 # Findings in the imported code
 
@@ -940,27 +949,28 @@ Measured: **4 failures in 80 runs** across eight concurrent
 `go test -race -count=10` processes; **zero** in ten solo runs. It went red once
 in CI, on a branch touching only `.github/scripts/` and `AGENTS.md`.
 
-**No verified fix here, and that is the point of the entry.** Moving `wg.Done()`
-into `Delete`'s `Run` hook — the obvious repair, and the right barrier for that
-expectation — takes it from 4 in 80 to **1 in 80**, not to zero. The remaining
-failure is a different unmet expectation:
+**Fixed upstream**, in `indexing-service` as `2c48785`, and verified here: 80
+runs across eight concurrent `go test -race -count=10` processes, **zero
+failures**. It needed two barriers, not one, which is why it is still written
+up. Moving `wg.Done()` into `Delete`'s `Run` hook — the obvious repair, and the
+right barrier for that expectation — took it from 4 in 80 only to **1 in 80**.
+The remaining failure was a different unmet expectation:
 
 ```
     mock_CachingQueue.go:23: FAIL:  Read(string,int)
         at: [...cachingqueuepoller_test.go:58]
 ```
 
-which is the `Read` expectation declared `.Once()` that blocks on
-`<-ctx.Done()` (the third `Read` declared, the second of the `.Once()` pair;
-`:58` pins it). The poller can stop before it loops around to make that call.
-So there are at least two wrong barriers, and the second is about the poller's
-shutdown ordering rather than the test's — whoever fixes this needs to read
-`queue.QueuePoller`'s lifecycle, which lives in
-`github.com/fil-forge/go-ipni-tools` rather than in this tree, so half the fix
-is in a different repository.
+the `Read` expectation declared `.Once()` that blocks on `<-ctx.Done()`. The
+poller can stop before it loops around to make that call, because `Stop()` is
+not a barrier for work in flight: it cancels the root context and then calls
+the job queue's `Shutdown` with that same, already-cancelled context, so
+`Shutdown` returns immediately rather than waiting for the workers to drain.
 
-Recorded without a patch deliberately: a wrong fix in a document written to be
-picked up later is worse than no entry, because it is read as the answer.
+So the fix is two barriers. `wg.Done()` moves into `Delete`'s `Run` hook, which
+is the job's last step; and a `parked` channel, closed by the final `Read`'s
+`Run` hook, makes the test wait for the poll loop to reach its parked state
+before calling `Stop()`. Both must be satisfied first.
 
 ## swarf
 

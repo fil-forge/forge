@@ -214,12 +214,10 @@ refuses "a prefix-sharing version does not satisfy the check" \
   "was built for v7.7.7 but reports" dist v7.7.7
 sed -i.bak 's/v7.7.77/v0.0.0/' "$svc/pkg/build/version.go" && rm -f "$svc/pkg/build/version.go.bak"
 
-# 4b. A VERSION CONTAINING AN ERE METACHARACTER. This is the test the round
-#     that fixed the escaping was asked for and did not add -- and the ONE break
-#     this guard did not catch: reverting `want_re`'s sed to `sed 's/\./\\./g'`
-#     -- naming the variable rather than a line, because that line has moved in
-#     three successive rounds and a line number is a hand-maintained fact -- left this
-#     file printing nine ok lines and exit 0 while the assertion accepted a
+# 4b. A VERSION CONTAINING AN ERE METACHARACTER. Reverting `want_re`'s sed to
+#     `sed 's/\./\\./g'` -- named by variable rather than by line, since a line
+#     number is a hand-maintained fact -- leaves this
+#     file printing nine ok lines and exit 0 while the assertion accepts a
 #     stale binary. `release.yml` admits `+` deliberately (its charset class
 #     lists it), so this is reachable, not hypothetical.
 #
@@ -380,10 +378,9 @@ mkdir -p "$uni" "$arm"
     go build -ldflags="-X example.com/fixture/pkg/build.version=v7.7.7" -o "$arm/fixture" ./cmd )
 # set +e around the assignment, the way refuses() does. Under `set -e` a
 # command substitution that fails takes the assignment's exit status with it
-# and errexit kills the script BEFORE the if -- which is how the first version
-# of this test ran, produced no output at all, and looked like it had not run.
-# Round seven found the same hole in accepts(); this is it a second time, in
-# the test added to close round seven.
+# and errexit kills the script BEFORE the if, so the test produces no output at
+# all and looks like it never ran. Every test here that captures a failing
+# command's status needs this; it is the easiest thing in the file to forget.
 set +e
 out=$( cd "$svc" && PATH="$shim:$PATH" bash "$script" dist v7.7.7 2>&1 ); rc=$?
 set -e
@@ -400,9 +397,9 @@ fi
 rm -rf "$uni"
 
 # 9b. THE ARM THAT SKIPS, which test 9 does not reach. Test 9 covers the
-#     `*_darwin_all|*_darwin_all/*` SELECT alternative -- the defect round seven
-#     named -- but instrumenting both `case` statements during round eight showed
-#     the `*) continue ;;` arms still taken ZERO times across the whole suite:
+#     `*_darwin_all|*_darwin_all/*` SELECT alternative; instrumenting both
+#     `case` statements showed the `*) continue ;;` arms taken ZERO times
+#     across the whole suite:
 #
 #       14 arch-select   15 os-select   1 universal-select   0 os-skip   0 arch-skip
 #
