@@ -47,10 +47,13 @@ name: release
 #   Run, AN EARLIER REVISION: both pull-request paths at b9fa2298, before the
 #     fork gate, the dry_run validation and the concurrency key. Run 35773432670
 #     from `release/ingot` built and asserted in 2m54s; run 35773389770 from an
-#     ordinary branch resolved nothing and skipped the release job. Kept
-#     because the second is where the 16s/11s COST of `plan` on an ordinary
-#     pull request is measured, and that cost has not changed -- the path has,
-#     since every pull request now also runs the fork check.
+#     ordinary branch resolved nothing and skipped the release job.
+#
+# WHAT AN ORDINARY PULL REQUEST COSTS: `plan` runs and the build job does not.
+# Five runs of that path across this branch measured 8-16s, of which the
+# fetch-depth: 0 checkout was 4-11s. The 16s is the first run and the slowest;
+# the other four are 8-11s. A single figure was published here and in AGENTS.md
+# and it was that outlier, which overstated the cost by about half.
 #   Run, AN EARLIER FILE: two dry-run dispatches, ingot on ubuntu-24.04 (run
 #     35762662020) and piri on macos-14 (run 35765210724). They are where the
 #     runner derivation, the skip list and the assertion were observed, and
@@ -481,15 +484,22 @@ jobs:
     # this cannot differ by mode -- which is the property that makes it a second
     # mechanism rather than a restatement of the first.
     #
-    # THE FORK-PULL-REQUEST CASE IS REAL HERE NOW, which it was not while this
-    # workflow was dispatch-only. A pull request from a fork can name its branch
-    # `release/piri` and get this job to run its own code. Three things hold it:
-    # GITHUB_TOKEN is read-only for a fork pull request whatever this block
-    # says, `dry_run` is resolved to true for every pull request regardless of
-    # the input, and the token is not passed to goreleaser at all in that mode.
-    # So arming publishing is no longer a matter of granting contents:write and
-    # packages:write here -- doing that alone would hand a fork's branch a
-    # writable token. It needs the grant to be conditional on the event, or the
+    # THIS JOB DOES NOT RUN FOR A FORK at all -- see the `if:` above, which
+    # requires a same-repository pull request -- so the fork question here is
+    # only about what arming publishing would cost. An earlier revision of this
+    # comment described the world before that gate, and listed three things
+    # holding a fork back that the gate then made beside the point.
+    #
+    # What still matters: a `pull_request` runs the workflow definitions from
+    # the pull request's own commit, so a fork's copy of this file is whatever
+    # the fork wrote, and neither the `if:` above nor this block is in it. Only
+    # GITHUB_TOKEN being read-only for a fork pull request survives that, and it
+    # survives it regardless of what is granted here.
+    #
+    # So arming publishing is not a matter of granting contents:write and
+    # packages:write here: doing that alone would widen what a same-repository
+    # pull request can do, since `runs-on` and the whole build come from the
+    # pull request's tree. It needs the grant conditional on the event, or the
     # publish path moved to a workflow a pull request cannot trigger.
     permissions:
       contents: read

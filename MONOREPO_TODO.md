@@ -174,8 +174,10 @@ temporary.
 ## Decide whether CI should run only what a change affects
 
 Nothing in `.github/` filters by path: no `paths:`, no `paths-ignore:`, no
-changed-files detection. Every push runs all four workflows and every job in
-them. `ci.yml`'s own header says why:
+changed-files detection. Every push to `main` runs all four workflows that
+trigger on one, and every job in them; a pull request runs five, since `release`
+added a `pull_request` trigger — though on an ordinary branch that one resolves
+no service and costs only its short `plan` job. `ci.yml`'s own header says why:
 
 > Unfiltered by path on purpose: one job per module and no filter list means a
 > new shared module cannot fall out of one and go silently green.
@@ -428,8 +430,10 @@ published. The plan treated `forge` at `f60dd59` as a starting point that
 already had that apparatus; this repository was built from subtree imports
 instead, and the apparatus was never part of them.
 
-**There is one now, and it is deliberately not armed** — dispatch-only, dry-run
-by default, and it never creates a tag. It does not close this entry. What it
+**There is one now, and it is deliberately not armed** — it publishes nothing,
+is dry-run by default, and never creates a tag. (It is no longer dispatch-only:
+a pull request from a `release/<svc>` branch runs it too, which is what makes
+the release path continuously checked rather than checked when recalled.) It does not close this entry. What it
 supplies is the build-and-verify path; what remains is the part that was always
 the hard bit, and it is a decision rather than a workflow: **while the polyrepo
 still releases these same services, a tag cut here gives each one two sources
