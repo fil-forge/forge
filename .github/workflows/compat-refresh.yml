@@ -1,0 +1,131 @@
+name: compat-refresh
+
+# Keep every open release pull request's compat answer current.
+#
+# WHY THIS EXISTS AT ALL. compat.yml asks "does the release proposed here still
+# work against what is already deployed?" -- and the answer changes without the
+# pull request changing, because the deployed side is read live from the
+# registry. An upstream release lands, the window moves, and a release pull
+# request that was green yesterday is no longer known to be green. Nothing about
+# the pull request triggers anything, so without this its check is simply old.
+#
+# WHY NOT A SCHEDULE ON compat.yml ITSELF. A `schedule:` trigger always runs on
+# the default branch, so that version tests `main` -- and a result about `main`
+# has no decision attached to it. `main` is not deployed; a red there leaves you
+# working out which pending release it implicates, which is the work the release
+# pull request was supposed to have already done for you. Same test, actionable
+# in one place and not the other.
+#
+# WHY RE-RUN RATHER THAN DISPATCH. `gh workflow run --ref release/piri` would
+# also run compat against that branch, but the result is a run on a branch, not
+# a check on the pull request -- so the fresh answer would sit somewhere other
+# than where the merge decision gets made. A re-run reuses the pull request's
+# own run, at its own commit, and replaces the check in place. That attachment
+# is the whole reason for this file's shape.
+#
+# WHAT IT GIVES UP: nothing runs while no release pull request is open. An
+# upstream incompatibility that lands in a quiet week is then found when the
+# next release is proposed rather than when it appeared. That is deliberate --
+# the earlier signal had nobody to act on it -- but it IS the trade, and if the
+# lead time turns out to matter the answer is a scheduled run that opens or
+# annotates a release pull request, not one that tests `main`.
+
+on:
+  schedule:
+    # 07:00 UTC daily -- after the US evening merges, before the EU morning.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+# The first workflow here to want more than `contents: read`, so it is worth
+# saying what for: listing pull requests, and re-running a workflow run. It
+# starts nothing new and can reach nothing this repository does not already run.
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Re-run compat on every open release pull request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Re-run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # DERIVED from the open pull requests, never a list kept here: a
+          # release branch that this file had not been told about would
+          # otherwise go unrefreshed, which is the failure mode that looks
+          # exactly like success.
+          #
+          # ASSIGNED AND TESTED, not piped into mapfile, because "could not ask"
+          # and "nothing to refresh" are different answers and the pipe form
+          # cannot tell them apart -- `mapfile < <(...)` discards the subshell's
+          # status, so a gh that cannot reach the API produces an empty list,
+          # the early exit below, and a green run that refreshed nothing. That is
+          # the same failure compat-window.sh's `|| true` had, one file over.
+          if ! raw=$(gh pr list --repo "$REPO" --state open --limit 100 \
+                       --json number,headRefName,headRefOid \
+                       --jq '.[] | select(.headRefName | startswith("release/"))
+                                 | "\(.number)\t\(.headRefName)\t\(.headRefOid)"'); then
+            echo "::error::could not list pull requests. Refusing to report that" \
+                 "as 'nothing to refresh': every open release pull request would" \
+                 "keep a stale green check and nobody would know." >&2
+            exit 1
+          fi
+
+          # `grep .` drops a blank line rather than letting one become an
+          # element: an empty row would be "refreshed" as a pull request with no
+          # number, and the tally at the end would count it.
+          mapfile -t prs < <(printf '%s' "$raw" | grep . || true)
+
+          if [ "${#prs[@]}" -eq 0 ]; then
+            echo "No open release/* pull request. Nothing to refresh."
+            exit 0
+          fi
+
+          stale=0
+          for row in "${prs[@]}"; do
+            num=${row%%$'\t'*}; rest=${row#*$'\t'}
+            branch=${rest%%$'\t'*}; sha=${rest##*$'\t'}
+            echo "::group::#$num ($branch @ ${sha:0:8})"
+
+            # The pull request's OWN latest compat run, matched on the head sha
+            # so a re-run cannot resurrect a run for code the branch has moved
+            # past. `--json` rather than parsing the table, because the table's
+            # columns are a display format.
+            if ! run=$(gh run list --repo "$REPO" --workflow compat.yml \
+                         --branch "$branch" --limit 20 \
+                         --json databaseId,headSha,event \
+                         --jq "[.[] | select(.headSha == \"$sha\" and .event == \"pull_request\")]
+                               | first | .databaseId // empty"); then
+              echo "::error::could not list compat runs for $branch." >&2
+              exit 1
+            fi
+
+            if [ -z "$run" ]; then
+              # Not a failure: a pull request opened since the last compat run,
+              # or one whose run has aged out of retention. Said out loud rather
+              # than passed over, because "nothing to re-run" and "re-ran
+              # nothing" read the same in a green log.
+              echo "no compat run at $sha yet -- nothing to re-run" >&2
+              stale=$((stale + 1))
+              echo "::endgroup::"
+              continue
+            fi
+
+            echo "re-running $run"
+            gh run rerun "$run" --repo "$REPO"
+            echo "::endgroup::"
+          done
+
+          echo
+          echo "${#prs[@]} open release pull request(s), $stale with no run to re-run."

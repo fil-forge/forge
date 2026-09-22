@@ -7,8 +7,26 @@ name: compat
 # field is a mix: we run sprue and hilt, third-party operators run piri and
 # ingot and upgrade on their own schedule. This workflow tests that skew.
 #
-# NIGHTLY, NOT PER-PR, because it needs published images and a pull request's
-# code has not been released. Also on demand.
+# IT RUNS ON A RELEASE PULL REQUEST, AND NOWHERE ELSE ON ITS OWN. A pull request
+# from a `release/<svc>` branch is the one place the question has an answer
+# somebody acts on: red means do not merge this release. The same run against
+# `main` produces a result with no decision attached -- `main` is not deployed,
+# so a red there leaves you working out which pending release it implicates.
+#
+# It takes no service. Unlike release.yml it tests the whole stack against the
+# window, so a release pull request for any service gets the same run; the
+# branch name is only the signal that a release is being proposed.
+#
+# THE ANSWER GOES STALE WITHOUT THE CODE CHANGING, which is why this file has no
+# `schedule:` and `compat-refresh.yml` does. The pinned side is read live from
+# the registry, so the same commit can face a different fleet tomorrow: an
+# upstream release lands, the window moves, and a release pull request that was
+# green is no longer known to be. That workflow re-runs THIS one on every open
+# release pull request, daily. Re-runs, rather than starting a fresh run against
+# the branch, because a re-run stays attached to the pull request and so lands
+# the fresh answer where the merge decision is made.
+#
+# Also on demand.
 #
 # THE PINNED SIDE IS THE POLYREPOS' IMAGES -- ghcr.io/fil-forge/<svc>. Those
 # are what ships to the network today, so they are what "already deployed"
@@ -22,9 +40,9 @@ name: compat
 # pin against?" -- and cannot drift from it.
 
 on:
-  schedule:
-    # 07:00 UTC daily -- after the US evening merges, before the EU morning.
-    - cron: '0 7 * * *'
+  # No `branches:` filter would help: it matches the BASE branch, and what
+  # selects a release here is the HEAD branch. The job condition below does it.
+  pull_request:
   workflow_dispatch:
     inputs:
       window:
@@ -43,6 +61,13 @@ concurrency:
 jobs:
   window:
     name: Resolve the published window
+    # A release pull request, or a dispatch. Every other pull request skips
+    # this job, and `compat` needs it, so both skip together -- which costs an
+    # ordinary pull request nothing, and matters because the compat job below
+    # is capped at an hour.
+    if: >-
+      github.event_name != 'pull_request' ||
+      startsWith(github.head_ref, 'release/')
     runs-on: ubuntu-latest
     # TWO JSON OBJECTS, not one entry per service. A hand-written list here was
     # wrong in both available directions at once: it named `base_sprue`, which
@@ -72,7 +97,7 @@ jobs:
     # the registry, rather than reporting that as "no releases". It used to do
     # the latter, which made an outage look like this case: four "publishes no
     # version-tagged image" lines, pinnable=false, this job skipped, and the
-    # nightly green having asserted nothing.
+    # run green having asserted nothing.
     if: needs.window.outputs.pinnable == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60

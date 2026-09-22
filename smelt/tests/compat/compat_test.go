@@ -30,8 +30,11 @@
 //	                   catches expand/contract violations, because it exercises
 //	                   the window where old and new are both live.
 //
-// Runs behind the `compat` tag, nightly and before a release, never on PRs —
-// it needs published images, which a PR's code does not have yet.
+// Runs behind the `compat` tag, on a release pull request and nowhere else on
+// its own -- that is the one place its answer has a decision attached, since
+// red there means do not merge this release. `compat-refresh.yml` re-runs it
+// daily on every open release pull request, because the pinned side is read
+// live from the registry and so the answer goes stale without the code moving.
 //
 // # Where the pinned side comes from
 //

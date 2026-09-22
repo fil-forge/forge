@@ -21,7 +21,7 @@
 # of this script is that it never confuses them. An earlier revision wrapped
 # the registry read in `|| true`, so a network failure printed "publishes no
 # version-tagged image" for all four services, exited 0 with pinnable=false,
-# and the nightly went green having tested nothing. Now: a package the registry
+# and the run went green having tested nothing. Now: a package the registry
 # declines to mint a token for reports none, and any OTHER failure aborts.
 #
 # Output is `key=value` lines on stdout, suitable for appending to
@@ -41,8 +41,8 @@
 #                                   registry failing is now fatal, that can only
 #                                   mean piri and ingot both publish no
 #                                   version-tagged image -- the bootstrap case,
-#                                   which should not give the nightly a
-#                                   permanent red.
+#                                   which should not give this a permanent
+#                                   red.
 #
 # The KEY is the package name upper-cased with `-` as `_`, which is what the
 # test reads as COMPAT_BASELINE_<KEY>. Package, never smelt's service name:
@@ -89,7 +89,7 @@ tags_for() {
       # tags/list with a 404. 401 and 404 were in this list as a guess, and a
       # guess in this position fails open: simulated, a 401 gave four "no
       # version-tagged image" lines, exit 0, pinnable=false, the compat job
-      # skipped and the nightly green having asserted nothing. That is the exact
+      # skipped and the run green having asserted nothing. That is the exact
       # failure the `|| true` above it was removed to close.
       return 10 ;;
     *) echo "$svc: token endpoint answered HTTP $code" >&2; return 1 ;;
