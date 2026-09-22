@@ -277,9 +277,9 @@ rm -rf "$mute"
 #    after it are never probed -- silently, with exit 0.
 build_fixture 'example.com/fixture/pkg/buildTYPO'
 # The name has to SORT BEFORE the real binary's directory, or there is nothing
-# left after it to swallow and this test passes with the bug present -- which
-# it did, on the first version of it. `aaa` before the goos does that, and the
-# goarch is still in the name so the host-arch filter still selects it.
+# left after it to swallow and this test passes with the bug present. `aaa`
+# before the goos does that, and the goarch is still in the name so the
+# host-arch filter still selects it.
 hungry=$svc/dist/fixture_aaa_$(go env GOHOSTOS)_$(go env GOHOSTARCH)
 mkdir -p "$hungry"
 cat > "$tmp/hungry.go" <<'EOF'
@@ -311,8 +311,9 @@ cp "$bin" "$nobuild/dist/nobuild_$(go env GOHOSTOS)_$(go env GOHOSTARCH)/nobuild
 refuses_in "$nobuild" "a service with no build package is refused" \
   "could not find" dist v7.7.7
 
-# 8. A BINARY THAT NEVER EXITS MUST NOT HANG THE RELEASE. run_probe's cap is
-#    the round-3 fix for a perl `alarm` that Go ignores; nothing exercised it.
+# 8. A BINARY THAT NEVER EXITS MUST NOT HANG THE RELEASE. This is the only
+#    test that exercises run_probe's cap at all, and it is why the suite costs
+#    ~40s rather than ~18s.
 build_fixture 'example.com/fixture/pkg/build'
 stuck=$svc/dist/fixture_$(go env GOHOSTOS)_$(go env GOHOSTARCH)_zzz
 mkdir -p "$stuck"

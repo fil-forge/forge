@@ -802,8 +802,10 @@ paths, and inside the repo the sibling edges are `replace ../<svc>`. So:
   decision to the moment it has a concrete requester.
 - **Drive goreleaser without a tag**, templating the version from an
   environment variable rather than `{{.Version}}`. Keeps OSS and the Go scheme,
-  at the cost of rewriting the ldflags in all four configs and losing
-  goreleaser's changelog.
+  at the cost of rewriting the ldflags in all four configs. (An earlier version
+  of this bullet also listed goreleaser's changelog as a cost. It is not one,
+  under any of these three options: all four configs already set
+  `changelog: disable: true`.)
 
 **What the table does not settle, and `release.yml` depends on.** Every row in
 the table above was measured with a *prefixed* tag. goreleaser's git pipe consults
@@ -816,15 +818,16 @@ goreleaser reported `couldn't find any tags before "v9.9.9"`, took
 `version: 9.9.9`. The rows above are not evidence for that case; this paragraph
 is.
 
-**`release.yml` sits closest to the third option, and reaches it more cheaply
-than that bullet describes.** It reads the version from `version.json`, never
-creates a tag, and hands goreleaser the plain semver through
-`GORELEASER_CURRENT_TAG` so the parse never happens — while still requiring the
-Go-scheme `<svc>/vX.Y.Z` tag to exist, and to point at the commit being built,
-before a real release proceeds. Neither cost that bullet names is actually
-paid: all four configs already stamp `-X …=v{{.Version}}`, so no ldflags need
-rewriting, and all four already set `changelog: disable: true`, so there is no
-changelog to lose.
+**`release.yml` reaches the third option's outcome by a different mechanism,
+and so pays its cost.** It reads the version from `version.json`, never creates
+a tag, and hands goreleaser the plain semver through `GORELEASER_CURRENT_TAG`
+so the parse never happens — while still requiring the Go-scheme
+`<svc>/vX.Y.Z` tag to exist, and to point at the commit being built, before a
+real release proceeds. That is the bullet's aim (keep OSS, keep the Go scheme)
+without its method: because `GORELEASER_CURRENT_TAG` makes `{{.Version}}`
+resolve correctly on its own, the four configs keep templating from it and no
+ldflags are rewritten. The bullet's method — templating from an environment
+variable instead — is what would force that rewrite.
 
 It does not use `--snapshot` in either mode, which would stamp
 `X.Y.Z-SNAPSHOT-<sha>` — a version the assertion can never match, so the
@@ -949,28 +952,37 @@ Measured: **4 failures in 80 runs** across eight concurrent
 `go test -race -count=10` processes; **zero** in ten solo runs. It went red once
 in CI, on a branch touching only `.github/scripts/` and `AGENTS.md`.
 
-**Fixed upstream**, in `indexing-service` as `2c48785`, and verified here: 80
-runs across eight concurrent `go test -race -count=10` processes, **zero
-failures**. It needed two barriers, not one, which is why it is still written
-up. Moving `wg.Done()` into `Delete`'s `Run` hook — the obvious repair, and the
-right barrier for that expectation — took it from 4 in 80 only to **1 in 80**.
-The remaining failure was a different unmet expectation:
+**A verified fix exists, and it is NOT on a branch a pull will deliver.** It is
+`indexing-service` `2c48785`, on that repository's `claude/forge-monorepo-poc-p9w0yr`
+branch only — `git merge-base --is-ancestor 2c48785 origin/main` exits 1. A
+`git subtree pull` tracks the default branch, so until that branch merges, this
+repository keeps the racy copy described above and the entry stays live.
+
+Measured here at 80 runs across eight concurrent `go test -race -count=10`
+processes, **zero failures**. It needed two barriers, not one, which is the part
+worth reading. Moving `wg.Done()` into `Delete`'s `Run` hook — the obvious
+repair, and the right barrier for that expectation — took it from 4 in 80 only
+to **1 in 80**. The remaining failure was a different unmet expectation:
 
 ```
     mock_CachingQueue.go:23: FAIL:  Read(string,int)
         at: [...cachingqueuepoller_test.go:58]
 ```
 
-the `Read` expectation declared `.Once()` that blocks on `<-ctx.Done()`. The
-poller can stop before it loops around to make that call, because `Stop()` is
-not a barrier for work in flight: it cancels the root context and then calls
-the job queue's `Shutdown` with that same, already-cancelled context, so
-`Shutdown` returns immediately rather than waiting for the workers to drain.
+the `Read` expectation declared `.Once()` that blocks on `<-ctx.Done()`. That
+call is simply never made: the poll loop `select`s on its root context and
+returns the moment `Stop()` cancels it, so it never comes round to
+`processJobs` again (`go-ipni-tools`, `pkg/queue/poller.go:173-178`).
 
-So the fix is two barriers. `wg.Done()` moves into `Delete`'s `Run` hook, which
-is the job's last step; and a `parked` channel, closed by the final `Read`'s
-`Run` hook, makes the test wait for the poll loop to reach its parked state
-before calling `Stop()`. Both must be satisfied first.
+**The two barriers answer two different mechanisms, which is the easy thing to
+get wrong here.** `Stop()` cancels the root context, waits for the loop to
+close `stopped`, and only *then* calls the job queue's `Shutdown` with that
+same, already-cancelled context — so `Shutdown` takes its `ctx.Done()` arm and
+returns without draining, losing a `Delete` still in flight. `wg.Done()` in
+`Delete`'s `Run` hook covers that one. The unissued final `Read` above is the
+other, and the `parked` channel — closed by that `Read`'s own `Run` hook —
+covers it, holding the test until the poll loop has actually parked. Both must
+be satisfied before `Stop()` is called.
 
 ## swarf
 
