@@ -170,19 +170,36 @@ rule 5 says ship none rather than a partial one. Keep them in a module's
 `testutil` package with a named const and an env override, not inline in a
 `_test.go`.
 
-## When a `git subtree pull` conflicts, finish the merge it could not follow
+## Run these with every `git subtree pull`
 
 ```
-.github/scripts/subtree-conflicts.sh <prefix>              merge and write
-.github/scripts/subtree-conflicts.sh --dry-run <prefix>    print the diffs only
+.github/scripts/finish-subtree-pull.sh <prefix>              merge, write, audit
+.github/scripts/finish-subtree-pull.sh --dry-run <prefix>    print the diffs only
+
+.github/scripts/resolve-rewrite-conflicts.sh                 take upstream + rewrite
+.github/scripts/resolve-rewrite-conflicts.sh --dry-run       say what it would take
 ```
 
-Run it **while the merge is still conflicted**. For every `deleted by us,
-modified by them` entry it finds where that file lives now and performs the
-three-way merge git would have performed if its rename detection had seen
-outside the prefix. Everything it needs is already in the index: stage 1 is the
-merge base, stage 3 is upstream, both at the old path, and our side is the file
-at its new home — an ordinary three-way merge, so `git merge-file` does it.
+**Flags come before the prefix.** `finish-subtree-pull.sh <prefix> --dry-run`
+used to ignore the flag and write anyway; it now refuses the trailing argument.
+
+The first runs after **every** pull, conflicted or not, and detects which it is
+rather than being told. The audit runs in both modes and speaks in both; what is
+true is narrower than an earlier revision of this line claimed — a pull with no
+conflicts at all is the case where the audit is *the only thing looking*, not
+the only case where it has something to say. The second is conflicted-pull-only, and exits 0
+saying so when there is no merge in progress, so running the pair
+unconditionally is safe.
+
+A subtree pull can lose an upstream change in two ways, and only one of them is
+loud, so the first script does two things.
+
+**The loud one.** For every `deleted by us, modified by them` entry it finds
+where that file lives now and performs the three-way merge git would have
+performed if its rename detection had seen outside the prefix. Everything it
+needs is already in the index: stage 1 is the merge base, stage 3 is upstream,
+both at the old path, and our side is the file at its new home — an ordinary
+three-way merge, so `git merge-file` does it.
 
 **It hands the result back in git's own terms.** A clean merge is written and
 staged. A conflicted one gets `--diff3` markers in the file *and* index stages
@@ -191,13 +208,37 @@ staged. A conflicted one gets `--diff3` markers in the file *and* index stages
 needs to know the script ran.
 
 **stdout is diffs and nothing else**, so `--dry-run` can be read, graded or
-piped. Notes and problems go to stderr. **Exit 1 if anything was left for a
-human**, which is what makes it safe to call from a script.
+piped — and a dry run that would resolve everything exits **0**, which it did
+not until the index was stopped from being read as evidence about a run that
+stages nothing. Notes and problems go to stderr. **Exit 1 if anything was left
+for a human or flagged by the audit, 2 if the script refused to act at all**.
+Test for non-zero, not for 1. **The seven refusals are enumerated in the
+script's own header, not here** — this file carried a second copy that went
+stale over the path-space refusal, which was added without updating it, and was
+born already missing the 200-merge one. Two copies of a derivable list is the
+failure rule 3 names, and the copy that is not next to the code is the one that
+rots.
 
 It applies only where a rename was recorded *and* the destination verified to
 exist. It refuses a same-basename guess, a true delete, a destination with
-uncommitted changes, and a binary (where `merge-file` yields plausible garbage
-rather than failing). Those are reported and skipped, never guessed at.
+uncommitted changes, a destination that is a symlink (the write is a redirect,
+and a redirect follows the link — the merged text landed in an unrelated
+tracked file and the run said `merged`), and a binary (where `merge-file`
+yields plausible garbage rather than failing). Those are reported and skipped,
+never guessed at.
+
+**It cannot audit a pull from an upstream that carries this repository's own
+history and layout** — a hand-made fork-back, not anything `git subtree push`
+produces, since that pushes rewritten commits in upstream's path space. In that
+state the pull merge is indistinguishable from an ordinary `Merge pull request`
+by ancestry and by path space alike, which is every signal available locally.
+Four successive review rounds each proposed a heuristic and each was measured
+wrong. What the script does is refuse where it can see the problem (the merge
+base lands in our path space) and say what "never pulled" rests on where it
+cannot. **That is the decision, not an open question:** no fork-back is expected
+against these ten upstreams, so the case is left unhandled on purpose. Do not
+add a fifth heuristic. Reopen it only if an upstream actually merges this
+repository's history — and then the fix is a remote, not another local signal.
 
 **Why react to the conflict rather than predict it:** you cannot predict it.
 Measured (matrix on the wiki):
@@ -217,11 +258,82 @@ Things that are true and worth not rediscovering:
 - **A rename/delete is reported at upstream's NEW path**, which never existed in
   our history. `MERGE_HEAD` is in upstream's path space (no prefix), so its own
   diff names the rename; the script uses that to map back.
-- **One gap it cannot cover.** When upstream *deletes* a file we moved out, both
-  sides deleted the path, so git raises no conflict at all — the pull succeeds
-  silently and we keep carrying a file upstream removed. Nothing in a
-  conflict-driven tool can see that; it needs an audit that runs when nothing
-  conflicted.
+
+**The quiet one, and the reason the name changed.** When upstream *deletes*
+a file we had moved out of the prefix, **both sides deleted that path, so git
+raises no conflict at all** — no status entry, nothing to react to. The pull
+succeeds in silence and we keep carrying a file upstream removed. So the audit
+does not wait to be asked: it reads upstream's own diff against the previous
+split point and reports deletions whose file we still have. It runs in both
+modes, including after a pull with no conflicts whatsoever, which is precisely
+when it is the only thing looking. `-M` is load-bearing there — without it a
+rename upstream reads as a delete and every one is a false positive.
+
+Exit is non-zero if anything was left for a human *or* anything was flagged by
+the audit, so a caller can act on the status rather than parse prose. The audit
+reports two kinds and counts them apart: a **carried** file, where our own
+rename chain proves we moved it, and one **to confirm**, where nothing outside
+the prefix is proven to be the same file but something shares its basename.
+The second is a lead — between 16% and 81% of a prefix's basenames also exist
+outside it — so it is never described as a move.
+
+## The other half of the conflicts: `resolve-rewrite-conflicts.sh`
+
+Everything above is about files we moved out of a prefix. The far more common
+conflict is the one this repository creates by existing: every service's
+imports were rewritten from `github.com/fil-forge/<svc>` to
+`github.com/fil-forge/forge/<svc>`, so a pull conflicts on every file where
+upstream touched that import block. **Fourteen of them in one resync**, each
+the same non-decision.
+
+`resolve-rewrite-conflicts.sh` takes upstream's file and re-applies the
+rewrite — but only where that is provably safe. What it writes for a `.go` file
+is `gofmt(rewrite(theirs))`, not `rewrite(theirs)`: it reformats, so deliberate
+spacing and CRLF do not survive it. Measured exposure today is zero — `gofmt -l`
+over the tree reports nothing and there is no CRLF in it — but that is a fact
+about the tree, not about the script.
+
+**The check is the point, not the fix.** It is safe only if our side carries
+nothing upstream could disagree with, so the script verifies per file that
+`rewrite(base)` is *exactly* ours, and refuses with a diff when it is not.
+`go.mod` and `go.sum` fail it every time, which is the check working: those
+carry real decisions (siblings at `v0.0.0` with `replace ../<svc>`, a unified
+libforge) that have to be re-applied by hand.
+
+`gofmt` normalises both sides for `.go` files, and that is load-bearing, not
+tidiness: the rewrite inserts `forge/` into the path, which can move the line
+**within** its import group, because `gofmt` sorts each group lexicographically.
+Not because the path got longer, and `gofmt` never reorders the groups
+themselves — measured: `fil-forge/piri/…` sorts *after* `fil-forge/libforge/…`
+and `fil-forge/forge/piri/…` sorts *before* it, since `forge/` < `libforge/`.
+Without normalising, a file whose only difference *is* the rewrite compares
+unequal and gets refused.
+
+**Neither tool sees the third class.** A hunk can merge *cleanly* and still
+carry a polyrepo import path, because it never touched a line we had rewritten
+— true of a file upstream added and of an existing file that merely gained an
+import. Nothing conflicts, so nothing reports it. So after every pull, before
+trusting a build, sweep the prefix for them:
+
+```sh
+svcs=$(for d in */; do [ -f "$d/go.mod" ] && printf '%s|' "${d%/}"; done)
+grep -rnE "github\.com/fil-forge/(${svcs%|})([^A-Za-z0-9_-]|$)" <prefix>/
+```
+
+Derived from the top-level directories with a `go.mod` — the same set
+`resolve-rewrite-conflicts.sh` builds — rather than typed out, so a service
+added or renamed needs no edit here (rule 3). Not the same set as `go.work`,
+which also lists `hilt/itest` and `ingot/itest`; those are caught anyway by
+their parent's alternative. Add `| grep -v 'https\?://'` if you only want
+module paths: most of the hits are repository URLs the monorepo deliberately
+left pointing at their own repositories.
+
+**A guard script for this does not exist on this branch.** An earlier revision
+of this paragraph named `check-module-paths.sh` as though it did; it is added by
+the subtree-resync pull request, not this one, and `.github/scripts/` is the
+list (rule 3) — a reader who looked there found nothing and either skipped the
+step or assumed it had run. When that script lands, this block becomes a call to
+it.
 
 ## Conventions
 
