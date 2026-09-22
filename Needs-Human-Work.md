@@ -25,9 +25,31 @@ now corrected in #19.
 | | what | state |
 |---|---|---|
 | [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | round 1 found **six, two blocking**; all six worked and pushed. Round 2 running. CI green on the previous head |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | round 1 running. Both event paths verified by real runs |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | round 1 found **five**; all five fixed at `2e1e690c`. Round 2 running. Both event paths verified by real runs |
 
-**Round 1 on #18 is the one worth reading.** Its two blocking findings were the
+**Round 1 on #19 found a security hole worth knowing about even if the PR
+changes shape.** `plan` derives the release runner by parsing
+`<svc>/.goreleaser.yaml` **from the pull request's own tree**, so a fork could
+have named a branch `release/ingot`, added a darwin build with `CGO_ENABLED=1`
+to that config, and put a **macos-14 runner under its own goreleaser hooks for
+forty minutes**. The repository is public, forkable, and has a fork; every other
+pull-request workflow here is pinned to ubuntu, so that file was the only route
+to a macOS runner. No secret was exposed — the token is read-only on a fork pull
+request and is not passed to goreleaser in dry-run mode — but arbitrary code on
+a runner we pay for is not something to leave open because the credential half
+is covered. **The build job now runs on a pull request only from this
+repository.** Cutting the job rather than pinning the runner, because piri's
+darwin cgo build cannot be cross-compiled from linux, so a pinned
+`release/piri` pull request would fail rather than be safe.
+
+Round 1's other four: the header cited two runs that executed a *different*
+`release.yml` (the same class the commit before it was written to fix);
+`dry_run` failed open on any string but `true`, and it gates the token; a pull
+request could cancel an in-flight dispatch through a shared concurrency group;
+and `AGENTS.md` still said this workflow "is not part of what a change costs",
+now measured at 16s of `plan` per pull request.
+
+**Round 1 on #18 is the other one worth reading.** Its two blocking findings were the
 same failure from both ends: **neither compat test could boot a stack** (seven
 of eight image variables unset against required compose interpolations —
 `${HILT_IMAGE:?...}` and siblings), and **nothing in CI compiled the suite**,
