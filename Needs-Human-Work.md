@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 22:30Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 22:50Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `2864c295`. Round six found six, one blocking; all worked and pushed, round seven running. `d18b640b` was green: 28 checks, 25 success, 3 deliberate skips |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1691b59c`. **Rounds stopped at seven**, per rule 10 as amended by #22: round seven's two findings were fixed with a comments-only push, which is the skip condition. Waiting on CI and on you |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 
@@ -87,6 +87,38 @@ same as not saying it.
 One finding is **deliberately not acted on**: a fork pull request with a
 `release/*` head passes the gate. Forks are not this repository's threat model,
 and the fork gate removed in `d4e95ea2` could not have worked anyway.
+
+### Round seven, and why it is the last one
+
+Two findings, and both are the same shape: **a correct piece of code defended
+by a false premise.** Neither changed behaviour, and both would have misled
+whoever touched the code next, which is what makes them worth a round.
+
+- The refresher's ref-less concurrency group was justified with "it only ever
+  runs from the default branch". Only `schedule:` is. A `workflow_dispatch`
+  runs on whatever ref is picked — `gh workflow run --ref`, the UI dropdown, or
+  `ref` in the REST body — and that is **exactly the case the ref-less group
+  covers**, since a ref-keyed one would put a dispatch on a branch in a
+  different group from the scheduled run and let both go at once. So the
+  comment argued the group was redundant when it is load-bearing.
+- The age diagnosis claimed to explain "the refusal whose cause the API error
+  never names". Backwards: GitHub answers it with "Unable to retry this
+  workflow run because it was created over a month ago", and `gh run rerun`'s
+  whole-run path forwards the server message verbatim — it is the `--job` path
+  that replaces it with a generic string, and that is a different command. What
+  the block actually adds is the exact age, 30 days in place of "over a month",
+  and the consequence: that this pull request's check can no longer be
+  refreshed at all.
+
+**Rounds stop here.** The fixing push changed only `#` lines, and rule 10 as
+amended by #22 skips a round when that is all that changed. #18 stays Open.
+
+Worth noting for the practice itself: rounds six and seven each found real
+things after five rounds that had stopped finding them, and what changed was
+the brief — both were scoped to one push rather than the whole PR, and both
+pushes contained shell. Round seven independently re-executed the loop with
+real `jq` against fixture JSON rather than reading it, which is the method that
+has found every bug in that script.
 
 ### A near miss worth recording, about this wiki
 
