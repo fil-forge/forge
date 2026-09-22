@@ -393,7 +393,7 @@ The tally, because the shape is the finding:
 | PR | rounds so far | last verdict | head | state |
 |---|---|---|---|---|
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
-| #14 | 1 on the rebuild | 5 findings, all fixed | `64634519` | **Open**, base `main` |
+| #14 | 4 on the rebuild | **satisfied** | `26061659` | **Open** — waiting on one uncancelled `itest` run |
 | #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
 | #13 | 8 | 4 findings, all fixed | — | **MERGED** as `226aa57d` |
 | #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
