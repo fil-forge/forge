@@ -128,8 +128,10 @@ different, and a draft cannot be merged.)
 - The review agent writes, verbatim and only when it found nothing:
   **"Satisfied. No findings this round. This PR is ready for human review."**
   That sentence's existence is the fact; it is told not to write it otherwise.
-- **A PR stays a draft while a round is open, and goes Open when a round comes
-  back satisfied.** Draft is the visible half of the same signal.
+- **A PR stays a draft while a round is open, and goes Open once a round comes
+  back satisfied.** Draft is the visible half of the same signal. **The flip is
+  the human's to make**, not the agent's — it is the point at which someone
+  else is being asked to spend time.
 
 **Every round posts, not only the satisfied one.** An unsatisfied agent
 reporting back privately makes the comment's *existence* the signal, which is
@@ -140,8 +142,26 @@ finding — the part actually worth reading.
 on a PR you authored, and everything here is authored by one account;
 `event: "COMMENT"` is accepted.
 
-**Put each major section in a `<details>` block**, so a long review does not
-cost a screen of scrolling while its detail stays available.
+**A review collapses its bulk, never its verdict.** A thorough review is long,
+and the evidence buries the next thing to do. So:
+
+- **Outside any `<details>`:** the verdict line, the number of findings, and
+  when satisfied the exact sentence above. That is what a reader gets at a
+  glance, and it is never hidden behind a disclosure.
+- **Each finding in its own `<details>`**, whose `<summary>` states it in one
+  line — so collapsed, the review reads as a scannable list of findings.
+  `<details open>` for one the reviewer considers blocking.
+- **Verification and what checked out: one `<details>`**, collapsed.
+- **Evidence — command output, tables, diffs — goes inside** the relevant
+  `<details>`, never above it.
+
+GitHub needs a blank line after `</summary>` or the markdown inside will not
+render. Do not wrap a review so short that the machinery outweighs it: one
+finding and three lines of evidence stays flat.
+
+**A review from a real human carries information that an agent round does
+not**, precisely because everything here is authored by one account. Surface
+it; do not treat it as the signal above.
 
 **A number earns its place only if a reader's decision changes with it.** This
 applies to review comments, PR bodies and code comments alike, and it is the
