@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 21:50Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 21:55Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -24,36 +24,49 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | **Open**, head `12eed736`, CI 24/24 green. Rounds stopped. One open question below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `d18b640b`, CI running. One round open on the new workflow — it is shell, not comments, so rule 10's skip does not apply |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
-| [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | Open, no round (by the rule it adds — prose-only) |
+| [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 
-## Open: should `compat.yml` keep its schedule?
+## Settled: compat runs on the release pull request, and a refresher keeps it fresh
 
-Petra's question on [#18](https://github.com/fil-forge/forge/pull/18) — now that
-the release-pull-request gate is merged, should compat run there rather than
-nightly?
+My answer was half right and Petra's reframing was better. I argued for keeping
+a schedule so an upstream release could not silently break us. Her point: **the
+question worth asking is "does the release in THIS pull request break compat?"**,
+and the answer to that changes over time without the pull request changing. A
+schedule on `main` answers a different question badly — `main` is not deployed,
+so a red there has no decision attached and leaves you working out which pending
+release it implicates.
 
-**Yes to the release pull request. No to dropping the schedule**, and the second
-half is a disagreement rather than a hedge. `compat-window.sh` reads the
-registry live, so the pinned side moves independently of us: if piri ships
-`0.3.0` upstream next week and it is incompatible with our HEAD, **no pull
-request of ours fires**. Only a schedule catches that. The release pull request
-answers "did our change break compat?"; the schedule answers "did *their*
-release break compat?", which is the question the polyrepo-images design was
-chosen to make answerable.
+So, at `d18b640b`:
 
-Cost of keeping it is one run a day, most identical to yesterday's. Weekly would
-still catch a moved window within a week.
+- **`compat.yml` loses `schedule:` and gains `pull_request:`**, gated on a
+  `release/*` HEAD branch via a job condition (`branches:` filters the base).
+  It takes no service — it tests the whole stack against the window — so any
+  release pull request gets the same run.
+- **`compat-refresh.yml` is new.** A `schedule:` always runs on the default
+  branch, so it cannot BE the compat run for a pull request. Instead it lists
+  the open release pull requests and **re-runs each one's own compat run**.
+  Re-running rather than dispatching against the branch is the whole point: a
+  re-run stays attached to the pull request and replaces its check in place, so
+  the fresh answer lands where the merge decision is made.
 
-The trigger itself is simpler than `release.yml`'s: compat resolves no service —
-it tests the whole stack against the window — so it is just "is this a
-`release/*` branch", with no per-service logic. It does need that scoping: the
-job is `timeout-minutes: 60`, so it cannot run on every pull request.
+**A bug was caught by testing it rather than reading it**, and it is the same
+class as the `|| true` removed from `compat-window.sh` one file over:
+`mapfile -t prs < <(gh pr list ...)` discards the subshell's exit status, so an
+unreachable API gave an empty list, the "nothing to refresh" early exit, and a
+green run. Six paths now exercised against a stubbed `gh`; the three failure
+modes exit 1.
 
-**Recommended placement: in #18 rather than a follow-up**, now that #19's shape
-is settled. Shipping a schedule-only `compat.yml` and changing it immediately is
-churn, and #18 owns the file. **Waiting on Petra.**
+**First workflow here to want more than `contents: read`** — `pull-requests:
+read` and `actions: write`, to list and to re-run.
+
+**What it gives up, and it is in the file:** nothing runs while no release pull
+request is open, so an upstream incompatibility landing in a quiet week is found
+when the next release is proposed rather than when it appeared. Deliberate — the
+earlier signal had nobody to act on it — but if the lead time turns out to
+matter, the fix is a scheduled run that *opens or annotates* a release pull
+request, not one that tests `main`.
 
 ## The review rounds are stopped on both, and the reason is measurable
 
