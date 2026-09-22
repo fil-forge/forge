@@ -27,10 +27,10 @@ below is an event.
 
 What a replacement probably keeps: rules 2 through 5, which are about the code
 and its CI rather than about moving it, and the commands and conventions at the
-end. What it probably drops: rules 1 and 6 through 10 — including the whole
-agent-review practice, which lasts only until the rest of the team is reviewing
-— the wiki, most of the
-document table, and the per-pull-request **skippable-checks block** — by then
+end. What it probably drops: rules 1 and 6 through 10, the agent-review
+practice among them (it lasts only until the rest of the team is reviewing),
+the wiki, most of the document table, and the per-pull-request
+**skippable-checks block**. By then
 the wiki's content belongs in the repository or in issues, *Needs Human Work*
 should be empty, and the blocks should have been replaced by real filtering
 designed from what they turned out to say. Do not treat that split as settled;
@@ -117,26 +117,28 @@ because nobody looked at it again is what this replaces. **This whole practice
 is temporary**, like everything else in this file: it lasts as long as the
 consolidation does, and the team develops its own when it arrives.
 
-**Open a review round on every push.** A subagent reads the PR and verifies its
-claims against the tree rather than against the body. Rounds repeat until one
-comes back with nothing.
+**Open a review round on every push.** A **review agent** reads the PR and
+verifies its claims against the tree rather than against the body. Rounds
+repeat until one comes back with nothing. ("Reviewer" elsewhere in this file —
+in the skippable-checks block — means the human who merges; these are
+different, and a draft cannot be merged.)
 
 **Two signals, and they are deliberately mechanical.**
 
-- The reviewer writes, verbatim and only when it found nothing: **"Satisfied.
-  No findings this round. This PR is ready for human review."** That sentence's
-  existence is the fact; a reviewer is told not to write it otherwise.
-- **A PR stays a draft while a review is open, and goes Open when a reviewer is
-  satisfied.** Draft is the visible half of the same signal.
+- The review agent writes, verbatim and only when it found nothing:
+  **"Satisfied. No findings this round. This PR is ready for human review."**
+  That sentence's existence is the fact; it is told not to write it otherwise.
+- **A PR stays a draft while a round is open, and goes Open when a round comes
+  back satisfied.** Draft is the visible half of the same signal.
 
-**Every round posts, not only the satisfied one.** An unsatisfied reviewer
+**Every round posts, not only the satisfied one.** An unsatisfied agent
 reporting back privately makes the comment's *existence* the signal, which is
-tidy and leaves the one person reviewing with no sight of what the reviews are
+tidy and leaves the one person merging with no sight of what the rounds are
 finding — the part actually worth reading.
 
 **`COMMENT` is the mechanism.** GitHub rejects `APPROVE` and `REQUEST_CHANGES`
 on a PR you authored, and everything here is authored by one account;
-`event: "COMMENT"` is accepted. Verified before the practice went out.
+`event: "COMMENT"` is accepted.
 
 **Put each major section in a `<details>` block**, so a long review does not
 cost a screen of scrolling while its detail stays available.
@@ -437,15 +439,16 @@ rewrite(upstream tree)` modulo a declared list of transformations. It is not
 built, deliberately — it is complex, error-prone, and would have to be trusted.
 **This list is what stands in for it**, and it is walked by hand (which in
 practice means an agent, at least on the first pass). Every entry below is a
-thing that actually happened. Two of them happened *twice* — the build tag and
-the itest-only bump were both fixed in one resync and came back in the next.
+thing that actually happened, and recurrence is the norm rather than the
+exception: the build tag and the itest-only bump were each fixed in one resync
+and back in the next, and the polyrepo-import class has shown up in every
+resync so far, in two different shapes (see below).
 
 - **A polyrepo import path in a hunk that merged cleanly.** Upstream adds an
   import, or touches a file we never rewrote, and `github.com/fil-forge/<svc>`
-  survives. `check-module-paths.sh` reports these — but its header names what
-  it does **not** read (`Makefile`, `*.yaml`, `*.json`, `*.sh`, `go.sum`), and
-  those are still yours. Most fail `go build` a step later; the dangerous one
-  is the reference that still compiles, like an otel meter name.
+  survives. `check-module-paths.sh` reports these, over the file types named
+  above — the rest are still yours. Most fail `go build` a step later; the
+  dangerous one is the reference that still compiles, like an otel meter name.
 - **A build tag upstream needs and we do not.** `ingot/itest` is its own module
   here with its own CI job, so upstream's `//go:build itest` only subtracts:
   `go test -list '^Test'` returned 13 where `-tags itest` returned 14, and the
