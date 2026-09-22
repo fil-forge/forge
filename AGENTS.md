@@ -337,14 +337,31 @@ above is for looking at a single prefix mid-pull; CI covers the tree. It reads
 `*.yaml`, `*.json`, `*.sh`, `go.sum`), because a success line that reads as
 total over a partial check is what rule 5 is about.
 
-**It is not a substitute for building.** Most of what the sweep finds is an
-import, and an import on the old path fails `go build` one step later — on the
-resync that produced this branch, swarf's two were a build error and piri's ten
-were caught by `go mod tidy`. The ones only the sweep sees are the references
-that still compile: piri's otel meter name
-(`Meter("github.com/fil-forge/piri/pkg/service/publisher")`) was one, and it
-would have shipped a metric attributed to a module path that does not exist
-here.
+**Do not rely on the build to find these, and do not rely on `go mod tidy`
+either — it goes both ways.** Most of what the sweep finds is an import, and on
+the resync that produced this branch swarf's two failed `go build` outright and
+piri's ten stopped `go mod tidy`. But an earlier resync had the opposite: tidy
+*resolved* a polyrepo import instead of refusing it, adding
+`github.com/fil-forge/sprue` to sprue's own `go.mod` pinned to the commit being
+merged — which builds green against code downloaded from the polyrepo. Which of
+the two you get depends only on whether the old path still resolves through the
+proxy, so neither outcome is a check.
+
+And some of them compile either way: piri's otel meter name
+(`Meter("github.com/fil-forge/piri/pkg/service/publisher")`) is a string, so no
+build or tidy anywhere would have objected, and it would have shipped a metric
+attributed to a module path that does not exist here.
+
+**Measure drift by ancestry, never by grepping commit messages.** Only
+`git subtree add` records a `git-subtree-split` trailer; a pull records nothing,
+so a grep counts imports and misses every pull since. Measured that way once and
+got 91 commits across nine prefixes when the answer was 37 across eight.
+Ancestry needs no metadata and cannot be fooled:
+
+```sh
+git merge-base --is-ancestor "up-$p/main" HEAD   # up to date?
+git rev-list --count "up-$p/main" --not HEAD     # how far behind
+```
 
 ## Conventions
 

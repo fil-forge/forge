@@ -50,8 +50,11 @@ SHARD_uploads     += TestForgeDeferredMultipart       # 0m52
 SHARD_CLAIMED := $(SHARD_encryption) $(SHARD_conformance) $(SHARD_uploads) TestForgeS3Compat
 
 # `rest` is the complement, so a test added to itest/ runs there rather than
-# matching no shard and silently never running: Delete, Retention, Eviction,
-# NativeProvision today (~5m27 in total).
+# matching no shard and silently never running. Upstream's version of this
+# comment then NAMED the four tests in it, which is a hand-maintained copy of
+# the list the line below derives -- and it was already wrong there and wronger
+# here, since this repository un-hid a fifth. `make -n itest-shard SHARD=rest`
+# prints the current set; that is the only copy worth reading.
 # Upstream spells this `$(GO) test -tags itest -list '.*' ./itest`, which fails
 # here with "main module does not contain package .../itest" -- itest/ is its
 # own module in the monorepo, not a tagged package of this one. $(shell) eats
