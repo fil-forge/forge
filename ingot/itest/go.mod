@@ -21,7 +21,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.1
 	github.com/aws/smithy-go v1.28.1
-	github.com/cloud-portable/s3tests/packages/go v0.0.0-20260908103400-a4688c972bb0
+	github.com/cloud-portable/s3tests/packages/go v0.0.0-20260916120817-ce77c26e7f6d
 	github.com/fil-forge/forge/ingot v0.0.0
 	github.com/fil-forge/forge/smelt v0.0.0
 	github.com/fil-forge/libforge v0.0.0-20260917175304-96b4969f0476
@@ -59,7 +59,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
-	github.com/cloud-portable/s3vectors/packages/go v1.0.1-0.20260908103307-c5fd132c07fb // indirect
+	github.com/cloud-portable/s3vectors/packages/go v1.0.1-0.20260916120050-4e36de71f642 // indirect
 	github.com/compose-spec/compose-go/v2 v2.12.1 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/containerd/containerd/api v1.11.1 // indirect
