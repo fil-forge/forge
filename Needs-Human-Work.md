@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 19:45Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 20:05Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -24,11 +24,41 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | round 1 found **six, two blocking**; all six worked and pushed. Round 2 running. CI green on the previous head |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | round 1 found **five**; all five fixed at `2e1e690c`. Round 2 running. Both event paths verified by real runs |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1 and 2 found **six and five**, four blocking between them. All fixed; head `008335bb`. Round 3 running |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1 and 2 found **five and three**. All fixed; head `68dd95d9`. Round 3 pending a verification run |
 
-**Round 1 on #19 found a security hole worth knowing about even if the PR
-changes shape.** `plan` derives the release runner by parsing
+**The rounds are finding things the round before introduced, on both pull
+requests, and that is now the most useful thing about them.** Round 2 on #18
+found that round 1's fleet-list fix asked the registry for three services that
+do not exist (`upload`, `indexer`, `signing-service` are smelt's names; the
+packages are `sprue`, `indexing-service`, `piri-signing-service` — measured, the
+first three answer 403 and the second three 200). Round 2 on #19 found that
+round 1's fork gate covered the build job and not `plan`, which still ran a
+fork's shell. Four of the nine findings across the two are in fixes made by the
+round before.
+
+**#19's security work took two rounds and the second was the real one.**
+Round 1 found that `plan` derives the release runner by parsing
+`<svc>/.goreleaser.yaml` **from the pull request's own tree**, so a fork could
+name a branch `release/ingot`, add a darwin `CGO_ENABLED=1` build to that
+config, and put a **macos-14 runner under its own goreleaser hooks**. I gated
+the *build* job on a same-repository pull request and wrote a comment saying
+nothing fork-controlled could reach further.
+
+**That comment was wrong, and round 2 proved it.** `plan` had no condition at
+all, and `resolve the version` interpolated `${{ steps.svc.outputs.dir }}`
+straight into its shell script. Reproduced end to end: a fork adds a directory
+literally named `evil$(touch${IFS}PWNED)x` carrying a `.goreleaser.yaml`, pushes
+the branch `release/evil$(touch${IFS}PWNED)x` — git accepts `$ ( ) { }` in a
+ref, only space is illegal and `${IFS}` covers that — `actions/checkout` takes
+`refs/pull/N/merge` so the `find` enumerates the **fork's** tree and the
+directory lands in `releasable`, the branch-derived name matches, and the next
+step runs the substitution. It is fixed twice over now: `dir` reaches the script
+by `env:` (and no `${{ }}` remains inside any `run:` in that file, checked by
+parsing it rather than by reading), and a fork pull request resolves no service
+at all.
+
+The original round-1 write-up, for context: `plan` derives the release runner by parsing
 `<svc>/.goreleaser.yaml` **from the pull request's own tree**, so a fork could
 have named a branch `release/ingot`, added a darwin build with `CGO_ENABLED=1`
 to that config, and put a **macos-14 runner under its own goreleaser hooks for
