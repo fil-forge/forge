@@ -1,9 +1,12 @@
 # Signing Service Makefile
 BINARY_NAME=signer
-VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-DATE=$(shell date -u -Iseconds)
-GOFLAGS=-ldflags="-X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)"
+# No -ldflags here on purpose. This Makefile used to inject
+# -X main.version/-X main.commit/-X main.date, but main.go declares none of
+# those three, and the linker accepts -X for a symbol that does not exist --
+# exit 0, no diagnostic -- so the flags stamped nothing. This service has no
+# build-metadata package to stamp instead; whether it should get one is the
+# open question in MONOREPO_TODO.md ("Decide whether service images should
+# report what they are"). Dead flags removed rather than left looking live.
 
 .PHONY: all build test clean install help
 
@@ -17,7 +20,7 @@ $(BINARY_NAME): FORCE
 	@if [ ! -f $(BINARY_NAME) ] || \
 	   [ -n "$$(find . -name '*.go' -type f -newer $(BINARY_NAME) 2>/dev/null)" ]; then \
 		echo "Building $(BINARY_NAME)..."; \
-		go build $(GOFLAGS) -o $(BINARY_NAME) .; \
+		go build -o $(BINARY_NAME) .; \
 	else \
 		echo "$(BINARY_NAME) is up to date"; \
 	fi
@@ -41,7 +44,7 @@ clean:
 
 # Install the binary to GOPATH/bin
 install:
-	go install $(GOFLAGS) .
+	go install .
 
 # Run the signer (for development)
 run: build

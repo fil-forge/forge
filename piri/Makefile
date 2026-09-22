@@ -1,7 +1,10 @@
 VERSION=$(shell awk -F'"' '/"version":/ {print $$4}' version.json)
 COMMIT=$(shell git rev-parse --short HEAD)
 DATE=$(shell date -u -Iseconds)
-GOFLAGS=-ldflags="-X github.com/fil-forge/piri/pkg/build.version=$(VERSION) -X github.com/fil-forge/piri/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/piri/pkg/build.Date=$(DATE) -X github.com/fil-forge/piri/pkg/build.BuiltBy=make"
+# LDFLAGS, not GOFLAGS: make re-exports a variable that was in its own
+# environment, so with GOFLAGS already set in the shell `go` parses this
+# string as $GOFLAGS and dies on "non-flag".
+LDFLAGS=-ldflags="-X github.com/fil-forge/forge/piri/pkg/build.version=$(VERSION) -X github.com/fil-forge/forge/piri/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/forge/piri/pkg/build.Date=$(DATE) -X github.com/fil-forge/forge/piri/pkg/build.BuiltBy=make"
 # Curio's vendored PDP code selects on-chain contract addresses by its build tag:
 # `2k` (or `debug`) makes it resolve addresses from CURIO_DEVNET_* env vars
 # (devnet/smelt); with NO network tag it uses hardcoded MAINNET addresses. Default
@@ -31,7 +34,7 @@ piri: FORCE
 	@if [ ! -f piri ] || \
 	   [ -n "$$(find cmd pkg internal -name '*.go' -type f -newer piri 2>/dev/null)" ]; then \
 		echo "Building piri..."; \
-		CGO_ENABLED=$(CGO_ENABLED) go build $(GOFLAGS) $(TAGS) -o ./piri github.com/fil-forge/piri/cmd; \
+		CGO_ENABLED=$(CGO_ENABLED) go build $(LDFLAGS) $(TAGS) -o ./piri ./cmd; \
 	fi
 
 FORCE:
