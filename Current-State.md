@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 17:20Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 17:45Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -396,9 +396,18 @@ The tally, because the shape is the finding:
 |---|---|---|---|---|
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
 | #14 | 4 on the rebuild | **satisfied** | — | **MERGED** as `88ca8c69` |
-| #12 | 13 | **satisfied** | `0ce788a7` | **Open** — ready to merge, CI green on all 24 |
 | #13 | 8 | 4 findings, all fixed | — | **MERGED** as `226aa57d` |
-| #16 | — | **PARKED** by Petra | `fafddf08` | draft, no further rounds |
+| #12 | 15 | round 16 running | `7c5506ff` | **Open** — waiting on her merge |
+| #17 | 2 | round 3 running | `e1985b7a` | draft |
+| #16 | — | **PARKED** by Petra | `9ecc21d1` | draft, rebased onto #12 |
+
+**Rounds 14 and 15 on #12 were about the commentary, not the code**, and both
+found real things: a list-splice fix that named the wrong option, a race entry
+claiming a fix was upstream when it sits on one unmerged branch, a `because`
+clause explaining the wrong barrier, and a paragraph this PR's own earlier
+commit had falsified. No executable line changed across any of the three
+commentary commits — verified by diff filter and by parsing both YAML
+revisions.
 
 **#15 is merged; #14 is Open and signed off.** #15 took five revisions of one Markdown entry to get
 right, and the last defect is the best example the repository has of the thing
