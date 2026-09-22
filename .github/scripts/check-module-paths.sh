@@ -34,10 +34,10 @@
 #   NOT checked  Makefile, *.yaml, *.json, *.sh, go.sum
 #
 # Docs and deploy scripts are deliberately out: those repositories still exist
-# and still serve the releases those documents describe. The others were an
-# oversight, and are handled here rather than left implied -- .mockery.yaml and
-# renovate.json are rewritten by this pull request, and the three Makefiles
-# with dead -X ldflags are #16, which also adds the guard for that class.
+# and still serve the releases those documents describe. The rest are named
+# rather than left implied -- .mockery.yaml and renovate.json already carry
+# monorepo paths, and the dead -X ldflags in piri/, hilt/ and sprue/Makefile
+# belong to #16, which adds the guard for that class.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."

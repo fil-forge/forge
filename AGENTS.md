@@ -27,7 +27,9 @@ below is an event.
 
 What a replacement probably keeps: rules 2 through 5, which are about the code
 and its CI rather than about moving it, and the commands and conventions at the
-end. What it probably drops: rules 1 and 6 through 9, the wiki, most of the
+end. What it probably drops: rules 1 and 6 through 10 — including the whole
+agent-review practice, which lasts only until the rest of the team is reviewing
+— the wiki, most of the
 document table, and the per-pull-request **skippable-checks block** — by then
 the wiki's content belongs in the repository or in issues, *Needs Human Work*
 should be empty, and the blocks should have been replaced by real filtering
@@ -105,6 +107,46 @@ Numbered as the wiki numbers them; it carries the reasoning.
    the import, not the work.
 9. **A branch meant to be reviewed and merged gets a PR when it is pushed.**
    Scratch branches do not.
+10. **Every pull request gets agent review rounds until one comes back
+    satisfied.** Details below.
+
+## Every pull request is reviewed by an agent, repeatedly
+
+One person is reviewing this repository, and a pull request that looks finished
+because nobody looked at it again is what this replaces. **This whole practice
+is temporary**, like everything else in this file: it lasts as long as the
+consolidation does, and the team develops its own when it arrives.
+
+**Open a review round on every push.** A subagent reads the PR and verifies its
+claims against the tree rather than against the body. Rounds repeat until one
+comes back with nothing.
+
+**Two signals, and they are deliberately mechanical.**
+
+- The reviewer writes, verbatim and only when it found nothing: **"Satisfied.
+  No findings this round. This PR is ready for human review."** That sentence's
+  existence is the fact; a reviewer is told not to write it otherwise.
+- **A PR stays a draft while a review is open, and goes Open when a reviewer is
+  satisfied.** Draft is the visible half of the same signal.
+
+**Every round posts, not only the satisfied one.** An unsatisfied reviewer
+reporting back privately makes the comment's *existence* the signal, which is
+tidy and leaves the one person reviewing with no sight of what the reviews are
+finding — the part actually worth reading.
+
+**`COMMENT` is the mechanism.** GitHub rejects `APPROVE` and `REQUEST_CHANGES`
+on a PR you authored, and everything here is authored by one account;
+`event: "COMMENT"` is accepted. Verified before the practice went out.
+
+**Put each major section in a `<details>` block**, so a long review does not
+cost a screen of scrolling while its detail stays available.
+
+**A number earns its place only if a reader's decision changes with it.** This
+applies to review comments, PR bodies and code comments alike, and it is the
+rule this repository breaks most often: the commentary drifts toward narrating
+how the change got here — which draft was wrong, which round found it — instead
+of explaining what is there now. Write for whoever opens the file next, not for
+whoever argued about it.
 
 ## Commands
 
@@ -382,6 +424,56 @@ Ancestry needs no metadata and cannot be fooled:
 git merge-base --is-ancestor "up-$p/main" HEAD   # up to date?
 git rev-list --count "up-$p/main" --not HEAD     # how far behind
 ```
+
+## What a clean merge hides: walk this list on every pull
+
+Both scripts above are conflict-driven, and the worst class of pull damage
+raises no conflict at all: **a hunk that merges cleanly and is wrong only
+because this repository's shape differs from upstream's.** There is no event
+for either tool to fire on.
+
+The check that would catch the whole family is `prefix tree ==
+rewrite(upstream tree)` modulo a declared list of transformations. It is not
+built, deliberately — it is complex, error-prone, and would have to be trusted.
+**This list is what stands in for it**, and it is walked by hand (which in
+practice means an agent, at least on the first pass). Every entry below is a
+thing that actually happened. Two of them happened *twice* — the build tag and
+the itest-only bump were both fixed in one resync and came back in the next.
+
+- **A polyrepo import path in a hunk that merged cleanly.** Upstream adds an
+  import, or touches a file we never rewrote, and `github.com/fil-forge/<svc>`
+  survives. `check-module-paths.sh` reports these — but its header names what
+  it does **not** read (`Makefile`, `*.yaml`, `*.json`, `*.sh`, `go.sum`), and
+  those are still yours. Most fail `go build` a step later; the dangerous one
+  is the reference that still compiles, like an otel meter name.
+- **A build tag upstream needs and we do not.** `ingot/itest` is its own module
+  here with its own CI job, so upstream's `//go:build itest` only subtracts:
+  `go test -list '^Test'` returned 13 where `-tags itest` returned 14, and the
+  missing one was the benchmark for the batched `/ucan/conclude` work.
+- **A dependency bump that lands in a module we split off.** Upstream bumps the
+  s3 compatibility corpus in its *root* `go.mod`; the suite using it lives in
+  `ingot/itest`, a separate module here, so the bump applies to a `require`
+  this repository dropped and our pin silently ages. Structural, not bad luck:
+  every future itest-only bump is invisible the same way.
+- **Shared dependencies fragmenting across prefixes.** Ten pulls leave each
+  prefix on whatever revision its own upstream pinned, so the tree ends up
+  carrying two versions each of `libforge`, `ucantone` and `go-ipni-tools`.
+  Every `go.mod` merged cleanly and each is individually correct; the tree is
+  wrong only in aggregate, which nothing per-prefix can see. Take the newest of
+  each.
+- **An import the rewrite moved within its group.** `forge/` sorts before
+  `libforge/`, and `gofmt` sorts groups — so inserting `forge/` can reorder the
+  line. `resolve-rewrite-conflicts.sh` normalises with `gofmt` for exactly this
+  reason, but it only sees files that conflicted; a `sed` sweep over the rest
+  does not sort, and `guards` goes red on `gofmt -s -l .`.
+- **A test corpus or shard list keyed to upstream's layout.** Anything deriving
+  a list of tests, packages or shards from a path or tag scheme that differs
+  here. `ingot/Makefile`'s `SHARD_ALL` is the instance.
+
+Two habits that make the walk cheap rather than heroic: derive each check as a
+command whose output you can read (rule 3), and after fixing one instance, run
+something that enumerates the class before committing (rule 5). Careful reading
+has missed the rest every time.
 
 ## Conventions
 
