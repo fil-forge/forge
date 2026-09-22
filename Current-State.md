@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 18:00Z, Tuesday.** For history and
+**Snapshot as of 2026-09-22 18:15Z, Tuesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -189,7 +189,7 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is `88ca8c69` and the import phase is closed.** All **ten** in-scope
+**`main` is `699f929f`, the import phase is closed, and no `forge` pull request is open.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
 digest, the checks the per-service `.github/` directories took with them
@@ -397,9 +397,35 @@ The tally, because the shape is the finding:
 | #15 | 5 | **satisfied** | — | **MERGED** as `74be2e39` |
 | #14 | 4 on the rebuild | **satisfied** | — | **MERGED** as `88ca8c69` |
 | #13 | 8 | 4 findings, all fixed | — | **MERGED** as `226aa57d` |
-| #12 | 16 | all fixed | `ed372c8d` | **Open** — rebased onto `main`, waiting on her merge |
-| #17 | 3 | all fixed | `6d8fc17e` | draft |
-| #16 | — | **PARKED** by Petra | `2b6af145` | draft, re-rebased onto #12 |
+| #12 | 16 | all fixed | — | **MERGED** as `983c9d4c` |
+| #16 | 1 | — | — | **MERGED** as `14b603d9`, reduced to the Makefile fixes |
+| #17 | 3 | rounds stopped | — | **MERGED** as `699f929f` |
+
+**Every `forge` pull request is merged.** Seven in the series: #9, #10, #11,
+#13, #14, #15 earlier, then #12, #16 and #17 today.
+
+**The release path ran for real.** First dispatch of `release.yml` on `main`,
+for `ingot`, dry run:
+
+| step | |
+|---|---|
+| `plan` | success — service and version resolution, previously fixtures-only |
+| `require the tag …` | **skipped**, correctly: gated on `!inputs.dry_run` |
+| `build (publishing nothing yet)` | success |
+| `assert the binaries report their version` | **success** |
+| `publish` | **skipped** |
+
+3m11s for the `release` job. `piri` is dispatched next, because it is the one
+service nobody has measured: macos-14, cgo darwin cross-builds against curio
+and lotus, then a universal binary, then two linux builds — and whether that
+fits inside `timeout-minutes: 40` is the open question `release.yml`'s own
+header names.
+
+**#16 was reduced before merging**, at Petra's instruction: *"take the Makefile
+fixes, drop the guard."* Five Makefiles, no `check-ldflags.sh`, `ci.yml`
+untouched. So the stale-`-X`-path class is now unguarded on purpose — the
+reasoning is in the merged PR body, including that the guard printed `All N …`
+and exit 0 with a dead flag in tree three separate times.
 
 **#12 was genuinely conflicted and I reported otherwise.** `git merge-tree`
 in its three-argument form printed no conflict markers for a branch that a real
