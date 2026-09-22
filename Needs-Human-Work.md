@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 20:05Z.** Everything here is waiting on a person — either
+**Updated 2026-09-22 20:20Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -25,7 +25,7 @@ now corrected in #19.
 | | what | state |
 |---|---|---|
 | [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` — tests this tree against the polyrepos' released images | rounds 1 and 2 found **six and five**, four blocking between them. All fixed; head `008335bb`. Round 3 running |
-| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1 and 2 found **five and three**. All fixed; head `68dd95d9`. Round 3 pending a verification run |
+| [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate — a `release/<svc>` branch builds and asserts that service | rounds 1 and 2 found **five and three**. All fixed; head `dcfbe0bc`. Round 3 running. Both event paths **verified green at the current head** |
 
 **The rounds are finding things the round before introduced, on both pull
 requests, and that is now the most useful thing about them.** Round 2 on #18
@@ -87,6 +87,17 @@ because `ci.yml`'s `tagged_suites` is a hand-maintained list nobody added
 `compat` to. The second is how the first reached a pull request at all. The tag
 list now carries the command that enumerates it, which reports `e2e` and
 `compat` over all twelve modules and nothing else.
+
+**The gate is proved at the head it is proved for, which took a second
+throwaway pull request.** Round 2's point was that the fork gate, the `dry_run`
+validation and the concurrency key had never been evaluated on a run where a
+service actually resolves — every run at those heads came from an ordinary
+branch, where `dir != ''` short-circuits first, and **a gate that wrongly skips
+is green and silent**. [#20](https://github.com/fil-forge/forge/pull/20) was
+reopened at `68dd95d9`, went green (`plan` 11s, `release` 3m35s on
+`ubuntu-24.04`, `require the tag` and `publish` both skipped), and is closed
+again. `release` running at all is the evidence: it needs `plan` to have
+succeeded, `dir` non-empty, and the same-repository condition to hold.
 
 **You also caught a hole in rule 10 before you left**: #18 was opened as a draft
 with no round started, so the draft state — half of the rule's two-signal
