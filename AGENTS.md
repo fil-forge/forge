@@ -27,12 +27,14 @@ below is an event.
 
 What a replacement probably keeps: rules 2 through 5, which are about the code
 and its CI rather than about moving it, and the commands and conventions at the
-end. What it probably drops: rules 1 and 6 through 9, the wiki, most of the
-document table, and the per-pull-request **skippable-checks block** — by then
-the wiki's content belongs in the repository or in issues, *Needs Human Work*
-should be empty, and the blocks should have been replaced by real filtering
-designed from what they turned out to say. Do not treat that split as settled;
-decide it when you can see the finished shape.
+end. What it probably drops: rules 1 and 6 through 10, the agent-review
+practice among them (it lasts only until the rest of the team is reviewing),
+the wiki, most of the document table, and the per-pull-request
+**skippable-checks block**. By then the wiki's content belongs in the
+repository or in issues, *Needs Human Work* should be empty, and the blocks
+should have been replaced by real filtering designed from what they turned out
+to say. Do not treat that split as settled; decide it when you can see the
+finished shape.
 
 ## Where state lives, and what goes where
 
@@ -105,6 +107,81 @@ Numbered as the wiki numbers them; it carries the reasoning.
    the import, not the work.
 9. **A branch meant to be reviewed and merged gets a PR when it is pushed.**
    Scratch branches do not.
+10. **Every pull request gets agent review rounds until one comes back
+    satisfied.** Details below.
+
+## Every pull request is reviewed by an agent, repeatedly
+
+One person is reviewing this repository, and a pull request that looks finished
+because nobody looked at it again is what this replaces. **This whole practice
+is temporary**, like everything else in this file: it lasts as long as the
+consolidation does, and the team develops its own when it arrives.
+
+**Open a review round on every push.** A **review agent** reads the PR and
+verifies its claims against the tree rather than against the body. Rounds
+repeat until one comes back with nothing. ("Reviewer" elsewhere in this file —
+in the skippable-checks block — means the human who merges; these are
+different, and a draft cannot be merged.)
+
+**Two signals, and they are deliberately mechanical.**
+
+- The review agent writes, verbatim and only when it found nothing:
+  **"Satisfied. No findings this round. This PR is ready for human review."**
+  That sentence's existence is the fact; it is told not to write it otherwise.
+- **A PR stays a draft while a round is open, and goes Open once a round comes
+  back satisfied.** Draft is the visible half of the same signal. **The flip is
+  the human's to make**, not the agent's — it is the point at which someone
+  else is being asked to spend time.
+
+**Every round posts, not only the satisfied one.** An unsatisfied agent
+reporting back privately makes the comment's *existence* the signal, which is
+tidy and leaves the one person merging with no sight of what the rounds are
+finding — the part actually worth reading.
+
+**`COMMENT` is the mechanism.** GitHub rejects `APPROVE` and `REQUEST_CHANGES`
+on a PR you authored, and everything here is authored by one account;
+`event: "COMMENT"` is accepted.
+
+**A review collapses its bulk, never its verdict.** A thorough review is long,
+and the evidence buries the next thing to do. So:
+
+- **Outside any `<details>`:** the verdict line, the number of findings, and
+  when satisfied the exact sentence above. That is what a reader gets at a
+  glance, and it is never hidden behind a disclosure.
+- **Each finding in its own `<details>`**, whose `<summary>` states it in one
+  line — so collapsed, the review reads as a scannable list of findings.
+  **Never `<details open>`**, not even for a blocking one: a block that opens
+  itself is the bulk back on the screen, which is the whole thing this avoids.
+  Severity belongs in the verdict line and in the summary's wording, both of
+  which are already visible.
+- **Verification and what checked out: one `<details>`**, collapsed.
+- **Evidence — command output, tables, diffs — goes inside** the relevant
+  `<details>`, never above it.
+
+GitHub needs a blank line after `</summary>` or the markdown inside will not
+render. Do not wrap a review so short that the machinery outweighs it: one
+finding and three lines of evidence stays flat.
+
+**A review from a real human carries information that an agent round does
+not**, precisely because everything here is authored by one account. Surface
+it; do not treat it as the signal above.
+
+**Scope the brief to what the PR can get wrong.** A round finds what it is
+asked to look for, so a wide brief on a narrow change buys prose edits at the
+price of a review cycle. For a **documentation-only** PR the brief is: *verify
+every derived number and factual claim against the tree, and report nothing
+else* — no prose, no cross-references, no line lengths, no consistency of
+phrasing. Measured on this file's own pull request: three wide rounds produced
+fifteen findings, of which **one** changed anything (a pull count copied out of
+a commit message, wrong in both its number and its causal claim), and a
+numbers-only brief would have caught that one and none of the other fourteen.
+
+**A number earns its place only if a reader's decision changes with it.** This
+applies to review comments, PR bodies and code comments alike, and it is the
+rule this repository breaks most often: the commentary drifts toward narrating
+how the change got here — which draft was wrong, which round found it — instead
+of explaining what is there now. Write for whoever opens the file next, not for
+whoever argued about it.
 
 ## Commands
 
@@ -384,6 +461,61 @@ Ancestry needs no metadata and cannot be fooled:
 git merge-base --is-ancestor "up-$p/main" HEAD   # up to date?
 git rev-list --count "up-$p/main" --not HEAD     # how far behind
 ```
+
+## What a clean merge hides: walk this list on every pull
+
+Both scripts above are conflict-driven, and the worst class of pull damage
+raises no conflict at all: **a hunk that merges cleanly and is wrong only
+because this repository's shape differs from upstream's.** There is no event
+for either tool to fire on.
+
+The check that would catch the whole family is `prefix tree ==
+rewrite(upstream tree)` modulo a declared list of transformations. It is not
+built, deliberately — it is complex, error-prone, and would have to be trusted.
+**This list is what stands in for it**, and it is walked by hand (which in
+practice means an agent, at least on the first pass). Every entry below is a
+thing that actually happened, and recurrence is the norm rather than the
+exception: the build tag and the itest-only bump were each fixed in one resync
+and back in the next, and the polyrepo-import class has shown up in every
+resync so far. It arrives in several shapes, enumerated above: `go build`
+fails, `go mod tidy` refuses, `go mod tidy` *resolves* the polyrepo path
+instead — and, worst, the reference that compiles cleanly either way.
+
+- **A polyrepo import path in a hunk that merged cleanly.** Upstream adds an
+  import, or touches a file we never rewrote, and `github.com/fil-forge/<svc>`
+  survives. `check-module-paths.sh` reports these, over the file types named
+  above — the rest are still yours. Most fail `go build` a step later; the
+  dangerous one is the reference that still compiles, like an otel meter name.
+- **A build tag upstream needs and we do not.** `ingot/itest` is its own module
+  here with its own CI job, so upstream's `//go:build itest` only subtracts:
+  `go test -list '^Test'` returned 13 where `-tags itest` returned 14, and the
+  missing one was the benchmark for the batched `/ucan/conclude` work.
+- **A dependency bump that lands in a module we split off.** Upstream bumps the
+  s3 compatibility corpus in its *root* `go.mod`; the suite using it lives in
+  `ingot/itest`, a separate module here, so the bump applies to a `require`
+  this repository dropped and our pin silently ages. Structural, not bad luck:
+  every future itest-only bump is invisible the same way.
+- **Shared dependencies fragmenting across prefixes.** A pull leaves its prefix
+  on whatever revision that upstream pinned, so a resync ends with the tree
+  carrying two versions each of `libforge`, `ucantone` and `go-ipni-tools`.
+  Not only the prefixes that moved: the last resync's re-unification also had
+  to bump `piri-signing-service`, which was not pulled at all.
+  Every `go.mod` merged cleanly and each is individually correct; the tree is
+  wrong only in aggregate, which nothing per-prefix can see. Take the newest of
+  each.
+- **An import the rewrite moved within its group.** `forge/` sorts before
+  `libforge/`, and `gofmt` sorts groups — so inserting `forge/` can reorder the
+  line. `resolve-rewrite-conflicts.sh` normalises with `gofmt` for exactly this
+  reason, but it only sees files that conflicted; a `sed` sweep over the rest
+  does not sort, and `guards` goes red on `gofmt -s -l .`.
+- **A test corpus or shard list keyed to upstream's layout.** Anything deriving
+  a list of tests, packages or shards from a path or tag scheme that differs
+  here. `ingot/Makefile`'s `SHARD_ALL` is the instance.
+
+Two habits that make the walk cheap rather than heroic: derive each check as a
+command whose output you can read (rule 3), and after fixing one instance, run
+something that enumerates the class before committing (rule 5). Careful reading
+has missed the rest every time.
 
 ## Conventions
 
