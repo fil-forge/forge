@@ -1,7 +1,10 @@
 VERSION=$(shell awk -F'"' '/"version":/ {print $$4}' version.json)
 COMMIT=$(shell git rev-parse --short HEAD)
 DATE=$(shell date -u -Iseconds)
-GOFLAGS=-ldflags="-X github.com/fil-forge/sprue/pkg/build.version=$(VERSION) -X github.com/fil-forge/sprue/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/sprue/pkg/build.Date=$(DATE) -X github.com/fil-forge/sprue/pkg/build.BuiltBy=make"
+# LDFLAGS, not GOFLAGS: make re-exports a variable that was in its own
+# environment, so with GOFLAGS already set in the shell `go` parses this
+# string as $GOFLAGS and dies on "non-flag".
+LDFLAGS=-ldflags="-X github.com/fil-forge/forge/sprue/pkg/build.version=$(VERSION) -X github.com/fil-forge/forge/sprue/pkg/build.Commit=$(COMMIT) -X github.com/fil-forge/forge/sprue/pkg/build.Date=$(DATE) -X github.com/fil-forge/forge/sprue/pkg/build.BuiltBy=make"
 DOCKER := $(shell which docker)
 
 .PHONY: all build test lint clean docker-build
@@ -15,7 +18,7 @@ sprue: FORCE
 	@if [ ! -f sprue ] || \
 	   [ -n "$$(find cmd pkg internal -name '*.go' -type f -newer sprue 2>/dev/null)" ]; then \
 		echo "Building sprue..."; \
-		go build $(GOFLAGS) -o ./sprue ./cmd/main.go; \
+		go build $(LDFLAGS) -o ./sprue ./cmd/main.go; \
 	fi
 
 FORCE:
