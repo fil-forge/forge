@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-22 22:50Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 00:20Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -28,6 +28,49 @@ now corrected in #19.
 | [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1691b59c`. **Rounds stopped at seven**, per rule 10 as amended by #22: round seven's two findings were fixed with a comments-only push, which is the skip condition. Waiting on CI and on you |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
+| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | **NEW**, draft, on `5277eac`. Opened overnight; a round is running. Reproduced before fixing, verified after |
+
+#18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
+and nothing else.
+
+## Overnight: piri's rotator flake, fixed upstream
+
+You asked what could be worked on overnight. First off the list, and the one
+that was actively costing CI cycles: `piri`'s `TestPeriodicRotator` starts a
+rotator with a 1 ms ticker, sleeps 30 ms, and asserts six rotations happened.
+It went red once on a `forge` branch whose entire diff was comments in a shell
+script.
+
+**Reproduced before touching it, which took some doing.** At `GOMAXPROCS=4`,
+twelve concurrent `-race` processes: **0 failures in 240**. Starving the
+scheduler is what surfaces it — `GOMAXPROCS=1` across 24 concurrent
+`-count=20 -race` processes gave **2 in 480**, logging three rotations in one
+and five in the other, of six. Fixed with `assert.Eventually` on a 2 s
+deadline; **0 failures and 0 races in 480** under the same conditions.
+
+**Two traps, both recorded in `MONOREPO_TODO.md` before this was attempted and
+both real.** `RotateFunc` runs on the rotator's goroutine and `Eventually`
+polls from a third, so without a mutex the fix does not merely flake — it
+introduces a data race. Measured at matched scale: the unguarded variant failed
+**10 of 10 processes** with 10 races over 200 runs; this PR, 0 of 10. And
+`require.Eventually` would abort the test goroutine so `Stop()` never runs and
+the rotator leaks, which is why it is `assert`.
+
+**A correction I made to my own PR body before anyone read it.** I first
+published the "fails every time under `-race`" claim by copying it from the
+TODO rather than measuring it, then measured and got 1 failure in 10 — which
+looked like a contradiction. It is not: the race detector stops the binary at
+its first detection, so one race per process is the ceiling, not the rate. Per
+process it really is every time; per single run it is about 5%. The body now
+states the measurement instead of the adjective. The general lesson is the one
+already in rule 7 — a premise copied from a note is still a premise to verify —
+and it applies to notes I wrote myself.
+
+**Also worth knowing:** the local `piri` checkout was carrying an unpushed
+commit from 2026-09-11 pointing the minio testcontainer at our own build.
+Upstream has since landed the same change, so `git diff origin/main HEAD` was
+empty and the PR is single-purpose. Nothing was lost and nothing was force-
+pushed.
 
 ## Settled: compat runs on the release pull request, and a refresher keeps it fresh
 
