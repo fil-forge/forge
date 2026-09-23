@@ -1,15 +1,21 @@
 package stack
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // The published image set is stated in four places, and they must agree:
@@ -58,6 +64,29 @@ func fieldReachedBy(t *testing.T, mutate func(*config)) string {
 	return found[0]
 }
 
+// walkYAMLStrings visits every string scalar in a decoded document, keys
+// included: compose interpolates throughout, not only in values.
+func walkYAMLStrings(n any, fn func(string)) {
+	switch v := n.(type) {
+	case string:
+		fn(v)
+	case []any:
+		for _, e := range v {
+			walkYAMLStrings(e, fn)
+		}
+	case map[string]any:
+		for k, e := range v {
+			fn(k)
+			walkYAMLStrings(e, fn)
+		}
+	case map[any]any:
+		for k, e := range v {
+			walkYAMLStrings(k, fn)
+			walkYAMLStrings(e, fn)
+		}
+	}
+}
+
 // requiredImageVars walks the smelt root and returns the required image
 // variables its YAML and its compose generator name.
 //
@@ -83,12 +112,65 @@ func requiredImageVars(t *testing.T, root string) map[string]bool {
 	re := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):?\?`)
 	vars := map[string]bool{}
 
-	scan := func(path string) {
-		b, err := os.ReadFile(path)
-		require.NoError(t, err)
-		for _, m := range re.FindAllStringSubmatch(string(b), -1) {
+	// PARSED, NOT GREPPED OVER THE RAW BYTES, and the difference is not
+	// tidiness. A raw scan matches text compose never interpolates -- inside a
+	// `#` comment, and `$${X:?}`, which compose emits literally. For a name the
+	// Go tables do not carry that is a false failure, which is safe. For one
+	// they DO carry it is the opposite: `wantVars` comes from the two Go
+	// tables, never from what the YAML requires, so a stale match at an
+	// existing name keeps that name in `required` and hides the drift. Comment
+	// out an interpolation while pinning the image literally and compose stops
+	// requiring the variable -- but a raw scan still sees it, and this test
+	// still passes on an `.env.published` entry nothing needs.
+	//
+	// So the earlier claim that "over-reading is the safe direction here" was
+	// true only for names the tables do not carry. Parsing removes the case
+	// rather than documenting it.
+	match := func(v string) {
+		// `$$` is compose's escape for a literal `$`. Blank it out first so
+		// `$${X:?}` cannot match; a lone `$` is untouched.
+		for _, m := range re.FindAllStringSubmatch(strings.ReplaceAll(v, "$$", "\x00\x00"), -1) {
 			vars[m[1]] = true
 		}
+	}
+
+	scanYAML := func(path string) {
+		b, err := os.ReadFile(path)
+		require.NoError(t, err)
+
+		// Every document: compose files are single-document, but the walk
+		// reaches config files that need not be.
+		dec := yaml.NewDecoder(strings.NewReader(string(b)))
+		for {
+			var doc any
+			if err := dec.Decode(&doc); err != nil {
+				// io.EOF ends the stream. Anything else means a file under
+				// this root does not parse, which is worth failing on rather
+				// than falling back to a raw scan and its comment problem.
+				require.ErrorIs(t, err, io.EOF, "parsing %s", path)
+				return
+			}
+			walkYAMLStrings(doc, match)
+		}
+	}
+
+	// The generator is Go, so read its STRING LITERALS rather than its bytes --
+	// symmetric with parsing the YAML, and for the same reason: a commented-out
+	// interpolation in this file would otherwise keep a name alive in
+	// `required` and mask exactly the drift this test is for.
+	scanGo := func(path string) {
+		f, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		require.NoError(t, err, "parsing %s", path)
+		ast.Inspect(f, func(n ast.Node) bool {
+			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if v, err := strconv.Unquote(lit.Value); err == nil {
+					match(v)
+				} else {
+					match(lit.Value) // raw string with no valid unquoting
+				}
+			}
+			return true
+		})
 	}
 
 	composeFiles := 0
@@ -105,10 +187,10 @@ func requiredImageVars(t *testing.T, root string) map[string]bool {
 		switch {
 		case strings.HasSuffix(path, ".yml"), strings.HasSuffix(path, ".yaml"):
 			composeFiles++
-			scan(path)
+			scanYAML(path)
 		case strings.HasPrefix(path, filepath.Join(root, "pkg", "generate")) &&
 			strings.HasSuffix(path, ".go"):
-			scan(path)
+			scanGo(path)
 		}
 		return nil
 	}))
