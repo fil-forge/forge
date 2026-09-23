@@ -242,7 +242,7 @@ digest_for() {
 # is a bug fix rather than tidiness. Under `set -o pipefail`, `head` closing
 # the pipe after one line races python's write: the print takes
 # BrokenPipeError, the pipeline reports non-zero, and `set -e` aborts the
-# whole script with an empty stdout and no message.
+# whole script with an empty stdout.
 #
 # WHEN IT FIRES: never idle, and often enough under CPU load to redden a job
 # -- measured between 1% and 55% of runs across two machines and five load
@@ -252,13 +252,15 @@ digest_for() {
 # indexing-service publish one each; the other five none). So it has never
 # fired in a real run, and it arrives with the second release of any service.
 #
-# The signature is rc=1 with empty stdout, which is what makes it expensive:
-# nothing says which step failed. check-compat-baselines.sh's tests 3, 10 and
-# 11 are the ones whose fixtures emit two or more, and they reproduce it under
-# load; the guard cannot catch a regression here deterministically, so the
-# defence is that the pipeline is gone rather than that anything watches for
-# it. How this was found, and the two wrong diagnoses before it, are in
-# `git log` for this function.
+# The signature is rc=1, empty stdout, and a BrokenPipeError traceback on
+# stderr naming `<string>` line 4 -- which says a python block died but not
+# which one or for which service, and in a CI log sits under whatever the
+# caller was doing. Measured: 9/9 and 93/93 aborts carried it, none silent.
+# check-compat-baselines.sh's tests 3, 10 and 11 are the ones whose fixtures
+# emit two or more, and they reproduce it under load; the guard cannot catch a
+# regression here deterministically, so the defence is that the pipeline is
+# gone rather than that anything watches for it. How this was found, and the
+# three wrong diagnoses before it, are in `git log` for this function.
 newest_version_from() {
   python3 -c '
 import re, sys
