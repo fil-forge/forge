@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 02:10Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 02:45Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -28,7 +28,7 @@ now corrected in #19.
 | [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1691b59c`. **Rounds stopped at seven**, per rule 10 as amended by #22: round seven's two findings were fixed with a comments-only push, which is the skip condition. Waiting on CI and on you |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
-| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `689e561`. Round one: **3 findings, none in the code** — the fix itself was verified correct. Round two running |
+| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `169cbd9`. Rounds one and two: **6 findings, none in the fix itself** — every one was about a claim made for it. Round three running |
 | [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `1945c7d1`. Round one: **5 findings, and the guard was passing on three broken trees.** Rewritten as a Go test, verified in eight directions. Round two running |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
@@ -72,6 +72,57 @@ commit from 2026-09-11 pointing the minio testcontainer at our own build.
 Upstream has since landed the same change, so `git diff origin/main HEAD` was
 empty and the PR is single-purpose. Nothing was lost and nothing was force-
 pushed.
+
+## piri#129 round two: a guard that was right 80% of the time
+
+Round one's own fix was the problem. The drain assertion added there checked
+`i == len(batches)` **after** `Stop()`, and the comment said it would catch a
+`cid.Undef` appended to the fixture. It catches it **97 times in 120** — once
+the length condition fires, whether the rotator gets one more tick before
+`Stop()` takes effect is a live race.
+
+**A guard that is right 80% of the time reads exactly like one that is right**,
+which is the thing rule 5 names — and it was added in the same push as a
+complaint about a partial guard elsewhere. That is twice in one evening now
+(the other being `check-published-images.sh` on forge#23), which is worth
+noticing as a pattern rather than two accidents: a guard written quickly at the
+end of a fix gets the same cursory treatment the fix's own tests would not.
+
+Fixed by **waiting on** the drain rather than checking it afterwards — the
+condition is now `i == len(batches) && len(actualBatches) == len(expectedBatches)`.
+Deterministic, and it changes what the check is for, which the comment now
+states honestly: a trailing `cid.Undef` is simply waited for (0 failures in
+100, where the old arrangement failed 80 in 100), and what it catches is a
+fixture entry the rotator can never reach, which times out naming the missing
+half.
+
+**And a number I published was not a measurement of what it sat next to.**
+"Measured at `-count=5`, every run" described the `require`-instead-of-`assert`
+panic — but a plain swap passes, rc=0, no panic: `require.Eventually` only
+aborts when the condition *fails*, and with the 2 s deadline it does not. The
+run behind that number had silently used a 5 ms deadline. True with that
+precondition, which the comment now carries.
+
+## The `-race` claim was wrong, and in a more interesting way
+
+Recorded here because [[Current State]] carried the earlier version. I said
+piri's CI runs `-race` "by accident" and that correcting `"cgo": false` to `0`
+would disable the detector. **That named a fix that does not exist.** The
+pinned reusable workflow renders the field as
+`CGO_ENABLED: ${{ toJSON(fromJSON(...).cgo) != 'false' }}`, which can only emit
+`true` or `false` — and Go recognises neither:
+
+```
+CGO_ENABLED=false  -> go env says 1
+CGO_ENABLED=true   -> go env says 1
+CGO_ENABLED=0      -> go env says 0
+```
+
+So **the field is inert whichever way it is set**. `-race` works regardless,
+and there is nothing fragile to trip over. What is still worth knowing: anyone
+setting `"cgo": false` expecting a CGO-free build gets a CGO build, and the
+lever that would actually stop the race detector is `"skipRace": true`, which
+piri does not set.
 
 ## piri#129 round one: the code was right, and my evidence for it was wrong twice
 
