@@ -25,15 +25,65 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1691b59c`. **Rounds stopped at seven**, per rule 10 as amended by #22: round seven's two findings were fixed with a comments-only push, which is the skip condition. Waiting on CI and on you |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `f98e7e26`. **Petra reviewed it 2026-09-23**; four of six comments are fixed and pushed, **two are questions back to her** (see below). One answer invalidates a load-bearing paragraph in `compat-refresh.yml` |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
 | [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`, **green — 25 checks pass, `release` skipped by design**. **Twelve rounds, 47 findings.** **The code has been still since round nine** — rounds ten, eleven and twelve found nothing in either test and ten findings in the PR body. One real guard gap found and documented rather than closed; see below |
 | [ucantone #57](https://github.com/fil-forge/ucantone/pull/57) | `ucanlib` + fixed test identities, so libforge's `ucan` and `testutil` can be retired | draft, now on `3456649`. **alanshaw left CHANGES_REQUESTED on 2026-09-21 and nothing answered it for two days** — see below. One comment now fixed and pushed; the other is a naming decision for you and him |
 
-#18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
-and nothing else.
+#18 is no longer just waiting on a merge: your review landed and two of its
+questions are back with you.
+
+## forge#18: your review, and the one answer that changes the design
+
+Four of the six comments are fixed and pushed as `f98e7e26` — the hand-run
+enumeration snippet in `ci.yml`, the eight-services paragraphs in
+`pkg/stack/options.go`, the three-of-nine sentence in `pkg/workspace`
+(your suggestion applied verbatim), and the `RELEASE.md` you asked for, with a
+row in `AGENTS.md`'s table and a rule that it stays current and stays tight.
+
+**Two are back with you, and one of them matters more than it looks.**
+
+### You can trigger a fresh run on a pull request. The header says you cannot.
+
+You asked whether there is really no way to get a fresh, non-rerun run onto a
+pull request. There is, and `compat-refresh.yml`'s `WHY RE-RUN RATHER THAN
+DISPATCH` paragraph is wrong about it: **a dispatched run creates its check
+runs on the COMMIT**, and a pull request's checks are the checks on its head
+commit. Measured rather than reasoned — run `35760677003` was a
+`workflow_dispatch` on `claude/release-workflow` at `7c5506ff`, and all 11 of
+its check runs are recorded against that commit. `compat.yml` is already
+dispatch-safe: its job condition is
+`github.event_name != 'pull_request' || startsWith(github.head_ref, 'release/')`.
+
+**The consequence is bigger than a paragraph.** The 30-day / 50-re-run expiry,
+which the file treats as unfixable inside its design and works around by
+failing loudly, is simply avoidable — a dispatch has no such ceiling, so the
+whole expiry branch could go and the header shrinks to roughly the three points
+you asked for.
+
+One thing NOT yet measured, and worth settling before switching: whether a
+second check run of the same name supersedes the first in the merge box, or
+sits alongside it. That is the only load-bearing unknown left.
+
+**The comment rewrite is deliberately on hold** until that is decided, because
+the answer changes what the comment should say.
+
+### `TestPinnedPeer`: your premise is half right, and I'd still cut it
+
+You asked whether we need that direction, since it is what a deploy would not
+look like. It *is* a state a rolling deploy passes through — with N services
+upgraded one at a time, `TestRollingUpgrade` is the first hop (one new, rest
+old) and `TestPinnedPeer` is the **last** (one old, rest new). Neither covers
+the middle.
+
+But the gate's question is "does what we are about to ship work against what is
+already deployed", and that is `TestRollingUpgrade` exactly. `TestPinnedPeer`
+answers the inverse, which matters only if a straggler is expected to lag a
+whole release — and it is about half the compat matrix's runtime. **Cut it**,
+unless you want the straggler case covered, in which case its doc comment needs
+to say it is the tail of a rollout rather than leaving it to be re-litigated.
 
 ## The check-in script was not checking two of the repositories
 
