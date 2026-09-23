@@ -226,9 +226,13 @@ until a review round caught it — it still listed #19, which merged as
   nothing, because the workflow ran the job when ANY service could be pinned
   and the test needed EVERY service pinned. Fixed: the five services with no
   cut release fall back to `:main` resolved to its index digest, and there is
-  no skip path left in script, workflow or test. A round is open and a
-  dispatched `compat.yml` run is in flight — that run is what says it gates.
-  See [[Needs Human Work]].
+  no skip path left in script, workflow or test. **The dispatched run then went
+  red for a real reason**: `smelt` boots baselines with HEAD's entrypoints, and
+  both real releases predate that launch contract — `piri:0.2.4` does not know
+  `--plc-directory`, `ingot:0.0.0` still demands `root_access`. The five
+  floating baselines booted fine. So the gate gives a true red and cannot give
+  a meaningful green until releases are cut from a recent commit. A decision
+  for Petra; see [[Needs Human Work]].
 - [#23](https://github.com/fil-forge/forge/pull/23) — **the published image
   set**: `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been
   broken on `main`. Draft, rounds running.

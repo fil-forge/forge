@@ -35,6 +35,70 @@ now corrected in #19.
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
 
+## forge#18: the gate now runs, and the first thing it found is a blocker
+
+**The dispatched run went red for a real reason, and it is not this change's
+doing** — it is what the vacuous green was hiding.
+[Run 35899900855](https://github.com/fil-forge/forge/actions/runs/35899900855)
+on `44fa2b51`: 3m28s instead of 0.126s, `Resolve the baselines` green,
+`Version skew` red.
+
+**The `:main` fallback works.** All five floating baselines pulled and booted —
+zero `manifest unknown` or `pull access denied` anywhere in the log, and none
+of the five is in the unhealthy list. `<pkg>@sha256:…` is a reference the stack
+handles.
+
+**The two services with real releases are the ones that fail**, symmetrically,
+and neither failure is about wire compatibility:
+
+```
+ingot:0.0.0   ingot: invalid config:
+              - root_access and root_secret are required
+piri:0.2.4    FATAL cli/root.go:28  unknown flag: --plc-directory
+```
+
+`smelt` boots baseline images with **HEAD's** entrypoints and config templates,
+and that surface has moved. `--plc-directory` is passed by
+`smelt/systems/piri/entrypoint.sh:76`, added 2026-07-22 (`45063e56`);
+`piri:0.2.4` is from 2026-04-01. `root_access`/`root_secret` were removed from
+ingot on 2026-09-14 (`54bed17f`); `ingot:0.0.0` is from 2026-07-13 and still
+requires them.
+
+### The decision this raises, which is yours
+
+**The compat suite cannot pin a baseline older than `smelt`'s own launch
+contract.** The usable window opens at the last launch-contract change per
+service, and both releases predate it:
+
+| service | harness usable from | only release | gap |
+|---|---|---|---|
+| `piri` | 2026-07-22 | `0.2.4`, 2026-04-01 | ~16 weeks too old |
+| `ingot` | 2026-09-14 | `0.0.0`, 2026-07-13 | ~9 weeks too old |
+
+So the gate can produce a **true red** — it just did — but **not a meaningful
+green**. Both available shapes are wrong: all-`:main` is vacuous and the new
+`t.Fatalf` refuses it, and the real releases cannot be launched.
+
+Three readings, not decided:
+
+1. **Version the launch contract** — `smelt` learns what each baseline needs.
+   Correct, unbounded, grows with every window.
+2. **Shrink the window to what the harness can launch** — recent `sha-*`
+   images instead of the two ancient tags, as the earlier proof-of-concept did.
+   Real but smaller signal, works today, gives up "a version-shaped tag is a
+   cut release".
+3. **Accept it is blocked until fresh releases are cut**, which is Phase 1.
+   Costs nothing now: `compat.yml` runs only on `release/*` heads and on
+   dispatch, and no release pull request is open. It would block the first one.
+
+**Recommendation: 3 as the position, 2 as the interim if lead time matters.**
+What settles it is whether a release cut next week is meant to be gated by
+compat at all, or whether compat starts gating from the release after it.
+
+Posted on the pull request as
+[a comment](https://github.com/fil-forge/forge/pull/18#issuecomment-5800374601)
+so it sits where the merge decision is made.
+
 ## forge#18: the vacuous gate, and what falling back to `:main` buys
 
 **Your question — "don't we have some kind of `v0.0.0` tagged for them?" — has
