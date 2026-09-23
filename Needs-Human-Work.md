@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `f98e7e26`. **Petra reviewed it 2026-09-23**; four of six comments are fixed and pushed, **two are questions back to her** (see below). One answer invalidates a load-bearing paragraph in `compat-refresh.yml` |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `26e94296`. **Petra reviewed it 2026-09-23**; four of six comments are fixed and pushed, **two are questions back to her** (see below). One answer invalidates a load-bearing paragraph in `compat-refresh.yml` |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -44,6 +44,16 @@ enumeration snippet in `ci.yml`, the eight-services paragraphs in
 row in `AGENTS.md`'s table and a rule that it stays current and stays tight.
 
 **Two are back with you, and one of them matters more than it looks.**
+
+<sub>A round on `RELEASE.md` then found the arming recipe wrong three ways
+(`publish` is skipped unconditionally too; a third fail-closed mechanism — a
+`publish` step that errors on `dry_run: false` — went unmentioned; and arming
+is config work, not just permissions, because goreleaser would create an
+unprefixed tag and `keep-existing` would merge one service's artifacts into
+another's release). Fixed in `26e94296`. **The same tension is inside
+`release.yml`**: its header says arming "is an `on:` block" while its publish
+step says the blocker is not a flag. Not changed there — it is not #18's file —
+but it is the same defect one layer down, and worth an issue.</sub>
 
 ### You can trigger a fresh run on a pull request. The header says you cannot.
 
