@@ -471,7 +471,7 @@ Where the defaults come from depends on whether this repository builds the image
     | sed -E 's/\$\{([A-Z_]+):\?/\1/' | sort -u
   ```
 
-  That misses `PIRI_IMAGE`, which appears in no compose file — `pkg/generate/compose.go` emits piri's service definition. `.github/scripts/check-published-images.sh` does the whole derivation and fails when `.env.published`, `publishedImages` in `pkg/stack/options.go` and the compose interpolations disagree.
+  That misses `PIRI_IMAGE`, which appears in no compose file — `pkg/generate/compose.go` emits piri's service definition. `TestPublishedImageSetAgrees` in `pkg/stack` does the whole derivation and fails when the compose interpolations, `.env.published`, `publishedImages` and `envImageOptions` disagree — including when two of them name *different* images for the same service.
 - **Not built here** — guppy, ipni, plc, blockchain, minio. These keep an inline `:-` default in their `systems/*/compose.yml`, because nothing in this repository can produce an alternative, and they are pinned by digest instead (`.github/scripts/check-stack-images.sh`).
 
 `.env` is yours: every line in it is commented out, and `make up` loads it *after* `.env.published`, so anything you uncomment there wins.
