@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `44fa2b51`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1e1fe5e9`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -34,6 +34,35 @@ now corrected in #19.
 
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
+
+## forge#18 round on the fallback: ten findings, three of them the same shape
+
+Worth recording because the shape recurs: **a check passing for a reason other
+than the one it is named for** — which is the defect this pull request adds a
+guard against, happening to the guard.
+
+- **Test 5 passed with the arm it was named for deleted.** A 500 body fell
+  through into the token parse, which failed, and the *next* guard returned 1
+  with a different message — which test 5's grep for the downstream `::error::`
+  still matched. It now pins the token endpoint's own text.
+- **`tags/list`'s non-200 check had no test at all**, and it is the half that
+  fails *open*: a token that succeeds and a `tags/list` that rate-limits
+  silently demotes that service from a release baseline to a floating one, the
+  run stays green, and the only trace is a `::warning::` naming it beside the
+  five that float legitimately. Invisible to the Go side's all-floating check
+  too, because the demotion is partial.
+- **The only output the workflow consumes was never asserted.** Every
+  assertion read the `base_*` lines the script's own header calls "nothing
+  consumes it"; emitting `baselines={}` left the guard green.
+
+Plus: a literal `main` baseline counted as a release and defeated the
+all-floating guard (`isDigest`'s complement, now a positive version match); a
+missing workspace was still a green skip; and the pagination comment justified
+itself with "GHCR's own next link carries `n=0`", which is false for the
+request this script makes — measured, GHCR echoes the `n` you send.
+
+All ten fixed in `1e1fe5e9`, verified by eleven mutations each caught by
+exactly the test its header names. A round on that commit is open.
 
 ## forge#18: the gate now runs, and the first thing it found is a blocker
 
