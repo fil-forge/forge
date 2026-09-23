@@ -70,6 +70,8 @@ jobs:
         run: .github/scripts/check-goreleaser-ldflags.sh
       - name: the release version assertion fails on a dead ldflag, and passes on a live one
         run: .github/scripts/check-assert-released-version.sh
+      - name: the compat baseline resolver refuses rather than reporting no releases
+        run: .github/scripts/check-compat-baselines.sh
       - name: gofmt
         run: |
           unformatted=$(gofmt -s -l .)

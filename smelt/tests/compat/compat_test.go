@@ -37,7 +37,7 @@
 //
 // # Where the pinned side comes from
 //
-// The released images are the POLYREPOS' — ghcr.io/fil-forge/<svc> — not this
+// The images are the POLYREPOS' — ghcr.io/fil-forge/<svc> — not this
 // repository's. That is not a stopgap standing in for a monorepo registry: the
 // polyrepos are what actually ships to the network today, so their images are
 // what "already deployed" means. This repository publishes no images at all
@@ -49,6 +49,21 @@
 // artifacts this repository would produce. Only the pinned side is an image;
 // the HEAD side is workspace binaries bind-mounted over a base image, so a
 // green run is evidence about wire compatibility, not about deployability.
+//
+// # Two kinds of baseline
+//
+// COMPAT_BASELINE_<PKG> carries either a version (`0.2.4`) or a digest
+// (`sha256:…`), and the difference is the difference between a cut release and
+// upstream's current main. Five of the eight services have cut no release, so
+// their baseline is `:main` resolved to a digest by
+// .github/scripts/compat-baselines.sh, whose header says what that is worth.
+//
+// The short version: those five are ones we deploy ourselves, so skew between
+// them is a scheduling problem rather than a compatibility contract, and the
+// skew this suite is about comes from piri and ingot — which third parties run
+// on their own schedule, and which do have releases to pin to. A run where
+// NONE of the baselines is a release is a run comparing current against
+// current, and this file fails rather than reporting that green.
 package compat
 
 import (
@@ -80,6 +95,12 @@ const imageRepo = "ghcr.io/fil-forge"
 // answer 200. workspace.ModuleDir is the mapping, and it is the same one that
 // decides what gets built, so the two cannot disagree.
 //
+// A DIGEST IS JOINED WITH `@`, A VERSION WITH `:`, and `sha256:` is what tells
+// them apart. Both arrive through the same variable because a service with no
+// cut release is pinned to `:main` resolved to a digest; joining a digest with
+// `:` asks for ghcr.io/fil-forge/<pkg>:sha256:… , which is not a tag anything
+// published.
+//
 // The leading `v` is stripped, and that is load-bearing rather than tidiness:
 // the polyrepos tag git with `v0.2.4` and publish the image as `0.2.4`.
 // Measured against the registry — ghcr.io/fil-forge/piri:0.2.4 answers 200 and
@@ -92,7 +113,44 @@ func imageFor(t *testing.T, service, version string) string {
 		t.Fatalf("no module directory known for service %q, so its registry "+
 			"package name cannot be derived", service)
 	}
+	if isDigest(version) {
+		return fmt.Sprintf("%s/%s@%s", imageRepo, pkg, version)
+	}
 	return fmt.Sprintf("%s/%s:%s", imageRepo, pkg, strings.TrimPrefix(version, "v"))
+}
+
+// isDigest reports whether a baseline value is a digest rather than a version.
+// One predicate, used by imageFor to pick the separator and by the test to
+// count how many baselines are real releases, so the two cannot disagree about
+// what a digest is.
+func isDigest(v string) bool { return strings.HasPrefix(v, "sha256:") }
+
+// TestImageFor locks the one thing imageFor can get wrong that nothing else
+// would catch until a container timed out forty minutes later: a digest joined
+// with `:`. It runs before the stack, costs nothing, and needs no Docker.
+func TestImageFor(t *testing.T) {
+	const dig = "sha256:a71a8bdcfd45e227019b9c5c8be344481f263a8070c00431cce520c31266e2d6"
+	for _, c := range []struct {
+		name, service, version, want string
+	}{
+		// The service name is not the package name for three of them, which is
+		// the other way this used to go wrong -- so the cases that exercise
+		// the separator use the services where both facts are live at once.
+		{"release", "piri", "0.2.4", "ghcr.io/fil-forge/piri:0.2.4"},
+		{"release with a v", "piri", "v0.2.4", "ghcr.io/fil-forge/piri:0.2.4"},
+		{"renamed service", "upload", "1.2.3", "ghcr.io/fil-forge/sprue:1.2.3"},
+		{"digest", "hilt", dig, "ghcr.io/fil-forge/hilt@" + dig},
+		{"digest, renamed service", "signing-service", dig,
+			"ghcr.io/fil-forge/piri-signing-service@" + dig},
+		{"floating tag", "swarf", "main", "ghcr.io/fil-forge/swarf:main"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := imageFor(t, c.service, c.version); got != c.want {
+				t.Errorf("imageFor(%q, %q) = %q, want %q",
+					c.service, c.version, got, c.want)
+			}
+		})
+	}
 }
 
 func TestMain(m *testing.M) {
@@ -106,8 +164,9 @@ func TestMain(m *testing.M) {
 
 // A VERSION-SHAPED TAG HERE IS A CUT RELEASE: upstream publishes
 // <svc>:X.Y.Z only from the git tag vX.Y.Z, never from an ordinary push to
-// main, which produces :main and :sha-* instead. That is what makes these
-// baselines usable where :main is not.
+// main, which produces :main and :sha-* instead. That is what makes a version
+// baseline worth more than the :main fallback: it does not move, and it is
+// genuinely older than HEAD.
 //
 // The exact mechanism is NOT described here, on purpose. Three revisions of
 // this comment tried and each was wrong in a different way -- which commit
@@ -116,8 +175,15 @@ func TestMain(m *testing.M) {
 // does. The chain differs per service and lives in each polyrepo's
 // .github/workflows; read it there if you need it.
 //
+// A GIT TAG IS NOT A RELEASE HERE. hilt and swarf both carry v0.0.0 in git and
+// publish no image under it -- hilt's is on the commit that ADDED version.json
+// and swarf's is on its root commit, six weeks before it had one. The registry
+// is the only thing that answers the question this file has, which is why the
+// workflow reads the registry and not git.
+//
 // What ingot's 0.0.0 says is how OLD the pinned peer is: fil-forge/ingot
-// carries exactly one tag, so it is that service's first and only release.
+// carries exactly one version-tagged image, so it is that service's first and
+// only release.
 
 // pinFor maps a smelt service name to the option that pins its image. The
 // names are workspace.Detect()'s, which are the names the stack itself uses,
@@ -166,15 +232,29 @@ func envSuffix(t *testing.T, service string) string {
 // this go.work, and one of the four it missed was the indexer, which sits on
 // the path this test asserts over.
 //
-// So it needs a released image for every one of them, and skips naming the ones
-// it lacks. Five of the eight publish no version-tagged image today, only :main
-// and :sha-*: sprue, hilt, the signing service, delegator and swarf. The other
-// three do -- piri 0.2.4, ingot 0.0.0 and the INDEXER at 1.13.4, which is worth
-// naming because an earlier revision of this comment counted it among the
-// missing. So the skip is the expected outcome until the five cut releases. It
-// is a skip rather than a substitution on purpose: :main is a moving tag, and
-// pinning a compatibility baseline to something that moves is how a red becomes
-// ambiguous.
+// So it needs an image for every one of them. Five of the eight publish no
+// version-tagged image today, only :main and :sha-*: sprue, hilt, the signing
+// service, delegator and swarf. The other three do -- piri 0.2.4, ingot 0.0.0
+// and the INDEXER at 1.13.4, which is worth naming because an earlier revision
+// of this comment counted it among the missing.
+//
+// IT USED TO SKIP OVER THE FIVE, AND THAT MADE THE WHOLE GATE VACUOUS. The
+// workflow ran the job when ANY service could be pinned; this needed EVERY
+// service pinned; so the job ran, this skipped, `go test` exited 0, and the
+// check went green in 0.126s having booted nothing. Two conditions differing
+// by one quantifier with a green check in the gap.
+//
+// Now the five take `:main`, and the objection the skip was defending against
+// is answered where it arises rather than by not running: :main moves, so the
+// workflow resolves it to a DIGEST and that digest is in the run's log and
+// output. The run still faces whatever :main is at the moment it asks, and a
+// red is still reproducible afterwards.
+//
+// What the fallback does NOT buy is skew for those five -- :main is roughly
+// this tree, so they contribute almost none. That is the right outcome rather
+// than a compromise: we deploy those five ourselves and can upgrade them
+// together. The skew this test is about comes from piri and ingot, the two it
+// upgrades, and those two have releases.
 func TestRollingUpgrade(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("skipping on darwin (docker-in-docker flakiness)")
@@ -186,30 +266,49 @@ func TestRollingUpgrade(t *testing.T) {
 	}
 
 	// Per-service semver means there is no single baseline VERSION -- there is
-	// a baseline SET, one release per service. COMPAT_BASELINE_<PACKAGE>
-	// carries each; the workflow fills them from the registry.
+	// a baseline SET, one entry per service. COMPAT_BASELINE_<PACKAGE> carries
+	// each; the workflow fills them from the registry.
 	baseline := map[string]string{}
-	var missing []string
+	var releases, floating []string
 	for _, svc := range fleet {
 		if _, ok := pinFor[svc]; !ok {
 			t.Fatalf("workspace service %q has no entry in pinFor, so this test "+
 				"cannot pin it and would boot it from HEAD inside a fleet that is "+
 				"supposed to be old. Add it.", svc)
 		}
-		key := "COMPAT_BASELINE_" + envSuffix(t, svc)
-		v := strings.TrimSpace(os.Getenv(key))
-		if v == "" {
-			// The VARIABLE, not the service name. Naming the service sends a
-			// reader to COMPAT_BASELINE_UPLOAD, which nothing reads -- the same
-			// service-versus-package confusion this file was just corrected for.
-			missing = append(missing, key)
-			continue
+		v := strings.TrimSpace(os.Getenv("COMPAT_BASELINE_" + envSuffix(t, svc)))
+		switch {
+		case v == "":
+			// Unset means nobody resolved one, which in practice means a local
+			// run: the workflow sets every entry. Take the bare tag rather
+			// than skipping, so a local run boots something.
+			v = "main"
+			floating = append(floating, svc)
+		case isDigest(v):
+			floating = append(floating, svc)
+		default:
+			releases = append(releases, svc)
 		}
 		baseline[svc] = v
 	}
-	if len(missing) > 0 {
-		t.Skipf("no published release to upgrade from; unset: %s",
-			strings.Join(missing, " "))
+	// THE ONE THING THAT WOULD MAKE THIS VACUOUS AGAIN. With no release in the
+	// set the whole fleet is upstream's main, which is roughly this tree, so
+	// the run compares current against current and a green means nothing. That
+	// is a failure rather than a skip, because a skip is what put this file
+	// here.
+	if len(releases) == 0 {
+		t.Fatalf("every baseline is a floating :main (%v), so the old half of "+
+			"the fleet is the same code as HEAD and a green here would assert "+
+			"nothing. Resolve them with:\n"+
+			"  eval \"$(.github/scripts/compat-baselines.sh | "+
+			"sed -n 's/^base_/export COMPAT_BASELINE_/p')\"", baseline)
+	}
+	if len(floating) > 0 {
+		t.Logf("compat: %d of %d baselines are a floating :main (%s) -- those "+
+			"services have cut no release, so they contribute little skew; the "+
+			"skew under test comes from %s",
+			len(floating), len(fleet), strings.Join(floating, " "),
+			strings.Join(releases, " "))
 	}
 
 	for _, upgraded := range []string{"piri", "ingot"} {

@@ -14,14 +14,14 @@ name: compat
 # so a red there leaves you working out which pending release it implicates.
 #
 # It takes no service. Unlike release.yml it tests the whole stack against the
-# window, so a release pull request for any service gets the same run; the
-# branch name is only the signal that a release is being proposed.
+# baseline set, so a release pull request for any service gets the same run;
+# the branch name is only the signal that a release is being proposed.
 #
 # THE ANSWER GOES STALE WITHOUT THE CODE CHANGING, which is why this file has no
 # `schedule:` and `compat-refresh.yml` does. The pinned side is read live from
 # the registry, so the same commit can face a different fleet tomorrow: an
-# upstream release lands, the window moves, and a release pull request that was
-# green is no longer known to be. That workflow re-runs THIS one on every open
+# upstream release lands or a `:main` moves, the baselines move with it, and a
+# release pull request that was green is no longer known to be. That workflow re-runs THIS one on every open
 # release pull request, daily. Re-runs, rather than starting a fresh run against
 # the branch, because a re-run stays attached to the pull request and so lands
 # the fresh answer where the merge decision is made. GitHub stops allowing that
@@ -37,22 +37,26 @@ name: compat
 # and carries no service-prefixed tags; neither is a prerequisite here, which
 # is why this can run before the release-ownership question is settled.
 #
-# THE VERSION SET COMES FROM THE REGISTRY, not from git tags, because the two
+# THE BASELINE SET COMES FROM THE REGISTRY, not from git tags, because the two
 # disagree: the polyrepos tag git `v0.2.4` and publish the image `0.2.4`.
 # Reading the registry asks the question the test actually has -- "what can I
 # pin against?" -- and cannot drift from it.
+#
+# FIVE OF THE EIGHT HAVE CUT NO RELEASE, so their baseline is `:main` resolved
+# to a digest. This job used to skip when any service lacked one, which made
+# the check GREEN IN 0.126s HAVING BOOTED NOTHING -- the job ran because SOME
+# service could be pinned, the test needed EVERY service pinned, and a skipped
+# Go test exits 0. There is now no skip: the script produces a complete
+# baseline set or fails, and compat-baselines.sh's own header says what a
+# floating baseline is worth and what it is not.
 
 on:
   # No `branches:` filter would help: it matches the BASE branch, and what
   # selects a release here is the HEAD branch. The job condition below does it.
   pull_request:
+  # No inputs. There was a `window` input, for a pinned-peer test that has
+  # since been cut; nothing read it.
   workflow_dispatch:
-    inputs:
-      window:
-        description: 'How many recent releases per service to test against'
-        required: false
-        default: '2'
-        type: string
 
 permissions:
   contents: read
@@ -74,8 +78,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  window:
-    name: Resolve the published window
+  baselines:
+    name: Resolve the baselines
     # A release pull request, or a dispatch. Every other pull request skips
     # this job, and `compat` needs it, so both skip together -- measured on
     # run 35788998286, an ordinary pull request, where both report `skipped`.
@@ -96,29 +100,24 @@ jobs:
     # thing that varies moves inside a value instead.
     outputs:
       baselines: ${{ steps.resolve.outputs.baselines }}
-      windows: ${{ steps.resolve.outputs.windows }}
-      pinnable: ${{ steps.resolve.outputs.pinnable }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve versions from the registry
+      - name: Resolve baselines from the registry
         id: resolve
-        env:
-          N: ${{ inputs.window || '2' }}
-        run: .github/scripts/compat-window.sh "$N" >> "$GITHUB_OUTPUT"
+        run: .github/scripts/compat-baselines.sh >> "$GITHUB_OUTPUT"
 
   compat:
     name: Version skew
-    needs: window
-    # Nothing to pin against is not a failure. A service that has not published
-    # a release yet should not give this a permanent red.
+    needs: baselines
+    # NO CONDITION, deliberately. There was one -- `pinnable == 'true'`, true
+    # when ANY service could be pinned -- and the test needs EVERY service
+    # pinned, so the job ran and the test skipped and the check went green
+    # having booted nothing. Two conditions that differ by one quantifier, one
+    # in YAML and one in Go, with a green check in the gap.
     #
-    # This skip is only safe because the script now FAILS when it cannot read
-    # the registry, rather than reporting that as "no releases". It used to do
-    # the latter, which made an outage look like this case: four "publishes no
-    # version-tagged image" lines, pinnable=false, this job skipped, and the
-    # run green having asserted nothing.
-    if: needs.window.outputs.pinnable == 'true'
+    # Now the baselines job either produces a complete set or fails, so there
+    # is one place that decides and it is the one that reads the registry.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -139,19 +138,18 @@ jobs:
       # the registry answered.
       - name: Expand the resolved versions
         env:
-          BASELINES: ${{ needs.window.outputs.baselines }}
+          BASELINES: ${{ needs.baselines.outputs.baselines }}
         run: |
           set -euo pipefail
           python3 - <<'EOF' >> "$GITHUB_ENV"
           import json, os, re
-          for var, prefix, suffix in (("BASELINES", "COMPAT_BASELINE_", ""),):
-              for k, v in json.loads(os.environ[var]).items():
-                  # The key comes from a package name the registry confirmed, so
-                  # it cannot carry a newline -- but $GITHUB_ENV is parsed line
-                  # by line, and a check here costs nothing.
-                  assert re.fullmatch(r"[A-Z0-9_]+", k), k
-                  assert "\n" not in v, v
-                  print(f"{prefix}{k}{suffix}={v}")
+          for k, v in json.loads(os.environ["BASELINES"]).items():
+              # The key comes from a package name the registry confirmed, so it
+              # cannot carry a newline -- but $GITHUB_ENV is parsed line by
+              # line, and a check here costs nothing.
+              assert re.fullmatch(r"[A-Z0-9_]+", k), k
+              assert "\n" not in v, v
+              print(f"COMPAT_BASELINE_{k}={v}")
           EOF
           echo "--- resolved ---"; grep '^COMPAT_' "$GITHUB_ENV"
 

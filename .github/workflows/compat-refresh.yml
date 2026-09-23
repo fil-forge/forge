@@ -11,7 +11,7 @@ name: compat-refresh
 # WHY THIS EXISTS AT ALL. compat.yml asks "does the release proposed here still
 # work against what is already deployed?" -- and the answer changes without the
 # pull request changing, because the deployed side is read live from the
-# registry. An upstream release lands, the window moves, and a release pull
+# registry. An upstream release lands or a `:main` moves, the baselines move, and a release pull
 # request that was green yesterday is no longer known to be green. Nothing about
 # the pull request triggers anything, so without this its check is simply old.
 #
