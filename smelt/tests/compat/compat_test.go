@@ -134,8 +134,8 @@ func isDigest(v string) bool { return strings.HasPrefix(v, "sha256:") }
 // satisfies the all-floating check, which is exactly the vacuous run that
 // check exists to refuse.
 //
-// The pattern is versions_from's in compat-baselines.sh, plus the optional
-// leading `v` imageFor already strips.
+// The pattern is newest_version_from's in compat-baselines.sh, plus the
+// optional leading `v` imageFor already strips.
 var isRelease = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+$`).MatchString
 
 // TestImageFor locks the one thing imageFor can get wrong that nothing else

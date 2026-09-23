@@ -37,8 +37,8 @@
 #   the digest length check                    -> FAIL (test 8)
 #   the empty-service-list refusal             -> FAIL (test 9)
 #   the pagination loop's Link following       -> FAIL (test 10)
-#   numeric sorting in versions_from           -> FAIL (tests 3, 11)
-#   versions_from's fullmatch (arch suffixes)  -> FAIL (tests 3, 11)
+#   numeric sorting in newest_version_from     -> FAIL (tests 3, 11)
+#   its fullmatch (the arch suffixes)          -> FAIL (tests 3, 11)
 #   `baselines=` emitted as {}                 -> FAIL (tests 1-3)
 #   key_for's `-` -> `_`                       -> FAIL (test 1)
 #   the `[a-z0-9-]` in the service derivation  -> FAIL (test 1)
@@ -123,7 +123,7 @@ TAGS = {
     "rel-svc": ["main", "sha-abc1234", "1.2.3"],
     # The arch-suffixed pair is ingot's real shape. WHAT IT CATCHES is a
     # loose match: `fullmatch` -> `match` takes `0.0.1-amd64` into the sort,
-    # whose key does `int("0-amd64")` and raises, so the script aborts with an
+    # whose key does `int("1-amd64")` and raises, so the script aborts with an
     # empty stdout. Not a mis-pick -- an earlier version of this comment said
     # the pair "sorts ABOVE every real version" so a loose match would choose
     # an unrunnable reference, which does not happen and made the ordering
@@ -215,15 +215,19 @@ class H(BaseHTTPRequestHandler):
     do_HEAD = do_GET
 
 # PLAIN, SINGLE-THREADED, DEFAULT BACKLOG -- which is what it was before a
-# revision that flailed at a flake. That revision made this ThreadingHTTPServer
-# and set `srv.request_queue_size = 128`, on a theory that the accept queue was
-# the bottleneck. Both halves were wrong: the assignment comes AFTER the
-# constructor, and socketserver calls `listen(self.request_queue_size)` during
-# it, so the backlog stayed 5 (measured by instrumenting socket.listen);
-# `daemon_threads = True` was already the class default; and the flake was
-# never here at all. It was the `| head -n 1` on versions_from in the script
-# under test -- see newest_version_from. Reverted rather than left in place
-# with a justification that did not hold.
+# revision that flailed at a flake. That revision made this a
+# ThreadingHTTPServer and set `srv.request_queue_size = 128`, on a theory that
+# the accept queue was the bottleneck. The knobs were inert: the assignment
+# comes AFTER the constructor and socketserver calls
+# `listen(self.request_queue_size)` during it, so the backlog stayed 5
+# (measured by instrumenting socket.listen), and `daemon_threads = True` was
+# already the class default.
+#
+# Nothing observed ever implicated this file. What was observed is in
+# newest_version_from's comment, and it is a defect in the script under test.
+# So the threading went back out: added on a theory, fixing nothing
+# measurable, and a stub that does one thing at a time is easier to reason
+# about than one that does not.
 srv = HTTPServer(("127.0.0.1", 0), H)
 print(srv.server_port, flush=True)
 srv.serve_forever()
@@ -305,7 +309,7 @@ if [ "$(rc_of t3)" = 0 ] && grep -qx 'base_SORTING=1.10.0' "$work/t3.out" \
    && grep -qx 'baselines={"SORTING": "1.10.0"}' "$work/t3.out"; then
   ok "3 newest release wins, sorted numerically"
 else
-  bad "3 numeric sort (rc=$(rc_of t3)): $(out_of t3)"
+  bad "3 numeric sort (rc=$(rc_of t3)): $(out_of t3) / $(err_of t3)"
 fi
 
 # 4. A package that does not exist is refused HERE, naming the service. It
