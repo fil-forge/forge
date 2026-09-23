@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 02:45Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 03:00Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `169cbd9`. Rounds one and two: **6 findings, none in the fix itself** — every one was about a claim made for it. Round three running |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `1945c7d1`. Round one: **5 findings, and the guard was passing on three broken trees.** Rewritten as a Go test, verified in eight directions. Round two running |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `cf5c105d`. Rounds one and two: **10 findings.** The shell guard was green on three broken trees; its Go replacement then under-read compose two ways. Eleven mutations now verified. Round three running |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -175,6 +175,35 @@ go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
 So correcting the spelling to `0` would silently turn the race detector off, or
 break the step outright. Noted on the PR. **Not filed as an issue** — that is
 yours to ask for.
+
+## forge#23 round two: the replacement under-read compose, two ways
+
+Round one's Go test was a real improvement and still recognised less than
+compose does. Both proved with the real client — Docker Compose v5.1.1 parses
+without a daemon, so `docker compose config` is available here even though
+`make up` is not.
+
+- **`${X?msg}` is also a required form.** `${X:?msg}` errors when unset *or
+  empty*; `${X?msg}` errors when unset. Compose rejects either identically —
+  `required variable NEWTHING_IMAGE is missing a value` — and the pattern
+  matched only the first, so the other spelling of the same line left the test
+  green.
+- **The walk keyed on the filename `compose.yml`.** The root file pulls its
+  parts in with `include:`, naming paths explicitly, so an included file called
+  anything else was invisible — and `compose.yaml` is compose's own
+  auto-discovered default. It now reads every `.yml` and `.yaml` under the
+  smelt root; across all of them, grafana dashboards and service configs
+  included, the pattern matches only compose files.
+
+**And the body repeated the miscount that caught three rounds on #18.** It said
+"seven across `systems/*/compose.yml`". That glob matches **thirteen** files and
+reaches none of the indexer's, which is at `systems/indexing/indexer/compose.yml`
+— a level deeper. Made in the body of the pull request that fixes the nesting.
+The number is now stated without the glob that does not produce it.
+
+The round also caught **this wiki**: [[Current State]] said #18 was the only
+open `forge` pull request, and a later paragraph still listed #19, which merged
+and is #23's own base. Both fixed above.
 
 ## forge#23 round one: the guard was green on three broken trees
 

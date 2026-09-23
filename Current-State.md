@@ -1,6 +1,6 @@
 # Current state
 
-**Snapshot as of 2026-09-22 22:30Z, Tuesday.** For history and
+**Snapshot as of 2026-09-23 03:00Z, early Wednesday.** For history and
 reasoning, see [[Consolidation Findings]].
 
 <!-- UPKEEP, for whoever maintains this page:
@@ -189,9 +189,10 @@ Seven rules that have actually decided things:
 
 ## Where it stands
 
-**`main` is `4611cbcb` (#22's merge), the import phase is closed, and
-[#18](https://github.com/fil-forge/forge/pull/18) is the only `forge` pull
-request open — and it is Open, not a draft.** All **ten** in-scope
+**`main` is `4611cbcb` (#22's merge), the import phase is closed, and **two**
+`forge` pull requests are open: [#18](https://github.com/fil-forge/forge/pull/18),
+Open and green, and [#23](https://github.com/fil-forge/forge/pull/23), a draft
+opened overnight.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
 digest, the checks the per-service `.github/` directories took with them
@@ -214,15 +215,19 @@ Merged onto `main` since the last revision of this page, newest first:
 | [#11](https://github.com/fil-forge/forge/pull/11) | 2026-09-18 17:04Z | shard `itest ingot` across three runners |
 | [#9](https://github.com/fil-forge/forge/pull/9) | 2026-09-18 14:20Z | every goreleaser `-X` ldflag named a pre-consolidation module path; a release would have shipped binaries reporting `v0.0.0` |
 
-**Two `forge` pull requests are open, both drafts, both with a review round
-running.** Neither is blocked on you yet; a draft means a round is open, and the
-flip to Open is yours to make once one comes back satisfied.
+**Two `forge` pull requests are open**, and this paragraph named the wrong two
+until a review round caught it — it still listed #19, which merged as
+`82aaa35b` and is #23's own base.
 
 - [#18](https://github.com/fil-forge/forge/pull/18) — **`compat.yml`**: does what
-  we are about to ship still work against what is already deployed?
-- [#19](https://github.com/fil-forge/forge/pull/19) — **the release-pull-request
-  gate**: a pull request from a `release/<svc>` branch builds that service and
-  asserts its version stamping.
+  we are about to ship still work against what is already deployed? **Open, not
+  a draft**, rounds stopped at seven, green on 28/28. **Waiting on your merge.**
+- [#23](https://github.com/fil-forge/forge/pull/23) — **the published image
+  set**: `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been
+  broken on `main`. Draft, rounds running.
+
+Since #22, a draft means the rounds are still running and Open means they have
+stopped — whoever called the stop.
 
 Heads, round numbers and what each round found live on [[Needs Human Work]] and
 are **not repeated here**. An earlier revision of this page carried them in a
