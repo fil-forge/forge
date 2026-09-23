@@ -10,10 +10,11 @@ its own tag; there is no repo-wide version number and no release train.
    Agent review rounds run until one comes back with nothing (`AGENTS.md`
    rule 10). Merge when it is green.
 2. **A release pull request.** Branch it `release/<service>` and bump
-   `<service>/version.json`. **The branch name is load-bearing**: `compat.yml`
-   runs its compatibility suite only for a head branch starting with
-   `release/`, and `compat-refresh.yml` finds the pull requests to refresh the
-   same way.
+   `<service>/version.json`. **The branch name is load-bearing**: of the pull
+   requests that open, `compat.yml` runs its compatibility suite for those
+   whose head branch starts with `release/` and no others, and
+   `compat-refresh.yml` finds the ones to refresh the same way. (A manual
+   dispatch runs it on any ref — the branch name gates the automatic run.)
 3. **Merge it**, then **create the tag by hand** (below).
 4. **Dispatch `release.yml`** for that service.
 
@@ -52,12 +53,19 @@ the two whose configs carry a `dockers:` stanza (`ingot`, `sprue`).
 ## What is not armed
 
 **`release.yml` cannot publish anything at this head, on purpose.** It is
-dispatch-only (never triggered by a push or a tag), `dry_run` defaults to
-true, and it is fail-closed twice over: goreleaser's `publish` and `docker`
-steps are skipped, *and* the job's token is `contents: read`, so even if a
-future edit drops the skips the release cannot be created.
+dispatch-only, `dry_run` defaults to true, and three independent things stop a
+publish even with `dry_run: false`: goreleaser's `publish` and `docker` steps
+are skipped unconditionally, the job's token is `contents: read`, and the
+`publish` step itself fails with an error saying why.
 
-Arming it means: `contents: write` and `packages: write`, `setup-qemu` and
-`setup-buildx`, and dropping `docker` from the skip list. That is a decision
-about who owns releases, not a workflow change — see the wiki's *Needs Human
-Work*.
+**Arming it is not a permissions change.** goreleaser's release pipe creates
+the tag it releases, from the plain semver — so it would create an unprefixed
+`v0.2.4`, not `piri/v0.2.4`, in the namespace ten services share. And with
+`release: mode: keep-existing` on all four configs and three services still at
+`v0.0.0`, the second service to release at a version another already used
+uploads its artifacts into that service's release instead of failing.
+
+Neither is fixable by a flag. The choice is per-service `release: disable:
+true` with somewhere else to put artifacts, or a tag scheme goreleaser and Go
+both accept — on top of the ownership decision. The comment above
+`release.yml`'s `publish` step is the long form.
