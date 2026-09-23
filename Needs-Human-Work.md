@@ -29,10 +29,48 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`. **Nine rounds, 37 findings**; round ten running. The one-line fix has been correct throughout; every finding has been about the guard. **The scope question below is now decided, with a flip condition** |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`, **green — 25 checks pass, `release` skipped by design**. **Ten rounds, 40 findings**; round eleven running, scoped to the body's numbers only. The one-line fix has been correct throughout. **The scope call below is settled: round ten's flip condition did not fire** |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
+
+## forge#23 round ten: the code is settled, the prose was not
+
+**Round ten found nothing in either test.** It reproduced all three of round
+nine's code fixes as genuinely fixed, with a control per case, re-derived the
+twelve-row mutation table, and separately removed each of the eight built-here
+names' requirement in turn to confirm the whole set is covered. **So the flip
+condition on the scope call below did not fire, and the second test stays in
+#23** — that is settled now rather than merely unfired.
+
+All three of its findings were **false claims in the pull request body**. Which
+means the last four findings on this PR, across two rounds, were all prose
+about the code rather than the code. Worth knowing before reading the round
+count as a sign the change is risky: it is not, and has not been since round
+one.
+
+**One of the three is a real fact about this repository, not just about the
+body.** The body claimed that replacing a compose interpolation with a
+digest-pinned literal "turns `check-stack-images.sh` red, so it is not
+invisible". That is **backwards.** The guard's rule is *pinned by digest **or**
+a variable*, so a digest-pinned literal is precisely what it accepts. Measured
+at this head, independently of the review:
+
+    ${GUPPY_IMAGE:-…}  ->  ghcr.io/fil-forge/guppy:main@sha256:…
+    check-stack-images.sh   rc=0   (green)
+    the new test            rc=0   (passes)
+
+So **a not-built-here image quietly pinned to a literal digest is caught by
+nothing at all** — no guard, no test. Only a non-digest literal turns the guard
+red. A *built-here* image replaced the same way is caught, by the required-form
+half. The gap is exactly the not-built-here case, and it is now stated as such
+in the PR's "what is still not checked" list rather than claimed to be covered.
+Not fixed here — closing it is a change to the guard, not to this PR.
+
+The other two were arithmetic: a size comparison that measured a check against
+a whole file (225 lines against 433, where the like-for-like figure is 225
+against 286 — 21%, not 48%), and round nine's finding count given as three when
+it was four.
 
 ## forge#23 round nine: the two halves want file sets of different sizes
 
@@ -68,12 +106,15 @@ That argument does not reach the second, and all three findings sit in the gap:
 Round nine recommended **splitting** it out, and the case is real — 225 of the
 file's 392 lines, three rounds absorbed, every finding in all three landing in
 it and none in the one-line fix. Against that, the same round's stated condition
-for *keeping* was that its three findings collapse into one push rather than
+for *keeping* was that its findings 1–3 collapse into one push rather than
 another round. They did, in `d92200e6`.
 
 **What flips it:** round ten finding anything further in
 `TestBuiltImagesAreRequiredNotDefaulted`. Then the fix has waited long enough
 for a guard that is still moving, and the guard goes to its own pull request.
+
+<sub>**Resolved: round ten found nothing in that test**, so the condition is
+spent and the check stays. See the round-ten section above.</sub>
 The cut is clean — `walkStrings` and `includeTargets` have no callers outside
 that test, and `options.go` is comments-only, so a follow-up needs nothing from
 the branch.
