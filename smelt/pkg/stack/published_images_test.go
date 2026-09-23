@@ -68,12 +68,17 @@ func fieldReachedBy(t *testing.T, mutate func(*config)) string {
 //
 // KEYS ARE NOT VISITED. An earlier revision visited them, justified by
 // "compose interpolates throughout, not only in values" -- which is the
-// opposite of what compose does. Measured with the client: a `${X:?}` in a
-// service name, an `environment` key, a `labels` key or a top-level `x-` key
-// leaves `docker compose config` exiting 0 with the variable unset, and the
-// output re-escapes the `$` to `$$`, which is compose saying it treated the
-// text as a literal. Visiting keys put back exactly the over-reading the
-// parse rewrite was written to remove.
+// opposite of what compose does. Measured with the client: a `${X:?}` in an
+// `environment` key, a `labels` key or a top-level `x-` key leaves
+// `docker compose config` exiting 0 with the variable unset, and the output
+// re-escapes the `$` to `$$` -- compose saying it treated the text as a
+// literal. Visiting keys put back exactly the over-reading the parse rewrite
+// was written to remove.
+//
+// An earlier revision named a SERVICE NAME as a fourth such position. It is
+// not one: compose exits 1 there with "services additional properties '...'
+// not allowed", schema validation refusing the name before interpolation is
+// reached. The conclusion held; one of the four cases cited had not been run.
 func walkYAMLStrings(n any, fn func(string)) {
 	switch v := n.(type) {
 	case string:
@@ -94,11 +99,20 @@ func walkYAMLStrings(n any, fn func(string)) {
 }
 
 // composeFileNames are the names `docker compose` discovers on its own in a
-// directory it is run from. Anything else only reaches compose by being named
-// in an `include:`.
+// directory it is run from.
+//
+// THE OVERRIDE NAMES COUNT. An earlier revision listed only the four base
+// names and called that the complete auto-discovery list. Compose also loads
+// `compose.override.{yml,yaml}` and `docker-compose.override.{yml,yaml}`
+// alongside them, and a `${X:?}` in one is required exactly as in the base
+// file -- verified with the client, rc=1 naming the variable. That is the live
+// `make up` path: smelt's COMPOSE passes no `-f` unless the workspace override
+// exists, and `-f` is what suppresses auto-discovery.
 var composeFileNames = map[string]bool{
 	"compose.yaml": true, "compose.yml": true,
+	"compose.override.yaml": true, "compose.override.yml": true,
 	"docker-compose.yaml": true, "docker-compose.yml": true,
+	"docker-compose.override.yaml": true, "docker-compose.override.yml": true,
 }
 
 // includePaths returns the `include:` targets a compose document names,
@@ -137,6 +151,38 @@ func includePaths(dir string, doc any) []string {
 	return out
 }
 
+// extendsPaths returns the files a document's services pull in with
+// `extends: {file: ...}`. A SECOND WAY COMPOSE READS A FILE, which an earlier
+// revision's comment denied by saying it "reaches anything else only through
+// an include:". Verified with the client: a required variable in an
+// extends.file target is required. Nothing in this tree uses it today; it is
+// covered because the comment claimed totality and the claim was wrong.
+func extendsPaths(dir string, doc any) []string {
+	m, ok := doc.(map[string]any)
+	if !ok {
+		return nil
+	}
+	services, ok := m["services"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, svc := range services {
+		sm, ok := svc.(map[string]any)
+		if !ok {
+			continue
+		}
+		ext, ok := sm["extends"].(map[string]any)
+		if !ok {
+			continue
+		}
+		if f, ok := ext["file"].(string); ok {
+			out = append(out, filepath.Join(dir, f))
+		}
+	}
+	return out
+}
+
 // requiredImageVars returns the image variables compose requires, from the
 // files compose actually reads.
 //
@@ -157,6 +203,14 @@ func includePaths(dir string, doc any) []string {
 //
 // ROOTED AT THE SMELT ROOT, not at systems/: smelt/compose.yml is the file
 // `make up` resolves and it sits outside systems/.
+//
+// TWO KNOWN LIMITS, stated because the comment above would otherwise read as
+// total and rule 5 is about exactly that. `include:` accepts a
+// `project_directory:` that redirects how the included file's OWN nested
+// includes resolve, and this reads them relative to the included file instead.
+// And `include.env_file:` can supply a required variable, which this does not
+// read -- that one errs towards a false failure. Neither appears in this tree;
+// both are left uncovered rather than half-covered.
 func requiredImageVars(t *testing.T, root string) map[string]bool {
 	t.Helper()
 	// `:?` and `?` are BOTH required forms. `${X:?msg}` errors when X is unset
@@ -226,12 +280,32 @@ func requiredImageVars(t *testing.T, root string) map[string]bool {
 
 		for _, doc := range parse(path) {
 			walkYAMLStrings(doc, match)
-			for _, inc := range includePaths(filepath.Dir(path), doc) {
-				// An include naming a file that is not there is compose's
-				// error to report, not this test's.
+			for _, inc := range append(includePaths(filepath.Dir(path), doc),
+				extendsPaths(filepath.Dir(path), doc)...) {
 				if _, err := os.Stat(inc); err == nil {
 					queue = append(queue, inc)
+					continue
 				}
+				// A MISSING TARGET IS FATAL, with one named exception. An
+				// earlier revision skipped any absent path "because that is
+				// compose's error to report" -- but compose reports it by
+				// failing the whole project (rc=1, "no such file or
+				// directory"), while this test went green having quietly
+				// dropped every variable that file named. Mistyping
+				// systems/swarf as systems/swraf in the root include loses
+				// SWARF_IMAGE from `required` and passes.
+				//
+				// The exception is generated/, which is gitignored build
+				// output from `go run ./cmd/smelt generate`; the root include
+				// names generated/compose/piri.yml and it is absent in a clean
+				// checkout. That is the only absence this skip was ever for,
+				// which the earlier comment did not say, so nobody could
+				// tighten it safely.
+				rel, rerr := filepath.Rel(root, inc)
+				require.NoError(t, rerr)
+				require.True(t, strings.HasPrefix(rel, "generated"+string(filepath.Separator)),
+					"%s includes %s, which does not exist; compose fails the whole project on that",
+					path, inc)
 			}
 		}
 	}
