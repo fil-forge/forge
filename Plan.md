@@ -119,9 +119,17 @@ here:
   which commits touch which module since `<service>/vX.Y.Z` — roughly
   `git log <service>/vX.Y.Z..main -- <service>/` being non-empty. Needs the tag
   to anchor from, and a rule for a module never released (no tag; the answer is
-  its first commit). **Open:** one pull request per module needing one, or one
-  bumping several. Per module keeps `compat.yml`'s `release/<service>`
-  convention and per-service semver intact.
+  its first commit). **One pull request per service** (Petra, 2026-09-23),
+  which keeps `compat.yml`'s `release/<service>` convention and per-service
+  semver intact — and gives ordering for free: when two services must be
+  released in sequence, only the first is green on compat, which is the one to
+  release, and releasing it turns the other green.
+
+  `git log <service>/vX.Y.Z..main -- <service>/` is enough for now. Once
+  in-repo libraries create intra-module dependencies it may need more, or may
+  not: because the modules are separate, arriving at a service version that
+  uses the new library version may simply be iterative. To settle when that is
+  built, not before.
 
 **Still gated on the two-sources-of-truth decision**, which is the same gate as
 the rest of Phase 1: while the polyrepo still releases these services, a tag cut
