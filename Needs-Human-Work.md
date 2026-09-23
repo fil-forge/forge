@@ -29,10 +29,75 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `f693c50c`. **Eight rounds, 33 findings.** The one-line fix has been correct throughout; every finding has been about the guard. **A scope question for you below** — the second test protects a property `main` never had |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`. **Nine rounds, 37 findings**; round ten running. The one-line fix has been correct throughout; every finding has been about the guard. **The scope question below is now decided, with a flip condition** |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
+
+## forge#23 round nine: the two halves want file sets of different sizes
+
+Round nine, three code findings and one about the pull request body. All three
+code findings have one root, and it is worth more than the findings.
+
+**Making the check two-sided gave its halves opposite incompleteness
+directions.** `isRequired` is existential — every built-here image must be
+demanded somewhere — so a file the check fails to read makes it fail *loudly*.
+`isDefaulted` is universal — no built-here image may carry a `:-` fallback
+anywhere — so a file the check fails to read makes it pass **silently**. Round
+eight narrowed the file set and argued its safety from the first half only.
+That argument does not reach the second, and all three findings sit in the gap:
+
+- **The generator was called with one storage shape of four.** A zero-value
+  `StorageSpec` never reaches `buildPostgresService`, `buildPostgresInitService`
+  or `buildMinioService` — and the committed `smelt.yml` resolves to
+  `{postgres, s3}`, so the three services `make up` actually runs were the three
+  the check never looked at. Now called once per `(DB, Blob)` pair.
+- **Gitignored build output decided the verdict.** `generated/compose/piri.yml`
+  is in the root include list, is gitignored, and CI has no generate step.
+  Measured both ways: a stale file carrying a default the source had already
+  fixed **fails locally and passes in CI**; one supplying a requirement the
+  source had lost **passes locally and fails in CI**. `generated/` is skipped
+  now; calling the generator covers it exactly.
+- **`compose.override.yml` is loaded and not read** — deliberately, now that the
+  reason is written down instead of assumed. Compose auto-discovers it and the
+  Makefile does load it, but it is never committed, so reading it would make the
+  verdict depend on one machine, which is the finding above.
+
+### Decision taken on your behalf: the second test stays in #23
+
+Round nine recommended **splitting** it out, and the case is real — 225 of the
+file's 392 lines, three rounds absorbed, every finding in all three landing in
+it and none in the one-line fix. Against that, the same round's stated condition
+for *keeping* was that its three findings collapse into one push rather than
+another round. They did, in `d92200e6`.
+
+**What flips it:** round ten finding anything further in
+`TestBuiltImagesAreRequiredNotDefaulted`. Then the fix has waited long enough
+for a guard that is still moving, and the guard goes to its own pull request.
+The cut is clean — `walkStrings` and `includeTargets` have no callers outside
+that test, and `options.go` is comments-only, so a follow-up needs nothing from
+the branch.
+
+This supersedes the "say the word and it comes out" framing further down, which
+left the call with you; you were asleep and `make up` is broken on `main`.
+Reversing it still costs one line of instruction.
+
+### Two corrections from the same night, kept rather than edited away
+
+**The round-eight push went red and I did not notice for an hour.**
+`staticcheck ./...` failed on an S1011 append loop. I ran gofmt, `go vet` and
+the tests before pushing and **not** staticcheck — which `ci.yml`'s unit job
+runs and `AGENTS.md` names in the standard loop. Running the three checks I
+happened to remember reads exactly like a pre-push check and is not one.
+
+**Two uncommitted fixes were silently reverted, twice, by a shared worktree.**
+A review agent was running `sed -i` mutations and `git checkout -- .` in the
+same worktree I was editing. I twice believed a fix was pushed when the tree had
+been reverted under me. The rule that came out of it: **commit before running
+anything that cleans the tree, and give each agent its own worktree.** A related
+trap cost a third run — `git clean -fd` does not remove *ignored* files, so a
+fixture written under the gitignored `generated/` survived into the next
+mutation row and corrupted it.
 
 ## Overnight: piri's rotator flake, fixed upstream
 
@@ -216,11 +281,15 @@ level of the branch rather than a mutation table.
   header and `smelt/CLAUDE.md` — both in this diff — *assert* the property, so
   checking it in the same pull request is coherent rather than merely adjacent.
 - **Split it.** #23's job is that `make up` is broken. The second test is
-  ~120 lines and two of the eight rounds; splitting leaves the fix minimal and
+  225 lines and three of the nine rounds; splitting leaves the fix minimal and
   gives the property its own review without holding up a repair.
 
 I kept it, because re-adding later costs another pull request while dropping it
 costs one line of your instruction. **Say the word and it comes out.**
+
+<sub>Round nine revisited this and recommended splitting; the decision and its
+flip condition are at the top of this page. The reasoning here stands, but the
+section above is the current state of the call.</sub>
 
 ### What eight rounds actually produced
 
