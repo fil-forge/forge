@@ -90,12 +90,8 @@ both accept — on top of the ownership decision. The comment above
 
 ## Planned, not built
 
-- **Release pull requests issued automatically.** A module needs one once it
-  has been touched since its last release, so what has to be derived is which
-  commits touch which module since `<service>/vX.Y.Z`. Leaving it to a person
-  means leaving it to someone noticing, which is the failure this repository
-  keeps repeating.
-- **Tagging on merge of the release pull request**, per *Tagging* above.
-- **Arming `release.yml` to publish**, per *What is not armed* above — the
-  largest of the three, because it is blocked on the tag-namespace decision
-  and not only on wiring.
+Three pieces of this are designed and not built: release pull requests issued
+automatically, tagging on merge, and arming `release.yml` to publish. The
+design and what gates each one live in **`MONOREPO_TODO.md`**, under *Phase 1
+needs machinery this repository does not have* — this file describes what
+exists.
