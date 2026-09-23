@@ -97,22 +97,55 @@ import is uneven raw material:
 The parts that need no further gate — writing the release workflow without
 cutting tags, `compat.yml`, deciding the tag scheme — can go first.
 
-**The shape of the flow is now decided** (Petra, 2026-09-23, on
-[#18](https://github.com/fil-forge/forge/pull/18)), which turns most of Phase 1
-from an open question into build work:
+**The shape of the flow is decided** (Petra, 2026-09-23, on
+[#18](https://github.com/fil-forge/forge/pull/18)), which turns most of what is
+left of Phase 1 from an open question into build work. **This is in scope for
+the consolidation** — it is not a post-consolidation TODO — so the design lives
+here:
 
-- a release pull request carries **only** the version bump, so it floats on
-  `main` and sweeps up every change to that module since its last release;
-- merging it **is** the release decision, so it should cause the tagging
-  automatically rather than leaving a human to retype the tag;
-- those pull requests should be **issued automatically**, derived from which
-  modules have been touched since their last release.
+- **A release pull request carries only the version bump.** One edit to
+  `<service>/version.json` and nothing else. Merging it means exactly one
+  thing: that module's current `main` is now that version. It therefore floats
+  on `main` and sweeps up every change to the module since its last release —
+  no cherry-picking, no release branch, and no second pull request for an
+  ordinary change.
+- **Merging it causes the tagging, automatically.** The merge already carries
+  the whole decision, so a human retyping `<service>/vX.Y.Z` afterwards is a
+  second chance to get it wrong rather than a second check. Today the tag is
+  made by hand and `release.yml` asserts it exists at the built commit; that
+  assertion is the interim, not the design.
+- **Release pull requests are issued automatically.** A module needs one once
+  it has been touched since its last release, so what has to be derived is
+  which commits touch which module since `<service>/vX.Y.Z` — roughly
+  `git log <service>/vX.Y.Z..main -- <service>/` being non-empty. Needs the tag
+  to anchor from, and a rule for a module never released (no tag; the answer is
+  its first commit). **Open:** one pull request per module needing one, or one
+  bumping several. Per module keeps `compat.yml`'s `release/<service>`
+  convention and per-service semver intact.
 
-The design, the derivation and the edge cases are written down in
-`MONOREPO_TODO.md` under *Phase 1 needs machinery this repository does not
-have*. **All three stay gated on the two-sources-of-truth decision** — while
-the polyrepo still releases these services, a tag cut here gives each two, and
-automatic tagging makes that worse rather than better.
+**Still gated on the two-sources-of-truth decision**, which is the same gate as
+the rest of Phase 1: while the polyrepo still releases these services, a tag cut
+here gives each of them two. Automatic tagging makes that worse rather than
+better, so it is built after the decision, not before it. `MONOREPO_TODO.md`
+carries that gate and the raw-material inventory; the design above is this
+plan's.
+
+### And the gate does not yet gate anything
+
+Measured on #18, 2026-09-23: a dispatched `compat.yml` run went **green having
+tested nothing**. `TestRollingUpgrade` needs a published baseline for every
+service in the fleet and skips when any is missing — `delegator`, `hilt`,
+`piri-signing-service`, `swarf` and `sprue` have none, so it skipped in 0.126s
+and the check reported success.
+
+The job's own condition asks a different question from the test: it runs when
+`pinnable` is true, which `compat-window.sh` sets from the *window* (piri and
+ingot have one), while the test needs *baselines for all eight*. So the job
+runs and the test opts out.
+
+**This is Phase 1 work, not a defect to file**: the gate cannot mean anything
+until the fleet is published, which is the same gate above. What #18 should not
+do is report green in the meantime.
 
 ## Not in scope
 
