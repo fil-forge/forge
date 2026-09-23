@@ -29,10 +29,69 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`, **green — 25 checks pass, `release` skipped by design**. **Ten rounds, 40 findings**; round eleven running, scoped to the body's numbers only. The one-line fix has been correct throughout. **The scope call below is settled: round ten's flip condition did not fire** |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`, **green — 25 checks pass, `release` skipped by design**. **Eleven rounds, 44 findings**; round twelve running. **The code has been still since round nine** — rounds ten and eleven found nothing in either test and seven findings in the PR body. One real guard gap found and documented rather than closed; see below |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
+
+## forge#23 round eleven: a real gap in the guard, and a body that had become the risk
+
+Four findings, all in the pull request body again — so **eleven findings across
+rounds ten and eleven, none of them in the code.** The code has not moved since
+round nine. Two of round eleven's four were errors inside corrections round ten
+had just asked for.
+
+### The one that is about the repository, not the prose
+
+`TestBuiltImagesAreRequiredNotDefaulted`'s `isRequired` half is **existential**:
+it asks whether a built-here image appears required *somewhere*. So replacing a
+compose `image:` outright with a digest-pinned **literal** is caught only
+sometimes. Measured here, guard and both tests:
+
+| the literal replaces | caught? |
+|---|---|
+| a not-built-here image (`${GUPPY_IMAGE:-…}`) | **no** — by nothing at all |
+| the **sole** occurrence of a built-here name (`SWARF_IMAGE`) | yes |
+| **one of two** occurrences (`HILT_IMAGE`, `UPLOAD_IMAGE`) | **no** |
+
+    one of HILT_IMAGE's two ${HILT_IMAGE:?…}  ->  ghcr.io/fil-forge/hilt:main@sha256:…
+    check-stack-images.sh   rc=0   (green)
+    both tests              rc=0   (pass)
+
+Two-sidedness does not rescue it: a literal leaves no defaulted form for the
+`isDefaulted` half to find. `HILT_IMAGE` and `UPLOAD_IMAGE` are exactly the two
+names the check already knows are required in two places.
+
+**Decision taken on your behalf: documented, not closed.** The PR body now
+states the gap as a table with the measurement, instead of the previous claim
+that the gap was "exactly the not-built-here case". Closing it is genuinely
+cheap — a third side rejecting any `publishedImages` reference that appears as a
+*literal* in a walked compose file, and those repository paths are already in
+that table — but it is a different regression class from the one #23 fixes, and
+every previous round that landed in this test landed in its growth. **What
+would flip it:** you deciding the property is worth the fourth round of growth
+now rather than in its own change.
+
+### And one that was raised three rounds ago and never fixed
+
+The skippable-checks block said `.env.published`'s contents are "read by
+exactly one thing, and it is this PR's own new test". **`make up` reads them** —
+`smelt/Makefile:23`, which is how the bug in this PR manifested at all. Round
+eight raised it; the fix did not land; round eleven raised it again. The block's
+*conclusion* was never wrong (no workflow runs `make`, so no CI job outside
+`unit smelt` reads it) and has been re-derived, but the sentence was false for
+three rounds.
+
+### The body was the risk surface, so it got smaller
+
+Rounds ten and eleven were both scoped to the body's factual claims and both
+found several. Rather than a twelfth correction of the same shape, the body was
+**cut**: the passages narrating which earlier draft said what are gone, which is
+what `AGENTS.md` asks for — *"a number earns its place only if a reader's
+decision changes with it … write for whoever opens the file next, not for
+whoever argued about it."* The corrections that change what a reader
+*understands to be checked* stayed; the ones that only recorded my drafting
+history moved here, which is where the record belongs.
 
 ## forge#23 round ten: the code is settled, the prose was not
 
