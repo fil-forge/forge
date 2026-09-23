@@ -11,9 +11,10 @@ name: compat-refresh
 # WHY THIS EXISTS AT ALL. compat.yml asks "does the release proposed here still
 # work against what is already deployed?" -- and the answer changes without the
 # pull request changing, because the deployed side is read live from the
-# registry. An upstream release lands or a `:main` moves, the baselines move, and a release pull
-# request that was green yesterday is no longer known to be green. Nothing about
-# the pull request triggers anything, so without this its check is simply old.
+# registry. An upstream release lands or a `:main` moves, the baselines move
+# with them, and a release pull request that was green yesterday is no longer
+# known to be green. Nothing about the pull request triggers anything, so
+# without this its check is simply old.
 #
 # WHY NOT A SCHEDULE ON compat.yml ITSELF. That version would test `main`, and a
 # result about `main` has no decision attached to it: `main` is not deployed, so

@@ -103,7 +103,8 @@ api=${GHCR_API:-https://ghcr.io}
 # amd64, arm64 and two attestation manifests -- and pinning a runner to one
 # architecture's digest breaks the other silently. Measured: all eight answer
 # 200 with `application/vnd.oci.image.index.v1+json` under this Accept.
-manifest_list_types='application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json'
+manifest_list_types='application/vnd.oci.image.index.v1+json'
+manifest_list_types="$manifest_list_types, application/vnd.docker.distribution.manifest.list.v2+json"
 
 # Mint an anonymous pull token for a package.
 #
@@ -319,13 +320,15 @@ if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
     printf '%s' "$summary"
     echo
     if [ -n "$floating" ]; then
-      echo "A **floating \`:main\`** baseline is upstream's current main, pinned"
-      echo "to the digest resolved just now. It is not an older version, so it"
-      echo "contributes little skew; it is also not this tree, so upstream drift"
-      echo "can redden this run. Both go away as services start cutting releases."
+      echo "A **floating \`:main\`** baseline is upstream's current main,"
+      echo "pinned to the digest resolved just now. It is not an older"
+      echo "version, so it contributes little skew; it is also not this"
+      echo "tree, so upstream drift can redden this run. Both go away as"
+      echo "services start cutting releases."
     else
-      echo "Every service has a cut release. The \`:main\` fallback is no longer"
-      echo "used and can come out of \`.github/scripts/compat-baselines.sh\`."
+      echo "Every service has a cut release. The \`:main\` fallback is no"
+      echo "longer used and can come out of"
+      echo "\`.github/scripts/compat-baselines.sh\`."
     fi
   } >> "$GITHUB_STEP_SUMMARY"
 fi

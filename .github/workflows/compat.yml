@@ -21,13 +21,14 @@ name: compat
 # `schedule:` and `compat-refresh.yml` does. The pinned side is read live from
 # the registry, so the same commit can face a different fleet tomorrow: an
 # upstream release lands or a `:main` moves, the baselines move with it, and a
-# release pull request that was green is no longer known to be. That workflow re-runs THIS one on every open
-# release pull request, daily. Re-runs, rather than starting a fresh run against
-# the branch, because a re-run stays attached to the pull request and so lands
-# the fresh answer where the merge decision is made. GitHub stops allowing that
-# 30 days after the original run, so a release pull request open longer than a
-# month keeps an answer nothing can refresh; the refresher says so and fails
-# rather than leaving the stale green unremarked.
+# release pull request that was green is no longer known to be. That workflow
+# dispatches THIS one at each open release branch, daily. A dispatched run
+# records its check runs against the branch's head commit, which is the pull
+# request's head commit, so the fresh answer lands where the merge decision is
+# made -- measured on run 35760677003, whose 11 check runs all landed on the
+# dispatched commit. It used to RE-RUN the pull request's own run instead,
+# which put the answer in the same place but expired 30 days after the
+# original; a dispatch has no such ceiling.
 #
 # Also on demand.
 #
