@@ -199,15 +199,15 @@ GOWORK=off go build ./...  # inside a module: what CI does, standalone
 go build ./...             # workspace mode, across go.work
 ```
 
-Four workflows run on every pull request — `ci` (per-module
-build/vet/staticcheck/tidy/test plus the `guards` job), `images`, `e2e`,
-`itest` — and two more exist without costing one. `release` is
-**dispatch-only and never runs on a push**. `compat` is triggered by
-`pull_request:` but both its jobs are gated on a `release/*` head branch, so
-on an ordinary pull request they report *skipped*; that is not free, because
-the run is still created and joins the concurrency group, which is why that
-group is keyed by ref (`compat.yml` says so at length). `compat-refresh`
-dispatches `compat` on a schedule and never on a pull request.
+Seven workflows, of which **four run jobs on every pull request** — `ci`
+(per-module build/vet/staticcheck/tidy/test plus the `guards` job), `images`,
+`e2e`, `itest`. Of the other three, two cost an ordinary pull request nothing
+at all: `release` is **dispatch-only**, and `compat-refresh` runs on a
+schedule. `compat` is the one in between — it triggers on `pull_request:`, so
+a run is created and joins the concurrency group, but its first job is gated
+on a `release/*` head branch and its second `needs:` the first, so both report
+*skipped*. What that costs is a queue slot, which is why the group is keyed by
+ref; `compat.yml` says so at length.
 
 **Nothing is filtered by path, on purpose**: `ci.yml`'s header says why, and
 `MONOREPO_TODO.md` carries the question of whether that should change. A

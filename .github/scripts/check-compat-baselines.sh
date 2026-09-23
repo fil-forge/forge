@@ -38,16 +38,29 @@
 #   the empty-service-list refusal             -> FAIL (test 9)
 #   the pagination loop's Link following       -> FAIL (test 10)
 #   numeric sorting in versions_from           -> FAIL (test 3)
+#   versions_from's fullmatch (arch suffixes)  -> FAIL (test 3)
 #   `baselines=` emitted as {}                 -> FAIL (tests 1-3)
+#   key_for's `-` -> `_`                       -> FAIL (test 1)
+#   the `[a-z0-9-]` in the service derivation  -> FAIL (test 1)
+#   the index media types in the Accept        -> FAIL (test 2)
+#   the $GITHUB_STEP_SUMMARY block             -> FAIL (test 11)
+#   the argument refusal                       -> FAIL (test 12)
 #
-# THE FIRST TWO OF THOSE ARE ONE ARM AND TWO MUTATIONS, and the difference is
-# why test 5 matches the token endpoint's OWN message rather than the
-# `::error::` further down. Deleting the arm outright does not stop the script
-# failing: a 500 body falls through into the token parse, which fails, and the
-# NEXT guard returns 1 with a different message. An earlier version of test 5
-# grepped only for that downstream `::error::`, so it passed on a guard other
-# than the one it is named for -- the failure this file's own header warns
-# about, happening to it.
+# THE SECOND AND THIRD ENTRIES ARE ONE ARM AND TWO MUTATIONS, and the
+# difference is why test 5 matches the token endpoint's OWN message rather
+# than the `::error::` further down. Deleting the arm outright does not stop
+# the script failing: a 500 body falls through into the token parse, which
+# fails, and the NEXT guard returns 1 with a different message. An earlier
+# version of test 5 grepped only for that downstream `::error::`, so it passed
+# on a guard other than the one it is named for -- the failure this file's own
+# header warns about, happening to it.
+#
+# THAT LIST IS NOT EVERY GUARD IN THE SCRIPT. The transport-failure arms
+# (curl itself failing in token_for, tags_for and digest_for) and the two
+# body-is-not-JSON arms have no fixture, because the stub answers every
+# request. An unreachable registry was checked by hand -- `GHCR_API` pointed
+# at a dead port exits 1 -- but by hand is not by this file, and saying "each
+# guard" would be the overclaim rule 5 is about.
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -65,13 +78,32 @@ bad()  { printf '  FAIL  %s\n' "$1" >&2; fails=$((fails + 1)); }
 # naming the service it asks about.
 cat > "$work/stub.py" <<'PY'
 import re, sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-DIGEST = "sha256:" + "a" * 64
+DIGEST = "sha256:" + "a" * 64          # the multi-arch INDEX
+ARCH_DIGEST = "sha256:" + "b" * 64     # one architecture's manifest
+
+# AGENTS.md rule 2: the index digest, never a per-architecture one. The
+# script asks for it by sending the two list media types in Accept, and a
+# stub that ignores Accept cannot tell whether it still does -- so this one
+# answers differently depending on what was asked for, and test 2 pins the
+# index digest. Drop the list types from the script's Accept and test 2 fails.
+LIST_TYPES = ("image.index.v1+json", "manifest.list.v2+json")
 
 TAGS = {
-    "rel":     ["main", "sha-abc1234", "1.2.3"],
-    "sorting": ["1.2.3", "1.10.0", "0.9.9", "main"],
+    # HYPHENATED ON PURPOSE. Two of the eight real services are
+    # (indexing-service, piri-signing-service), and the `-` -> `_` in key_for
+    # is what makes COMPAT_BASELINE_INDEXING_SERVICE line up with envSuffix's
+    # own ReplaceAll -- the descendant of the COMPAT_BASELINE_SPRUE / _UPLOAD
+    # mismatch this whole apparatus exists to stop. With every fixture
+    # hyphen-free, both that mapping and the `[a-z0-9-]` in the service
+    # derivation survive deletion with the guard fully green.
+    "rel-svc": ["main", "sha-abc1234", "1.2.3"],
+    # The arch-suffixed pair is ingot's real shape, and it sorts ABOVE every
+    # real version here -- so a versions_from that matched loosely instead of
+    # fullmatch would pick an image that is not runnable as a multi-arch
+    # reference.
+    "sorting": ["1.2.3", "1.10.0", "0.9.9", "2.0.0-amd64", "2.0.0-arm64", "main"],
     "flo":     ["main", "sha-abc1234"],
     "nomain":  ["sha-abc1234"],
     "nodig":   ["main"],
@@ -128,6 +160,8 @@ class H(BaseHTTPRequestHandler):
         return self._send(404, b"no")
 
     def _manifest(self, svc):
+        accept = self.headers.get("Accept", "")
+        wants_index = any(t in accept for t in LIST_TYPES)
         if svc == "nomain":
             return self._send(404, b'{"errors":[{"code":"MANIFEST_UNKNOWN"}]}')
         if svc == "nodig":
@@ -135,11 +169,22 @@ class H(BaseHTTPRequestHandler):
             return self._send(200, b"")
         if svc == "shortdig":
             return self._send(200, b"", [("Docker-Content-Digest", "sha256:abc123")])
-        return self._send(200, b"", [("Docker-Content-Digest", DIGEST)])
+        dig = DIGEST if wants_index else ARCH_DIGEST
+        return self._send(200, b"", [("Docker-Content-Digest", dig)])
 
     do_HEAD = do_GET
 
-srv = HTTPServer(("127.0.0.1", 0), H)
+# THREADING, and the backlog raised. Observed once, under load from a
+# mutation matrix running eighteen copies of this file: a single connection to
+# the stub failed and the script reported "could not read sorting's tags",
+# which is the script behaving correctly about a stub that was not. A guard
+# that goes red when the machine is busy teaches people to re-run it, and
+# AGENTS.md is explicit that a re-run is not a diagnosis. 0/30 before the
+# change and 0/40 after is not proof it was the cause; making the stub not
+# be the bottleneck costs one line either way.
+srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+srv.request_queue_size = 128
+srv.daemon_threads = True
 print(srv.server_port, flush=True)
 srv.serve_forever()
 PY
@@ -160,12 +205,14 @@ api="http://127.0.0.1:$port"
 # something that does not.
 run() {
   local name=$1 line=$2 root
+  shift 2 || true
   root="$work/$name"
   mkdir -p "$root/.github/scripts" "$root/smelt/pkg/stack"
   cp "$under_test" "$root/.github/scripts/"
   printf '%s\n' "$line" > "$root/smelt/pkg/stack/options.go"
   set +e
-  GHCR_API="$api" "$root/.github/scripts/$(basename "$under_test")" \
+  GHCR_API="$api" GITHUB_STEP_SUMMARY="$work/$name.summary" \
+    "$root/.github/scripts/$(basename "$under_test")" "$@" \
     > "$work/$name.out" 2> "$work/$name.err"
   echo $? > "$work/$name.rc"
   set -e
@@ -182,17 +229,25 @@ echo "check-compat-baselines.sh"
 # 1. A service with a version-shaped tag pins to it, and says nothing about
 #    floating. The positive direction: without it, every negative test below
 #    could pass with the script permanently broken.
-run t1 "$(svc_line rel)"
-if [ "$(rc_of t1)" = 0 ] && grep -qx 'base_REL=1.2.3' "$work/t1.out" \
-   && grep -qx 'baselines={"REL": "1.2.3"}' "$work/t1.out" \
+#    THE FIXTURE IS HYPHENATED, which is what makes this test cover key_for's
+#    `-` -> `_` and the `[a-z0-9-]` in the service derivation. Two of the eight
+#    real services are hyphenated and the mapping is what lines
+#    COMPAT_BASELINE_INDEXING_SERVICE up with envSuffix.
+run t1 "$(svc_line rel-svc)"
+if [ "$(rc_of t1)" = 0 ] && grep -qx 'base_REL_SVC=1.2.3' "$work/t1.out" \
+   && grep -qx 'baselines={"REL_SVC": "1.2.3"}' "$work/t1.out" \
    && ! grep -q 'sha256:' "$work/t1.out" && ! grep -q '::warning::' "$work/t1.err"; then
-  ok "1 release baseline: pins the version and the JSON, no warning"
+  ok "1 release baseline: hyphenated key, the version and the JSON, no warning"
 else
   bad "1 release baseline (rc=$(rc_of t1)): $(out_of t1) / $(err_of t1)"
 fi
 
 # 2. No version-shaped tag falls back to :main AS A DIGEST, and warns. The
 #    digest is the point: a floating TAG would leave a red unreproducible.
+#
+#    IT IS THE INDEX DIGEST, and the stub answers a different one when Accept
+#    does not ask for the list media types -- so this also pins AGENTS.md
+#    rule 2, which nothing else here could see.
 run t2 "$(svc_line flo)"
 if [ "$(rc_of t2)" = 0 ] \
    && grep -qx "base_FLO=sha256:$(printf 'a%.0s' $(seq 64))" "$work/t2.out" \
@@ -289,16 +344,44 @@ else
 fi
 
 # 10. The pagination loop, which nothing reached: every other stub answers in
-#     one page. It matters because the order is neither lexicographic nor
-#     version order -- ingot's first page of 100 holds exactly one of its
-#     version-shaped tags out of 117 -- so a loop that stops after one request
-#     picks a baseline from whatever the registry happened to return first.
-#     Page one holds the OLDER release and the Link; page two holds the newer.
+#     one page. THE RISK IS A MISSED TAG, not a mis-picked one: a version-
+#     shaped tag that falls on a later page is never seen at all, and the
+#     service is silently demoted to a floating baseline. Nothing today
+#     paginates at n=1000 -- ingot's 117 tags are the most any fleet service
+#     has, and no fleet service publishes more than one version-shaped tag --
+#     so this is entirely about the guarantee the script refuses to assume.
+#     Page one holds the OLDER release and the Link; page two holds the newer,
+#     so a loop that stops after one request picks 1.0.0.
 run t10 "$(svc_line paged)"
 if [ "$(rc_of t10)" = 0 ] && grep -qx 'base_PAGED=2.0.0' "$work/t10.out"; then
   ok "10 pagination: follows rel=next and sorts across pages"
 else
   bad "10 pagination (rc=$(rc_of t10)): $(out_of t10) / $(err_of t10)"
+fi
+
+# 11. The job summary, which the ::warning:: points at ("the digests are in
+#     the job summary; they are what makes a red reproducible"). Nothing set
+#     $GITHUB_STEP_SUMMARY, so the whole block -- both arms -- was unreached
+#     and could be deleted green.
+# The patterns carry backticks because the table does; nothing expands here.
+# shellcheck disable=SC2016
+if grep -q '| `flo` |' "$work/t2.summary" 2>/dev/null \
+   && grep -q 'floating' "$work/t2.summary" \
+   && grep -q '| `rel-svc` | `1.2.3` | release |' "$work/t1.summary" 2>/dev/null \
+   && grep -q 'Every service has a cut release' "$work/t1.summary"; then
+  ok "11 job summary: a row per service, and the right closing note per case"
+else
+  bad "11 job summary: t1=$(cat "$work/t1.summary" 2>&1 | tr '\n' ' ') | t2=$(cat "$work/t2.summary" 2>&1 | tr '\n' ' ')"
+fi
+
+# 12. It takes no arguments, and used to take N. A caller still passing one
+#     must be told, not silently ignored -- the same trailing-argument slip
+#     finish-subtree-pull.sh had.
+run t12 "$(svc_line rel-svc)" 2
+if [ "$(rc_of t12)" = 2 ] && grep -q 'takes no arguments' "$work/t12.err"; then
+  ok "12 an argument is refused, not ignored"
+else
+  bad "12 argument refusal (rc=$(rc_of t12)): $(err_of t12)"
 fi
 
 if [ "$fails" -ne 0 ]; then

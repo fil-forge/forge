@@ -158,11 +158,21 @@ jobs:
       # nothing checked it: with it off, workspace.Detect() fails and the
       # suite used to skip green. It is a hard failure in the test now, but
       # failing here says which knob rather than which symptom.
+      #
+      # TWO CONDITIONS, because `go env GOWORK` prints the LITERAL STRING
+      # `off` when GOWORK=off -- it is empty only when no go.work was found at
+      # all. A `[ -n "$w" ]` on its own therefore passes on exactly the case
+      # this step is written about, which is rule 5's partial guard that reads
+      # as a total one. pkg/workspace tests both (`gowork == "" || gowork ==
+      # "off"`); this now matches it.
       - name: the workspace is active
         run: |
           set -euo pipefail
           w=$(go env GOWORK)
-          [ -n "$w" ] || { echo "::error::GOWORK is off, so pkg/workspace has no fleet to build from HEAD and this suite cannot compare anything."; exit 1; }
+          if [ -z "$w" ] || [ "$w" = off ]; then
+            echo "::error::go env GOWORK is '${w:-<empty>}', so pkg/workspace has no fleet to build from HEAD and this suite cannot compare anything."
+            exit 1
+          fi
           echo "GOWORK=$w"
 
       # GOWORK stays ON: the services NOT pinned to a released image are built
