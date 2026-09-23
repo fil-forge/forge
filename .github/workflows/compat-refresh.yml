@@ -45,14 +45,6 @@ permissions:
   pull-requests: read
   actions: write
 
-# DELIBERATELY REF-LESS, unlike every other workflow here. What this job
-# contends for is not a ref: it acts on every open release pull request, so two
-# refreshers race over the same set whatever ref each was started from. A
-# ref-keyed group would put a dispatch on some branch in a different group from
-# the scheduled run and let both go at once. (Only `schedule:` is
-# default-branch-only; a dispatch runs on whatever ref is picked.) compat.yml is
-# the opposite case and keys its group by ref -- it contends for one pull
-# request's own check, not all of them at once.
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false

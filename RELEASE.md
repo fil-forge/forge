@@ -3,32 +3,27 @@
 Per service, not per repository. Every service carries its own version and cuts
 its own tag; there is no repo-wide version number and no release train.
 
-## The path a change takes
+## Two cycles
 
-**Most changes only take the first step.**
+**The development cycle.** A pull request to `main`. CI runs unfiltered — every
+module's build/vet/staticcheck/tidy/test, the `guards` job, images, e2e and
+itest. Agent review rounds run until one comes back with nothing (`AGENTS.md`
+rule 10). Merge when it is green. An ordinary change never leaves this cycle.
 
-1. **A pull request to `main`.** CI runs unfiltered — every module's
-   build/vet/staticcheck/tidy/test, the `guards` job, images, e2e and itest.
-   Agent review rounds run until one comes back with nothing (`AGENTS.md`
-   rule 10). Merge when it is green. That is the whole path for an ordinary
-   change: nothing about it is per-release, and it waits for no release.
+**The release cycle**, independent of it and per module. A release pull request
+is branched `release/<service>`, bumps `<service>/version.json`, and changes
+**nothing else**. Merging it declares that the module's current `main` is
+version `vX.Y.Z` — which bundles every change to that module merged since its
+last release, however many development cycles that was.
 
-2. **A release pull request, when a module is ready to ship.** It contains
-   **only the version bump** — one edit to `<service>/version.json` and
-   nothing else. Merging it means exactly one thing: *the current `main` of
-   that module is now version `vX.Y.Z`*. It has no content of its own, so it
-   sweeps up every change to that module merged since its last release. There
-   is no cherry-picking, no release branch to maintain, and no second pull
-   request for an ordinary change.
+**The branch name is load-bearing**: of the pull requests that open,
+`compat.yml` runs its compatibility suite for those whose head branch starts
+with `release/` and no others, and `compat-refresh.yml` finds the ones to
+refresh the same way. (A manual dispatch runs it on any ref — the name gates
+the automatic run.)
 
-   Branch it `release/<service>`. **The name is load-bearing**: of the pull
-   requests that open, `compat.yml` runs its compatibility suite for those
-   whose head branch starts with `release/` and no others, and
-   `compat-refresh.yml` finds the ones to refresh the same way. (A manual
-   dispatch runs it on any ref — the name gates the automatic run.)
-
-3. **Merging it is the release decision.** The tag and the release build
-   follow from that merge — today by hand; see *Tagging*.
+Merging is the release decision. The tag and the release build follow from it —
+today by hand; see *Tagging*.
 
 ## Versions
 

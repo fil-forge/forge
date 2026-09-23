@@ -156,12 +156,8 @@ func envSuffix(t *testing.T, service string) string {
 // replaces one with HEAD while the rest stay old -- the state a real deployment
 // passes through, since services do not upgrade simultaneously.
 //
-// This is the FIRST hop of a rollout: one new service meeting an old fleet. The
-// inverse hop -- one old straggler meeting a new fleet -- had its own test and
-// was cut, because this is the direction the gate's question is about, and a
-// change that breaks only the other direction (removing a required field,
-// breaking new-reader/old-writer) is caught here too as soon as the next
-// service is upgraded.
+// One new service meeting an old fleet: the direction the gate's question is
+// about.
 //
 // THE FLEET IS WHATEVER THE WORKSPACE WOULD BUILD, not a list written here.
 // That is the whole correctness condition: any service left off such a list is
