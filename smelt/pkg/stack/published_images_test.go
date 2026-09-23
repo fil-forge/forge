@@ -64,8 +64,16 @@ func fieldReachedBy(t *testing.T, mutate func(*config)) string {
 	return found[0]
 }
 
-// walkYAMLStrings visits every string scalar in a decoded document, keys
-// included: compose interpolates throughout, not only in values.
+// walkYAMLStrings visits every string scalar VALUE in a decoded document.
+//
+// KEYS ARE NOT VISITED. An earlier revision visited them, justified by
+// "compose interpolates throughout, not only in values" -- which is the
+// opposite of what compose does. Measured with the client: a `${X:?}` in a
+// service name, an `environment` key, a `labels` key or a top-level `x-` key
+// leaves `docker compose config` exiting 0 with the variable unset, and the
+// output re-escapes the `$` to `$$`, which is compose saying it treated the
+// text as a literal. Visiting keys put back exactly the over-reading the
+// parse rewrite was written to remove.
 func walkYAMLStrings(n any, fn func(string)) {
 	switch v := n.(type) {
 	case string:
@@ -75,33 +83,80 @@ func walkYAMLStrings(n any, fn func(string)) {
 			walkYAMLStrings(e, fn)
 		}
 	case map[string]any:
-		for k, e := range v {
-			fn(k)
+		for _, e := range v {
 			walkYAMLStrings(e, fn)
 		}
 	case map[any]any:
-		for k, e := range v {
-			walkYAMLStrings(k, fn)
+		for _, e := range v {
 			walkYAMLStrings(e, fn)
 		}
 	}
 }
 
-// requiredImageVars walks the smelt root and returns the required image
-// variables its YAML and its compose generator name.
+// composeFileNames are the names `docker compose` discovers on its own in a
+// directory it is run from. Anything else only reaches compose by being named
+// in an `include:`.
+var composeFileNames = map[string]bool{
+	"compose.yaml": true, "compose.yml": true,
+	"docker-compose.yaml": true, "docker-compose.yml": true,
+}
+
+// includePaths returns the `include:` targets a compose document names,
+// resolved against its own directory. Entries are a path, a list of paths, or
+// a mapping with `path:` holding either.
+func includePaths(dir string, doc any) []string {
+	m, ok := doc.(map[string]any)
+	if !ok {
+		return nil
+	}
+	list, ok := m["include"].([]any)
+	if !ok {
+		return nil
+	}
+	var out []string
+	add := func(v any) {
+		if p, ok := v.(string); ok {
+			out = append(out, filepath.Join(dir, p))
+		}
+	}
+	for _, e := range list {
+		switch v := e.(type) {
+		case string:
+			add(v)
+		case map[string]any:
+			switch p := v["path"].(type) {
+			case string:
+				add(p)
+			case []any:
+				for _, q := range p {
+					add(q)
+				}
+			}
+		}
+	}
+	return out
+}
+
+// requiredImageVars returns the image variables compose requires, from the
+// files compose actually reads.
 //
-// ROOTED AT THE SMELT ROOT, not at systems/. smelt/compose.yml is the file
-// `make up` resolves and it sits outside systems/; a walk rooted one directory
-// deeper would let a required variable added there go unchecked. That is the
-// same bug class this test exists for, at the one compose file systems/ does
-// not contain.
+// THE FILE SET IS WHAT COMPOSE READS, not every YAML under the root. Compose
+// discovers `compose.yml`/`compose.yaml` (and the `docker-compose` spellings)
+// in a directory it is run from -- the root for `make up`, and each
+// systems/<x>/ for the standalone runs the root file documents -- and reaches
+// anything else only through an `include:`. So the set is those, plus their
+// include targets transitively.
 //
-// EVERY .yml AND .yaml, not files named compose.yml. The root file pulls in
-// its parts with `include:`, whose paths it names explicitly, so an included
-// file called anything else would be missed -- and `compose.yaml` is compose's
-// own auto-discovered default. Over-reading is the safe direction here and
-// costs nothing measurable: across every YAML file under this root, the
-// pattern matches only compose files.
+// AN EARLIER REVISION SCANNED EVERY .yml AND .yaml, on the grounds that
+// over-reading was the safe direction. It is not, and the same function said
+// so a few lines down: `wantVars` comes from the two Go tables and never from
+// what the YAML requires, so a match on text compose does not interpolate
+// keeps a name alive in `required` and hides the drift. Under a blanket scan,
+// a `${HILT_IMAGE:?...}` written into systems/telemetry/config/prometheus.yml
+// -- a file compose never opens -- would mask a hilt image pinned literally.
+//
+// ROOTED AT THE SMELT ROOT, not at systems/: smelt/compose.yml is the file
+// `make up` resolves and it sits outside systems/.
 func requiredImageVars(t *testing.T, root string) map[string]bool {
 	t.Helper()
 	// `:?` and `?` are BOTH required forms. `${X:?msg}` errors when X is unset
@@ -112,90 +167,111 @@ func requiredImageVars(t *testing.T, root string) map[string]bool {
 	re := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):?\?`)
 	vars := map[string]bool{}
 
-	// PARSED, NOT GREPPED OVER THE RAW BYTES, and the difference is not
-	// tidiness. A raw scan matches text compose never interpolates -- inside a
-	// `#` comment, and `$${X:?}`, which compose emits literally. For a name the
-	// Go tables do not carry that is a false failure, which is safe. For one
-	// they DO carry it is the opposite: `wantVars` comes from the two Go
-	// tables, never from what the YAML requires, so a stale match at an
-	// existing name keeps that name in `required` and hides the drift. Comment
-	// out an interpolation while pinning the image literally and compose stops
-	// requiring the variable -- but a raw scan still sees it, and this test
-	// still passes on an `.env.published` entry nothing needs.
-	//
-	// So the earlier claim that "over-reading is the safe direction here" was
-	// true only for names the tables do not carry. Parsing removes the case
-	// rather than documenting it.
 	match := func(v string) {
 		// `$$` is compose's escape for a literal `$`. Blank it out first so
-		// `$${X:?}` cannot match; a lone `$` is untouched.
+		// `$${X:?}` cannot match; a lone `$` is untouched. Left-to-right
+		// pairing matches compose's own lexer, checked against the client for
+		// runs of one to five dollars.
 		for _, m := range re.FindAllStringSubmatch(strings.ReplaceAll(v, "$$", "\x00\x00"), -1) {
 			vars[m[1]] = true
 		}
 	}
 
-	scanYAML := func(path string) {
+	// PARSED, NOT GREPPED OVER THE RAW BYTES, and the difference is not
+	// tidiness: a raw scan matches inside a `#` comment, so commenting out an
+	// interpolation while pinning the image literally left this test green on
+	// an .env.published entry nothing needed.
+	parse := func(path string) []any {
 		b, err := os.ReadFile(path)
 		require.NoError(t, err)
-
-		// Every document: compose files are single-document, but the walk
-		// reaches config files that need not be.
+		var docs []any
 		dec := yaml.NewDecoder(strings.NewReader(string(b)))
 		for {
 			var doc any
 			if err := dec.Decode(&doc); err != nil {
-				// io.EOF ends the stream. Anything else means a file under
-				// this root does not parse, which is worth failing on rather
-				// than falling back to a raw scan and its comment problem.
+				// Anything but a clean end of stream means a file compose
+				// reads does not parse, which is worth failing on rather than
+				// falling back to a raw scan and its comment problem.
 				require.ErrorIs(t, err, io.EOF, "parsing %s", path)
-				return
+				return docs
 			}
-			walkYAMLStrings(doc, match)
+			docs = append(docs, doc)
 		}
 	}
 
-	// The generator is Go, so read its STRING LITERALS rather than its bytes --
-	// symmetric with parsing the YAML, and for the same reason: a commented-out
-	// interpolation in this file would otherwise keep a name alive in
-	// `required` and mask exactly the drift this test is for.
-	scanGo := func(path string) {
-		f, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
-		require.NoError(t, err, "parsing %s", path)
-		ast.Inspect(f, func(n ast.Node) bool {
-			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-				if v, err := strconv.Unquote(lit.Value); err == nil {
-					match(v)
-				} else {
-					match(lit.Value) // raw string with no valid unquoting
-				}
-			}
-			return true
-		})
-	}
-
-	composeFiles := 0
+	// Seed with every auto-discoverable name under the root, then follow
+	// include: to a fixpoint.
+	seen := map[string]bool{}
+	var queue []string
 	require.NoError(t, filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
-			return nil
-		}
-		// PIRI_IMAGE appears in no compose file at all -- pkg/generate emits
-		// piri's service definition -- so the generator is a second source and
-		// a glob over compose files alone reports seven of eight.
-		switch {
-		case strings.HasSuffix(path, ".yml"), strings.HasSuffix(path, ".yaml"):
-			composeFiles++
-			scanYAML(path)
-		case strings.HasPrefix(path, filepath.Join(root, "pkg", "generate")) &&
-			strings.HasSuffix(path, ".go"):
-			scanGo(path)
+		if !d.IsDir() && composeFileNames[d.Name()] {
+			queue = append(queue, path)
 		}
 		return nil
 	}))
+	require.NotEmpty(t, queue, "found no compose file under %s", root)
 
-	require.NotZero(t, composeFiles, "found no YAML under %s", root)
+	for len(queue) > 0 {
+		path := queue[0]
+		queue = queue[1:]
+		abs, err := filepath.Abs(path)
+		require.NoError(t, err)
+		if seen[abs] {
+			continue
+		}
+		seen[abs] = true
+
+		for _, doc := range parse(path) {
+			walkYAMLStrings(doc, match)
+			for _, inc := range includePaths(filepath.Dir(path), doc) {
+				// An include naming a file that is not there is compose's
+				// error to report, not this test's.
+				if _, err := os.Stat(inc); err == nil {
+					queue = append(queue, inc)
+				}
+			}
+		}
+	}
+
+	// PIRI_IMAGE appears in no compose file at all -- pkg/generate emits piri's
+	// service definition -- so the generator is a second source and a scan of
+	// compose files alone reports seven of eight.
+	//
+	// ITS TESTS ARE EXCLUDED. Nothing in a _test.go reaches compose, and
+	// generate_test.go already asserts on emitted interpolations verbatim
+	// ("${SMELT_PIRI_0_PORT:-15100:3000}"); the same assertion for the image
+	// line is the obvious next test to write, and would pin PIRI_IMAGE in
+	// `required` for good.
+	//
+	// The generator is Go, so read its STRING LITERALS rather than its bytes --
+	// symmetric with parsing the YAML, and for the same reason: a commented-out
+	// interpolation would otherwise mask the same drift.
+	gen := filepath.Join(root, "pkg", "generate")
+	require.NoError(t, filepath.WalkDir(gen, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		f, perr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		require.NoError(t, perr, "parsing %s", path)
+		ast.Inspect(f, func(n ast.Node) bool {
+			if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if v, uerr := strconv.Unquote(lit.Value); uerr == nil {
+					match(v)
+				} else {
+					match(lit.Value)
+				}
+			}
+			return true
+		})
+		return nil
+	}))
+
 	require.NotEmpty(t, vars, "found no required ${X_IMAGE:?} interpolations")
 	return vars
 }
