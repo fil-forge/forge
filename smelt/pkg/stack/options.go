@@ -406,13 +406,20 @@ var envImageOptions = []struct {
 // builds, alongside the config field it lands in. It is the Go-side twin of
 // .env.published, which says the same thing for `make up` — the Makefile
 // shells out to `docker compose` directly, so it cannot read this table.
-// Neither copy can drift silently: the compose interpolations for these are
-// required (`${X:?...}`), so a missing entry fails at `compose up` naming
-// the variable rather than quietly booting :main.
 //
-// Only what this repository builds. The other images the stack runs (guppy,
-// ipni, plc, blockchain, minio) come from elsewhere and keep their `:-`
-// compose defaults, so there is nothing for this to fill in.
+// THIS COMMENT USED TO SAY the two copies could not drift silently, because
+// the interpolations are required (`${X:?...}`) so a missing entry fails at
+// `compose up` naming the variable. That is true and it is not enough: they
+// drifted anyway — indexing-service was added here and not to .env.published,
+// and `make up` had been failing ever since, because nothing in CI runs it.
+// TestPublishedImageSetAgrees is what checks it now: this table against
+// .env.published and envImageOptions above, name by name and reference by
+// reference.
+//
+// Only what this repository builds; the rest keep their `:-` compose defaults,
+// so there is nothing for this to fill in. That set is not listed here — it
+// was, and the copy in smelt/CLAUDE.md went stale twice over — it is whatever
+// the test derives.
 var publishedImages = []struct {
 	ref string
 	get func(*config) *string

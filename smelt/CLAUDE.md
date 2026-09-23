@@ -462,8 +462,17 @@ Available variables: `PIRI_IMAGE`, `GUPPY_IMAGE`, `DELEGATOR_IMAGE`, `INDEXER_IM
 
 Where the defaults come from depends on whether this repository builds the image:
 
-- **Built here** — `PIRI_IMAGE`, `HILT_IMAGE`, `INGOT_IMAGE`, `UPLOAD_IMAGE`, `DELEGATOR_IMAGE`, `SIGNER_IMAGE`. These have **no compose default**: the interpolation is `${PIRI_IMAGE:?...}`, so compose fails with the variable's name rather than quietly booting `ghcr.io/fil-forge/piri:main`. That silent fallback used to let a test that forgot its overrides pass while exercising published code instead of the commit under test. Published references for these live in `.env.published`, which `make up` loads via `--env-file`; a Go test asks for them with `stack.WithPublishedImages()`.
-- **Not built here** — everything else (guppy, indexer, ipni, swarf, plc, blockchain, minio). These keep an inline `:-` default in their `systems/*/compose.yml`, because nothing in this repository can produce an alternative. `SWARF_IMAGE` joins the required set when the branch that builds swarf lands.
+- **Built here.** These have **no compose default**: the interpolation is `${PIRI_IMAGE:?...}`, so compose fails with the variable's name rather than quietly booting `ghcr.io/fil-forge/piri:main`. That silent fallback used to let a test that forgot its overrides pass while exercising published code instead of the commit under test. Published references for these live in `.env.published`, which `make up` loads via `--env-file`; a Go test asks for them with `stack.WithPublishedImages()`.
+
+  **The set is not listed here**, because this paragraph carried a hand-written copy of it and went stale twice over: it named six when there were eight, and still called swarf and the indexer "not built here" long after both were imported. Derive it:
+
+  ```sh
+  find systems -name compose.yml -exec grep -hoE '\$\{[A-Z_]+_IMAGE:\?' {} + \
+    | sed -E 's/\$\{([A-Z_]+):\?/\1/' | sort -u
+  ```
+
+  That misses `PIRI_IMAGE`, which appears in no compose file — `pkg/generate/compose.go` emits piri's service definition. `TestPublishedImageSetAgrees` in `pkg/stack` checks `.env.published`, `publishedImages` and `envImageOptions` against each other — name by name and reference by reference, so it catches two of them naming *different* images for the same service. It deliberately does not read the compose files; its own comment says what that gives up and how to get it back.
+- **Not built here** — guppy, ipni, plc, blockchain, minio. These keep an inline `:-` default in their `systems/*/compose.yml`, because nothing in this repository can produce an alternative, and they are pinned by digest instead (`.github/scripts/check-stack-images.sh`).
 
 `.env` is yours: every line in it is commented out, and `make up` loads it *after* `.env.published`, so anything you uncomment there wins.
 
