@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `93a17f6f`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `b96d59ed`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -34,6 +34,52 @@ now corrected in #19.
 
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
+
+## forge#18 round three: a real bug in the script, and a correction I owe
+
+**Correction.** The round-two entry below, and the comment I posted on the pull
+request, said a guard flake was contention on the test stub's accept queue.
+That was wrong in every part, and the "fix" was inert:
+
+- `srv.request_queue_size = 128` runs **after** the constructor, and
+  `socketserver` calls `listen(self.request_queue_size)` during it — measured
+  by instrumenting `socket.listen`, the backlog was `[5]`, not `[128]`;
+- `daemon_threads = True` was already the class default;
+- and the stub was never the cause.
+
+**The cause is a real bug in `compat-baselines.sh`.** `newest=$(… |
+versions_from | head -n 1)`: `head` closes the pipe after one line, python's
+`print` takes `BrokenPipeError`, `set -o pipefail` propagates it and `set -e`
+aborts the script with an empty stdout.
+
+```
+idle       :   0 / 150 failed
+under load :  21 / 150 failed
+```
+
+It can only fire when more than one version-shaped tag is emitted, which **no
+fleet service does today** — so it has never appeared in a real run, and it
+arrives with the second release of any service. Fixed by taking the head in
+python; 0/150 under the same load, and the guard is 25/25 green under six-way
+CPU load where the old one failed about 40% of the time.
+
+**What I got wrong is worth more than the bug.** I asserted a cause I had not
+established, and the evidence I cited for it ("0/30 before and 0/40 after") was
+measured *idle* — the one condition under which the bug cannot appear. The
+stub change is reverted rather than kept with a justification that did not
+hold.
+
+The other five were the guard claiming more than it checked: test 11 pinned the
+summary row's existence and not the digest in it — which is the entire reason
+the `::warning::` points readers there; the `Accept` test used `any(...)`, so
+dropping **either** index media type left it green, including the one AGENTS.md
+rule 2 rests on; `digest_for`'s manifest-non-200 and token-mint arms had no
+fixture; a mutation's rationale described a mis-pick where the script actually
+crashes; and one entry named fewer tests than went red.
+
+Twenty mutations now, each caught by the tests its entry names. The header also
+says what the file **cannot** catch — the `| head` regression is load-dependent,
+so a pass there proves nothing about it.
 
 ## forge#18 round two: the fix from round one was itself a partial guard
 
