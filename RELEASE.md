@@ -7,8 +7,7 @@ its own tag; there is no repo-wide version number and no release train.
 
 **The development cycle.** A pull request to `main`. CI runs unfiltered — every
 module's build/vet/staticcheck/tidy/test, the `guards` job, images, e2e and
-itest. Agent review rounds run until one comes back with nothing (`AGENTS.md`
-rule 10). Merge when it is green. An ordinary change never leaves this cycle.
+itest. It is reviewed. Merge when the review is satisfied and CI is green.
 
 **The release cycle**, independent of it and per module. A release pull request
 is branched `release/<service>`, bumps `<service>/version.json`, and changes
