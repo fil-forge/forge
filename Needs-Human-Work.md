@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 01:30Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 01:50Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `b9423bc0`. **Four rounds, 16 findings**, every one a deriver reading something other than what its consumer reads. 19 mutations verified. Round five running |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `1c27d270`. **Five rounds, 21 findings**, every one a deriver reading something other than what its consumer reads. Round six asks whether the test is the right shape at all — see below |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -193,6 +193,52 @@ hours fast makes a stale page look fresh.
 It is also the same failure as the night's twenty-five review findings, in the
 one place I would not have thought to check: **a value written from
 recollection rather than measured.** `date -u` costs nothing.
+
+## forge#23 round five, and a scope question for you
+
+Round five found three more holes and two more claims. The holes are the kind
+that matter: **`composeFileNames` omitted the four `*.override.*` names**, which
+compose auto-discovers and which is the live `make up` path (`COMPOSE` passes no
+`-f` unless the workspace override exists, and `-f` is what suppresses
+auto-discovery); **`extends: file:` is a second way compose reads a file**, which
+the comment denied outright; and **a missing include target was skipped
+silently**, so mistyping `systems/swarf` as `systems/swraf` in the root include
+dropped `SWARF_IMAGE` from the derived set and passed, while compose fails the
+whole project on it. That last is now fatal except under `generated/`, which is
+gitignored generator output and the only absence the skip was ever for.
+
+The claims: one measurement **named a case it had not run** — the key comment
+cited four positions where compose leaves a `${X:?}` literal, and a *service
+name* is not one of them (compose exits 1 with `services additional properties
+'…' not allowed`, schema validation before interpolation). Three of four
+reproduced exactly. And two real limits are now stated rather than implied,
+since the comment would otherwise read as total: `include.project_directory`
+and `include.env_file`.
+
+### The question I would rather you decided than I did
+
+**This started as a one-line fix and is now a ~250-line Go test**, and five
+consecutive rounds have found the same shape of defect: the deriver reading
+something other than what its consumer reads. Each fix was right; the *rate* is
+the signal. The test now reimplements a slice of compose's file-resolution and
+interpolation grammar, and compose's grammar is larger than the part that is
+written down here.
+
+Three ways out, and I have not picked one:
+
+1. **Keep it.** It is correct for this tree, five rounds hardened it, and the
+   remaining known gaps are documented and absent from the repository.
+2. **Ask compose instead of reimplementing it** — run `docker compose config`
+   with an empty environment and read back which variables it names as missing.
+   That is exact by construction. It costs a dependency on the compose binary
+   in `unit smelt`, which CI's runner has and a contributor's machine may not.
+3. **Read less.** The original bug was `.env.published` and `publishedImages`
+   disagreeing — a comparison that needs none of the grammar. The grammar is
+   load-bearing only for the stricter property the test grew into.
+
+Round six is briefed to answer this rather than hunt another corner. **Nothing
+is blocked on it**: the one-line fix is correct and verified either way, and
+`make up` is repaired in every version of this PR.
 
 ## forge#23 rounds three and four: the same mistake, four times, one layer down each time
 
