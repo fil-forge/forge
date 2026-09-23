@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `b96d59ed`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `f991dcc5`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -34,6 +34,56 @@ now corrected in #19.
 
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
+
+## forge#18 round four: I put a symptom in the record that I never saw
+
+Round four found no defect in anything that ships. It found three claims the
+files make about themselves, and the first is the one worth keeping.
+
+**The correction below, and the one I posted on the pull request, said the
+observed flake was the script "reporting `could not read sorting's tags`".
+That string was never seen.** Test 3's failure line printed stdout only at the
+time:
+
+```
+$ git show 1e1fe5e9:.github/scripts/check-compat-baselines.sh | grep 'bad "3 numeric'
+  bad "3 numeric sort (rc=$(rc_of t3)): $(out_of t3)"
+```
+
+I inferred a plausible message from the surrounding code and wrote it down as
+an observation. The round then reasoned from it — correctly, given the input —
+that the `| head -n 1` bug cannot be the cause, since that message comes from
+`tags_for` two steps earlier. So a fabricated detail propagated into someone
+else's analysis and produced a wrong conclusion about a real bug.
+
+**What was actually observed** is one run red on test 3 alone, rc=1, with
+empty stdout. At that commit `sorting` was the only fixture with more than one
+version-shaped tag — `paged` had `1.0.0` and `main`, one — so "the only test
+that can hit a `BrokenPipeError` is 3" and "only test 3 went red" agree
+exactly. Restoring the old pipeline reddens the guard under load on precisely
+the fixtures with two or more. The identification stands, on the rc and the
+empty stdout rather than on a message nobody read.
+
+**A fabricated detail is worse than the misdiagnosis it decorates**, because
+everyone downstream reasons from it. Both versions are in the comment now, and
+the guard prints stderr on every failure — test 3 was one of two `bad` lines
+that dropped it, which is the entire reason there was nothing to go on.
+
+The other two: `int("0-amd64")` was derived from a fixture the same commit had
+replaced (`0.0.1-amd64` raises on `int("1-amd64")`), inside the comment written
+to correct a previous wrong mechanism claim; and the `versions_from` rename
+left three dangling references, one of them in `compat_test.go`.
+
+### Where the rounds stand
+
+Five rounds on this stretch: 10, 6, 6, 3, and one running. Round four found no
+code defect; round five's brief is numbers-only, per AGENTS.md's own rule for a
+documentation-only change. The code has not moved since `b96d59ed` except one
+failure message.
+
+**The thing that has not moved at all, and is still yours:** no release of
+`piri` or `ingot` can be launched by this harness, so the gate can go red
+truthfully and cannot go green meaningfully. That decision is above.
 
 ## forge#18 round three: a real bug in the script, and a correction I owe
 
