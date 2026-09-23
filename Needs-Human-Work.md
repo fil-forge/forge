@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `26e94296`. **Petra reviewed it 2026-09-23**; four of six comments are fixed and pushed, **two are questions back to her** (see below). One answer invalidates a load-bearing paragraph in `compat-refresh.yml` |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `44fa2b51`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -35,7 +35,104 @@ now corrected in #19.
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
 
-## forge#18: your review, and the one answer that changes the design
+## forge#18: the vacuous gate, and what falling back to `:main` buys
+
+**Your question — "don't we have some kind of `v0.0.0` tagged for them?" — has
+a yes and a no, and the no is the one that mattered.** Three separate things
+get called "tagged" here and they disagree:
+
+| service | `version.json` | upstream **git tag** | ghcr **image** `X.Y.Z` |
+|---|---|---|---|
+| `piri` | `v0.2.4` | `v0.2.4` | `0.2.4` ✔ |
+| `ingot` | `v0.0.0` | `v0.0.0` | `0.0.0` ✔ |
+| `indexing-service` | `v1.13.4` | — | `1.13.4` ✔ |
+| `hilt` | `v0.0.0` | `v0.0.0` | — |
+| `swarf` | `v0.0.0` | `v0.0.0` | — |
+| `sprue` | `v0.0.6` | *none* | — |
+| `delegator` | `v0.1.1` | *none* | — |
+| `piri-signing-service` | `v0.1.0` | *none* | — |
+
+`hilt` and `swarf` do carry `v0.0.0` in git. Neither published an image under
+it, and what those tags mark is the moment the release plumbing landed rather
+than a release: `hilt`'s is on the very commit that **added** `version.json`,
+and `swarf`'s is on its **root commit**, six weeks before it had one.
+`compat-baselines.sh` reads published image tags, because the fleet boots from
+images and you cannot `docker run` a git tag.
+
+**Your instruction — fall back to a floating `:main` and warn about it — is
+built and pushed.** `44fa2b51` is the head. What it produces now:
+
+```
+base_PIRI=0.2.4        base_INGOT=0.0.0        base_INDEXING_SERVICE=1.13.4
+base_HILT=sha256:a71a8bdc…   base_SPRUE=sha256:5dda5c78…
+base_DELEGATOR=sha256:30b17579…   base_PIRI_SIGNING_SERVICE=sha256:b7ef5f0e…
+base_SWARF=sha256:b090ceb7…
+::warning::Compat baseline is a floating :main for hilt sprue delegator
+piri-signing-service swarf. …
+```
+
+### Decision taken on your behalf: the fallback resolves `:main` to a digest
+
+You asked for a floating `:main`. I emit the **index digest** it resolves to
+rather than the tag.
+
+**Why.** The objection the skip was defending against is written into the file:
+":main is a moving tag, and pinning a compatibility baseline to something that
+moves is how a red becomes ambiguous." Your instruction overrides the decision
+but not the concern, and the digest answers it for about fifteen lines: the run
+still asks the registry at the moment it runs, so the answer stays as fresh as
+a floating tag, and the digest lands in the run's log, output and job summary,
+so a red is reproducible afterwards. Index, never per-architecture, per
+`AGENTS.md` rule 2 — measured, all eight are 4-entry OCI indexes.
+
+**The alternative** is to pass `:main` through unchanged: simpler, and one
+fewer registry call per service. **What would flip it:** if the extra call ever
+becomes a flake source, or if you would rather the env var read as something a
+person can recognise at a glance. Reverting is deleting `digest_for` and
+passing `main`; the Go side already handles a bare tag, and `TestImageFor`
+covers that case.
+
+### What the fallback is worth, and what it is not
+
+**It does not buy skew for those five.** `:main` tracks upstream's main, which
+these prefixes are resynced against — measured today, the tree is 1 commit
+behind upstream for `hilt`, 1 for `piri`, 6 for `ingot` and 0 for everything
+else. So for the five, the "old" fleet is about the same code as HEAD.
+
+That is the right outcome rather than a compromise, and it is the script's own
+reasoning: we deploy those five ourselves and can upgrade them together, so
+skew between them is a scheduling problem. The skew this suite is about comes
+from `piri` and `ingot` — the two third parties run, and the two
+`TestRollingUpgrade` upgrades — and both have real releases to pin to, ~112
+commits back each.
+
+**It is also not this tree**, so upstream drift can redden a run. Small today;
+it grows between resyncs. Said in the warning rather than hidden.
+
+### There is no skip path left anywhere
+
+That is the actual fix, and it is three places agreeing instead of two
+disagreeing:
+
+- **the script** produces a complete baseline set or exits non-zero;
+- **`compat.yml`'s job condition is gone** — the `pinnable == 'true'` gate was
+  the "any service" half of the quantifier mismatch;
+- **the Go side fails** if *every* baseline is floating, which is the one state
+  where the fleet is the same code as HEAD.
+
+`check-compat-baselines.sh` is new and runs in `guards`: nine tests against a
+stub registry, each negative one matching its own message. Verified both
+directions — seven fixes deleted from the script in turn, each caught by the
+test named for it.
+
+### One stale claim found and fixed rather than deferred
+
+`compat.yml`'s header still explained why re-running a pull request's own run
+beats dispatching, and still cited the 30-day re-run ceiling as a live
+limitation — two commits after `cb542109` replaced re-running with a dispatch.
+The ceiling is the part a reader would act on. Fixed in `44fa2b51`.
+
+## forge#18: your earlier review, and the one answer that changes the design
 
 Four of the six comments are fixed and pushed as `f98e7e26` — the hand-run
 enumeration snippet in `ci.yml`, the eight-services paragraphs in

@@ -191,8 +191,8 @@ Seven rules that have actually decided things:
 
 **`main` is `4611cbcb` (#22's merge), the import phase is closed, and **two**
 `forge` pull requests are open: [#18](https://github.com/fil-forge/forge/pull/18),
-Open and green, and [#23](https://github.com/fil-forge/forge/pull/23), a draft
-opened overnight.** All **ten** in-scope
+Open with a round running on two new commits, and
+[#23](https://github.com/fil-forge/forge/pull/23), a draft opened overnight.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
 digest, the checks the per-service `.github/` directories took with them
@@ -221,7 +221,14 @@ until a review round caught it — it still listed #19, which merged as
 
 - [#18](https://github.com/fil-forge/forge/pull/18) — **`compat.yml`**: does what
   we are about to ship still work against what is already deployed? **Open, not
-  a draft**, rounds stopped at seven, green on 28/28. **Waiting on your merge.**
+  a draft**, head `44fa2b51`. Rounds had stopped at seven; **Petra's reading
+  then found the gate was vacuous** — it went green in 0.126s having booted
+  nothing, because the workflow ran the job when ANY service could be pinned
+  and the test needed EVERY service pinned. Fixed: the five services with no
+  cut release fall back to `:main` resolved to its index digest, and there is
+  no skip path left in script, workflow or test. A round is open and a
+  dispatched `compat.yml` run is in flight — that run is what says it gates.
+  See [[Needs Human Work]].
 - [#23](https://github.com/fil-forge/forge/pull/23) — **the published image
   set**: `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been
   broken on `main`. Draft, rounds running.
