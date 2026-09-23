@@ -1,14 +1,21 @@
 package stack
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 // The published image set is stated in three places, and they must agree:
@@ -133,6 +140,21 @@ func TestPublishedImageSetAgrees(t *testing.T) {
 	require.Equal(t, wantVars, gotEnv,
 		".env.published does not supply exactly the images this repository builds")
 
+	// Every published reference must be reachable by an override variable.
+	// Without this a publishedImages entry whose config field no
+	// envImageOptions entry reaches drops out of wantVars silently -- not
+	// required in .env.published, reference never compared. That is the
+	// symmetric twin of the drift this test exists for, and it was the one
+	// way two of the three could genuinely disagree and pass.
+	reached := map[string]bool{}
+	for _, f := range varToField {
+		reached[f] = true
+	}
+	for f := range fieldToRef {
+		require.True(t, reached[f],
+			"publishedImages publishes %s, which no envImageOptions entry reaches", f)
+	}
+
 	// Comparing the REFERENCES pairwise, not the two sets. A set comparison
 	// passes on a file where PIRI_IMAGE and HILT_IMAGE have been swapped --
 	// each service booting the other's image -- which is how the shell version
@@ -140,5 +162,132 @@ func TestPublishedImageSetAgrees(t *testing.T) {
 	for _, v := range wantVars {
 		require.Equal(t, fieldToRef[varToField[v]], env[v],
 			"%s in .env.published names a different image than publishedImages does", v)
+	}
+}
+
+// TestBuiltImagesAreRequiredNotDefaulted checks that each image this
+// repository builds is a REQUIRED compose interpolation, not one with a
+// fallback.
+//
+// WHY THIS IS SAFE TO DO BY READING THE COMPOSE FILES WHEN THE CHECK ABOVE IS
+// NOT. It asks a different question, and the direction of the question decides
+// which way incompleteness errs. "Does each of these known names appear
+// required somewhere?" fails when a file is missed -- a false failure. "What
+// is the complete set of required names?" PASSES when a file is missed, and
+// six review rounds went into chasing every way that could happen. Under-
+// reading is safe here; over-reading is not, which is why this looks only at
+// files named like compose files and not at every YAML under the root.
+//
+// Comments cannot mask a downgrade, because the YAML is parsed rather than
+// scanned: a commented-out `${X:?}` left above a defaulted line is not in the
+// parsed document at all.
+//
+// WHAT IT PROTECTS. `.env.published`'s header and smelt/CLAUDE.md both say the
+// required form exists because a silent default meant a caller who forgot an
+// override booted a published image and never heard about it. Downgrading
+// `${HILT_IMAGE:?...}` to `${HILT_IMAGE:-ghcr.io/fil-forge/hilt:main}` puts
+// that back, and nothing else notices: check-stack-images.sh skips every
+// `${...}` value by design, and no Go path compares the two forms.
+func TestBuiltImagesAreRequiredNotDefaulted(t *testing.T) {
+	root := filepath.Join("..", "..")
+
+	built := map[string]bool{}
+	for _, e := range envImageOptions {
+		f := fieldReachedBy(t, func(c *config) { e.opt(imageSentinel)(c) })
+		for _, p := range publishedImages {
+			if fieldReachedBy(t, func(c *config) { *p.get(c) = imageSentinel }) == f {
+				built[e.env] = true
+			}
+		}
+	}
+	require.NotEmpty(t, built)
+
+	// `:?` errors when unset or empty, `?` when unset. Either is required.
+	required := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):?\?`)
+	found := map[string]bool{}
+
+	isComposeFile := func(name string) bool {
+		return strings.HasPrefix(name, "compose.") || strings.HasPrefix(name, "docker-compose.")
+	}
+
+	require.NoError(t, filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		switch {
+		case d.IsDir():
+			return nil
+		case isComposeFile(d.Name()) &&
+			(strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml")):
+		case strings.HasPrefix(path, filepath.Join(root, "pkg", "generate")) &&
+			strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go"):
+			// piri's service definition is emitted, not written down. PARSED,
+			// not scanned: a raw read matches inside a `//` comment, and
+			// over-reading is the unsafe direction for this question -- a
+			// commented-out `${PIRI_IMAGE:?}` would let a downgraded live one
+			// pass.
+			f, perr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			require.NoError(t, perr, "parsing %s", path)
+			ast.Inspect(f, func(n ast.Node) bool {
+				if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+					v := lit.Value
+					if u, uerr := strconv.Unquote(v); uerr == nil {
+						v = u
+					}
+					for _, m := range required.FindAllStringSubmatch(v, -1) {
+						found[m[1]] = true
+					}
+				}
+				return true
+			})
+			return nil
+		default:
+			return nil
+		}
+
+		b, rerr := os.ReadFile(path)
+		require.NoError(t, rerr)
+		dec := yaml.NewDecoder(strings.NewReader(string(b)))
+		for {
+			var doc any
+			if derr := dec.Decode(&doc); derr != nil {
+				require.ErrorIs(t, derr, io.EOF, "parsing %s", path)
+				return nil
+			}
+			walkStrings(doc, func(v string) {
+				for _, m := range required.FindAllStringSubmatch(v, -1) {
+					found[m[1]] = true
+				}
+			})
+		}
+	}))
+
+	for v := range built {
+		require.True(t, found[v],
+			"%s is built here but is not a required compose interpolation anywhere; "+
+				"a `${%s:-default}` form silently boots a published image when the "+
+				"caller forgets an override", v, v)
+	}
+}
+
+// walkStrings visits every string scalar VALUE. Keys are not visited: compose
+// does not interpolate them -- measured, `docker compose config` exits 0 with
+// the variable unset and re-escapes the `$` to `$$`.
+func walkStrings(n any, fn func(string)) {
+	switch v := n.(type) {
+	case string:
+		fn(v)
+	case []any:
+		for _, e := range v {
+			walkStrings(e, fn)
+		}
+	case map[string]any:
+		for _, e := range v {
+			walkStrings(e, fn)
+		}
+	case map[any]any:
+		for _, e := range v {
+			walkStrings(e, fn)
+		}
 	}
 }
