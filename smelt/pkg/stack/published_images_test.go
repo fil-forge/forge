@@ -1,6 +1,7 @@
 package stack
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -238,8 +239,25 @@ func TestBuiltImagesAreRequiredNotDefaulted(t *testing.T) {
 		}
 	}
 
-	// The project `make up` runs: the root compose file and its include
-	// targets, transitively.
+	// The files the project loads AND this repository commits: the root
+	// compose file and its `include:` targets, transitively.
+	//
+	// Both halves below read this one set, and their incompleteness runs in
+	// OPPOSITE directions. `isRequired` is existential, so a file missed here
+	// makes the check fail loudly. `isDefaulted` is universal, so a file
+	// missed here makes it pass SILENTLY. The set has to be justified for the
+	// second; being safe for the first says nothing.
+	//
+	// What it leaves out, deliberately. `compose.override.yml` is
+	// auto-discovered by compose next to compose.yml, and the Makefile does
+	// load it -- its COMPOSE passes no `-f` at all unless the workspace
+	// override exists, and an explicit `-f` list is what suppresses
+	// auto-discovery. `generated/compose/workspace.override.yml` is the one
+	// it passes by `-f` when that does exist. NEITHER IS COMMITTED. A
+	// developer's own override is theirs, CI cannot see it, and a verdict
+	// that depends on a file only one machine has is the defect the
+	// `generated/` skip below exists to remove. If this repository ever
+	// commits an override file, it belongs in this walk.
 	seen := map[string]bool{}
 	queue := []string{filepath.Join(root, "compose.yml")}
 	for len(queue) > 0 {
@@ -250,15 +268,24 @@ func TestBuiltImagesAreRequiredNotDefaulted(t *testing.T) {
 		}
 		seen[path] = true
 
-		b, err := os.ReadFile(path)
-		if err != nil {
-			// The one include that is legitimately absent is generated/, which
-			// is gitignored output; its content is covered by calling the
-			// generator below.
-			require.True(t, os.IsNotExist(err) && strings.Contains(path, "generated"),
-				"reading %s: %v", path, err)
+		// `generated/` is gitignored build output, and it is SKIPPED rather
+		// than read-if-present. CI's `unit smelt` has no generate step, so
+		// there the file is absent; locally it is whatever the last
+		// `make generate` left. Reading it makes the verdict depend on which
+		// machine ran the test, in both directions: a stale file supplying a
+		// requirement the source had since lost passes locally and fails in
+		// CI, and a stale file carrying a default the source had since fixed
+		// fails locally -- naming a gitignored file -- and passes in CI.
+		// The generator is called below instead, which is exact.
+		if rel, rerr := filepath.Rel(root, path); rerr == nil &&
+			strings.HasPrefix(rel, "generated"+string(filepath.Separator)) {
 			continue
 		}
+		// Any other include target must exist. An `include:` naming a file
+		// that is not there is a broken project, and silently skipping it
+		// would drop that file's defaulted forms from a universal check.
+		b, err := os.ReadFile(path)
+		require.NoError(t, err, "reading %s", path)
 		dec := yaml.NewDecoder(strings.NewReader(string(b)))
 		for {
 			var doc any
@@ -276,11 +303,24 @@ func TestBuiltImagesAreRequiredNotDefaulted(t *testing.T) {
 	// piri's service definition is emitted, not written down. CALLED, not
 	// read: a `${PIRI_IMAGE:?}` string literal the generator never emits must
 	// not count.
-	emitted, err := generate.GeneratePiriCompose([]manifest.ResolvedPiriNode{
-		{Name: "piri-0", Index: 0},
-	})
-	require.NoError(t, err)
-	scan("pkg/generate (emitted)", string(emitted))
+	// ONCE PER STORAGE SHAPE, because the generator emits a different set of
+	// services for each and those branches carry image references of their
+	// own -- postgres adds `piri-postgres` and `piri-postgres-init`, s3 adds
+	// `piri-minio`. A single zero-value call reached none of them, and the
+	// committed smelt.yml resolves to {postgres, s3}, so the three services
+	// `make up` actually runs were the three it never looked at. The only
+	// image line in those branches is `${MINIO_IMAGE:-...}`, which is inert
+	// here because MINIO_IMAGE is not built by this repository -- but it is
+	// inert by accident, not by construction.
+	for _, db := range []string{manifest.DBSQLite, manifest.DBPostgres} {
+		for _, blob := range []string{manifest.BlobFS, manifest.BlobS3} {
+			emitted, err := generate.GeneratePiriCompose([]manifest.ResolvedPiriNode{
+				{Name: "piri-0", Index: 0, Storage: manifest.StorageSpec{DB: db, Blob: blob}},
+			})
+			require.NoError(t, err, "generating db=%s blob=%s", db, blob)
+			scan(fmt.Sprintf("pkg/generate (emitted, db=%s blob=%s)", db, blob), string(emitted))
+		}
+	}
 
 	for v := range built {
 		require.True(t, isRequired[v],
