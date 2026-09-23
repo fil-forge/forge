@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 01:12Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 01:30Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `b5ce12ec`. Three rounds, **13 findings.** The shell guard was green on three broken trees; its Go replacement under-read compose two ways; then round three found the over-reading claim inverts. Both inputs are parsed now, not grepped. Round four needed |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `b9423bc0`. **Four rounds, 16 findings**, every one a deriver reading something other than what its consumer reads. 19 mutations verified. Round five running |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -193,6 +193,51 @@ hours fast makes a stale page look fresh.
 It is also the same failure as the night's twenty-five review findings, in the
 one place I would not have thought to check: **a value written from
 recollection rather than measured.** `date -u` costs nothing.
+
+## forge#23 rounds three and four: the same mistake, four times, one layer down each time
+
+Worth setting out together, because on its own each round reads as a detail and
+together they are a shape.
+
+The check derives the published image set from four statements and fails when
+they disagree. Every round found the deriver **reading something other than
+what its consumer reads**:
+
+| round | it read | what the consumer reads |
+|---|---|---|
+| one | the two lists as **sets** | pairs — which reference a given variable carries |
+| two | only `${X:?}`, only files named `compose.yml` | `${X?}` too; `include:` targets of any name; `compose.yaml` |
+| three | raw bytes, so `#` comments and `$$` escapes | parsed values |
+| four | **YAML map keys**, `_test.go`, non-compose YAML | values, in the files compose opens |
+
+Round four is the one to keep, because **the third over-read was introduced by
+the fix for the first two**. The new walker visited map keys, justified by a
+comment reading "compose interpolates throughout, not only in values" — which
+is the opposite of what compose does. Measured with the client: a `${X:?}` in a
+service name, an `environment` key, a `labels` key or a top-level `x-` key
+leaves `docker compose config` exiting 0 with the variable unset, and the
+output **re-escapes the `$` to `$$`** — compose stating it treated the text as
+literal.
+
+And the sentence "over-reading is the safe direction here" was still sitting
+four lines above the paragraph, in the same function, that retracted it.
+
+**Why over-reading is not safe here**, since it is counter-intuitive: `wantVars`
+comes from the two Go tables and never from what the YAML requires. So an extra
+match at a name the tables do *not* carry fails loudly — but at a name they
+*do*, it keeps that name alive in `required` and hides the drift. A
+`${HILT_IMAGE:?…}` written into `systems/telemetry/config/prometheus.yml`, a
+file compose never opens, masked a hilt image pinned literally.
+
+The file set is now what compose actually reads: the names it auto-discovers in
+a directory it is run from, plus `include:` targets followed transitively.
+
+**A harness note worth more than the findings.** Two of the four masking cases
+first read as *passes*. The mutation had not applied — `HILT_IMAGE` appears
+twice in `systems/hilt/compose.yml` and the substitution replaced one. **A
+mutation that does not apply is indistinguishable from a guard that does not
+fire**, and that is the second time tonight. Every mutation now asserts it
+changed the file, and prints what it left behind.
 
 ## The pattern across both overnight PRs, which is the thing worth keeping
 
