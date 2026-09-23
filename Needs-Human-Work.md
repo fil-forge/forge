@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 02:40Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 03:10Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `b35c8275`. **Seven rounds, 26 findings.** Round six cut 285 lines that were not load-bearing; round seven found the cut gave up more than it said and took one check back, differently framed. Round eight needed |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `f693c50c`. **Eight rounds, 33 findings.** The one-line fix has been correct throughout; every finding has been about the guard. **A scope question for you below** — the second test protects a property `main` never had |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -193,6 +193,41 @@ hours fast makes a stale page look fresh.
 It is also the same failure as the night's twenty-five review findings, in the
 one place I would not have thought to check: **a value written from
 recollection rather than measured.** `date -u` costs nothing.
+
+## forge#23: a scope call for you, and a reframing I should have made sooner
+
+**The second test in #23 protects a property `main` has never had.** I checked
+by downgrading `${HILT_IMAGE:?…}` to `${HILT_IMAGE:-…}` on an untouched
+`origin/main` worktree: no test fails, no guard fails. Nothing catches it
+today.
+
+That matters because of how it got there. Round seven told me the round-six
+simplification had "given up" that coverage, and I added
+`TestBuiltImagesAreRequiredNotDefaulted` to take it back. But it was given up
+only relative to **an unmerged intermediate revision of this branch** — never
+relative to `main`. **So it is an addition, not a restoration**, and I
+reasoned about it as a regression for two rounds without checking the baseline.
+That is the same error as a "before" column written from expectation, at the
+level of the branch rather than a mutation table.
+
+**The choice, which is cheap either way:**
+
+- **Keep it.** It works and is verified over 11 mutations. `.env.published`'s
+  header and `smelt/CLAUDE.md` — both in this diff — *assert* the property, so
+  checking it in the same pull request is coherent rather than merely adjacent.
+- **Split it.** #23's job is that `make up` is broken. The second test is
+  ~120 lines and two of the eight rounds; splitting leaves the fix minimal and
+  gives the property its own review without holding up a repair.
+
+I kept it, because re-adding later costs another pull request while dropping it
+costs one line of your instruction. **Say the word and it comes out.**
+
+### What eight rounds actually produced
+
+33 findings. **Not one was a defect in the one-line fix.** Every one was in a
+guard written for it or a claim made about it — which is worth knowing before
+reading the round history as evidence that the change was risky. It was not.
+The guard was.
 
 ## forge#23 round seven: the simplification gave up more than I said it did
 
