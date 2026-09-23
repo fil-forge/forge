@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `f991dcc5`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `d2d0652f`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -34,6 +34,47 @@ now corrected in #19.
 
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
+
+## forge#18 round five: the fixing commit keeps introducing the next error
+
+Numbers-only brief, three findings, no code defect. Two of the three were
+introduced **by the commit that was fixing the previous round**, which is now
+the pattern rather than the exception.
+
+- **The uniqueness argument was built on a miscount.** I said `sorting` was the
+  only fixture with more than one version-shaped tag. `paged` has two — 1.0.0
+  on page one, 2.0.0 on page two — and `tags_for` concatenates every page
+  before the pipeline sees it, so test 10 takes the same abort in about one
+  loaded run in twenty. I counted the first page only. The next sentence of the
+  same paragraph said "the tests whose fixtures have two or more", plural,
+  contradicting it.
+- **"The guard now prints stderr on every failure" was false when written.**
+  Two `bad` lines dropped it and that commit fixed one. Test 11's printed
+  neither rc nor stderr — and test 11 drives the `sorting` fixture, so it is
+  one of the tests that reddens from exactly the bug the sentence documents.
+- **Two rates in the tree for one measurement**, 18/150 in one file and 21/150
+  in the other, and neither reproduces: 0/100 idle, 1/100, 8/100, 18/100 across
+  load here, against 56–83/150 and non-monotonic elsewhere.
+
+**The comment was also cut roughly in half.** It had grown four paragraphs
+narrating which revision was wrong and how, which is the drift `AGENTS.md`
+names in as many words: *"the commentary drifts toward narrating how the change
+got here … instead of explaining what is there now."* Fixing that was worth
+more than any of the three findings.
+
+### Where this leaves the rounds
+
+Five rounds: 10, 6, 6, 3, 3. The last two found **no defect in anything that
+ships**. In four of the five, the fixing commit introduced at least one new
+wrong claim of its own — always a claim about a measurement, never a claim
+about code. One more numbers-only round is running against a comment half the
+size; **if it comes back without a code defect the rounds stop there**, which
+is a rule stated before the result rather than after it.
+
+Worth keeping beyond this PR: the rounds stopped finding bugs after round three
+and kept finding false statements *about* the bugs. The mechanism that caught
+every one was applying the mutation or re-running the measurement — never
+reading.
 
 ## forge#18 round four: I put a symptom in the record that I never saw
 
