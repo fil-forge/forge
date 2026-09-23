@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 01:35Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 02:10Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `689e561`. Round one: **3 findings, none in the code** — the fix itself was verified correct. Round two running |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the guard that makes its own "cannot drift silently" claim true | **NEW**, draft, on `c66c88f8`. A round is running. Guard verified in seven directions, each seen to fail before it was seen to pass |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `1945c7d1`. Round one: **5 findings, and the guard was passing on three broken trees.** Rewritten as a Go test, verified in eight directions. Round two running |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -124,6 +124,43 @@ go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
 So correcting the spelling to `0` would silently turn the race detector off, or
 break the step outright. Noted on the PR. **Not filed as an issue** — that is
 yours to ask for.
+
+## forge#23 round one: the guard was green on three broken trees
+
+The worst kind of finding, and the reason the rounds are worth their cost. The
+shell guard written to stop the published image set drifting **reported
+"agreed" and exited 0 on three trees that were genuinely broken** — the same
+class it existed to catch. All three reproduced before anything was changed.
+
+**It compared sets, never pairs.** Variable names in one comparison, image
+references in the other, and never which reference a given variable carries.
+So it passed on `.env.published` with `PIRI_IMAGE` and `HILT_IMAGE` **swapped**
+— each service booting the other's image — and on a file binding `PIRI_IMAGE`
+**twice**, once to hilt's image, because `sort -u` collapsed the repeated name
+and the value was already there from hilt's own line.
+
+**It looked in the wrong root.** `find smelt/systems -name compose.yml` is one
+directory too deep: `smelt/compose.yml` is the file `make up` resolves and sits
+outside `systems/`. Nothing is broken there today, but it is the bug's own
+class at the one compose file `systems/` does not contain.
+
+**So it is a Go test now**, `TestPublishedImageSetAgrees` in `pkg/stack`, and
+the script and its `ci.yml` step are gone. Closing the pairing hole in shell
+means recovering which `config` field each variable and each reference reaches,
+which is Go semantics. The test pairs them **by behaviour** — applying each
+option and each getter to a fresh config and seeing which field moved — so
+nothing has to agree about how `PIRI_IMAGE` relates to `piriImage`, and a
+renamed field cannot silently break the join. It also covers `envImageOptions`,
+a fourth statement of the set the script ignored entirely.
+
+**And the fourth copy of the disproven sentence was in the file the script was
+parsing.** "Neither copy can drift silently" was corrected in `.env.published`,
+dropped from `smelt/CLAUDE.md`, and left standing in `pkg/stack/options.go` —
+which holds one of the two copies "neither copy" refers to. Fixing one instance
+and leaving the rest, inside a change about exactly that.
+
+Verified in eight directions, each seen to fail before being seen to pass.
+Three of those eight are cases the shell version passed.
 
 ## Overnight, second item: `make up` has been broken on `main`, and three lists had drifted
 
