@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 01:50Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 02:15Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `1c27d270`. **Five rounds, 21 findings**, every one a deriver reading something other than what its consumer reads. Round six asks whether the test is the right shape at all — see below |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `7f04a8b8`. **Six rounds, 24 findings.** Round six asked whether the check was the right shape; it was not, and 285 of its 433 lines are gone. **A decision taken on your behalf — see below, and it is cheap to reverse** |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -193,6 +193,57 @@ hours fast makes a stale page look fresh.
 It is also the same failure as the night's twenty-five review findings, in the
 one place I would not have thought to check: **a value written from
 recollection rather than measured.** `date -u` costs nothing.
+
+## Decision taken while you were away: forge#23's check reads less
+
+**Chosen:** drop the 285 lines of compose-grammar derivation from
+`TestPublishedImageSetAgrees`, leaving it to compare `.env.published`,
+`publishedImages` and `envImageOptions` against each other — name by name and
+reference by reference. 144 lines instead of 433.
+
+**The alternative** was either to keep extending the grammar, or to replace it
+with a compose oracle (`docker compose config` against an empty environment,
+read back the variable it names missing, repeat — exact by construction, no
+daemon, ~1.4s over 9 invocations, at the cost of depending on the compose
+binary in `unit smelt`).
+
+**What settled it, and why I did not wait for you.** I put this question on
+this page two rounds ago with three options and no data. Round six produced
+the data, and it is decisive: **stub the grammar out to a constant and the
+original bug still fails, and so does round one's headline catch.** The
+expected set comes from the two Go tables and never from the compose files, so
+the grammar was never load-bearing for the drift the check exists for. It was
+defending a stricter property — "compose requires exactly this set and no
+more" — and that property is what cost six rounds and still had a live masking
+hole at round six (a string literal in `pkg/generate/compose.go` the generator
+never emits counted as required, which is round three's class again).
+
+Asking you a question the evidence had already answered seemed worse than
+taking it and making the reversal cheap.
+
+**What would flip it:** wanting the stricter property. If a service is ever
+added to a compose file and to neither Go table nor `.env.published`, this no
+longer catches it — and that is the one case given up. The route back is in the
+test's own comment: ask compose, do not reimplement it, and **not** `docker
+compose config --variables`, which was measured to under-report.
+
+**Nothing was at risk either way.** The one-line fix that repairs `make up` is
+correct in every version of this PR and was never what the rounds were about.
+
+### The six rounds, as one table
+
+Every round found the same shape — a deriver reading something other than what
+its consumer reads — which is why the sixth asked about the shape instead of
+the corner:
+
+| round | it read | what the consumer reads |
+|---|---|---|
+| one | the two lists as **sets** | pairs — which reference a given variable carries |
+| two | only `${X:?}`; only files named `compose.yml` | `${X?}` too; `include:` targets of any name; `compose.yaml` |
+| three | raw bytes, so `#` comments and `$$` escapes counted | parsed values |
+| four | YAML **map keys**, `_test.go`, non-compose YAML | values, in the files compose opens |
+| five | four auto-discovered names | eight, plus `extends: file:` |
+| six | every string literal in `pkg/generate`, emitted or not | what the generator emits |
 
 ## forge#23 round five, and a scope question for you
 
