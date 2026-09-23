@@ -97,6 +97,23 @@ import is uneven raw material:
 The parts that need no further gate — writing the release workflow without
 cutting tags, `compat.yml`, deciding the tag scheme — can go first.
 
+**The shape of the flow is now decided** (Petra, 2026-09-23, on
+[#18](https://github.com/fil-forge/forge/pull/18)), which turns most of Phase 1
+from an open question into build work:
+
+- a release pull request carries **only** the version bump, so it floats on
+  `main` and sweeps up every change to that module since its last release;
+- merging it **is** the release decision, so it should cause the tagging
+  automatically rather than leaving a human to retype the tag;
+- those pull requests should be **issued automatically**, derived from which
+  modules have been touched since their last release.
+
+The design, the derivation and the edge cases are written down in
+`MONOREPO_TODO.md` under *Phase 1 needs machinery this repository does not
+have*. **All three stay gated on the two-sources-of-truth decision** — while
+the polyrepo still releases these services, a tag cut here gives each two, and
+automatic tagging makes that worse rather than better.
+
 ## Not in scope
 
 Decided, not deferred; `MAJOR_DECISIONS.md` carries the rule. Staying out:
