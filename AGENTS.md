@@ -199,11 +199,18 @@ GOWORK=off go build ./...  # inside a module: what CI does, standalone
 go build ./...             # workspace mode, across go.work
 ```
 
-CI is four workflows — `ci` (per-module build/vet/staticcheck/tidy/test plus
-the `guards` job), `images`, `e2e`, `itest`. A fifth, `release`, exists but is
-**dispatch-only and never runs on a push**, so it is not part of what a change
-costs. **Nothing is filtered by path, on purpose**: `ci.yml`'s header says why,
-and `MONOREPO_TODO.md` carries the question of whether that should change. A
+Four workflows run on every pull request — `ci` (per-module
+build/vet/staticcheck/tidy/test plus the `guards` job), `images`, `e2e`,
+`itest` — and two more exist without costing one. `release` is
+**dispatch-only and never runs on a push**. `compat` is triggered by
+`pull_request:` but both its jobs are gated on a `release/*` head branch, so
+on an ordinary pull request they report *skipped*; that is not free, because
+the run is still created and joins the concurrency group, which is why that
+group is keyed by ref (`compat.yml` says so at length). `compat-refresh`
+dispatches `compat` on a schedule and never on a pull request.
+
+**Nothing is filtered by path, on purpose**: `ci.yml`'s header says why, and
+`MONOREPO_TODO.md` carries the question of whether that should change. A
 documentation-only change therefore costs a full run; that is known, not an
 oversight.
 

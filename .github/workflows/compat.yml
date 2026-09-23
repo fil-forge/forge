@@ -154,6 +154,17 @@ jobs:
           EOF
           echo "--- resolved ---"; grep '^COMPAT_' "$GITHUB_ENV"
 
+      # ASSERTED, not assumed. The line below says GOWORK stays on, and
+      # nothing checked it: with it off, workspace.Detect() fails and the
+      # suite used to skip green. It is a hard failure in the test now, but
+      # failing here says which knob rather than which symptom.
+      - name: the workspace is active
+        run: |
+          set -euo pipefail
+          w=$(go env GOWORK)
+          [ -n "$w" ] || { echo "::error::GOWORK is off, so pkg/workspace has no fleet to build from HEAD and this suite cannot compare anything."; exit 1; }
+          echo "GOWORK=$w"
+
       # GOWORK stays ON: the services NOT pinned to a released image are built
       # from HEAD by pkg/workspace, which is the whole point of the comparison.
       - name: Run compatibility suite

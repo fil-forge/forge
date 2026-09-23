@@ -71,6 +71,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -119,11 +120,23 @@ func imageFor(t *testing.T, service, version string) string {
 	return fmt.Sprintf("%s/%s:%s", imageRepo, pkg, strings.TrimPrefix(version, "v"))
 }
 
-// isDigest reports whether a baseline value is a digest rather than a version.
-// One predicate, used by imageFor to pick the separator and by the test to
-// count how many baselines are real releases, so the two cannot disagree about
-// what a digest is.
+// isDigest reports whether a baseline value is a digest rather than a tag.
+// imageFor uses it to pick the separator, and nothing else: it is not the
+// discriminator for "is this a release", which is isRelease below.
 func isDigest(v string) bool { return strings.HasPrefix(v, "sha256:") }
+
+// isRelease matches a cut release, and it matches POSITIVELY rather than as
+// the complement of isDigest. That distinction is the whole guard: "not a
+// digest" counts `main`, `main-dev`, `latest` and `sha-abc1234` as releases,
+// and `main` is a value this very file assigns two ways -- the unset fallback
+// below, and TestImageFor's floating-tag case. With the complement, one
+// hand-set COMPAT_BASELINE_PIRI=main puts every service on :main and still
+// satisfies the all-floating check, which is exactly the vacuous run that
+// check exists to refuse.
+//
+// The pattern is versions_from's in compat-baselines.sh, plus the optional
+// leading `v` imageFor already strips.
+var isRelease = regexp.MustCompile(`^v?[0-9]+\.[0-9]+\.[0-9]+$`).MatchString
 
 // TestImageFor locks the one thing imageFor can get wrong that nothing else
 // would catch until a container timed out forty minutes later: a digest joined
@@ -233,8 +246,9 @@ func envSuffix(t *testing.T, service string) string {
 // the path this test asserts over.
 //
 // So it needs an image for every one of them. Five of the eight publish no
-// version-tagged image today, only :main and :sha-*: sprue, hilt, the signing
-// service, delegator and swarf. The other three do -- piri 0.2.4, ingot 0.0.0
+// version-tagged image today -- sprue, hilt, the signing service, delegator
+// and swarf. What they do publish is :main and :sha-<sha>, and, for hilt,
+// sprue and swarf, :main-dev and :sha-<sha>-dev alongside them. The other three do -- piri 0.2.4, ingot 0.0.0
 // and the INDEXER at 1.13.4, which is worth naming because an earlier revision
 // of this comment counted it among the missing.
 //
@@ -260,9 +274,18 @@ func TestRollingUpgrade(t *testing.T) {
 		t.Skip("skipping on darwin (docker-in-docker flakiness)")
 	}
 
+	// FATAL, NOT A SKIP. Every other vacuous path in this file was hardened
+	// into a failure by the change that removed the baseline skip, and this
+	// one was left: a workspace that cannot be detected gave `--- SKIP` and
+	// rc=0, which is the 0.126s green in a different costume. Nothing in CI
+	// reaches it -- compat.yml runs with GOWORK on and asserts so before the
+	// test, and ci.yml's `vet tagged suites` only compiles this package -- so
+	// the only way here is a local run without a workspace, where the suite
+	// cannot answer its question anyway.
 	_, fleet, err := workspace.Detect()
 	if err != nil {
-		t.Skipf("no active go.work, so there is no fleet to hold old: %v", err)
+		t.Fatalf("no active go.work, so there is no fleet to hold old and "+
+			"nothing to upgrade from HEAD: %v", err)
 	}
 
 	// Per-service semver means there is no single baseline VERSION -- there is
@@ -277,17 +300,16 @@ func TestRollingUpgrade(t *testing.T) {
 				"supposed to be old. Add it.", svc)
 		}
 		v := strings.TrimSpace(os.Getenv("COMPAT_BASELINE_" + envSuffix(t, svc)))
-		switch {
-		case v == "":
+		if v == "" {
 			// Unset means nobody resolved one, which in practice means a local
 			// run: the workflow sets every entry. Take the bare tag rather
 			// than skipping, so a local run boots something.
 			v = "main"
-			floating = append(floating, svc)
-		case isDigest(v):
-			floating = append(floating, svc)
-		default:
+		}
+		if isRelease(v) {
 			releases = append(releases, svc)
+		} else {
+			floating = append(floating, svc)
 		}
 		baseline[svc] = v
 	}

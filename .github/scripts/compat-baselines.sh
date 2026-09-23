@@ -139,8 +139,11 @@ token_for() {
 # request today, but a page size is not a guarantee: the registry answers with
 # `Link: <...?last=<tag>&n=...>; rel="next"` when it has truncated, so the loop
 # follows that rather than trusting one request to be complete. Only `last` is
-# taken from it -- GHCR's own next link carries `n=0`, and replaying that asks
-# for a page size this script did not choose.
+# taken from it, so the page size stays the one this script chose rather than
+# whatever the registry echoes back. An earlier revision justified that with
+# "GHCR's own next link carries `n=0`", which is not true of the request this
+# script makes: measured, GHCR echoes the `n` you sent (`?n=100` comes back
+# `n=100`, `?n=5` comes back `n=5`) and only answers `n=0` when you send none.
 #
 # Order is NOT lexicographic and not version order: ingot's first page of 100
 # held exactly one version-shaped tag out of 117. Sorting happens below, over
