@@ -91,7 +91,7 @@ both accept — on top of the ownership decision. The comment above
 ## Planned, not built
 
 Three pieces of this are designed and not built: release pull requests issued
-automatically, tagging on merge, and arming `release.yml` to publish. The
-design and what gates each one live in **`MONOREPO_TODO.md`**, under *Phase 1
-needs machinery this repository does not have* — this file describes what
+automatically, tagging on merge, and arming `release.yml` to publish. All three
+are in scope for the consolidation, so the design and what gates each one live
+in the plan — the wiki's [[Plan]], under *Ahead*. This file describes what
 exists.

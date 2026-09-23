@@ -436,37 +436,6 @@ still releases these same services, a tag cut here gives each one two sources
 of truth.** Until that is settled, nothing should be tagged in this
 repository.
 
-### The shape it should take, decided 2026-09-23
-
-Settled on [#18](https://github.com/fil-forge/forge/pull/18); written here
-because this is the entry that closes when it is built, and `RELEASE.md`
-describes what exists rather than what is planned.
-
-- **A release pull request contains only the version bump.** One edit to
-  `<service>/version.json` and nothing else. Merging it means exactly one
-  thing: the module's current `main` is now that version. It therefore floats
-  on `main` and sweeps up every change to that module since its last release —
-  no cherry-picking, no release branch, and no second pull request for an
-  ordinary change.
-- **Merging it should cause the tagging, automatically.** The merge already
-  carries the whole decision, so a human retyping `<service>/vX.Y.Z` afterwards
-  is a second chance to get it wrong rather than a second check. Today the tag
-  is made by hand and `release.yml` asserts it exists at the built commit; that
-  assertion is the interim, not the design.
-- **Release pull requests should be issued automatically.** A module needs one
-  once it has been touched since its last release, so what has to be derived is
-  which commits touch which module since `<service>/vX.Y.Z` — roughly
-  `git log <service>/vX.Y.Z..main -- <service>/` being non-empty. It needs the
-  tag to anchor from, and a rule for a module never released (no tag; the
-  answer is the first commit). Open: one pull request per module needing one,
-  or one bumping several. Per module keeps `compat.yml`'s `release/<service>`
-  convention and per-service semver intact.
-
-**All three are gated on the same thing as the rest of this entry** — while the
-polyrepo still releases these services, a tag cut here gives each two sources
-of truth. Automatic tagging makes that worse rather than better, so it is built
-after the decision, not before it.
-
 What survives is raw material, and it is uneven:
 
 | | have it |
