@@ -58,17 +58,29 @@ func fieldReachedBy(t *testing.T, mutate func(*config)) string {
 	return found[0]
 }
 
-// requiredImageVars walks every compose.yml under the smelt root, plus the
-// generator, and returns the `${X_IMAGE:?...}` variables.
+// requiredImageVars walks the smelt root and returns the required image
+// variables its YAML and its compose generator name.
 //
 // ROOTED AT THE SMELT ROOT, not at systems/. smelt/compose.yml is the file
 // `make up` resolves and it sits outside systems/; a walk rooted one directory
 // deeper would let a required variable added there go unchecked. That is the
 // same bug class this test exists for, at the one compose file systems/ does
 // not contain.
+//
+// EVERY .yml AND .yaml, not files named compose.yml. The root file pulls in
+// its parts with `include:`, whose paths it names explicitly, so an included
+// file called anything else would be missed -- and `compose.yaml` is compose's
+// own auto-discovered default. Over-reading is the safe direction here and
+// costs nothing measurable: across every YAML file under this root, the
+// pattern matches only compose files.
 func requiredImageVars(t *testing.T, root string) map[string]bool {
 	t.Helper()
-	re := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):\?`)
+	// `:?` and `?` are BOTH required forms. `${X:?msg}` errors when X is unset
+	// or empty; `${X?msg}` errors only when unset. Compose rejects either the
+	// same way -- "required variable NEWTHING_IMAGE is missing a value" --
+	// and an earlier version of this pattern matched only the first, so the
+	// other spelling of the same line left this test green.
+	re := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):?\?`)
 	vars := map[string]bool{}
 
 	scan := func(path string) {
@@ -91,7 +103,7 @@ func requiredImageVars(t *testing.T, root string) map[string]bool {
 		// piri's service definition -- so the generator is a second source and
 		// a glob over compose files alone reports seven of eight.
 		switch {
-		case d.Name() == "compose.yml":
+		case strings.HasSuffix(path, ".yml"), strings.HasSuffix(path, ".yaml"):
 			composeFiles++
 			scan(path)
 		case strings.HasPrefix(path, filepath.Join(root, "pkg", "generate")) &&
@@ -101,7 +113,7 @@ func requiredImageVars(t *testing.T, root string) map[string]bool {
 		return nil
 	}))
 
-	require.NotZero(t, composeFiles, "found no compose.yml under %s", root)
+	require.NotZero(t, composeFiles, "found no YAML under %s", root)
 	require.NotEmpty(t, vars, "found no required ${X_IMAGE:?} interpolations")
 	return vars
 }
