@@ -162,22 +162,8 @@ jobs:
       # Compiling them (not running them — they need Docker and a live stack)
       # is what keeps that from happening.
       #
-      # The tag list above is hand-maintained, which is rule 3's failure mode:
-      # `compat` was added and this was not, so the new suite compiled nowhere.
-      # Until a guard derives it, here is the command that enumerates the class
-      # — for every module in go.work, every build tag that unlocks a package
-      # an untagged build does not compile. Run it when a suite is added; it
-      # reports `smelt e2e` and `smelt compat`, and nothing else in the tree:
-      #
-      #   for m in $(grep -oE '\./[a-z0-9/-]+' go.work | sed 's|^\./||'); do
-      #     tags=$(grep -rhoE '^//go:build [a-z0-9_, ]+' "$m" --include='*.go' \
-      #            | sed 's|^//go:build ||' | tr ', ' '\n' | sort -u)
-      #     base=$( (cd "$m" && GOWORK=off go list ./...) | sort )
-      #     for t in $tags; do
-      #       (cd "$m" && GOWORK=off go list -tags "$t" ./... 2>/dev/null) | sort \
-      #         | comm -13 <(printf '%s\n' "$base") - | sed "s|^|$m $t |"
-      #     done
-      #   done
+      # The tag list is hand-maintained. `compat` was once added without being
+      # added here, so the new suite compiled nowhere until someone noticed.
       - name: vet tagged suites
         if: matrix.tagged_suites != ''
         run: go vet -tags ${{ matrix.tagged_suites }} ./...

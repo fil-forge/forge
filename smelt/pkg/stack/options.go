@@ -242,19 +242,6 @@ func WithWorkspaceBinaries() Option {
 //
 // Without the exclusion the workspace binary would be mounted over the pinned
 // image, and the test would silently exercise HEAD against HEAD.
-//
-// WithPublishedImages is in that example because the stack does not boot
-// without it. Workspace binaries are bind mounts over an image; they are not
-// an image, and every service this repository builds is a required compose
-// interpolation -- EIGHT of them. Pinning one service and building the rest
-// leaves the other seven with no image at all, and compose refuses, naming the
-// variable.
-//
-// Eight, and it takes three places to reach that: `systems/*/compose.yml` gives
-// six, recursing into systems/ adds INDEXER_IMAGE (one level down, in
-// indexing/indexer/), and PIRI_IMAGE has no compose.yml at all -- it is emitted
-// by pkg/generate/compose.go into generated/compose/piri.yml. A flat glob says
-// six and a recursive one says seven; both look complete.
 func WithWorkspaceBinariesExcept(services ...string) Option {
 	return func(c *config) {
 		c.workspaceBinaries = true

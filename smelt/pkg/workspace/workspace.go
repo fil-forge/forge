@@ -61,12 +61,7 @@ var Services = map[string]serviceBuild{
 	"swarf":           {moduleDir: "swarf", buildTarget: "./cmd/swarf", binPath: "/usr/bin/swarf", configPath: "/etc/swarf/config.yaml"},
 }
 
-// ModuleDir is the repository directory a smelt service is built from, and
-// therefore also its name everywhere outside smelt: its polyrepo, its module
-// path segment, and its GHCR package. Three of the nine differ from the service
-// name -- upload/sprue, indexer/indexing-service, signing-service/piri-signing-service --
-// so anything naming a service to the outside world has to go through this
-// rather than passing the service name along.
+// ModuleDir is the repository directory a smelt service is built from.
 //
 // Exported because the compat suite builds image references from Detect()'s
 // output, and passing those names straight through asked ghcr.io for
