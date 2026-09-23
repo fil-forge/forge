@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 03:40Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 01:12Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -175,6 +175,24 @@ go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
 So correcting the spelling to `0` would silently turn the race detector off, or
 break the step outright. Noted on the PR. **Not filed as an issue** — that is
 yours to ask for.
+
+## Every timestamp on these two pages tonight was wrong, by about two hours
+
+Caught by accident, and worth a paragraph because of what it says about the
+rest. Four of tonight's updates stamped themselves 02:10Z, 02:45Z, 03:00Z and
+03:40Z. The real times were 00:19Z through 01:10Z — I was tracking elapsed time
+by feel across a long stretch of work and never once read a clock. The
+authoritative value came from an unrelated API response reporting `now`.
+
+Nothing downstream turned on it, and the git commit times were right all along
+(they are what a reader should trust). But **a snapshot's timestamp is how
+staleness gets judged**, and this page's own upkeep note says a stale snapshot
+is worse than none precisely because it is believed. A timestamp that is two
+hours fast makes a stale page look fresh.
+
+It is also the same failure as the night's twenty-five review findings, in the
+one place I would not have thought to check: **a value written from
+recollection rather than measured.** `date -u` costs nothing.
 
 ## The pattern across both overnight PRs, which is the thing worth keeping
 
