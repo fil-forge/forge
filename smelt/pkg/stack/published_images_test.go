@@ -1,20 +1,19 @@
 package stack
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"io"
 	"os"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/fil-forge/forge/smelt/pkg/generate"
+	"github.com/fil-forge/forge/smelt/pkg/manifest"
 	"gopkg.in/yaml.v3"
 )
 
@@ -167,20 +166,35 @@ func TestPublishedImageSetAgrees(t *testing.T) {
 
 // TestBuiltImagesAreRequiredNotDefaulted checks that each image this
 // repository builds is a REQUIRED compose interpolation, not one with a
-// fallback.
+// fallback -- and that no defaulted form of one exists in the project.
 //
-// WHY THIS IS SAFE TO DO BY READING THE COMPOSE FILES WHEN THE CHECK ABOVE IS
-// NOT. It asks a different question, and the direction of the question decides
-// which way incompleteness errs. "Does each of these known names appear
-// required somewhere?" fails when a file is missed -- a false failure. "What
-// is the complete set of required names?" PASSES when a file is missed, and
-// six review rounds went into chasing every way that could happen. Under-
-// reading is safe here; over-reading is not, which is why this looks only at
-// files named like compose files and not at every YAML under the root.
+// WHY THIS CAN READ THE COMPOSE FILES WHEN THE CHECK ABOVE COULD NOT. It asks
+// a different question, and the direction of the question decides which way
+// incompleteness errs. "Is each of these known names required somewhere?"
+// FAILS when a file is missed -- a false failure. "What is the complete set of
+// required names?" PASSES when a file is missed, and six review rounds went
+// into chasing every way that could happen.
 //
-// Comments cannot mask a downgrade, because the YAML is parsed rather than
-// scanned: a commented-out `${X:?}` left above a defaulted line is not in the
-// parsed document at all.
+// So under-reading is safe here and OVER-reading is not, which is what the
+// file set and the two exclusions below are for. An earlier revision got the
+// direction argument right and then over-read three ways:
+//
+//   - it counted `$${X:?}`, which is compose's escape for a literal `$` and
+//     requires nothing. Blanked before matching now, as the deleted derivation
+//     already did -- the unfixed half of that fix.
+//   - it counted any compose-SHAPED filename, including
+//     systems/telemetry/compose.yml and systems/stress-tester/compose.yml,
+//     which no project loads: they are in no include list, no Makefile target
+//     and no embed set. A required occurrence planted in one satisfied the
+//     check for a name defaulted everywhere compose looks.
+//   - it scanned the generator's SOURCE, so a string literal it never emits
+//     counted. That is round six's finding, reintroduced.
+//
+// The file set is now the project `make up` runs: the root compose file and
+// its `include:` targets, transitively. Missing one is safe by the direction
+// above, so this needs none of the auto-discovery or `extends:` machinery the
+// deleted derivation needed. And the generator is CALLED rather than read, so
+// what counts is what it emits.
 //
 // WHAT IT PROTECTS. `.env.published`'s header and smelt/CLAUDE.md both say the
 // required form exists because a silent default meant a caller who forgot an
@@ -203,71 +217,118 @@ func TestBuiltImagesAreRequiredNotDefaulted(t *testing.T) {
 	require.NotEmpty(t, built)
 
 	// `:?` errors when unset or empty, `?` when unset. Either is required.
+	// `:-` and `-` supply a default, which is what must not appear.
 	required := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):?\?`)
-	found := map[string]bool{}
+	defaulted := regexp.MustCompile(`\$\{([A-Z0-9_]+_IMAGE):?-`)
 
-	isComposeFile := func(name string) bool {
-		return strings.HasPrefix(name, "compose.") || strings.HasPrefix(name, "docker-compose.")
+	isRequired := map[string]bool{}
+	isDefaulted := map[string]string{} // variable -> where
+
+	scan := func(where, text string) {
+		// `$$` is compose's escape for a literal `$`. Blank it before matching
+		// so `$${X:?}` cannot count as a requirement.
+		text = strings.ReplaceAll(text, "$$", "\x00\x00")
+		for _, m := range required.FindAllStringSubmatch(text, -1) {
+			isRequired[m[1]] = true
+		}
+		for _, m := range defaulted.FindAllStringSubmatch(text, -1) {
+			if built[m[1]] {
+				isDefaulted[m[1]] = where
+			}
+		}
 	}
 
-	require.NoError(t, filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
+	// The project `make up` runs: the root compose file and its include
+	// targets, transitively.
+	seen := map[string]bool{}
+	queue := []string{filepath.Join(root, "compose.yml")}
+	for len(queue) > 0 {
+		path := queue[0]
+		queue = queue[1:]
+		if seen[path] {
+			continue
 		}
-		switch {
-		case d.IsDir():
-			return nil
-		case isComposeFile(d.Name()) &&
-			(strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml")):
-		case strings.HasPrefix(path, filepath.Join(root, "pkg", "generate")) &&
-			strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, "_test.go"):
-			// piri's service definition is emitted, not written down. PARSED,
-			// not scanned: a raw read matches inside a `//` comment, and
-			// over-reading is the unsafe direction for this question -- a
-			// commented-out `${PIRI_IMAGE:?}` would let a downgraded live one
-			// pass.
-			f, perr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
-			require.NoError(t, perr, "parsing %s", path)
-			ast.Inspect(f, func(n ast.Node) bool {
-				if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					v := lit.Value
-					if u, uerr := strconv.Unquote(v); uerr == nil {
-						v = u
-					}
-					for _, m := range required.FindAllStringSubmatch(v, -1) {
-						found[m[1]] = true
-					}
-				}
-				return true
-			})
-			return nil
-		default:
-			return nil
-		}
+		seen[path] = true
 
-		b, rerr := os.ReadFile(path)
-		require.NoError(t, rerr)
+		b, err := os.ReadFile(path)
+		if err != nil {
+			// The one include that is legitimately absent is generated/, which
+			// is gitignored output; its content is covered by calling the
+			// generator below.
+			require.True(t, os.IsNotExist(err) && strings.Contains(path, "generated"),
+				"reading %s: %v", path, err)
+			continue
+		}
 		dec := yaml.NewDecoder(strings.NewReader(string(b)))
 		for {
 			var doc any
 			if derr := dec.Decode(&doc); derr != nil {
 				require.ErrorIs(t, derr, io.EOF, "parsing %s", path)
-				return nil
+				break
 			}
-			walkStrings(doc, func(v string) {
-				for _, m := range required.FindAllStringSubmatch(v, -1) {
-					found[m[1]] = true
-				}
-			})
+			// Parsed, not scanned: a commented-out `${X:?}` left above a
+			// downgraded line must not count, and does not.
+			walkStrings(doc, func(v string) { scan(path, v) })
+			for _, inc := range includeTargets(filepath.Dir(path), doc) {
+				queue = append(queue, inc)
+			}
 		}
-	}))
+	}
+
+	// piri's service definition is emitted, not written down. CALLED, not
+	// read: a `${PIRI_IMAGE:?}` string literal the generator never emits must
+	// not count.
+	emitted, err := generate.GeneratePiriCompose([]manifest.ResolvedPiriNode{
+		{Name: "piri-0", Index: 0},
+	})
+	require.NoError(t, err)
+	scan("pkg/generate (emitted)", string(emitted))
 
 	for v := range built {
-		require.True(t, found[v],
-			"%s is built here but is not a required compose interpolation anywhere; "+
-				"a `${%s:-default}` form silently boots a published image when the "+
-				"caller forgets an override", v, v)
+		require.True(t, isRequired[v],
+			"%s is built here but is not a required compose interpolation anywhere "+
+				"in the project; a `${%s:-default}` form silently boots a published "+
+				"image when the caller forgets an override", v, v)
+		require.Empty(t, isDefaulted[v],
+			"%s is built here but has a DEFAULTED form in %s; that is the silent "+
+				"fallback the required form exists to prevent", v, isDefaulted[v])
 	}
+}
+
+// includeTargets returns the `include:` paths a compose document names,
+// resolved against its own directory. Entries are a path, a list of paths, or
+// a mapping with `path:` holding either.
+func includeTargets(dir string, doc any) []string {
+	m, ok := doc.(map[string]any)
+	if !ok {
+		return nil
+	}
+	list, ok := m["include"].([]any)
+	if !ok {
+		return nil
+	}
+	var out []string
+	add := func(v any) {
+		if p, ok := v.(string); ok {
+			out = append(out, filepath.Join(dir, p))
+		}
+	}
+	for _, e := range list {
+		switch v := e.(type) {
+		case string:
+			add(v)
+		case map[string]any:
+			switch p := v["path"].(type) {
+			case string:
+				add(p)
+			case []any:
+				for _, q := range p {
+					add(q)
+				}
+			}
+		}
+	}
+	return out
 }
 
 // walkStrings visits every string scalar VALUE. Keys are not visited: compose
