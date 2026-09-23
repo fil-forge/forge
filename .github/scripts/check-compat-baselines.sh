@@ -59,9 +59,12 @@
 # NOT IN THE LIST, because this file cannot catch it deterministically:
 # putting `| head -n 1` back on newest_version_from. That is a real bug --
 # `head` closing the pipe races the writer under `set -o pipefail`, and the
-# script aborts -- but it is load-dependent (0/150 idle, 21/150 on a busy
-# box), so a passing run here proves nothing about it. The defence is that
-# the pipeline is gone, not that this file watches for it.
+# script aborts -- but it is load-dependent: never idle, readily under load,
+# at a rate that varies with the machine. newest_version_from's own
+# comment has the measurements; they are not repeated here, because the same
+# figure in two files is how they come to disagree. A passing run here proves
+# nothing about it: the defence is that the pipeline is gone, not that this
+# file watches for it.
 #
 # THE SECOND AND THIRD ENTRIES ARE ONE ARM AND TWO MUTATIONS, and the
 # difference is why test 5 matches the token endpoint's OWN message rather
@@ -432,7 +435,7 @@ if grep -qxF '| service | baseline | kind |' "$work/t11r.summary" 2>/dev/null \
    && grep -q "upstream's current main" "$work/t11f.summary"; then
   ok "11 job summary: the table, the digest in the row, and each closing note"
 else
-  bad "11 job summary: r=$(cat "$work/t11r.summary" 2>&1 | tr '\n' ' ') | f=$(cat "$work/t11f.summary" 2>&1 | tr '\n' ' ')"
+  bad "11 job summary (rc=$(rc_of t11r)/$(rc_of t11f)): r=$(cat "$work/t11r.summary" 2>&1 | tr '\n' ' ') | f=$(cat "$work/t11f.summary" 2>&1 | tr '\n' ' ') | err=$(err_of t11r) $(err_of t11f)"
 fi
 
 # 12. It takes no arguments, and used to take N. A caller still passing one

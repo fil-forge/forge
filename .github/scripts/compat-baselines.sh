@@ -242,33 +242,23 @@ digest_for() {
 # is a bug fix rather than tidiness. Under `set -o pipefail`, `head` closing
 # the pipe after one line races python's write: the print takes
 # BrokenPipeError, the pipeline reports non-zero, and `set -e` aborts the
-# whole script with an empty stdout. Measured in isolation on this pipeline,
-# and the rate is a property of the load rather than of the code: 0/150 idle,
-# 18/150 under six-way CPU load, 77/150 on a busier box. It can only fire when
-# more than one version-shaped tag is emitted -- which no fleet service does
-# today (piri,
-# ingot and indexing-service publish one each; the other five none), so it has
-# never been seen in a real run, and it arrives with the second release of any
-# service.
+# whole script with an empty stdout and no message.
 #
-# WHAT WAS ACTUALLY OBSERVED, since two revisions of this comment have now got
-# it wrong in opposite directions: one run of check-compat-baselines.sh went
-# red on test 3 alone, rc=1, with EMPTY STDOUT, while eighteen mutation copies
-# of it were running. At that commit `sorting` was the only fixture with more
-# than one version-shaped tag, so "the only test that can hit this is 3" and
-# "only test 3 went red" agree. Restoring the old pipeline reproduces it: the
-# guard goes red 4/15 and 5/20 under load, on exactly the tests whose fixtures
-# have two or more.
+# WHEN IT FIRES: never idle, and often enough under CPU load to redden a job
+# -- measured between 1% and 55% of runs across two machines and five load
+# levels, so there is no single rate to quote and an earlier revision of this
+# comment was wrong to quote one. It needs MORE THAN ONE version-shaped tag
+# to be emitted, which no fleet service produces today (piri, ingot and
+# indexing-service publish one each; the other five none). So it has never
+# fired in a real run, and it arrives with the second release of any service.
 #
-# THE FIRST REVISION CLAIMED THE STUB'S ACCEPT QUEUE, and cited a symptom --
-# the script reporting "could not read <svc>'s tags" -- that was never seen.
-# Test 3's failure line printed stdout only at the time, so its stderr was
-# never read; that string was inferred and written down as an observation. It
-# is also the wrong path: that message comes from tags_for returning non-zero,
-# two steps before this pipeline runs. A later review took the invented
-# symptom at face value and concluded from it that the cause here is unproven,
-# which is what a fabricated detail in a record does. The guard now prints
-# stderr on every failure.
+# The signature is rc=1 with empty stdout, which is what makes it expensive:
+# nothing says which step failed. check-compat-baselines.sh's tests 3, 10 and
+# 11 are the ones whose fixtures emit two or more, and they reproduce it under
+# load; the guard cannot catch a regression here deterministically, so the
+# defence is that the pipeline is gone rather than that anything watches for
+# it. How this was found, and the two wrong diagnoses before it, are in
+# `git log` for this function.
 newest_version_from() {
   python3 -c '
 import re, sys
