@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 02:15Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 02:40Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,7 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `7f04a8b8`. **Six rounds, 24 findings.** Round six asked whether the check was the right shape; it was not, and 285 of its 433 lines are gone. **A decision taken on your behalf — see below, and it is cheap to reverse** |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `b35c8275`. **Seven rounds, 26 findings.** Round six cut 285 lines that were not load-bearing; round seven found the cut gave up more than it said and took one check back, differently framed. Round eight needed |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -193,6 +193,51 @@ hours fast makes a stale page look fresh.
 It is also the same failure as the night's twenty-five review findings, in the
 one place I would not have thought to check: **a value written from
 recollection rather than measured.** `date -u` costs nothing.
+
+## forge#23 round seven: the simplification gave up more than I said it did
+
+The decision below stands, but the accounting under it was wrong and is
+corrected here rather than edited away.
+
+I wrote that dropping the compose derivation gave up **one** case. It gave up a
+family, and one member has teeth: **downgrading `${HILT_IMAGE:?...}` to
+`${HILT_IMAGE:-ghcr.io/fil-forge/hilt:main}` now passes.** That is exactly the
+silent-fallback regression `.env.published`'s own header and `smelt/CLAUDE.md`
+— both in this pull request's diff — say the required form exists to prevent,
+and nothing else catches it: `check-stack-images.sh` skips every `${...}` value
+by design, and no Go path compares the two forms.
+
+**So one check comes back, and the reason it is not the 285 lines again is the
+part worth keeping.** It asks a different question, and *the direction of the
+question decides which way incompleteness errs*:
+
+- "**Is each of these known names required somewhere?**" — a missed file means
+  a name is not found, so the test **fails**. Under-reading is safe.
+- "**What is the complete set of required names?**" — a missed file means a
+  name is never demanded, so the test **passes**. Under-reading is fatal, and
+  chasing every way a file could be missed is what six rounds went on.
+
+Framed the first way, reading the compose files costs 60 lines instead of 285
+and needs no `include:` following, no override names, no `extends:`.
+Over-reading becomes the unsafe direction instead, so it looks only at
+compose-shaped filenames and parses both the YAML and the generator's Go — a
+commented-out `${X:?}` above a downgraded line must not count, and does not.
+
+**Round seven also found the one way two of the three statements could
+genuinely disagree and pass**: a `publishedImages` entry whose config field no
+`envImageOptions` entry reaches was compared against nothing, because
+`fieldToRef` was never iterated. The symmetric twin of the drift the check
+exists for. Five lines.
+
+### What this says about the decision below
+
+It does not reverse it — 285 lines of compose-grammar reimplementation still
+bought nothing, and the stub proof still holds. What it corrects is my claim
+about the cost. **I stated the coverage delta from the abstract property
+("compose requires exactly this set") rather than by enumerating what actually
+stopped failing**, which is the same mistake as a "before" column written from
+expectation. Enumerating it takes one mutation run per candidate, and the
+review did it in the round I should have done it in.
 
 ## Decision taken while you were away: forge#23's check reads less
 
