@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `d2d0652f`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `344c764a`. **Rounds are stopped.** The only thing left on it is your decision on the launch contract, below. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -34,6 +34,44 @@ now corrected in #19.
 
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
+
+## forge#18: rounds stopped at six, and what they were worth
+
+**10, 6, 6, 3, 3, 1.** The sixth found no code defect, which was the stated
+condition for stopping — stated in the fifth round's comment, before the
+result.
+
+The last one is the pattern one more time, inverted. I wrote that the abort
+leaves "an empty stdout and no message" and that "nothing says which step
+failed". It always writes a `BrokenPipeError` traceback to stderr — 9/9 aborts
+here, 93/93 in review, none silent — and that traceback is what I used to
+diagnose the bug two commits earlier. The sentence denies the existence of its
+own evidence. Round five had removed an *invented* stderr symptom; round six
+caught me asserting the *absence* of the real one. Both times the error was
+writing a claim about stderr without looking at stderr.
+
+### What six rounds were actually worth
+
+**Rounds 1–3 found real defects**, including one in shipping code that nothing
+else would have caught: `head` closing a pipe under `set -o pipefail` aborts
+`compat-baselines.sh` with rc=1 and an empty stdout, at 1–55% of runs under
+load and never idle. It needs more than one version-shaped tag to fire, which
+no fleet service publishes today — so it has never fired in a real run, and it
+arrives with the second release of any service. That is a latent CI flake in
+the release path, found only because the gate was made to run.
+
+**Rounds 4–6 found no code defect at all** — eleven findings, every one a claim
+a file made about itself.
+
+**The pattern worth keeping, because it is not about this PR:** in five of the
+six rounds, the commit fixing the previous round introduced a new false claim.
+Every one was about a measurement or an observation; not one was about code.
+And every one was caught by applying the mutation or re-running the
+measurement — none by reading.
+
+If that generalises, the cheap version of this practice is not "review the
+change" but "re-run every number in the diff", and the expensive part of a
+review is not finding bugs but keeping the record honest about them.
 
 ## forge#18 round five: the fixing commit keeps introducing the next error
 

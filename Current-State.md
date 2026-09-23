@@ -191,7 +191,7 @@ Seven rules that have actually decided things:
 
 **`main` is `4611cbcb` (#22's merge), the import phase is closed, and **two**
 `forge` pull requests are open: [#18](https://github.com/fil-forge/forge/pull/18),
-Open with rounds running; head `d2d0652f`, and
+Open with rounds running; head `344c764a`, and
 [#23](https://github.com/fil-forge/forge/pull/23), a draft opened overnight.** All **ten** in-scope
 modules are subtree-merged with their histories, module paths rewritten,
 `go.work` in place, per-module CI, library pins unified, images pinned by
