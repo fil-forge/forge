@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 03:00Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 03:40Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -28,8 +28,8 @@ now corrected in #19.
 | [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1691b59c`. **Rounds stopped at seven**, per rule 10 as amended by #22: round seven's two findings were fixed with a comments-only push, which is the skip condition. Waiting on CI and on you |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
-| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `169cbd9`. Rounds one and two: **6 findings, none in the fix itself** — every one was about a claim made for it. Round three running |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `cf5c105d`. Rounds one and two: **10 findings.** The shell guard was green on three broken trees; its Go replacement then under-read compose two ways. Eleven mutations now verified. Round three running |
+| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the check that makes its own "cannot drift silently" claim true | draft, on `b5ce12ec`. Three rounds, **13 findings.** The shell guard was green on three broken trees; its Go replacement under-read compose two ways; then round three found the over-reading claim inverts. Both inputs are parsed now, not grepped. Round four needed |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -175,6 +175,50 @@ go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
 So correcting the spelling to `0` would silently turn the race detector off, or
 break the step outright. Noted on the PR. **Not filed as an issue** — that is
 yours to ask for.
+
+## The pattern across both overnight PRs, which is the thing worth keeping
+
+Six review rounds across piri#129 and forge#23 produced **25 findings, and not
+one was a defect in either fix.** Both changes were mechanically correct from
+their first push and have barely moved since. Everything the rounds found was
+in the *claims made for* the changes:
+
+- **measurements published without being run** — "fails every run under
+  `-race`" copied out of `MONOREPO_TODO.md`; "not detected" in a before/after
+  column written from expectation; a `-count=20` failure rate reported as a
+  per-run rate;
+- **guards that were right most of the time** — a drain check that caught its
+  advertised case 66–97 times in 100, and a shell guard that was green on three
+  genuinely broken trees;
+- **a claim whose preconditions I kept supplying one at a time** — the panic
+  from `require` instead of `assert` needs a failing condition *and* a still-
+  running rotator *and* `-count=5`; three revisions each named a different one.
+
+**The useful reading is not "write fewer claims".** It is that the rounds are
+finding exactly what a second pair of eyes is for, and that the thing being
+reviewed is the prose as much as the diff. Two corollaries worth acting on:
+
+1. **A guard written at the end of a fix gets less care than the fix.** That
+   happened twice in one night, in changes whose whole subject was partial
+   guards. If a change adds a guard, the guard needs its own reproduce-fix-
+   reproduce, not a single confirming run.
+2. **A "before" column is a measurement, not a recollection.** Two of the
+   twelve findings on piri#129 were before/after tables where the "before" had
+   never been run.
+
+## piri#129 round three, and the rounds stopping there
+
+Four findings, none in behaviour. The panic paragraph needed `-count=5` *and*
+a failing condition *and* a still-running rotator; each revision gave one. And
+"undrained implies still producing" is false in precisely the case the drain
+half exists for — with an entry the rotator can never reach it is *stuck*, so
+`require` aborts and nothing panics (0 in 10, against 10 in 10 for a rotator
+still running). The lock in the final block was also justified with a path that
+cannot be reached, since `require.NoError` Goexits above it.
+
+The fixing push is comments only, which is rule 10's skip condition as #22
+amended it, so **three is the last round**. #129 stays a **draft** because it is
+upstream and that is your standing rule — not because rounds are open.
 
 ## forge#23 round two: the replacement under-read compose, two ways
 
