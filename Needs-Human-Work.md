@@ -29,10 +29,103 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
-| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`, **green — 25 checks pass, `release` skipped by design**. **Eleven rounds, 44 findings**; round twelve running. **The code has been still since round nine** — rounds ten and eleven found nothing in either test and seven findings in the PR body. One real guard gap found and documented rather than closed; see below |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main` | draft, on `d92200e6`, **green — 25 checks pass, `release` skipped by design**. **Twelve rounds, 47 findings.** **The code has been still since round nine** — rounds ten, eleven and twelve found nothing in either test and ten findings in the PR body. One real guard gap found and documented rather than closed; see below |
+| [ucantone #57](https://github.com/fil-forge/ucantone/pull/57) | `ucanlib` + fixed test identities, so libforge's `ucan` and `testutil` can be retired | draft, now on `3456649`. **alanshaw left CHANGES_REQUESTED on 2026-09-21 and nothing answered it for two days** — see below. One comment now fixed and pushed; the other is a naming decision for you and him |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
+
+## The check-in script was not checking two of the repositories
+
+**This is the one to read.** The overnight check-in script had a hand-written
+list of five repositories. It was missing `fil-forge/piri` and
+`fil-forge/ucantone` — so every check-in since it was written reported
+"ANOMALIES: 0" while never looking at four open pull requests, two of them
+mine.
+
+What that hid: **[ucantone #57](https://github.com/fil-forge/ucantone/pull/57)
+has had `CHANGES_REQUESTED` from alanshaw since 2026-09-21, and nothing
+responded to it for two days.** A human reviewer spent time on it and got
+silence, which is the exact outcome the check-in exists to prevent. The script's
+own comment says a hand-maintained list is how sprue#106 sat red for eighteen
+hours; the list it was attached to was that failure happening again.
+
+**Fixed, and fixed in the direction that fails loudly.** Deriving the list from
+GitHub is not possible here — this session is bound to its configured
+repositories and `/search/issues` refuses with *"sessions are bound to their
+configured repositories; use repository-scoped endpoints"*. My first attempt to
+derive it anyway printed **"0 PRs from 0 open"** and **"ANOMALIES: 0"**: a
+monitoring script reporting all-clear because it looked at nothing, which is
+worse than the list it replaced. So the list stays, and two things changed:
+
+- it is **every repository this session can reach**, fourteen of them, not the
+  handful that happened to have pull requests the day it was written;
+- **every repository reports whether its query succeeded.** One that 404s or
+  falls out of scope prints `UNREACHABLE` and counts as an anomaly, so *"no
+  pull requests here"* and *"I could not look here"* stop being the same
+  output.
+
+It now checks 14/14 and finds 10 pull requests. Rule 5, exactly: a green check
+is a claim about what ran, and this one was claiming more than it had done.
+
+## ucantone#57: the review that went unanswered, now answered
+
+Two comments from alanshaw, handled differently on purpose.
+
+**The fixture domain — done, pushed as `3456649`.** `testutil`'s web-service
+identity carried `did:web:test.storacha.network` and
+`https://test.storacha.network` over from libforge: a real domain, and the old
+branding. He suggested `example.com`, and he was pointing at a convention this
+fixture broke rather than a preference — `did:web:example.com` already appears
+**21** times in that tree against these 2.
+
+Checked before changing it, because the pull request body promises dependents'
+hard-coded DIDs keep passing: nothing compares the literal. `testutil.WebService`
+and `testutil.TestURL` are used by value in piri's `ucanhandlers` suites and in
+indexing-service's `contentclaims` and `blobindexlookup` tests, and the exact
+string appears nowhere else in ucantone, forge, guppy or indexing-service. The
+`*.test.storacha.network` hits a grep turns up are different hostnames doing a
+different job — guppy's `forge-test` preset and piri's register test point at
+real staging endpoints. `make ci` passes.
+
+**The package name — a proposal, not a change.** He asked whether `ucanlib` has
+a better name or a better home. It does not have a good one: `ucanlib` is what
+libforge called it, where the directory could not be `ucan/` either, and I
+carried the name rather than choosing one. I proposed a top-level **`proof/`**,
+which sits beside `validator/` as the counterpart the doc comment already claims
+it is, and drops the stutter — `proof.Chain`, `proof.Store`,
+`proof.ContainerStore`, `proof.MatcherFunc`.
+
+**Left for you and him**, because it is a naming decision for the module rather
+than a defect. But it has a deadline worth knowing: every consumer of these
+symbols is changing its import path anyway in this migration, so a rename costs
+them one extra token per line they are already editing. Afterwards it is a
+breaking change to a published module. **This is the cheapest that decision will
+ever be.**
+
+## forge#23 round twelve: three more, all prose, and one that was wrong twice
+
+Nothing in either test again. Two of the three are worth recording because both
+were claims I had just written *in response to a finding*:
+
+- **"no workflow runs `make`, so none of them runs in CI"** — true of the
+  Makefile, false of the other two things that sentence names.
+  `pkg/snapshot/stack_internal_test.go` is an untagged `package snapshot` test,
+  so `unit smelt` runs it and `composeArgs` with it. Harmless — `composeArgs`
+  only `os.Stat`s the path and the test writes empty fixtures into
+  `t.TempDir()` — but this was round eleven's finding failing a *second* way
+  after I rewrote it.
+- **"changes check names"**, my reason for not collapsing `ci.yml`'s seven
+  guard steps into a glob. Wrong: all seven are steps of the single `guards`
+  job, and GitHub creates a check run per job, so `ci / guards` is unaffected.
+  What a glob actually costs is the per-guard step name that tells you which
+  guard failed without opening the log. Still not worth doing, for a smaller
+  reason than the one I gave.
+
+The third: the cheap closure I proposed for the literal-replacement gap closes
+**one** of the two uncaught rows. `GUPPY_IMAGE` is not in `publishedImages`, so
+a check keyed on that table cannot see an image this repository does not build.
+Both corrected in the body.
 
 ## forge#23 round eleven: a real gap in the guard, and a body that had become the risk
 
