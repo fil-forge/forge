@@ -5,18 +5,30 @@ its own tag; there is no repo-wide version number and no release train.
 
 ## The path a change takes
 
+**Most changes only take the first step.**
+
 1. **A pull request to `main`.** CI runs unfiltered — every module's
    build/vet/staticcheck/tidy/test, the `guards` job, images, e2e and itest.
    Agent review rounds run until one comes back with nothing (`AGENTS.md`
-   rule 10). Merge when it is green.
-2. **A release pull request.** Branch it `release/<service>` and bump
-   `<service>/version.json`. **The branch name is load-bearing**: of the pull
+   rule 10). Merge when it is green. That is the whole path for an ordinary
+   change: nothing about it is per-release, and it waits for no release.
+
+2. **A release pull request, when a module is ready to ship.** It contains
+   **only the version bump** — one edit to `<service>/version.json` and
+   nothing else. Merging it means exactly one thing: *the current `main` of
+   that module is now version `vX.Y.Z`*. It has no content of its own, so it
+   sweeps up every change to that module merged since its last release. There
+   is no cherry-picking, no release branch to maintain, and no second pull
+   request for an ordinary change.
+
+   Branch it `release/<service>`. **The name is load-bearing**: of the pull
    requests that open, `compat.yml` runs its compatibility suite for those
    whose head branch starts with `release/` and no others, and
    `compat-refresh.yml` finds the ones to refresh the same way. (A manual
-   dispatch runs it on any ref — the branch name gates the automatic run.)
-3. **Merge it**, then **create the tag by hand** (below).
-4. **Dispatch `release.yml`** for that service.
+   dispatch runs it on any ref — the name gates the automatic run.)
+
+3. **Merging it is the release decision.** The tag and the release build
+   follow from that merge — today by hand; see *Tagging*.
 
 ## Versions
 
@@ -31,13 +43,19 @@ treat the existing numbers as a starting point rather than a precedent.
 ## Tagging
 
 Tags are `<service>/vX.Y.Z` — `piri/v0.2.5`, not `v0.2.5`. Ten services share
-one tag namespace, so an unprefixed tag is ambiguous and a second service
+one tag namespace, so an unprefixed tag is ambiguous, and a second service
 releasing at a version the first already used would collide.
 
-**`release.yml` never creates a tag.** It asserts one exists *and* points at
-the commit being built, and fails otherwise. Tagging is deliberately a human
-step: it is the point of no return, and the assertion is what stops a release
-built from a commit the tag does not name.
+**The tag should follow from merging the release pull request, automatically.**
+That merge already carries the entire decision — it means "release the current
+`main` of this module as the listed version" and has no other meaning — so a
+human retyping the tag afterwards is a second chance to get it wrong rather
+than a second check.
+
+**That is not built yet.** Today the tag is created by hand after the merge,
+and `release.yml` never creates one: it asserts a tag exists *and* points at
+the commit being built, failing otherwise. That assertion is the interim
+guard, not the intended design.
 
 ## Artifacts
 
@@ -69,3 +87,15 @@ Neither is fixable by a flag. The choice is per-service `release: disable:
 true` with somewhere else to put artifacts, or a tag scheme goreleaser and Go
 both accept — on top of the ownership decision. The comment above
 `release.yml`'s `publish` step is the long form.
+
+## Planned, not built
+
+- **Release pull requests issued automatically.** A module needs one once it
+  has been touched since its last release, so what has to be derived is which
+  commits touch which module since `<service>/vX.Y.Z`. Leaving it to a person
+  means leaving it to someone noticing, which is the failure this repository
+  keeps repeating.
+- **Tagging on merge of the release pull request**, per *Tagging* above.
+- **Arming `release.yml` to publish**, per *What is not armed* above — the
+  largest of the three, because it is blocked on the tag-namespace decision
+  and not only on wiring.

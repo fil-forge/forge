@@ -242,6 +242,10 @@ func WithWorkspaceBinaries() Option {
 //
 // Without the exclusion the workspace binary would be mounted over the pinned
 // image, and the test would silently exercise HEAD against HEAD.
+//
+// WithPublishedImages is in that example because the stack does not boot
+// without it: a workspace binary is a bind mount over an image, not an image,
+// so every service left unpinned still needs one.
 func WithWorkspaceBinariesExcept(services ...string) Option {
 	return func(c *config) {
 		c.workspaceBinaries = true

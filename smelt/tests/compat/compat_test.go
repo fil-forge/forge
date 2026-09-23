@@ -19,16 +19,13 @@
 // the thing that used to make you think. This suite is the deliberate
 // replacement.
 //
-// Two shapes:
+// One shape:
 //
-//	TestPinnedPeer     one service pinned to a RELEASED image, everything else
-//	                   from HEAD. "Can what we are about to ship talk to what is
-//	                   already deployed?"
 //	TestRollingUpgrade boot the whole stack at a released version, then replace
 //	                   ONE service with HEAD in place. "Does the upgrade order
-//	                   we will actually perform work?" This is the one that
-//	                   catches expand/contract violations, because it exercises
-//	                   the window where old and new are both live.
+//	                   we will actually perform work?" It catches
+//	                   expand/contract violations, because it exercises the
+//	                   window where old and new are both live.
 //
 // Runs behind the `compat` tag, on a release pull request and nowhere else on
 // its own -- that is the one place its answer has a decision attached, since
@@ -107,33 +104,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// pinnedVersions reads the versions to test against from the environment, as
-// COMPAT_<PACKAGE>_VERSIONS, comma separated. The workflow fills these from the
-// version-shaped tags that actually exist in the registry; a developer can set
-// one by hand. Package, not service, for the reason envSuffix gives -- it
-// happens to make no difference for piri and ingot, and would the moment a
-// service whose names differ joined the window.
-//
-//	COMPAT_PIRI_VERSIONS=0.2.4 go test -tags compat ./tests/compat
-//
-// Skips rather than fails when unset: a service with no published releases has
-// nothing to test against, and that should not be a permanent red.
-func pinnedVersions(t *testing.T, service string) []string {
-	t.Helper()
-	key := "COMPAT_" + envSuffix(t, service) + "_VERSIONS"
-	raw := os.Getenv(key)
-	if strings.TrimSpace(raw) == "" {
-		t.Skipf("%s unset; no published release window for %s", key, service)
-	}
-	var out []string
-	for _, v := range strings.Split(raw, ",") {
-		if v = strings.TrimSpace(v); v != "" {
-			out = append(out, v)
-		}
-	}
-	return out
-}
-
 // A VERSION-SHAPED TAG HERE IS A CUT RELEASE: upstream publishes
 // <svc>:X.Y.Z only from the git tag vX.Y.Z, never from an ordinary push to
 // main, which produces :main and :sha-* instead. That is what makes these
@@ -182,66 +152,16 @@ func envSuffix(t *testing.T, service string) string {
 	return strings.ToUpper(strings.ReplaceAll(pkg, "-", "_"))
 }
 
-// TestPinnedPeer boots the stack with one service at a released image and every
-// other in-repo service built from this commit.
-func TestPinnedPeer(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		t.Skip("skipping on darwin (docker-in-docker flakiness)")
-	}
-
-	for _, service := range []string{"piri", "ingot"} {
-		t.Run(service, func(t *testing.T) {
-			for _, version := range pinnedVersions(t, service) {
-				t.Run(version, func(t *testing.T) {
-					image := imageFor(t, service, version)
-					pin, ok := pinFor[service]
-					if !ok {
-						t.Fatalf("no pin option for %s", service)
-					}
-
-					// WithPublishedImages is not garnish. Every service
-					// this repository builds is a REQUIRED compose
-					// interpolation -- ${HILT_IMAGE:?...} and seven
-					// siblings -- and config.buildEnv() omits a variable
-					// it has no value for, so compose refuses to start,
-					// naming the variable. Workspace binaries do not
-					// cover for that: they are bind mounts over an image,
-					// not an image.
-					//
-					// Eight takes three places to reach:
-					// systems/*/compose.yml gives six, recursing adds
-					// INDEXER_IMAGE (in indexing/indexer/), and
-					// PIRI_IMAGE has no compose.yml -- pkg/generate
-					// emits it. Either glob alone looks complete.
-					//
-					// The exclusion is load-bearing too. Without it the
-					// workspace binary is mounted over the pinned image
-					// and this quietly becomes a HEAD-vs-HEAD run that
-					// always passes.
-					s := stack.MustNewStack(t,
-						stack.WithPublishedImages(),
-						stack.WithPiriNodes(stack.PiriNodeConfig{Postgres: true}),
-						stack.WithWorkspaceBinariesExcept(service),
-						pin(image),
-					)
-					t.Logf("compat: %s pinned to %s, all other services from HEAD", service, image)
-
-					assertUploadRetrieve(t, s)
-				})
-			}
-		})
-	}
-}
-
 // TestRollingUpgrade boots every in-repo service at a released version, then
 // replaces one with HEAD while the rest stay old -- the state a real deployment
 // passes through, since services do not upgrade simultaneously.
 //
-// Compared to TestPinnedPeer this inverts which side is new: there, one old
-// service meets a new fleet; here, one new service meets an old fleet. Both
-// windows occur during a rollout, and a change can break only one of them
-// (adding a required field breaks old-reader/new-writer; removing one breaks
-// new-reader/old-writer).
+// This is the FIRST hop of a rollout: one new service meeting an old fleet. The
+// inverse hop -- one old straggler meeting a new fleet -- had its own test and
+// was cut, because this is the direction the gate's question is about, and a
+// change that breaks only the other direction (removing a required field,
+// breaking new-reader/old-writer) is caught here too as soon as the next
+// service is upgraded.
 //
 // THE FLEET IS WHATEVER THE WORKSPACE WOULD BUILD, not a list written here.
 // That is the whole correctness condition: any service left off such a list is

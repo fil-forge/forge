@@ -161,9 +161,6 @@ jobs:
       # import path in them stays green until someone runs the suite by hand.
       # Compiling them (not running them — they need Docker and a live stack)
       # is what keeps that from happening.
-      #
-      # The tag list is hand-maintained. `compat` was once added without being
-      # added here, so the new suite compiled nowhere until someone noticed.
       - name: vet tagged suites
         if: matrix.tagged_suites != ''
         run: go vet -tags ${{ matrix.tagged_suites }} ./...

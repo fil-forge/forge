@@ -140,13 +140,11 @@ jobs:
       - name: Expand the resolved versions
         env:
           BASELINES: ${{ needs.window.outputs.baselines }}
-          WINDOWS: ${{ needs.window.outputs.windows }}
         run: |
           set -euo pipefail
           python3 - <<'EOF' >> "$GITHUB_ENV"
           import json, os, re
-          for var, prefix, suffix in (("BASELINES", "COMPAT_BASELINE_", ""),
-                                      ("WINDOWS", "COMPAT_", "_VERSIONS")):
+          for var, prefix, suffix in (("BASELINES", "COMPAT_BASELINE_", ""),):
               for k, v in json.loads(os.environ[var]).items():
                   # The key comes from a package name the registry confirmed, so
                   # it cannot carry a newline -- but $GITHUB_ENV is parsed line

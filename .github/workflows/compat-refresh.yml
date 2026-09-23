@@ -2,6 +2,12 @@ name: compat-refresh
 
 # Keep every open release pull request's compat answer current.
 #
+# HOW: a scheduled run -- so it runs on `main`, the only ref a schedule can run
+# on -- dispatches compat.yml at each open `release/*` branch. A dispatched run
+# records its check runs against that branch's head commit, which is the pull
+# request's head commit, so the fresh answer replaces the check where the merge
+# decision is made.
+#
 # WHY THIS EXISTS AT ALL. compat.yml asks "does the release proposed here still
 # work against what is already deployed?" -- and the answer changes without the
 # pull request changing, because the deployed side is read live from the
@@ -9,37 +15,17 @@ name: compat-refresh
 # request that was green yesterday is no longer known to be green. Nothing about
 # the pull request triggers anything, so without this its check is simply old.
 #
-# WHY NOT A SCHEDULE ON compat.yml ITSELF. A `schedule:` trigger always runs on
-# the default branch, so that version tests `main` -- and a result about `main`
-# has no decision attached to it. `main` is not deployed; a red there leaves you
-# working out which pending release it implicates, which is the work the release
-# pull request was supposed to have already done for you. Same test, actionable
-# in one place and not the other.
-#
-# WHY RE-RUN RATHER THAN DISPATCH. `gh workflow run --ref release/piri` would
-# also run compat against that branch, but the result is a run on a branch, not
-# a check on the pull request -- so the fresh answer would sit somewhere other
-# than where the merge decision gets made. A re-run reuses the pull request's
-# own run, at its own commit, and replaces the check in place. That attachment
-# is the whole reason for this file's shape.
-#
-# A RE-RUN EXPIRES, AND SO DOES THE ANSWER. GitHub allows a run to be re-run for
-# 30 days after its initial run, and at most 50 times. A release pull request
-# open longer than that keeps a compat check nothing can refresh: green, and
-# about a fleet that has moved on. There is no fix inside this design -- a fresh
-# dispatch would refresh the answer and put it somewhere nobody is looking,
-# which is the trade the previous paragraph already rejected -- so the run below
-# reports the expiry loudly and fails, rather than letting the stale green
-# stand unmentioned. A release pull request open for a month has a larger
-# problem than its compat check.
-# https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs
+# WHY NOT A SCHEDULE ON compat.yml ITSELF. That version would test `main`, and a
+# result about `main` has no decision attached to it: `main` is not deployed, so
+# a red there leaves you working out which pending release it implicates --
+# which is the work the release pull request was supposed to have done for you.
 #
 # WHAT IT GIVES UP: nothing runs while no release pull request is open. An
-# upstream incompatibility that lands in a quiet week is then found when the
-# next release is proposed rather than when it appeared. That is deliberate --
-# the earlier signal had nobody to act on it -- but it IS the trade, and if the
-# lead time turns out to matter the answer is a scheduled run that opens or
-# annotates a release pull request, not one that tests `main`.
+# upstream incompatibility that lands in a quiet week is found when the next
+# release is proposed rather than when it appeared. Deliberate -- the earlier
+# signal had nobody to act on it -- but if the lead time turns out to matter,
+# the answer is a scheduled run that opens or annotates a release pull request,
+# not one that tests `main`.
 
 on:
   schedule:
@@ -47,53 +33,37 @@ on:
     - cron: '0 7 * * *'
   workflow_dispatch:
 
-# The first workflow here to want more than `contents: read`, so it is worth
-# saying what for: listing pull requests, and re-running a workflow run.
-#
-# `actions: write` IS WIDER THAN WHAT THIS USES. It is also the scope that
-# permits `POST /actions/workflows/{id}/dispatches`, and a `workflow_dispatch`
-# raised with GITHUB_TOKEN is one of the two events exempt from the rule that
-# GITHUB_TOKEN-triggered events start no run -- so this token could start
-# release.yml. An earlier revision of this comment claimed the opposite
-# ("starts nothing new"), which was wrong. GitHub has no narrower scope to ask
-# for; what bounds this is that the step below runs fixed commands over data it
-# only ever reads, not that the permission is small.
+# `actions: write` is what `POST /actions/workflows/{id}/dispatches` requires,
+# and dispatching compat.yml is this workflow's whole job. It is also the scope
+# that would let this token start release.yml: `workflow_dispatch` is one of the
+# two events exempt from the rule that GITHUB_TOKEN-triggered events start no
+# run. GitHub has no narrower scope to ask for; what bounds this is that the
+# step below dispatches one named workflow at branches it derived by reading.
 # https://docs.github.com/en/actions/concepts/security/github_token
 permissions:
   contents: read
   pull-requests: read
   actions: write
 
-# DELIBERATELY REF-LESS, unlike every other workflow here, and the ref-lessness
-# is load-bearing rather than a leftover.
-#
-# WHAT THIS JOB CONTENDS FOR IS NOT A REF. It re-runs every open release pull
-# request's run, so two refreshers race over the same pull requests whatever ref
-# each was started from. A ref-keyed group would put a `workflow_dispatch` on
-# some branch in a different group from the scheduled run and let both go at
-# once, which is the collision the group exists to prevent.
-#
-# An earlier revision justified this with "it only ever runs from the default
-# branch", which is false and, worse, argued the group was redundant: only
-# `schedule:` is default-branch-only. A dispatch runs on whatever ref is picked
-# -- `gh workflow run --ref`, the UI's branch dropdown, or `ref` in the REST
-# body -- and that is precisely the case the ref-less group covers.
-# https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow
-#
-# compat.yml is the opposite case and keys its group by ref -- see the note
-# there. The difference is what each one contends for: a pull request's own
-# check, versus all of them at once.
+# DELIBERATELY REF-LESS, unlike every other workflow here. What this job
+# contends for is not a ref: it acts on every open release pull request, so two
+# refreshers race over the same set whatever ref each was started from. A
+# ref-keyed group would put a dispatch on some branch in a different group from
+# the scheduled run and let both go at once. (Only `schedule:` is
+# default-branch-only; a dispatch runs on whatever ref is picked.) compat.yml is
+# the opposite case and keys its group by ref -- it contends for one pull
+# request's own check, not all of them at once.
 concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: false
 
 jobs:
   refresh:
-    name: Re-run compat on every open release pull request
+    name: Dispatch compat on every open release pull request
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Re-run
+      - name: Dispatch
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
@@ -101,16 +71,15 @@ jobs:
           set -euo pipefail
 
           # DERIVED from the open pull requests, never a list kept here: a
-          # release branch that this file had not been told about would
-          # otherwise go unrefreshed, which is the failure mode that looks
-          # exactly like success.
+          # release branch this file had not been told about would otherwise go
+          # unrefreshed, which is the failure mode that looks exactly like
+          # success.
           #
           # ASSIGNED AND TESTED, not piped into mapfile, because "could not ask"
           # and "nothing to refresh" are different answers and the pipe form
           # cannot tell them apart -- `mapfile < <(...)` discards the subshell's
-          # status, so a gh that cannot reach the API produces an empty list,
-          # the early exit below, and a green run that refreshed nothing. That is
-          # the same failure compat-window.sh's `|| true` had, one file over.
+          # status, so a gh that cannot reach the API produces an empty list and
+          # a green run that refreshed nothing.
           if ! raw=$(gh pr list --repo "$REPO" --state open --limit 100 \
                        --json number,headRefName,headRefOid \
                        --jq '.[] | select(.headRefName | startswith("release/"))
@@ -122,8 +91,7 @@ jobs:
           fi
 
           # `grep .` drops a blank line rather than letting one become an
-          # element: an empty row would be "refreshed" as a pull request with no
-          # number, and the tally at the end would count it.
+          # element the tally would then count.
           mapfile -t prs < <(printf '%s' "$raw" | grep . || true)
 
           if [ "${#prs[@]}" -eq 0 ]; then
@@ -131,100 +99,33 @@ jobs:
             exit 0
           fi
 
-          missing=0
           failed=0
           for row in "${prs[@]}"; do
             num=${row%%$'\t'*}; rest=${row#*$'\t'}
             branch=${rest%%$'\t'*}; sha=${rest##*$'\t'}
             echo "::group::#$num ($branch @ ${sha:0:8})"
 
-            # The pull request's OWN latest compat run, matched on the head sha
-            # so a re-run cannot resurrect a run for code the branch has moved
-            # past. `--json` rather than parsing the table, because the table's
-            # columns are a display format. `createdAt` is carried only to
-            # explain a failure below, never to decide whether to try.
-            if ! found=$(gh run list --repo "$REPO" --workflow compat.yml \
-                           --branch "$branch" --limit 20 \
-                           --json databaseId,headSha,event,createdAt \
-                           --jq "[.[] | select(.headSha == \"$sha\" and .event == \"pull_request\")]
-                                 | first | \"\(.databaseId // \"\")\t\(.createdAt // \"\")\""); then
-              # Counted and carried on, for the reason the re-run below gives:
-              # aborting here would leave every later pull request untried on
-              # one that could not be listed.
-              echo "::error::#$num ($branch): could not list its compat runs," \
-                   "so nothing was refreshed for it." >&2
-              failed=$((failed + 1))
-              echo "::endgroup::"
-              continue
-            fi
-            run=${found%%$'\t'*}; created=${found#*$'\t'}
-
-            if [ -z "$run" ]; then
-              # Not a failure: a pull request opened since the last compat run,
-              # or one whose run has aged out of retention. An ANNOTATION rather
-              # than a log line, because a log line here is inside a collapsed
-              # group in an otherwise green run, which is the same as not saying
-              # it -- "nothing to re-run" and "re-ran nothing" read alike.
-              echo "::warning::#$num ($branch): no compat run at $sha -- nothing" \
-                   "to re-run, so its compat check is whatever it already was."
-              missing=$((missing + 1))
-              echo "::endgroup::"
-              continue
-            fi
-
-            # NOT `set -e`'s problem to handle: a failed re-run used to abort
-            # the loop here, so one pull request GitHub refused left every later
-            # one untried, the tally unprinted and the group unclosed. Each is
-            # independent; one failing says nothing about the next.
-            echo "re-running $run (created $created)"
-            if ! gh run rerun "$run" --repo "$REPO"; then
-              # AGE IS DIAGNOSIS, NOT CONTROL. The attempt above is the only
-              # authority on whether a re-run was allowed.
-              #
-              # WHAT THIS ADDS IS PRECISION AND CONSEQUENCE, not the cause. An
-              # earlier revision said it explained "the refusal whose cause the
-              # API error never names", which is backwards: GitHub answers the
-              # age refusal with "Unable to retry this workflow run because it
-              # was created over a month ago", and `gh run rerun`'s whole-run
-              # path forwards the server message verbatim. (Its `--job` path is
-              # the one that discards it -- a different command.) So the reader
-              # already learns WHY. What they do not learn is how old, that the
-              # rule is 30 days rather than a vague "over a month", and that
-              # this pull request's compat check is now unrefreshable.
-              #
-              # STATED ONLY WHEN IT APPLIES: a first draft appended the ceiling
-              # to every failure, so a run refused for being already in progress
-              # was reported as one day old and then told the reader about a
-              # 30-day limit. A reason offered for the wrong failure is worse
-              # than none -- it is the next person's wasted hour. Below 30 days
-              # the age line says only how old, which is what rules the ceiling
-              # out.
-              why=""
-              if [ -n "$created" ] && created_s=$(date -u -d "$created" +%s 2>/dev/null); then
-                days=$(( ( $(date -u +%s) - created_s ) / 86400 ))
-                why=" That run is $days days old."
-                if [ "$days" -ge 30 ]; then
-                  why="$why PAST THE 30-DAY RE-RUN CEILING: nothing can refresh"
-                  why="$why this pull request's compat check any more, and the"
-                  why="$why answer it shows is $days days old too."
-                fi
-              fi
-              echo "::error::#$num ($branch): could not re-run compat run $run.$why" \
-                   "Its compat check still shows an earlier answer against today's fleet."
+            # Dispatched at the BRANCH, which runs compat.yml as that branch has
+            # it and at whatever its tip is now -- so a head that moved between
+            # the listing above and here is tested as it currently stands, not
+            # as it was. compat.yml is written for this: its job condition is
+            # `event_name != 'pull_request' || head_ref starts with release/`,
+            # so a dispatch satisfies it on any ref.
+            #
+            # EACH IS INDEPENDENT: a refusal is counted and the loop carries on,
+            # because aborting here would leave every later pull request untried
+            # on account of one.
+            if ! gh workflow run compat.yml --repo "$REPO" --ref "$branch"; then
+              echo "::error::#$num ($branch): could not dispatch compat." \
+                   "Its compat check still shows an earlier answer against" \
+                   "today's fleet." >&2
               failed=$((failed + 1))
             fi
             echo "::endgroup::"
           done
 
           echo
-          # "could not refresh", not "re-run refused": $failed also counts the
-          # pull request whose runs could not be listed, which never reached a
-          # re-run at all.
-          echo "${#prs[@]} open release pull request(s):" \
-               "$missing with no run to re-run, $failed that could not be refreshed."
+          echo "${#prs[@]} open release pull request(s): $failed could not be dispatched."
 
-          # Non-zero on a failure, so the stale check has somewhere to be seen.
-          # `missing` does not fail the run: a pull request opened since the last
-          # compat run is the ordinary case, and its own `pull_request` run is
-          # already on its way.
+          # Non-zero on a failure, so a stale check has somewhere to be seen.
           [ "$failed" -eq 0 ]
