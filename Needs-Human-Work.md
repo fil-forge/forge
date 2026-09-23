@@ -25,7 +25,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1e1fe5e9`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `93a17f6f`. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
@@ -34,6 +34,43 @@ now corrected in #19.
 
 #18 is no longer just waiting on a merge: your review landed and two of its
 questions are back with you.
+
+## forge#18 round two: the fix from round one was itself a partial guard
+
+Round one's finding 9 was "a missing workspace is still a green skip". The fix
+added a `t.Fatalf` **and** a step in `compat.yml` asserting the workspace is
+active. The assertion was wrong:
+
+```
+$ GOWORK=off go env GOWORK
+off
+```
+
+`go env GOWORK` prints the literal string `off`; it is empty only when no
+`go.work` was found at all. So `[ -n "$w" ]` was true in exactly the case the
+step's own comment is written about. `pkg/workspace` has always tested both
+(`gowork == "" || gowork == "off"`) — the shell step tested one, so it caught a
+strict *subset* of what the `t.Fatalf` beside it catches and missed the case it
+existed for. Rule 5's partial guard reading as a total one, added while fixing
+a finding about a vacuous green.
+
+**That is twice now that a fix for "this check passes for the wrong reason" has
+itself passed for the wrong reason.** Worth naming as a pattern rather than
+three separate slips: the class is cheap to introduce and invisible to reading,
+and the only thing that has caught any of it is applying the mutation.
+
+The other five from that round were claims the guard made that no test backed:
+every fixture was hyphen-free, so `key_for`'s `-`→`_` and the service
+derivation's `[a-z0-9-]` both survived deletion green — and two of the eight
+real services are the hyphenated ones; the stub ignored `Accept`, so the
+index-not-per-architecture media types (AGENTS.md rule 2) were unverifiable;
+and `versions_from`'s arch-suffix exclusion, the whole `$GITHUB_STEP_SUMMARY`
+block and the argument refusal had no fixture at all.
+
+Seventeen mutations now, each caught by the test its header names. The header
+also names the arms that have **no** fixture — the transport-failure and
+body-is-not-JSON ones — rather than saying "each guard", which was itself the
+overclaim.
 
 ## forge#18 round on the fallback: ten findings, three of them the same shape
 
