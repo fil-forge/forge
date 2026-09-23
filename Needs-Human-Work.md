@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 00:20Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 01:05Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -29,6 +29,7 @@ now corrected in #19.
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | **NEW**, draft, on `5277eac`. Opened overnight; a round is running. Reproduced before fixing, verified after |
+| [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the guard that makes its own "cannot drift silently" claim true | **NEW**, draft, on `c66c88f8`. A round is running. Guard verified in seven directions, each seen to fail before it was seen to pass |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
 and nothing else.
@@ -71,6 +72,50 @@ commit from 2026-09-11 pointing the minio testcontainer at our own build.
 Upstream has since landed the same change, so `git diff origin/main HEAD` was
 empty and the PR is single-purpose. Nothing was lost and nothing was force-
 pushed.
+
+## Overnight, second item: `make up` has been broken on `main`, and three lists had drifted
+
+`smelt/.env.published` supplies seven of the eight required `${X_IMAGE:?}`
+compose interpolations. The missing one is `INDEXER_IMAGE`, so `make up` fails
+at `compose up`. (The eighth, `PIRI_IMAGE`, is in no compose file at all —
+`pkg/generate/compose.go` emits piri's service — which is the same counting trap
+that caught three review rounds on #18.)
+
+**The interesting part is why nothing caught it.** That file's own header said
+the duplication between it and `publishedImages` in `pkg/stack/options.go`
+"cannot drift silently — a missing entry fails at `compose up` naming the
+variable". Both halves are true and together they are not enough: it failed at
+`compose up`, and it drifted anyway, because **nothing in CI runs `make up`**.
+Not silent and not noticed turned out to be the same thing. Every Go path fills
+all eight through `WithPublishedImages()`, whose table *does* list the indexer,
+so no test could see it either.
+
+So #23 is the entry plus the check that makes the header's claim true —
+`check-published-images.sh` derives all three lists and fails when they
+disagree, with no list in it.
+
+**Enumerating the class found a third copy, staler than the first.**
+`smelt/CLAUDE.md` named six of eight and still listed swarf and the indexer
+under "not built here", closing with "`SWARF_IMAGE` joins the required set when
+the branch that builds swarf lands" — which it did. Replaced with the
+derivation rather than extended, since extending a hand-written list is what
+produced copies two and three.
+
+**Two defects in the guard, both in the guard itself, both found by running
+it.** Its first draft's `awk` range ended at `/^}/`, which matches the `}{`
+closing the *struct type*, so the Go table read as empty — and under
+`set -o pipefail` the empty grep killed the script at that line, *before* the
+emptiness check written to catch exactly that. The script exited 1, which
+looked like the first check reporting correctly. **A second check that never
+ran, shipped inside a guard, is the thing rule 5 is about, and it happened
+while writing a guard against a different instance of the same class.**
+
+**One thing raised rather than decided.** `AGENTS.md` says of the guards that
+"that directory is the list", but `ci.yml` enumerates them by hand, one named
+step each — so a `check-*.sh` added without a step silently never runs. Same
+class, one layer up. Collapsing eight named steps into a glob would lose the
+per-guard names in the checks UI and change check names, which is a trade
+rather than a fix, so it is yours.
 
 ## Settled: compat runs on the release pull request, and a refresher keeps it fresh
 
