@@ -850,6 +850,29 @@ took that trade). `AGENTS.md` carries it.
      release, and *then* fail at the goreleaser step — leaving a published tag
      with no artifacts behind it. `swarf` has the same absence but is not in
      the allowlist, so it simply never releases.
+
+     **CLOSED by [#12](https://github.com/fil-forge/forge/pull/12), and this
+     bullet is about the workflow it replaced.** The `release.yml` on `main`
+     has no allowlist: it derives the releasable set with a `find` for
+     `.goreleaser.{yaml,yml}` at depth 2 and validates a free-text `service`
+     input against it, so a service that gains or loses a config needs no edit.
+     Simulated against this tree — a dispatch is refused *before* any tag or
+     release exists:
+
+     ```
+     releasable: indexing-service ingot piri sprue
+       hilt      -> ::error::'hilt' has no goreleaser config. Releasable: …
+       swarf     -> refused, same message
+       delegator -> refused, same message
+       piri      -> accepted
+     ```
+
+     I carried this forward as a live "release footgun" on the overnight queue
+     after #12 had already fixed it, which is a stale note read as a finding.
+     One documented difference does remain, and is deliberate: the ldflags
+     guard lints a config at *any* depth while a releasable service is a
+     top-level directory, so a nested `ingot/itest/.goreleaser.yaml` would be
+     linted and not dispatchable. No such config exists.
    - **"Nothing builds the `Dockerfile.release` files" is stronger than it
      sounds.** `hilt`'s and `swarf`'s are wired to nothing that *could* build
      them: no goreleaser config exists to invoke them. Only `ingot` and
