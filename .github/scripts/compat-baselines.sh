@@ -171,7 +171,14 @@ tags_for() {
     fi
     python3 -c 'import json,sys; print("\n".join(json.load(sys.stdin).get("tags") or []))' <"$body" || {
       rm -f "$hdr"; echo "$svc: tags/list returned something that is not a tag list" >&2; return 1; }
-    last=$(sed -n 's/.*[?&]last=\([^&>]*\).*rel="next".*/\1/p' "$hdr" | head -n 1)
+    # NO `| head`, for the reason newest_version_from gives: an early-exit
+    # reader under `set -o pipefail` can kill the writer with SIGPIPE and
+    # abort the script. The header file is far below a pipe buffer so the
+    # writer would in practice always finish first -- but "in practice always"
+    # is what the other one looked like too, and taking the first line in the
+    # shell costs nothing and removes the shape.
+    last=$(sed -n 's/.*[?&]last=\([^&>]*\).*rel="next".*/\1/p' "$hdr")
+    last=${last%%$'\n'*}
     rm -f "$hdr"
     if [ -n "$last" ]; then
       url="$api/v2/fil-forge/${svc}/tags/list?n=1000&last=$last"
@@ -210,7 +217,8 @@ digest_for() {
   fi
 
   local dig
-  dig=$(tr -d '\r' <"$hdr" | sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest: //p' | head -n 1)
+  dig=$(tr -d '\r' <"$hdr" | sed -n 's/^[Dd]ocker-[Cc]ontent-[Dd]igest: //p')
+  dig=${dig%%$'\n'*}
   # Checked rather than trusted: an empty value here would go out as a
   # baseline of the empty string and pull `<pkg>@`, which fails far from
   # here. The shape is checked too -- anything that is not a sha256 digest is
@@ -226,14 +234,30 @@ digest_for() {
   esac
 }
 
-# Version-shaped tags only, newest first. Excludes main, main-dev, latest and
-# sha-*, and also the per-architecture `0.0.0-amd64` / `0.0.0-arm64` variants
-# ingot publishes, which are not runnable as a multi-arch reference.
-versions_from() {
+# The NEWEST version-shaped tag, or nothing. Excludes main, main-dev, latest
+# and sha-*, and also the per-architecture `0.0.0-amd64` / `0.0.0-arm64`
+# variants ingot publishes, which are not runnable as a multi-arch reference.
+#
+# IT TAKES THE HEAD ITSELF rather than being piped into `head -n 1`, and that
+# is a bug fix rather than tidiness. Under `set -o pipefail`, `head` closing
+# the pipe after one line races python's write: the print takes
+# BrokenPipeError, the pipeline reports non-zero, and `set -e` aborts the
+# whole script with an empty stdout. Measured in isolation on this pipeline:
+# 0/150 idle, 21/150 with the box loaded. It can only fire when more than one
+# version-shaped tag is emitted -- which no fleet service does today, so it
+# has never been seen in a real run, and would arrive with the second release
+# of any service.
+#
+# It was first seen as a flaky guard, and the commit before this one
+# misdiagnosed it as contention on the test stub's accept queue and "fixed"
+# it with a `request_queue_size` assignment that never reaches listen(). That
+# was wrong in both halves; this is the cause.
+newest_version_from() {
   python3 -c '
 import re, sys
 out = {t for t in sys.stdin.read().split() if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", t)}
-print("\n".join(sorted(out, key=lambda v: [int(p) for p in v.split(".")], reverse=True)))
+ordered = sorted(out, key=lambda v: [int(p) for p in v.split(".")], reverse=True)
+print(ordered[0] if ordered else "")
 '
 }
 
@@ -284,7 +308,7 @@ for svc in $services; do
       exit 1 ;;
   esac
 
-  newest=$(printf '%s\n' "$raw" | versions_from | head -n 1)
+  newest=$(printf '%s\n' "$raw" | newest_version_from)
 
   if [ -n "$newest" ]; then
     value=$newest
