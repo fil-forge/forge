@@ -412,8 +412,9 @@ var envImageOptions = []struct {
 // `compose up` naming the variable. That is true and it is not enough: they
 // drifted anyway — indexing-service was added here and not to .env.published,
 // and `make up` had been failing ever since, because nothing in CI runs it.
-// TestPublishedImageSetAgrees is what checks it now, and it checks all four
-// statements of this set against each other, including envImageOptions above.
+// TestPublishedImageSetAgrees is what checks it now: this table against
+// .env.published and envImageOptions above, name by name and reference by
+// reference.
 //
 // Only what this repository builds; the rest keep their `:-` compose defaults,
 // so there is nothing for this to fill in. That set is not listed here — it
