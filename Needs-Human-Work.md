@@ -1,6 +1,6 @@
 # Needs human work
 
-**Updated 2026-09-23 01:05Z.** Everything here is waiting on a person — either
+**Updated 2026-09-23 01:35Z.** Everything here is waiting on a person — either
 because it is a judgement call, or because the agent cannot perform the action.
 See [[Current State]] for the broad picture and [[Consolidation Findings]] for
 why each item exists.
@@ -28,7 +28,7 @@ now corrected in #19.
 | [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `1691b59c`. **Rounds stopped at seven**, per rule 10 as amended by #22: round seven's two findings were fixed with a comments-only push, which is the skip condition. Waiting on CI and on you |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
-| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | **NEW**, draft, on `5277eac`. Opened overnight; a round is running. Reproduced before fixing, verified after |
+| [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `689e561`. Round one: **3 findings, none in the code** — the fix itself was verified correct. Round two running |
 | [forge #23](https://github.com/fil-forge/forge/pull/23) | `.env.published` was missing `INDEXER_IMAGE`, so `make up` has been broken on `main`; plus the guard that makes its own "cannot drift silently" claim true | **NEW**, draft, on `c66c88f8`. A round is running. Guard verified in seven directions, each seen to fail before it was seen to pass |
 
 #18 is green — **28/28 checks, mergeable, clean.** It is waiting on your merge
@@ -72,6 +72,58 @@ commit from 2026-09-11 pointing the minio testcontainer at our own build.
 Upstream has since landed the same change, so `git diff origin/main HEAD` was
 empty and the PR is single-purpose. Nothing was lost and nothing was force-
 pushed.
+
+## piri#129 round one: the code was right, and my evidence for it was wrong twice
+
+Worth recording because of *where* the findings landed. The round verified the
+fix mechanically — no overshoot in the `Eventually` condition, the mutex covers
+everything shared, `Stop()` genuinely joins the goroutine, and the 2 s deadline
+has roughly a 3× margin at the worst starvation it could induce. **All three
+findings were in the pull request body.**
+
+Two were measurements I had published without running:
+
+- I wrote that the race detector "stops the binary at its first detection".
+  It does not. A `-count=20 -race` process runs all twenty iterations — 19
+  `--- PASS`, 1 `--- FAIL`. What limits it to one report per process is
+  ThreadSanitizer's duplicate-report suppression.
+- I wrote that a single run catches the unguarded variant "perhaps 5% of the
+  time". Measured properly — 60 independent `-count=1 -race` processes — it is
+  **60 / 60**, against 0 / 60 for the fix. The 5% came from reading 10 failures
+  across 10 `-count=20` processes as a per-run rate, which it never was.
+
+Both errors pointed the same way, so the decision to add the mutex was
+unaffected; the reasoning published for it was wrong. **This is the second time
+in one evening that a claim reached a pull request body by being copied rather
+than run** — the first was taking "fails every time under `-race`" from
+`MONOREPO_TODO.md`. Rule 7 is about premises from any source, including my own
+notes and my own earlier paragraphs.
+
+The third finding was a genuine fragility and is fixed: the `Eventually`
+condition keys on **length**, which equals "the mock was fully consumed" only
+because the last fixture entry happens to be a real CID. A trailing `cid.Undef`
+would have silently stopped exercising the tail. There is now a direct
+assertion, verified to fail on exactly that fixture.
+
+Also corrected in the code: `require` instead of `assert` does not merely leak
+the rotator, it **panics** the binary with `Log in goroutine after
+TestPeriodicRotator has completed`, every run at `-count=5`.
+
+**Something for you, found on the way and not piri#129's to fix.** That
+repository's CI runs `-race` **by accident**. `.github/workflows/go-test-config.json`
+sets `"cgo": false`, which renders as the literal `CGO_ENABLED=false`; Go does
+not recognise that value and falls back to `1`. Measured:
+
+```
+$ CGO_ENABLED=false go env CGO_ENABLED
+1
+$ CGO_ENABLED=0 go vet -race ./...
+go: -race requires cgo; enable cgo by setting CGO_ENABLED=1
+```
+
+So correcting the spelling to `0` would silently turn the race detector off, or
+break the step outright. Noted on the PR. **Not filed as an issue** — that is
+yours to ask for.
 
 ## Overnight, second item: `make up` has been broken on `main`, and three lists had drifted
 
