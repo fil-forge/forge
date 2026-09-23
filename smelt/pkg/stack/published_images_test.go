@@ -269,9 +269,7 @@ func TestBuiltImagesAreRequiredNotDefaulted(t *testing.T) {
 			// Parsed, not scanned: a commented-out `${X:?}` left above a
 			// downgraded line must not count, and does not.
 			walkStrings(doc, func(v string) { scan(path, v) })
-			for _, inc := range includeTargets(filepath.Dir(path), doc) {
-				queue = append(queue, inc)
-			}
+			queue = append(queue, includeTargets(filepath.Dir(path), doc)...)
 		}
 	}
 
