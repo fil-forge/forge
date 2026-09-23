@@ -1067,3 +1067,48 @@ explains that rows can become visible out of `recorded_at` order — but ten
 seconds is a guess at how far out of order. A monotonic database sequence
 would make publication and cursor advancement independent of how long a
 transaction took.
+
+## smelt: `make up` fails for want of `INDEXER_IMAGE`, and `.env.published` is why
+
+Eight image variables are **required** compose interpolations — the `:?` form,
+which makes compose refuse and name the variable rather than quietly booting a
+published image. `make up` loads `.env.published` and then `.env`, and between
+them they supply seven:
+
+```
+$ { find smelt/systems -name compose.yml -print0 | xargs -0 grep -ho '${[A-Z_]*_IMAGE:?'
+    grep -ho '${[A-Z_]*_IMAGE:?' smelt/pkg/generate/compose.go; } | sort -u | tr -d '${:?'
+DELEGATOR_IMAGE  HILT_IMAGE  INDEXER_IMAGE  INGOT_IMAGE
+PIRI_IMAGE  SIGNER_IMAGE  SWARF_IMAGE  UPLOAD_IMAGE
+
+$ grep -oE '^[A-Z_]+_IMAGE' smelt/.env.published | sort | tr '\n' ' '
+DELEGATOR_IMAGE HILT_IMAGE INGOT_IMAGE PIRI_IMAGE SIGNER_IMAGE SWARF_IMAGE UPLOAD_IMAGE
+
+$ grep -cvE '^\s*(#|$)' smelt/.env
+0
+```
+
+`INDEXER_IMAGE` is in neither. **Pre-existing on `main`**, not something the
+compat work introduced, and **invisible to CI**: nothing under `.github/` runs
+smelt's Makefile, `$(COMPOSE)` or the snapshot CLI, and every Go path fills all
+eight through `stack.WithPublishedImages()`, whose `publishedImages` table does
+list the indexer. So `e2e` and `itest` are unaffected.
+
+It is not only `make up`, though: `ENV_FILES` (`smelt/Makefile:23`) is on every
+compose invocation in the Makefile — sixteen through `$(COMPOSE)`, plus
+`debug-upload`, which spells the command out at line 321 — and
+`smelt/pkg/snapshot/stack.go` attaches the same pair for the `smelt snapshot`
+CLI.
+
+**`INDEXER_IMAGE` is easy to miss by hand**, and counting the required set is
+harder than it looks: `systems/*/compose.yml` finds six, recursing into
+`systems/` adds `INDEXER_IMAGE` (one level down, in `indexing/indexer/`), and
+`PIRI_IMAGE` has no `compose.yml` at all — `pkg/generate/compose.go` emits it
+into `generated/compose/piri.yml`. Either glob on its own looks complete. Three
+review rounds on [#18](https://github.com/fil-forge/forge/pull/18) got the
+number wrong, in both directions.
+
+The fix is a line in `.env.published`. Whether that file should be *generated*
+from `publishedImages` rather than maintained beside it is the larger question,
+and it is rule 3's shape exactly: two lists of the same eight services that can
+disagree, and did.

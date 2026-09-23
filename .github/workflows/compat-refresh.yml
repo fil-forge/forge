@@ -1,0 +1,124 @@
+name: compat-refresh
+
+# Keep every open release pull request's compat answer current.
+#
+# HOW: a scheduled run -- so it runs on `main`, the only ref a schedule can run
+# on -- dispatches compat.yml at each open `release/*` branch. A dispatched run
+# records its check runs against that branch's head commit, which is the pull
+# request's head commit, so the fresh answer replaces the check where the merge
+# decision is made.
+#
+# WHY THIS EXISTS AT ALL. compat.yml asks "does the release proposed here still
+# work against what is already deployed?" -- and the answer changes without the
+# pull request changing, because the deployed side is read live from the
+# registry. An upstream release lands or a `:main` moves, the baselines move
+# with them, and a release pull request that was green yesterday is no longer
+# known to be green. Nothing about the pull request triggers anything, so
+# without this its check is simply old.
+#
+# WHY NOT A SCHEDULE ON compat.yml ITSELF. That version would test `main`, and a
+# result about `main` has no decision attached to it: `main` is not deployed, so
+# a red there leaves you working out which pending release it implicates --
+# which is the work the release pull request was supposed to have done for you.
+#
+# WHAT IT GIVES UP: nothing runs while no release pull request is open. An
+# upstream incompatibility that lands in a quiet week is found when the next
+# release is proposed rather than when it appeared. Deliberate -- the earlier
+# signal had nobody to act on it -- but if the lead time turns out to matter,
+# the answer is a scheduled run that opens or annotates a release pull request,
+# not one that tests `main`.
+
+on:
+  schedule:
+    # 07:00 UTC daily -- after the US evening merges, before the EU morning.
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+# `actions: write` is what `POST /actions/workflows/{id}/dispatches` requires,
+# and dispatching compat.yml is this workflow's whole job. It is also the scope
+# that would let this token start release.yml: `workflow_dispatch` is one of the
+# two events exempt from the rule that GITHUB_TOKEN-triggered events start no
+# run. GitHub has no narrower scope to ask for; what bounds this is that the
+# step below dispatches one named workflow at branches it derived by reading.
+# https://docs.github.com/en/actions/concepts/security/github_token
+permissions:
+  contents: read
+  pull-requests: read
+  actions: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Dispatch compat on every open release pull request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # DERIVED from the open pull requests, never a list kept here: a
+          # release branch this file had not been told about would otherwise go
+          # unrefreshed, which is the failure mode that looks exactly like
+          # success.
+          #
+          # ASSIGNED AND TESTED, not piped into mapfile, because "could not ask"
+          # and "nothing to refresh" are different answers and the pipe form
+          # cannot tell them apart -- `mapfile < <(...)` discards the subshell's
+          # status, so a gh that cannot reach the API produces an empty list and
+          # a green run that refreshed nothing.
+          if ! raw=$(gh pr list --repo "$REPO" --state open --limit 100 \
+                       --json number,headRefName,headRefOid \
+                       --jq '.[] | select(.headRefName | startswith("release/"))
+                                 | "\(.number)\t\(.headRefName)\t\(.headRefOid)"'); then
+            echo "::error::could not list pull requests. Refusing to report that" \
+                 "as 'nothing to refresh': every open release pull request would" \
+                 "keep a stale green check and nobody would know." >&2
+            exit 1
+          fi
+
+          # `grep .` drops a blank line rather than letting one become an
+          # element the tally would then count.
+          mapfile -t prs < <(printf '%s' "$raw" | grep . || true)
+
+          if [ "${#prs[@]}" -eq 0 ]; then
+            echo "No open release/* pull request. Nothing to refresh."
+            exit 0
+          fi
+
+          failed=0
+          for row in "${prs[@]}"; do
+            num=${row%%$'\t'*}; rest=${row#*$'\t'}
+            branch=${rest%%$'\t'*}; sha=${rest##*$'\t'}
+            echo "::group::#$num ($branch @ ${sha:0:8})"
+
+            # Dispatched at the BRANCH, which runs compat.yml as that branch has
+            # it and at whatever its tip is now -- so a head that moved between
+            # the listing above and here is tested as it currently stands, not
+            # as it was. compat.yml is written for this: its job condition is
+            # `event_name != 'pull_request' || head_ref starts with release/`,
+            # so a dispatch satisfies it on any ref.
+            #
+            # EACH IS INDEPENDENT: a refusal is counted and the loop carries on,
+            # because aborting here would leave every later pull request untried
+            # on account of one.
+            if ! gh workflow run compat.yml --repo "$REPO" --ref "$branch"; then
+              echo "::error::#$num ($branch): could not dispatch compat." \
+                   "Its compat check still shows an earlier answer against" \
+                   "today's fleet." >&2
+              failed=$((failed + 1))
+            fi
+            echo "::endgroup::"
+          done
+
+          echo
+          echo "${#prs[@]} open release pull request(s): $failed could not be dispatched."
+
+          # Non-zero on a failure, so a stale check has somewhere to be seen.
+          [ "$failed" -eq 0 ]

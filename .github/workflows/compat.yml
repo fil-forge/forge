@@ -1,0 +1,179 @@
+name: compat
+
+# Does what we are about to ship still work against what is already deployed?
+#
+# `ci`, `itest` and `e2e` all boot this commit against itself, which is the
+# guarantee the monorepo gives for free and is a development-time one. The
+# field is a mix: we run sprue and hilt, third-party operators run piri and
+# ingot and upgrade on their own schedule. This workflow tests that skew.
+#
+# IT RUNS ON A RELEASE PULL REQUEST, AND NOWHERE ELSE ON ITS OWN. A pull request
+# from a `release/<svc>` branch is the one place the question has an answer
+# somebody acts on: red means do not merge this release. The same run against
+# `main` produces a result with no decision attached -- `main` is not deployed,
+# so a red there leaves you working out which pending release it implicates.
+#
+# It takes no service. Unlike release.yml it tests the whole stack against the
+# baseline set, so a release pull request for any service gets the same run;
+# the branch name is only the signal that a release is being proposed.
+#
+# THE ANSWER GOES STALE WITHOUT THE CODE CHANGING, which is why this file has no
+# `schedule:` and `compat-refresh.yml` does. The pinned side is read live from
+# the registry, so the same commit can face a different fleet tomorrow: an
+# upstream release lands or a `:main` moves, the baselines move with it, and a
+# release pull request that was green is no longer known to be. That workflow
+# dispatches THIS one at each open release branch, daily. A dispatched run
+# records its check runs against the branch's head commit, which is the pull
+# request's head commit, so the fresh answer lands where the merge decision is
+# made -- measured on run 35760677003, whose 11 check runs all landed on the
+# dispatched commit. It used to RE-RUN the pull request's own run instead,
+# which put the answer in the same place but expired 30 days after the
+# original; a dispatch has no such ceiling.
+#
+# Also on demand.
+#
+# THE PINNED SIDE IS THE POLYREPOS' IMAGES -- ghcr.io/fil-forge/<svc>. Those
+# are what ships to the network today, so they are what "already deployed"
+# means. This repository publishes no images (images.yml runs with push: false)
+# and carries no service-prefixed tags; neither is a prerequisite here, which
+# is why this can run before the release-ownership question is settled.
+#
+# THE BASELINE SET COMES FROM THE REGISTRY, not from git tags, because the two
+# disagree: the polyrepos tag git `v0.2.4` and publish the image `0.2.4`.
+# Reading the registry asks the question the test actually has -- "what can I
+# pin against?" -- and cannot drift from it.
+#
+# FIVE OF THE EIGHT HAVE CUT NO RELEASE, so their baseline is `:main` resolved
+# to a digest. This job used to skip when any service lacked one, which made
+# the check GREEN IN 0.126s HAVING BOOTED NOTHING -- the job ran because SOME
+# service could be pinned, the test needed EVERY service pinned, and a skipped
+# Go test exits 0. There is now no skip: the script produces a complete
+# baseline set or fails, and compat-baselines.sh's own header says what a
+# floating baseline is worth and what it is not.
+
+on:
+  # No `branches:` filter would help: it matches the BASE branch, and what
+  # selects a release here is the HEAD branch. The job condition below does it.
+  pull_request:
+  # No inputs. There was a `window` input, for a pinned-peer test that has
+  # since been cut; nothing read it.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# KEYED BY REF, which it was not until this trigger arrived. A group of just
+# `${{ github.workflow }}` was harmless while this ran only on a schedule and on
+# demand; with `pull_request:` it is not. GitHub holds one run per group and
+# cancels any PREVIOUSLY PENDING one when a newer arrives, so with a global key
+# a release pull request's hour-long compat run would make every other pull
+# request's compat run pend behind it -- and the third arrival would cancel the
+# second outright. A release pull request could have its compat check cancelled
+# by an unrelated pull request, which is the one thing this workflow must not do.
+# https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/control-the-concurrency-of-workflows-and-jobs
+#
+# `head_ref` for a pull request, `ref` for a dispatch; a re-run reuses its
+# original event, so it lands back in the same group.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  baselines:
+    name: Resolve the baselines
+    # A release pull request, or a dispatch. Every other pull request skips
+    # this job, and `compat` needs it, so both skip together -- measured on
+    # run 35788998286, an ordinary pull request, where both report `skipped`.
+    # That matters because the compat job below is capped at an hour.
+    #
+    # NOT "costs an ordinary pull request nothing", which this said until the
+    # concurrency note above was written: the run is still created and still
+    # joins the group. What it costs is a queue slot, which is why that group
+    # is now keyed by ref.
+    if: >-
+      github.event_name != 'pull_request' ||
+      startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-latest
+    # TWO JSON OBJECTS, not one entry per service. A hand-written list here was
+    # wrong in both available directions at once: it named `base_sprue`, which
+    # the test read as COMPAT_BASELINE_UPLOAD and never saw, and it omitted the
+    # four services the fleet gained. `outputs:` cannot be generated, so the
+    # thing that varies moves inside a value instead.
+    outputs:
+      baselines: ${{ steps.resolve.outputs.baselines }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve baselines from the registry
+        id: resolve
+        run: .github/scripts/compat-baselines.sh >> "$GITHUB_OUTPUT"
+
+  compat:
+    name: Version skew
+    needs: baselines
+    # NO CONDITION, deliberately. There was one -- `pinnable == 'true'`, true
+    # when ANY service could be pinned -- and the test needs EVERY service
+    # pinned, so the job ran and the test skipped and the check went green
+    # having booted nothing. Two conditions that differ by one quantifier, one
+    # in YAML and one in Go, with a green check in the gap.
+    #
+    # Now the baselines job either produces a complete set or fails, so there
+    # is one place that decides and it is the one that reads the registry.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache-dependency-path: |
+            piri/go.sum
+            hilt/go.sum
+            sprue/go.sum
+            ingot/go.sum
+            smelt/go.sum
+
+      # Expanded here rather than listed as `env:` entries, for the reason the
+      # `outputs:` comment gives. The key is already the package name the test
+      # asks for, so this adds no mapping of its own -- it writes exactly what
+      # the registry answered.
+      - name: Expand the resolved versions
+        env:
+          BASELINES: ${{ needs.baselines.outputs.baselines }}
+        run: |
+          set -euo pipefail
+          python3 - <<'EOF' >> "$GITHUB_ENV"
+          import json, os, re
+          for k, v in json.loads(os.environ["BASELINES"]).items():
+              # The key comes from a package name the registry confirmed, so it
+              # cannot carry a newline -- but $GITHUB_ENV is parsed line by
+              # line, and a check here costs nothing.
+              assert re.fullmatch(r"[A-Z0-9_]+", k), k
+              assert "\n" not in v, v
+              print(f"COMPAT_BASELINE_{k}={v}")
+          EOF
+          echo "--- resolved ---"; grep '^COMPAT_' "$GITHUB_ENV"
+
+      # GOWORK stays ON: the services NOT pinned to a released image are built
+      # from HEAD by pkg/workspace, which is the whole point of the comparison.
+      - name: Run compatibility suite
+        working-directory: smelt
+        run: go test -tags compat -v -timeout 55m -parallel 1 ./tests/compat/...
+
+      - name: Dump container state on failure
+        if: failure()
+        run: |
+          mkdir -p /tmp/container-logs
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs "$c" > "/tmp/container-logs/$c.log" 2>&1 || true
+            echo "::group::$c"; tail -200 "/tmp/container-logs/$c.log"; echo "::endgroup::"
+          done
+
+      - name: Upload container logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compat-container-logs
+          path: /tmp/container-logs/
+          if-no-files-found: ignore
+          retention-days: 7

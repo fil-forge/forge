@@ -70,6 +70,8 @@ jobs:
         run: .github/scripts/check-goreleaser-ldflags.sh
       - name: the release version assertion fails on a dead ldflag, and passes on a live one
         run: .github/scripts/check-assert-released-version.sh
+      - name: the compat baseline resolver refuses rather than reporting no releases
+        run: .github/scripts/check-compat-baselines.sh
       - name: gofmt
         run: |
           unformatted=$(gofmt -s -l .)
@@ -95,7 +97,7 @@ jobs:
           - service: ingot
           - service: sprue
           - service: smelt
-            tagged_suites: e2e
+            tagged_suites: e2e,compat
           - service: delegator
           - service: piri-signing-service
           - service: swarf
@@ -161,6 +163,9 @@ jobs:
       # import path in them stays green until someone runs the suite by hand.
       # Compiling them (not running them — they need Docker and a live stack)
       # is what keeps that from happening.
+      #
+      # The tag list is hand-maintained on purpose: a suite is added about
+      # never, so a guard deriving it would cost more than it saves.
       - name: vet tagged suites
         if: matrix.tagged_suites != ''
         run: go vet -tags ${{ matrix.tagged_suites }} ./...

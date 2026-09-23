@@ -46,8 +46,16 @@ Four places, and putting something in the wrong one is how it gets lost:
 | **wiki → Needs Human Work** | what is blocked on a person, and decisions taken on their behalf awaiting confirmation | items leave via *Recently cleared* |
 | **`MAJOR_DECISIONS.md`** | decisions with a rationale someone will otherwise re-litigate — what is deliberately *out* of the monorepo, and why | permanent |
 | **`MONOREPO_TODO.md`** | questions only answerable once the monorepo is whole, and bugs found in imported code that are not the migration's to fix | until answered |
+| **`RELEASE.md`** | how a change becomes a release: the pull request path, versions, tagging, artifacts | permanent, and **kept tight** |
 
 Ordinary unfinished work belongs in issues, not in any of these.
+
+`RELEASE.md` is the one a reader is most likely to act on directly, so it earns
+a second rule: **it stays current and it stays short.** Change the release
+path, the version scheme, the tag scheme or what gets published, and update it
+in the same pull request. Resist growing it — reasoning about why the flow has
+its shape belongs in the workflow files, which already carry it; `RELEASE.md`
+says what to do.
 
 ## Update the wiki in the same turn as the thing it describes
 

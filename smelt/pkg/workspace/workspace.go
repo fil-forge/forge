@@ -61,6 +61,17 @@ var Services = map[string]serviceBuild{
 	"swarf":           {moduleDir: "swarf", buildTarget: "./cmd/swarf", binPath: "/usr/bin/swarf", configPath: "/etc/swarf/config.yaml"},
 }
 
+// ModuleDir is the repository directory a smelt service is built from.
+//
+// Exported because the compat suite builds image references from Detect()'s
+// output, and passing those names straight through asked ghcr.io for
+// fil-forge/upload, fil-forge/indexer and fil-forge/signing-service, none of
+// which exist.
+func ModuleDir(service string) (string, bool) {
+	b, ok := Services[service]
+	return b.moduleDir, ok
+}
+
 // libforgeDir is the workspace dir of the shared library. Its presence in the
 // use-list forces a rebuild of every service (see package doc).
 const libforgeDir = "libforge"
