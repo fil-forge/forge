@@ -9,6 +9,54 @@ why each item exists.
      belongs in issues. Items leave via **Recently cleared**, which is pruned
      once it stops being useful. Kept current as things move. -->
 
+## forge#18: your decision is recorded, and CI has stopped running on pushes
+
+**Decision, 2026-09-24 — option 1.** A release pull request's compat check goes
+red, and that is the answer. Your reasoning, which is better than the framing I
+offered it under: *"it's not really broken, the monorepo's just not done yet,
+and it would reflect that correctly."*
+
+Built from it, in `6c776cde`: a `RELEASE.md` section saying the check is
+expected to fail, why, and **how to tell that red from one worth stopping
+for** — a launch-contract red fails during `compose up` with a config or flag
+error in the container's log, before any upload runs; a real incompatibility
+gets the stack up and fails inside `assertUploadRetrieve`. If you see the
+second, do not merge. Whoever opens the first release pull request would
+otherwise have only `container … is unhealthy` to go on.
+
+## Blocked on you: no `pull_request` workflow run anywhere in `forge` for ~20 hours
+
+**Correction first.** I told you "CI should be green on the usual set" without
+checking. It is not green; it has not run.
+
+The last `pull_request` run of any workflow in the whole repository is
+[35899843519](https://github.com/fil-forge/forge/actions/runs/35899843519) at
+**2026-09-23 18:03Z**, on `44fa2b51`. Seven pushes to `claude/compat-polyrepo`
+since then have produced **zero** runs, and the pull request shows
+`total_count: 0` checks at its head.
+
+What this is *not*:
+
+- **Not Actions being off.** A `workflow_dispatch` of `ci.yml` at `344c764a`
+  ([36008290884](https://github.com/fil-forge/forge/actions/runs/36008290884))
+  queued, started and is running.
+- **Not out of minutes**, for the same reason.
+- **Not specific to this branch or this pull request** — the query above is
+  repo-wide, across all 610 `pull_request` runs. (#23 has not pushed in the
+  window, so it neither confirms nor rules anything out.)
+- **Not this branch's content.** `ci.yml`'s triggers are unchanged since
+  `1cdf10c7`, and that commit's own push did get a run.
+
+Candidates I cannot check from here, in rough order of likelihood: a repository
+or organisation Actions setting changed (permissions narrowed, or a ruleset
+suppressing the event); a GitHub incident affecting `pull_request` event
+delivery. **Worth a look at Settings → Actions and at githubstatus.com.**
+
+**What is verified at `344c764a` regardless:** the dispatched `ci` run's
+`guards` job passed, including the new step *"the compat baseline resolver
+refuses rather than reporting no releases"* — the first time that guard has run
+in CI. The only change since that commit is `RELEASE.md`, which nothing reads.
+
 ## Since you went AFK (Tuesday 18:05Z → 19:45Z)
 
 **#12, #16 and #17 all merged, then #19 and #22 behind them; `main` is
@@ -25,7 +73,7 @@ now corrected in #19.
 
 | | what | state |
 |---|---|---|
-| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `344c764a`. **Rounds are stopped.** The only thing left on it is your decision on the launch contract, below. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
+| [#18](https://github.com/fil-forge/forge/pull/18) | `compat.yml` + `compat-refresh.yml` — the release-pull-request compat gate | **Open**, head `6c776cde`. Rounds stopped; the launch-contract decision is made. **Blocked on a repo-level CI problem, not on the PR** — see below. **Your reading found the gate was vacuous** — it went green in 0.126s having booted nothing. Fixed in two pushes; a round is open and a dispatched `compat.yml` run is in flight, which is the thing that says it now gates. See below |
 | [#19](https://github.com/fil-forge/forge/pull/19) | the release-pull-request gate | **MERGED** as `82aaa35b` |
 | [#22](https://github.com/fil-forge/forge/pull/22) | rule 10: a PR goes Open when the rounds stop | **MERGED** as `4611cbcb`. `main` is there now |
 | [piri #129](https://github.com/fil-forge/piri/pull/129) | `TestPeriodicRotator` waits on a deadline instead of 30ms of wall clock | draft, on `f616ea0`. **Rounds stopped at three** — 12 findings, **not one in the fix itself**. Stays draft because it is upstream, not because rounds are open. Yours to un-draft |
