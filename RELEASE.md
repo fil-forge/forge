@@ -24,6 +24,39 @@ the automatic run.)
 Merging is the release decision. The tag and the release build follow from it —
 today by hand; see *Tagging*.
 
+## Expect the compat check to be red, and merge anyway
+
+**Until the fleet has releases this repository's harness can start, a release
+pull request's `Version skew` check fails — and that is the honest answer, not
+a broken check.** Petra's call, 2026-09-24: a red there reflects that the
+monorepo is not finished yet, which is true, so it should say so rather than be
+made green.
+
+`smelt` boots the baseline images with **this tree's** entrypoints and config
+templates. Both services that have a published release predate that surface:
+
+```
+piri  0.2.4  (2026-04-01)   Error: unknown flag: --plc-directory
+                            smelt/systems/piri/entrypoint.sh has passed it
+                            since 2026-07-22
+ingot 0.0.0  (2026-07-13)   ingot: invalid config:
+                            - root_access and root_secret are required
+                            ingot dropped those keys 2026-09-14
+```
+
+So the container never becomes healthy and the suite never reaches a
+wire-compatibility question at all.
+
+**How to tell that red from one worth stopping for.** A launch-contract red
+fails during `compose up`, with `container … is unhealthy` and a config or
+flag error in that container's log, before any upload runs. A real
+incompatibility gets the stack up and fails inside `assertUploadRetrieve`.
+If you see the second, do not merge.
+
+**What closes this** is the first release cut from a recent commit — Phase 1 in
+the plan. Nothing needs to change here when it happens: the baseline comes from
+the registry, so a new `X.Y.Z` image is picked up on the next run.
+
 ## Versions
 
 `<service>/version.json`, one key: `{"version": "v0.2.4"}`. It is the single
