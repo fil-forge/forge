@@ -24,38 +24,61 @@ the automatic run.)
 Merging is the release decision. The tag and the release build follow from it —
 today by hand; see *Tagging*.
 
-## Expect the compat check to be red, and merge anyway
+## A red compat check means do not release
 
-**Until the fleet has releases this repository's harness can start, a release
-pull request's `Version skew` check fails — and that is the honest answer, not
-a broken check.** Petra's call, 2026-09-24: a red there reflects that the
-monorepo is not finished yet, which is true, so it should say so rather than be
-made green.
+**That holds however it went red.** The check exists to say a release is safe
+to ship; a red one has not said it, and shipping anyway is the vacuous-green
+failure moved up a layer — releasing on a gate that did not clear it, rather
+than on one that cleared it without looking.
+
+**Until the fleet has releases this repository's harness can start, it will be
+red.** That is the expected state and it is accurate: the monorepo is not
+finished, and a release cut now would be cut without the evidence the process
+asks for. Petra's call, 2026-09-24.
+
+What the two kinds of red differ in is **what to go and fix**, not whether to
+proceed.
+
+### The gate could not ask (today's case)
 
 `smelt` boots the baseline images with **this tree's** entrypoints and config
-templates. Both services that have a published release predate that surface:
+templates. Both services with a published release predate that surface:
 
 ```
 piri  0.2.4  (2026-04-01)   Error: unknown flag: --plc-directory
-                            smelt/systems/piri/entrypoint.sh has passed it
-                            since 2026-07-22
+                            the entrypoint has passed it since 2026-07-22
 ingot 0.0.0  (2026-07-13)   ingot: invalid config:
                             - root_access and root_secret are required
                             ingot dropped those keys 2026-09-14
 ```
 
-So the container never becomes healthy and the suite never reaches a
-wire-compatibility question at all.
+**Note the direction: this is HEAD's configuration applied to an old binary**,
+which is backwards from a real upgrade, where an operator gets the new binary
+first and the new configuration with it. Old ingot demands a key HEAD removed;
+old piri does not know a flag HEAD added. Neither is a break an operator would
+hit upgrading — so this red is **not** evidence that the release breaks the
+network.
 
-**How to tell that red from one worth stopping for.** A launch-contract red
-fails during `compose up`, with `container … is unhealthy` and a config or
-flag error in that container's log, before any upload runs. A real
-incompatibility gets the stack up and fails inside `assertUploadRetrieve`.
-If you see the second, do not merge.
+It is also not evidence that it does not. The container never becomes healthy,
+so the suite never reaches a wire-compatibility question at all. **No answer,
+not a good one.**
 
-**What closes this** is the first release cut from a recent commit — Phase 1 in
-the plan. Nothing needs to change here when it happens: the baseline comes from
-the registry, so a new `X.Y.Z` image is picked up on the next run.
+**What fixes it:** a baseline the harness can start — the first release cut
+from a recent commit, Phase 1 in the plan. Nothing here changes when that
+happens: the baseline comes from the registry, so a new `X.Y.Z` image is
+picked up on the next run.
+
+### The gate asked and the answer was no
+
+The stack comes up and the failure is inside `assertUploadRetrieve` — the
+upload or the retrieval fails across the version skew. That is a real
+incompatibility between the release and what is deployed, and **the fix is in
+the code**, not in the harness.
+
+**Telling them apart:** a could-not-ask red fails during `compose up`, with
+`container … is unhealthy` and a config or flag error in that container's own
+log, before any upload runs. Anything that gets past `compose up` is the
+second kind.
 
 ## Versions
 
